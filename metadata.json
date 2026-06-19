@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Remix: Billey Invoice Maker",
+  "description": "A responsive invoice, estimate, and financial reporting platform inspired by Billey.in. Features real-time SVG charts, PDF/MSWord exports, multi-client records management, custom tax schemes, and secure cloud sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
