@@ -44,14 +44,16 @@ function getTheme(style: string): Theme {
 }
 
 // Returns 'cgst_sgst' | 'igst' | 'generic'
-function resolveTaxMode(invoice: Invoice): 'cgst_sgst' | 'igst' | 'generic' {
+function resolveTaxMode(invoice: Invoice, profile: BusinessProfile): 'cgst_sgst' | 'igst' | 'generic' {
   const targetState = (invoice.shippedToState || invoice.clientState || '').trim().toLowerCase();
   const targetCountry = (invoice.shippedToCountry || invoice.clientCountry || '').trim().toLowerCase() || 'india';
+  const compCountry = (profile.country || invoice.companyCountry || 'india').trim().toLowerCase();
+  const compState = (profile.state || invoice.companyState || '').trim().toLowerCase();
   
   if (targetCountry !== 'india' && targetCountry !== 'in') {
     return 'generic';
   }
-  if (targetState === 'delhi' || targetState === 'dl' || targetState === 'new delhi') {
+  if ((compCountry === 'india' || compCountry === 'in') && targetState === compState && targetState !== '') {
     return 'cgst_sgst';
   }
   return 'igst';
@@ -62,7 +64,7 @@ function getTaxRate(invoice: Invoice): number {
     return invoice.customTaxPercentage;
   }
   // Derive from items average — use per-item tax in rows; grand tax total is already computed
-  return 18; // fallback
+  return 0; // fallback
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -93,7 +95,7 @@ export function exportInvoicePDF(invoice: Invoice, profile: BusinessProfile, act
   const mL = 14, mR = 14;
   const cW = W - mL - mR;
   const docType = (invoice.invoiceType || 'invoice').toUpperCase() === 'ESTIMATE' ? 'QUOTE' : 'TAX INVOICE';
-  const taxMode = resolveTaxMode(invoice);
+  const taxMode = resolveTaxMode(invoice, profile);
   doc.setFont('Helvetica', 'normal');
 
   const T_txt = (text: string, x: number, y: number, opts: any = {}) => {
@@ -213,15 +215,23 @@ export function exportInvoicePDF(invoice: Invoice, profile: BusinessProfile, act
   }
   T_txt('GSTIN / UIN', mL + 2, leftY, { size: 8, color: [31, 41, 55] }); T_txt(':', mL + 28, leftY, { size: 8, color: [31, 41, 55] }); T_txt(invoice.clientGstin || 'N/A', mL + 31, leftY, { size: 8, color: [31, 41, 55] }); leftY += 3;
 
+  const isShippingSame = !invoice.shippedToName && !invoice.shippedToAddress;
+  const shipName = isShippingSame ? invoice.clientName : invoice.shippedToName;
+  const shipPhone = isShippingSame ? invoice.clientPhone : invoice.shippedToPhone;
+  const shipCountry = isShippingSame ? invoice.clientCountry : invoice.shippedToCountry;
+  const shipState = isShippingSame ? invoice.clientState : invoice.shippedToState;
+  const shipAddress = isShippingSame ? invoice.clientAddress : invoice.shippedToAddress;
+  const shipGstin = isShippingSame ? invoice.clientGstin : invoice.shippedToGstin;
+
   rightY = partyY + 11;
-  T_txt(invoice.shippedToName || '', W/2 + 2, rightY, { size: 8, color: [31, 41, 55] }); rightY += 5;
-  T_txt('Party Mobile No', W/2 + 2, rightY, { size: 8, color: [31, 41, 55] }); T_txt(':', W/2 + 28, rightY, { size: 8, color: [31, 41, 55] }); T_txt(invoice.shippedToPhone || 'N/A', W/2 + 31, rightY, { size: 8, color: [31, 41, 55] }); rightY += 5;
-  T_txt('Country', W/2 + 2, rightY, { size: 8, color: [31, 41, 55] }); T_txt(':', W/2 + 28, rightY, { size: 8, color: [31, 41, 55] }); T_txt(invoice.shippedToCountry || 'N/A', W/2 + 31, rightY, { size: 8, color: [31, 41, 55] }); rightY += 5;
-  T_txt('State', W/2 + 2, rightY, { size: 8, color: [31, 41, 55] }); T_txt(':', W/2 + 28, rightY, { size: 8, color: [31, 41, 55] }); T_txt(invoice.shippedToState || 'N/A', W/2 + 31, rightY, { size: 8, color: [31, 41, 55] }); rightY += 5;
-  if(invoice.shippedToAddress) {
-      doc.splitTextToSize(invoice.shippedToAddress, cW/2 - 4).forEach((l:string) => { T_txt(l, W/2 + 2, rightY, { size: 8, color: [31, 41, 55] }); rightY += 4; });
+  T_txt(shipName || '', W/2 + 2, rightY, { size: 8, color: [31, 41, 55] }); rightY += 5;
+  T_txt('Party Mobile No', W/2 + 2, rightY, { size: 8, color: [31, 41, 55] }); T_txt(':', W/2 + 28, rightY, { size: 8, color: [31, 41, 55] }); T_txt(shipPhone || 'N/A', W/2 + 31, rightY, { size: 8, color: [31, 41, 55] }); rightY += 5;
+  T_txt('Country', W/2 + 2, rightY, { size: 8, color: [31, 41, 55] }); T_txt(':', W/2 + 28, rightY, { size: 8, color: [31, 41, 55] }); T_txt(shipCountry || 'N/A', W/2 + 31, rightY, { size: 8, color: [31, 41, 55] }); rightY += 5;
+  T_txt('State', W/2 + 2, rightY, { size: 8, color: [31, 41, 55] }); T_txt(':', W/2 + 28, rightY, { size: 8, color: [31, 41, 55] }); T_txt(shipState || 'N/A', W/2 + 31, rightY, { size: 8, color: [31, 41, 55] }); rightY += 5;
+  if(shipAddress) {
+      doc.splitTextToSize(shipAddress, cW/2 - 4).forEach((l:string) => { T_txt(l, W/2 + 2, rightY, { size: 8, color: [31, 41, 55] }); rightY += 4; });
   }
-  T_txt('GSTIN / UIN', W/2 + 2, rightY, { size: 8, color: [31, 41, 55] }); T_txt(':', W/2 + 28, rightY, { size: 8, color: [31, 41, 55] }); T_txt(invoice.shippedToGstin || 'N/A', W/2 + 31, rightY, { size: 8, color: [31, 41, 55] }); rightY += 3;
+  T_txt('GSTIN / UIN', W/2 + 2, rightY, { size: 8, color: [31, 41, 55] }); T_txt(':', W/2 + 28, rightY, { size: 8, color: [31, 41, 55] }); T_txt(shipGstin || 'N/A', W/2 + 31, rightY, { size: 8, color: [31, 41, 55] }); rightY += 3;
   
   const partyBoxHeight = Math.max(leftY, rightY) - partyY;
   doc.rect(mL, partyY, cW, partyBoxHeight);
@@ -461,7 +471,7 @@ export function exportInvoicePDF(invoice: Invoice, profile: BusinessProfile, act
       tRow(`SGST (${taxPct}%)`, fmt(sgstTotal, ''));
       tRow(`CGST (${taxPct}%)`, fmt(cgstTotal, ''));
   } else {
-      let activePct = invoice.items.length > 0 ? invoice.items[0].taxPercentage : 18;
+      let activePct = invoice.items.length > 0 ? invoice.items[0].taxPercentage : 0;
       if (taxMode === 'custom' || taxMode === 'generic') {
         if (taxMode === 'generic' && invoice.customTaxCols && invoice.customTaxCols.length > 0 && invoice.items.length > 0) {
           const firstItem = invoice.items[0];
@@ -603,22 +613,30 @@ export function exportCollectiveReportPDF(
         doc.addPage(); y=15;
         doc.setFillColor(15,23,42); doc.rect(0,0,W,3.5,'F');
       }
-      if (i%2===1) { doc.setFillColor(252,253,254); doc.rect(mL,y,cW,7.5,'F'); }
+      if (i%2===1) { doc.setFillColor(252,253,254); doc.rect(mL,y,cW,9,'F'); }
 
       doc.setFontSize(7.2); doc.setFont('Helvetica','normal'); doc.setTextColor(30,41,59);
-      doc.text(inv.date, cols.date, y+5);
-      doc.text(inv.invoiceNumber, cols.inv, y+5);
+      doc.text(inv.date, cols.date, y+5.5);
+      doc.text(inv.invoiceNumber, cols.inv, y+5.5);
       const cn = inv.clientName.length>20 ? inv.clientName.slice(0,20)+'…' : inv.clientName;
-      doc.text(cn, cols.client, y+5);
-      doc.text(fmt(inv.subtotal,sym),   cols.sub,   y+5, {align:'right'});
-      doc.text(fmt(inv.taxTotal,sym),   cols.tax,   y+5, {align:'right'});
-      doc.text(fmt(inv.grandTotal,sym), cols.grand, y+5, {align:'right'});
+      doc.text(cn, cols.client, y+5.5);
+      doc.text(fmt(inv.subtotal,sym),   cols.sub,   y+5.5, {align:'right'});
+      doc.text(fmt(inv.taxTotal,sym),   cols.tax,   y+5.5, {align:'right'});
+      doc.text(fmt(inv.grandTotal,sym), cols.grand, y+5.5, {align:'right'});
 
       const sc = statusColors(inv.status);
       doc.setFont('Helvetica','bold'); doc.setTextColor(sc.text[0],sc.text[1],sc.text[2]);
-      doc.text((inv.status||'pending').toUpperCase(), cols.status, y+5, {align:'right'});
+      
+      if (inv.status === 'paid' && inv.paidDate) {
+        doc.text('PAID', cols.status, y+4, {align:'right'});
+        doc.setFontSize(5);
+        doc.text(`ON ${inv.paidDate}`, cols.status, y+7.5, {align:'right'});
+      } else {
+        doc.text((inv.status||'pending').toUpperCase(), cols.status, y+5.5, {align:'right'});
+      }
+      
       doc.setFont('Helvetica','normal');
-      y += 7.5;
+      y += 9;
     });
   }
 

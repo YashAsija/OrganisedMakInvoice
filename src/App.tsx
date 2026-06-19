@@ -347,6 +347,53 @@ export default function App() {
     };
   }, [isOnline]);
 
+  // --- Retroactive Sync of Clients from Existing Invoices ---
+  useEffect(() => {
+    if (invoices.length === 0) return;
+    
+    let clientsChanged = false;
+    let updatedClients = [...clients];
+
+    invoices.forEach(inv => {
+      if (inv.clientName && inv.clientName.trim() !== '') {
+        const nameLower = inv.clientName.trim().toLowerCase();
+        const exists = updatedClients.some(c => 
+          c.name.toLowerCase() === nameLower || 
+          c.companyName.toLowerCase() === nameLower
+        );
+        
+        if (!exists) {
+          clientsChanged = true;
+          updatedClients.push({
+            id: crypto.randomUUID(),
+            userId: user ? user.uid : '',
+            name: inv.clientName.trim(),
+            companyName: inv.clientName.trim(),
+            address: inv.clientAddress || '',
+            email: inv.clientEmail || '',
+            phone: inv.clientPhone || '',
+            createdAt: inv.createdAt || new Date().toISOString(),
+            updatedAt: inv.createdAt || new Date().toISOString()
+          });
+        }
+      }
+    });
+
+    if (clientsChanged) {
+      setClients(updatedClients);
+      localStorage.setItem('invoice_maker_clients', JSON.stringify(updatedClients));
+      
+      if (isOnline && user) {
+        updatedClients.forEach(client => {
+          const clientWithUser = { ...client, userId: user.uid };
+          setDoc(doc(db, 'users', user.uid, 'clients', client.id), clientWithUser).catch(e => {
+            console.error('Failed to retroactively sync client to cloud:', e);
+          });
+        });
+      }
+    }
+  }, [invoices, clients, isOnline, user]);
+
   // --- ACTIONS SYSTEM ---
 
   // 1. Google OAuth Popup login trigger
@@ -447,6 +494,36 @@ export default function App() {
 
   // 3. Save / Update Invoice
   const handleSaveInvoice = async (invoice: Invoice) => {
+    // Automatically create or update client database based on invoice
+    if (invoice.clientName && invoice.clientName.trim() !== '') {
+      const clientNameLower = invoice.clientName.trim().toLowerCase();
+      const existingClient = clients.find(c => 
+        c.name.toLowerCase() === clientNameLower || 
+        c.companyName.toLowerCase() === clientNameLower
+      );
+
+      const clientToSave: ClientProfile = existingClient ? {
+        ...existingClient,
+        // Update with latest details from invoice if present
+        address: invoice.clientAddress || existingClient.address,
+        email: invoice.clientEmail || existingClient.email,
+        phone: invoice.clientPhone || existingClient.phone,
+        updatedAt: new Date().toISOString()
+      } : {
+        id: crypto.randomUUID(),
+        userId: user ? user.uid : '',
+        name: invoice.clientName.trim(),
+        companyName: invoice.clientName.trim(),
+        address: invoice.clientAddress || '',
+        email: invoice.clientEmail || '',
+        phone: invoice.clientPhone || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      await handleSaveClient(clientToSave);
+    }
+
     const updatedInvoices = invoices.map(inv => inv.id === invoice.id ? invoice : inv);
     
     // Check if newly created
@@ -513,7 +590,11 @@ export default function App() {
     if (invoiceIds.length === 0) return;
     const updated = invoices.map(inv => {
       if (invoiceIds.includes(inv.id)) {
-        return { ...inv, status, updatedAt: new Date().toISOString() };
+        const paidDateUpdate: { paidDate?: string } = status === 'paid' && !inv.paidDate ? { paidDate: new Date().toISOString().split('T')[0] } : {};
+        if (status !== 'paid') {
+            paidDateUpdate.paidDate = undefined; // clear paid date if status changed from paid
+        }
+        return { ...inv, status, updatedAt: new Date().toISOString(), ...paidDateUpdate };
       }
       return inv;
     });

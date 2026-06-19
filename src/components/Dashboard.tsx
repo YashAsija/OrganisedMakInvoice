@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Download,
@@ -206,6 +206,40 @@ export default function Dashboard({
       { id: 'mu_5', code: 'KGS', name: 'Kilograms weight' }
     ];
   });
+  // --- Auto-sync items from invoices into material catalog ---
+  useEffect(() => {
+    if (!invoices || invoices.length === 0) return;
+    
+    let changed = false;
+    let updatedMaterials = [...materials];
+
+    invoices.forEach(inv => {
+      if (!inv.items) return;
+      inv.items.forEach(item => {
+        if (item.name && item.name.trim() !== '') {
+          const nameLower = item.name.trim().toLowerCase();
+          const exists = updatedMaterials.some(m => m.name && m.name.toLowerCase() === nameLower);
+          
+          if (!exists) {
+            changed = true;
+            updatedMaterials.push({
+              id: `mat_${Math.random().toString(36).substr(2, 9)}`,
+              name: item.name.trim(),
+              rate: item.rate || 0,
+              hsn: item.hsnCode || item.sacCode || '',
+              uom: item.quantityType || 'unit',
+              category: 'Auto-Added from Invoice'
+            });
+          }
+        }
+      });
+    });
+
+    if (changed) {
+      setMaterials(updatedMaterials);
+      localStorage.setItem('makinvoice_masters_materials', JSON.stringify(updatedMaterials));
+    }
+  }, [invoices, materials]);
 
   // Reusable Master Database handlers
   const handleSaveMasterItem = (item: any) => {
@@ -554,7 +588,7 @@ export default function Dashboard({
         </div>
 
         {/* Bottom sign out */}
-        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-auto">
+        <div className="pt-4 pb-6 border-t border-slate-100 dark:border-slate-800 mt-auto">
           {userEmail ? (
             <button
               onClick={() => {
@@ -1196,7 +1230,8 @@ export default function Dashboard({
 
   // Expense Logger states
   const [isExpenseLoggerOpen, setIsExpenseLoggerOpen] = useState(false);
-  const [expenseCategory, setExpenseCategory] = useState('Rent & Utilities');
+  const [expenseCategory, setExpenseCategory] = useState('Rent & Overheads');
+  const [customExpenseCategory, setCustomExpenseCategory] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
   const [expenseDesc, setExpenseDesc] = useState('');
@@ -1501,7 +1536,7 @@ export default function Dashboard({
     onSaveExpense({
       id: `exp_${Math.random().toString(36).substr(2, 9)}`,
       userId: 'local',
-      category: expenseCategory,
+      category: expenseCategory === 'Custom' ? (customExpenseCategory.trim() || 'Other') : expenseCategory,
       amount: amountVal,
       date: expenseDate,
       description: expenseDesc.trim(),
@@ -1509,6 +1544,7 @@ export default function Dashboard({
     });
     setExpenseAmount('');
     setExpenseDesc('');
+    setCustomExpenseCategory('');
     setIsExpenseLoggerOpen(false);
   };
 
@@ -1607,7 +1643,7 @@ export default function Dashboard({
       </header>
 
       {/* Dynamic Main Responsive Workspace - Grid layout turns dual-column on desktop */}
-      <main className="w-full max-w-[1400px] mx-auto px-3 sm:px-4 pt-4 md:pt-6 space-y-4 md:space-y-0 md:flex md:gap-6 lg:gap-8 md:items-start overflow-hidden">
+      <main className="w-full max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4 pt-4 md:pt-6 space-y-4 md:space-y-0 md:flex md:gap-6 lg:gap-8 md:items-start overflow-hidden">
         
         {/* DESKTOP BRANDING & CONTROL SIDEBAR - Visible only on md screens and larger */}
         <aside className="hidden md:flex shrink-0 flex-col bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/80 p-5 rounded-3xl shadow-xs h-[calc(100vh-110px)] overflow-y-auto w-[280px]">
@@ -2484,19 +2520,23 @@ export default function Dashboard({
           <div className="space-y-6 text-sans animate-in fade-in duration-200">
             
             {/* Page Header heading block */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-sky-500/10 via-transparent to-transparent p-4 rounded-3xl border border-sky-100/30 dark:border-slate-800/40 backdrop-blur-3xs">
-              <div>
-                <h2 className="text-sm font-black text-slate-805 uppercase tracking-tight flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-sky-550 animate-pulse" />
-                  <span>Welcome to {profile.name || 'MakInvoice Workspace'}</span>
-                </h2>
-                <span className="text-[10px] text-slate-400 block mt-0.5">Real-time financials, pre-coded GST collections, and catalog registries.</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow duration-300">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                  <Sparkles className="w-5 h-5 text-white animate-pulse" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+                    Welcome to {profile.name || 'MakInvoice Workspace'}
+                  </h2>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5 font-medium">Real-time financials, pre-coded GST collections, and catalog registries.</span>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => onOpenInvoiceEditor(null)}
-                  className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-[10px] font-black tracking-wide flex items-center gap-1 cursor-pointer shadow-md shadow-sky-950/10"
+                  className="px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white rounded-xl text-[10px] font-black tracking-wide flex items-center gap-1.5 cursor-pointer shadow-lg shadow-sky-500/30 hover:shadow-sky-500/40 hover:-translate-y-0.5 transition-all duration-300"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Quick Bill</span>
@@ -2506,33 +2546,36 @@ export default function Dashboard({
 
             {/* Quick stats grid */}
             <section className="grid grid-cols-3 gap-2.5">
-              <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/80 p-3 rounded-2.5xl shadow-2xs flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold flex-shrink-0">
-                  <CheckCircle2 className="w-4.5 h-4.5" />
+              <div className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                  <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <span className="text-[8px] uppercase font-black tracking-wider text-slate-400 block truncate">Cleared</span>
-                  <span className="text-[11px] font-black font-mono text-emerald-500 mt-0.5 block truncate">{currencySymbol}{totalBilled.toLocaleString()}</span>
+                  <span className="text-[9px] uppercase font-black tracking-wider text-slate-500 dark:text-slate-400 block truncate">Cleared</span>
+                  <span className="text-[13px] font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate">{currencySymbol}{totalBilled.toLocaleString()}</span>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/80 p-3 rounded-2.5xl shadow-2xs flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold flex-shrink-0">
-                  <Clock className="w-4.5 h-4.5 animate-pulse" />
+              <div className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                  <Clock className="w-5 h-5 animate-pulse" />
                 </div>
                 <div className="min-w-0">
-                  <span className="text-[8px] uppercase font-black tracking-wider text-slate-400 block truncate">Receivables</span>
-                  <span className="text-[11px] font-black font-mono text-amber-500 mt-0.5 block truncate">{currencySymbol}{totalOutstanding.toLocaleString()}</span>
+                  <span className="text-[9px] uppercase font-black tracking-wider text-slate-500 dark:text-slate-400 block truncate">Receivables</span>
+                  <span className="text-[13px] font-black font-mono text-amber-600 dark:text-amber-400 mt-0.5 block truncate">{currencySymbol}{totalOutstanding.toLocaleString()}</span>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/80 p-3 rounded-2.5xl shadow-2xs flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center font-bold flex-shrink-0">
-                  <TrendingDown className="w-4.5 h-4.5" />
+              <div className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-rose-500/0 via-rose-500/5 to-rose-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                  <TrendingDown className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <span className="text-[8px] uppercase font-black tracking-wider text-slate-400 block truncate">Expenses</span>
-                  <span className="text-[11px] font-black font-mono text-rose-500 mt-0.5 block truncate">{currencySymbol}{totalReportedExpenses.toLocaleString()}</span>
+                  <span className="text-[9px] uppercase font-black tracking-wider text-slate-500 dark:text-slate-400 block truncate">Expenses</span>
+                  <span className="text-[13px] font-black font-mono text-rose-600 dark:text-rose-400 mt-0.5 block truncate">{currencySymbol}{totalReportedExpenses.toLocaleString()}</span>
                 </div>
               </div>
             </section>
@@ -2545,23 +2588,29 @@ export default function Dashboard({
                   <p className="text-[11px] font-bold text-slate-400">Generate your first invoice to view details here!</p>
                 </div>
               ) : (
-                <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-805 rounded-3xl overflow-hidden shadow-2xs divide-y divide-slate-50 dark:divide-slate-805">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {invoices.slice(0, 3).map(inv => (
                     <div 
                       key={inv.id}
                       onClick={() => setActivePreviewInvoice(inv)}
-                      className="p-3.5 hover:bg-slate-50/50 dark:hover:bg-slate-850/40 flex justify-between items-center cursor-pointer transition-all"
+                      className="group relative p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between"
                     >
+                      <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-sky-400 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       <div>
-                        <span className="text-[9.5px] font-black text-sky-600 dark:text-sky-400 block">{inv.invoiceNumber}</span>
-                        <span className="text-xs font-bold text-slate-805 dark:text-white mt-0.5 block">{inv.clientName}</span>
-                        <span className="text-[9px] text-slate-400 font-mono block">Released {inv.date}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xs font-black font-mono text-slate-805 block">{currencySymbol}{inv.grandTotal.toFixed(2)}</span>
-                        <span className={`inline-block px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider mt-1 ${getStatusColor(inv.status)}`}>
-                          {inv.status}
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-[10px] font-black text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-500/10 px-2 py-0.5 rounded-lg">{inv.invoiceNumber}</span>
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
+                            {inv.status}
+                          </span>
+                        </div>
+                        <span className="text-sm font-bold text-slate-800 dark:text-white mt-2 block truncate">{inv.clientName}</span>
+                        <span className="text-[9px] text-slate-400 font-medium mt-1 flex items-center gap-1">
+                          <Calendar className="w-3 h-3" /> Released {inv.date}
                         </span>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex justify-between items-end">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Total</span>
+                        <span className="text-sm font-black font-mono text-slate-800 dark:text-slate-100">{currencySymbol}{inv.grandTotal.toFixed(2)}</span>
                       </div>
                     </div>
                   ))}
@@ -2581,31 +2630,32 @@ export default function Dashboard({
               <div className="space-y-4">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Billing Guidelines & How to Use</h3>
                 
-                <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/80 p-4 rounded-3xl space-y-4 shadow-2xs">
-                  <div>
-                    <span className="text-[9px] uppercase font-black text-sky-600 dark:text-sky-400 tracking-wider block mb-1">📖 Quick User Guide</span>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-normal">
-                      1. Check your GSTIN details in **Profile Settings** (Default: Indian 18% GST).<br/>
-                      2. Add your customer directory in the **Clients Ledger** tab.<br/>
-                      3. Hit **New Bill** to draft a new itemized professional invoice.<br/>
-                      4. Click the download or print icons to save official compliance PDFs.
+                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-3xl space-y-5 shadow-sm hover:shadow-md transition-shadow duration-300">
+                  <div className="group p-3 rounded-2xl hover:bg-sky-50 dark:hover:bg-sky-500/5 transition-colors duration-300 cursor-default">
+                    <span className="text-[10px] uppercase font-black text-sky-600 dark:text-sky-400 tracking-wider block mb-2 flex items-center gap-1.5"><span className="p-1 bg-sky-100 dark:bg-sky-500/20 rounded-lg">📖</span> Quick User Guide</span>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium space-y-1">
+                      <span className="block">• Check your GSTIN details in <strong>Profile Settings</strong></span>
+                      <span className="block">• Add your customer directory in the <strong>Clients Ledger</strong></span>
+                      <span className="block">• Hit <strong>New Bill</strong> to draft a new itemized professional invoice</span>
+                      <span className="block">• Click the download or print icons to save official compliance PDFs</span>
                     </p>
                   </div>
 
-                  <div className="border-t border-slate-100 dark:border-slate-800/80 pt-3">
-                    <span className="text-[9px] uppercase font-black text-amber-600 dark:text-amber-400 tracking-wider block mb-1">⚖️ Company Billing Policy</span>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-normal">
-                      - All invoices are registered under Standard Net-15/Net-30 payment intervals.<br/>
-                      - Overdue bills incur late fee penalties in accordance with Indian MSME rules.<br/>
-                      - Split CGST/SGST apply on Intrastate sales; unified IGST applies on Interstate accounts.
+                  <div className="group p-3 rounded-2xl hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-colors duration-300 cursor-default">
+                    <span className="text-[10px] uppercase font-black text-amber-600 dark:text-amber-400 tracking-wider block mb-2 flex items-center gap-1.5"><span className="p-1 bg-amber-100 dark:bg-amber-500/20 rounded-lg">⚖️</span> Company Billing Policy</span>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium space-y-1">
+                      <span className="block">• Standard Net-15/Net-30 payment intervals applied</span>
+                      <span className="block">• Overdue bills incur late fee penalties per Indian MSME rules</span>
+                      <span className="block">• Split CGST/SGST on Intrastate; unified IGST on Interstate</span>
                     </p>
                   </div>
 
                   <button 
                     onClick={() => setActiveTab('learn')}
-                    className="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-955 dark:hover:bg-slate-850 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl text-[10px] font-bold cursor-pointer block transition-all"
+                    className="group w-full py-2.5 bg-gradient-to-r from-slate-100 to-slate-50 hover:from-sky-500 hover:to-indigo-500 dark:from-slate-800 dark:to-slate-850 dark:hover:from-sky-500 dark:hover:to-indigo-500 text-slate-700 hover:text-white dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-transparent rounded-2xl text-[11px] font-black uppercase tracking-wide cursor-pointer transition-all duration-300 flex items-center justify-center gap-2 shadow-sm hover:shadow-lg"
                   >
-                    View Company T&C & Detailed App Manual →
+                    View Detailed Manual 
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
               </div>
@@ -2618,116 +2668,72 @@ export default function Dashboard({
         {activeTab === 'learn' && (
           <div className="space-y-6 text-sans animate-in fade-in duration-200">
             {/* Main Header Guide card */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-5 rounded-3xl shadow-2xs space-y-2">
-              <h2 className="text-sm font-black text-slate-805 uppercase tracking-tight flex items-center gap-1.5">
-                <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
-                <span>How to use our App & Company Billing Policies</span>
-              </h2>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                Welcome to the official IndoTech portal documentation! Here you will find step-by-step app user guidelines, business terms, and Indian GST rules for audit-readiness.
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-sm hover:shadow-md transition-all duration-300 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-rose-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                  <Sparkles className="w-5 h-5 text-white animate-pulse" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+                    How to use our App & Company Billing Policies
+                  </h2>
+                </div>
+              </div>
+              <p className="text-[11.5px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                Welcome to the official IndoTech portal documentation! Here you will find step-by-step app user guidelines, business terms, and invoicing best practices.
               </p>
             </div>
 
             {/* How to Use Our App */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-5 rounded-3xl shadow-2xs space-y-4">
-              <h3 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-                <span className="p-1 px-1.5 bg-sky-50 dark:bg-sky-955 text-sky-600 dark:text-sky-400 rounded-lg text-xs font-bold font-mono">STEP-BY-STEP</span>
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-sm space-y-5">
+              <h3 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                <span className="px-2 py-1 bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded-lg text-[10px] font-black font-mono shadow-sm">STEP-BY-STEP</span>
                 <span>Part A: How to Use Our Billing App</span>
               </h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-                <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 rounded-2xl space-y-1">
-                  <strong className="text-slate-705 dark:text-slate-100 block">1. Establish profile & compliance details</strong>
-                  <p>Click your round profile icon on the top right bar, head to profile dashboard, and register your complete organization details (Company name, logo, signature asset, and unique GSTIN / Tax identification number).</p>
+                <div className="group p-4 bg-slate-50 dark:bg-slate-950/50 hover:bg-sky-50 dark:hover:bg-sky-500/10 border border-slate-100 dark:border-slate-800 rounded-2.5xl space-y-1.5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                  <strong className="text-slate-800 dark:text-slate-100 block text-xs flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-600 flex justify-center items-center font-bold">1</span> Establish Profile</strong>
+                  <p className="font-medium mt-2">Click your round profile icon on the top right bar, head to profile dashboard, and register your complete organization details.</p>
                 </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 rounded-2xl space-y-1">
-                  <strong className="text-slate-705 dark:text-slate-100 block">2. Maintain Client Ledger accounts</strong>
-                  <p>Save corporate clients inside the Clients Ledger to avoid typing contact details repeatedly. You can choose home state indicators for accurate SGST+CGST vs interstate IGST tax auto-generation.</p>
+                <div className="group p-4 bg-slate-50 dark:bg-slate-950/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 border border-slate-100 dark:border-slate-800 rounded-2.5xl space-y-1.5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                  <strong className="text-slate-800 dark:text-slate-100 block text-xs flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 flex justify-center items-center font-bold">2</span> Client Ledger</strong>
+                  <p className="font-medium mt-2">Save corporate clients inside the Clients Ledger to avoid typing contact details repeatedly and set their local addresses.</p>
                 </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 rounded-2xl space-y-1">
-                  <strong className="text-slate-705 dark:text-slate-100 block">3. Draft customized professional invoices</strong>
-                  <p>Select **New Bill** button on the billing dashboard, add custom line deliverables with rates, quantities, descriptions, and discount percentages. Our math engine updates final computations instantly.</p>
+                <div className="group p-4 bg-slate-50 dark:bg-slate-950/50 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 border border-slate-100 dark:border-slate-800 rounded-2.5xl space-y-1.5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                  <strong className="text-slate-800 dark:text-slate-100 block text-xs flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-600 flex justify-center items-center font-bold">3</span> Draft Invoices</strong>
+                  <p className="font-medium mt-2">Select <strong>New Bill</strong> on the dashboard, add line items with rates, quantities, descriptions, and discount percentages.</p>
                 </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 rounded-2xl space-y-1">
-                  <strong className="text-slate-705 dark:text-slate-100 block">4. Generate & Download Official Documents</strong>
-                  <p>Hit the download icon to save a premium, clean PDF invoice. You can also head into the **Accounting Summary** to download collective invoices by 1 Week, 1 Month, or 1 Year intervals in one single click.</p>
+                <div className="group p-4 bg-slate-50 dark:bg-slate-950/50 hover:bg-amber-50 dark:hover:bg-amber-500/10 border border-slate-100 dark:border-slate-800 rounded-2.5xl space-y-1.5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                  <strong className="text-slate-800 dark:text-slate-100 block text-xs flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-600 flex justify-center items-center font-bold">4</span> Official Documents</strong>
+                  <p className="font-medium mt-2">Hit the download icon to save a clean PDF invoice, or use the Accounting Summary for collective reports.</p>
                 </div>
               </div>
             </div>
 
             {/* Terms and conditions card */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-5 rounded-3xl shadow-2xs space-y-4">
-              <h3 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-                <span className="p-1 px-1.5 bg-amber-50 dark:bg-amber-955 text-amber-600 dark:text-amber-400 rounded-lg text-xs font-bold font-mono">T&C</span>
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-sm space-y-5">
+              <h3 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                <span className="px-2 py-1 bg-gradient-to-r from-amber-500 to-rose-500 text-white rounded-lg text-[10px] font-black font-mono shadow-sm">T&C</span>
                 <span>Part B: Company Terms & Conditions for Invoicing</span>
               </h3>
 
-              <div className="space-y-3.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-405">
-                <div className="border-l-2 border-slate-205 dark:border-slate-800 pl-3">
-                  <strong className="text-slate-755 dark:text-slate-100 uppercase tracking-wider text-[9.5px] block mb-0.5">1. Payment Intervals & Net Terms</strong>
-                  <p>Unless explicitly formulated differently in custom contract items, all standard invoices are published under **Net-15 payment terms**. Beneficiaries must complete payments via our electronic banking or QR asset channels within fifteen days of bill publication.</p>
+              <div className="space-y-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-405">
+                <div className="group p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-2xl border-l-2 border-slate-200 dark:border-slate-700 hover:border-amber-400 transition-colors duration-300">
+                  <strong className="text-slate-800 dark:text-slate-100 uppercase tracking-wider text-[10px] block mb-1">1. Payment Intervals & Net Terms</strong>
+                  <p className="font-medium">Unless explicitly formulated differently in custom contract items, all standard invoices are published under <strong>Net-15 payment terms</strong>. Beneficiaries must complete payments via our electronic banking or QR asset channels within fifteen days of bill publication.</p>
                 </div>
-                <div className="border-l-2 border-slate-205 dark:border-slate-800 pl-3">
-                  <strong className="text-slate-755 dark:text-slate-100 uppercase tracking-wider text-[9.5px] block mb-0.5">2. Late Fees & Interest Penalties under Indian MSME Act</strong>
-                  <p>To discourage deliberate delayed cash resolutions, invoices unpaid past Net-15 days are susceptible to late fee interest. Interest is computed at **three times the bank interest rate** declared by the Reserve Bank of India (RBI) from time to time, as per the rules of MSMED Act, 2006.</p>
+                <div className="group p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-2xl border-l-2 border-slate-200 dark:border-slate-700 hover:border-rose-400 transition-colors duration-300">
+                  <strong className="text-slate-800 dark:text-slate-100 uppercase tracking-wider text-[10px] block mb-1">2. Late Fees & Interest Penalties</strong>
+                  <p className="font-medium">To discourage deliberate delayed cash resolutions, invoices unpaid past Net-15 days are susceptible to late fee interest. Interest is computed according to company and regional guidelines.</p>
                 </div>
-                <div className="border-l-2 border-slate-205 dark:border-slate-800 pl-3">
-                  <strong className="text-slate-755 dark:text-slate-100 uppercase tracking-wider text-[9.5px] block mb-0.5">3. Indian GST Compliance & Place of Supply</strong>
-                  <p>Invoices are generated strictly according to state-level compliance. CGST (Central GST 9%) and SGST (State GST 9%) are split for local state transactions (Host and Client located in the same state). Unified IGST (Integrated GST 18%) is applied on interstate transactions based on registered state data.</p>
+                <div className="group p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-2xl border-l-2 border-slate-200 dark:border-slate-700 hover:border-sky-400 transition-colors duration-300">
+                  <strong className="text-slate-800 dark:text-slate-100 uppercase tracking-wider text-[10px] block mb-1">3. Tax Compliance & Place of Supply</strong>
+                  <p className="font-medium">Invoices are generated strictly according to compliance guidelines. Taxes are applied and split based on local vs interstate client relationships.</p>
                 </div>
-                <div className="border-l-2 border-slate-205 dark:border-slate-800 pl-3">
-                  <strong className="text-slate-755 dark:text-slate-100 uppercase tracking-wider text-[9.5px] block mb-0.5">4. Audit reconciliations & revisions</strong>
-                  <p>Invoices must be thoroughly checked by the recipient within seven business days from receiving. Any dispute claims or modifications shall be governed by standard trade rules in Mumbai region jurisdiction.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Indian GST Section */}
-            <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/80 p-4 rounded-3xl space-y-3 shadow-2xs">
-                <span className="text-[10px] font-black uppercase text-indigo-500 block">1. SGST / CGST 18% Rules</span>
-                <p className="text-[10.5px] text-slate-500 dark:text-slate-405 leading-relaxed">
-                  When supplying services within the home state, the 18% GST coefficient is divided equally into **9% CGST** (Central Tax value) and **9% SGST** (State Tax value).
-                </p>
-                <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 rounded-2xl font-mono text-[9px] text-slate-500 dark:text-slate-400">
-                  <span className="font-extrabold text-slate-700 dark:text-slate-200 block mb-1">Tax Calculation Breakdown:</span>
-                  Base Fee: ₹1,00,000<br/>
-                  CGST (9.0%): ₹9,000<br/>
-                  SGST (9.0%): ₹9,000<br/>
-                  <span className="font-extrabold text-indigo-500 block mt-1">Gross Total: ₹1,18,000</span>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/80 p-4 rounded-3xl space-y-3 shadow-2xs">
-                <span className="text-[10px] font-black uppercase text-rose-500 block">2. Inter-State IGST Rules</span>
-                <p className="text-[10.5px] text-slate-500 dark:text-slate-405 leading-relaxed">
-                  When service provision spans interstate client addresses, a unified **18% IGST** coefficient is applied directly. This is remitted fully as Integrated Goods and Services Tax.
-                </p>
-                <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 rounded-2xl font-mono text-[9px] text-slate-500 dark:text-slate-400">
-                  <span className="font-extrabold text-slate-705 block mb-1">Inter-State IGST Calculation:</span>
-                  Base Fee: ₹1,00,000<br/>
-                  IGST (18.0%): ₹18,000<br/>
-                  <span className="font-extrabold text-rose-500 block mt-1.5">Gross Total: ₹1,18,000</span>
-                </div>
-              </div>
-            </section>
-
-            <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/80 p-4 rounded-3xl space-y-2.5 shadow-2xs">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-405 block">Key SAC Reference Codes</span>
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                <div className="py-2 flex justify-between items-center text-[10.5px]">
-                  <div>
-                    <span className="font-mono font-extrabold text-slate-700 dark:text-slate-200">SAC 998311</span>
-                    <span className="text-slate-400 ml-2">Software consulting deliverable review</span>
-                  </div>
-                  <span className="text-[9.5px] font-bold text-sky-600 font-mono bg-sky-50 dark:bg-sky-955 px-1.5 rounded-lg border border-sky-100 dark:border-sky-950">18% GST</span>
-                </div>
-                <div className="py-2 flex justify-between items-center text-[10.5px]">
-                  <div>
-                    <span className="font-mono font-extrabold text-slate-700 dark:text-slate-200">SAC 998313</span>
-                    <span className="text-slate-400 ml-2">General advisory and business structuring advice</span>
-                  </div>
-                  <span className="text-[9.5px] font-bold text-sky-600 font-mono bg-sky-50 dark:bg-sky-955 px-1.5 rounded-lg border border-sky-100 dark:border-sky-950">18% GST</span>
+                <div className="group p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-2xl border-l-2 border-slate-200 dark:border-slate-700 hover:border-emerald-400 transition-colors duration-300">
+                  <strong className="text-slate-800 dark:text-slate-100 uppercase tracking-wider text-[10px] block mb-1">4. Audit Reconciliations & Revisions</strong>
+                  <p className="font-medium">Invoices must be thoroughly checked by the recipient within seven business days from receiving. Any dispute claims or modifications shall be governed by standard trade rules.</p>
                 </div>
               </div>
             </div>
@@ -3048,7 +3054,18 @@ export default function Dashboard({
                   <option value="Advertisements & Marketing">Advertisements & Marketing</option>
                   <option value="Travel & Relocation expense">Travel & Relocation expense</option>
                   <option value="Other Corporate Sundry Expenses">Other Corporate Sundry Expenses</option>
+                  <option value="Custom">Custom (Type below)</option>
                 </select>
+                {expenseCategory === 'Custom' && (
+                  <input
+                    type="text"
+                    placeholder="Enter custom category..."
+                    value={customExpenseCategory}
+                    onChange={(e) => setCustomExpenseCategory(e.target.value)}
+                    className="w-full px-2.5 py-1.5 mt-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 dark:text-white rounded-lg focus:outline-none focus:border-sky-500"
+                    required
+                  />
+                )}
               </div>
 
               <div>

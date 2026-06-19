@@ -52,6 +52,7 @@ export interface Invoice {
   items: InvoiceItem[];
   createdAt: string;
   updatedAt: string;
+  paidDate?: string;
   recurringSettings?: RecurringSettings; // Optional recurring invoice setup
   parentInvoiceId?: string; // Tracks which recurring series this was auto-generated from
   selectedTemplateStyle?: 'minimal' | 'professional' | 'modern' | 'startup' | 'agency' | 'enterprise'; // Selected visual invoice layout style

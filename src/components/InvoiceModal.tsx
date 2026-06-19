@@ -171,13 +171,13 @@ export default function InvoiceModal({
       }
 
       // Geographic/tax options loader
-      setCompanyState(invoice.companyState || localStorage.getItem('makinvoice_tax_company_state') || 'Maharashtra');
-      setCompanyCountry(invoice.companyCountry || localStorage.getItem('makinvoice_tax_company_country') || 'India');
+      setCompanyState(invoice.companyState || profile.state || localStorage.getItem('makinvoice_tax_company_state') || 'Maharashtra');
+      setCompanyCountry(invoice.companyCountry || profile.country || localStorage.getItem('makinvoice_tax_company_country') || 'India');
       setClientState(invoice.clientState || '');
       setClientCountry(invoice.clientCountry || 'India');
       setTaxMode(invoice.taxMode || 'dynamic');
       setCustomTaxName(invoice.customTaxName || 'Custom VAT');
-      setCustomTaxPercentage(invoice.customTaxPercentage !== undefined ? invoice.customTaxPercentage : 18);
+      setCustomTaxPercentage(invoice.customTaxPercentage !== undefined ? invoice.customTaxPercentage : 0);
       setCustomTaxType(invoice.customTaxType || 'generic');
 
       if (invoice.recurringSettings) {
@@ -250,11 +250,25 @@ export default function InvoiceModal({
       // Set locations defaults
       setClientState('');
       setClientCountry('India');
+      setCompanyState(profile.state || localStorage.getItem('makinvoice_tax_company_state') || 'Maharashtra');
+      setCompanyCountry(profile.country || localStorage.getItem('makinvoice_tax_company_country') || 'India');
       setTaxMode('dynamic');
       setCustomTaxName('Custom VAT');
-      setCustomTaxPercentage(18);
+      setCustomTaxPercentage(0);
     }
   }, [invoice, isOpen, defaultTaxRate]);
+
+  // Sync shipping details continuously when shippingSameAsClient is active
+  useEffect(() => {
+    if (shippingSameAsClient) {
+      setShippedToName(clientName);
+      setShippedToPhone(clientPhone);
+      setShippedToCountry(clientCountry);
+      setShippedToState(clientState);
+      setShippedToAddress(clientAddress);
+      setShippedToGstin(clientGstin);
+    }
+  }, [shippingSameAsClient, clientName, clientPhone, clientCountry, clientState, clientAddress, clientGstin]);
 
   // --- DYNAMIC SELECTION LISTS FROM PAST DATA & PRESETS ---
   const pastNames = React.useMemo(() => {
@@ -439,8 +453,13 @@ export default function InvoiceModal({
 
   // --- GEOGRAPHIC TAX CLASSIFICATION ---
   const taxClassification = React.useMemo<TaxClassification>(() => {
-    const targetState = (shippedToState || clientState || '').trim().toLowerCase();
-    const targetCountry = (shippedToCountry || clientCountry || '').trim().toLowerCase() || 'india';
+    const activeShippedToState = shippingSameAsClient ? undefined : shippedToState;
+    const targetState = (activeShippedToState || clientState || '').trim().toLowerCase();
+    
+    const activeShippedToCountry = shippingSameAsClient ? undefined : shippedToCountry;
+    const targetCountry = (activeShippedToCountry || clientCountry || '').trim().toLowerCase() || 'india';
+    const compCountry = (companyCountry || 'india').trim().toLowerCase();
+    const compState = (companyState || '').trim().toLowerCase();
 
     // 1. Foreign Country -> Export / Custom Tax
     if (targetCountry !== 'india' && targetCountry !== 'in') {
@@ -454,12 +473,12 @@ export default function InvoiceModal({
       };
     }
 
-    // 2. India -> Delhi -> Local
-    if (targetState === 'delhi' || targetState === 'dl' || targetState === 'new delhi') {
+    // 2. India -> Same State -> Local (CGST + SGST)
+    if ((compCountry === 'india' || compCountry === 'in') && targetState === compState && targetState !== '') {
       return {
         type: 'local',
         name: 'CGST + SGST',
-        desc: 'Intra-State Supply (Delhi): Divided into 50% Central and 50% State',
+        desc: `Intra-State Supply (${companyState || 'Local'}): Divided into 50% Central and 50% State`,
         rateMultiplier: 1,
         zeroTax: false
       };
@@ -473,7 +492,7 @@ export default function InvoiceModal({
       rateMultiplier: 1,
       zeroTax: false
     };
-  }, [clientState, shippedToState, clientCountry, shippedToCountry, customTaxName, customTaxPercentage]);
+  }, [clientState, shippedToState, clientCountry, shippedToCountry, customTaxName, customTaxPercentage, companyState, companyCountry]);
 
   // Save company config state to localstorage
   useEffect(() => {
@@ -596,12 +615,12 @@ export default function InvoiceModal({
       driverMobile: driverMobile.trim() || undefined,
       station: station.trim() || undefined,
       ewayBillNo: ewayBillNo.trim() || undefined,
-      shippedToName: shippedToName.trim() || undefined,
-      shippedToPhone: shippedToPhone.trim() || undefined,
-      shippedToState: shippedToState.trim() || undefined,
-      shippedToCountry: shippedToCountry.trim() || undefined,
-      shippedToGstin: shippedToGstin.trim() || undefined,
-      shippedToAddress: shippedToAddress.trim() || undefined,
+      shippedToName: shippingSameAsClient ? undefined : (shippedToName.trim() || undefined),
+      shippedToPhone: shippingSameAsClient ? undefined : (shippedToPhone.trim() || undefined),
+      shippedToState: shippingSameAsClient ? undefined : (shippedToState.trim() || undefined),
+      shippedToCountry: shippingSameAsClient ? undefined : (shippedToCountry.trim() || undefined),
+      shippedToGstin: shippingSameAsClient ? undefined : (shippedToGstin.trim() || undefined),
+      shippedToAddress: shippingSameAsClient ? undefined : (shippedToAddress.trim() || undefined),
       customTaxCols,
     };
   };
@@ -633,7 +652,7 @@ export default function InvoiceModal({
 
   const handleAddItem = () => {
     const newItemId = `item_${Date.now()}`;
-    let defaultTax = 18;
+    let defaultTax = 0;
     if (taxClassification.type === 'custom' || taxClassification.zeroTax) defaultTax = 0;
 
     const initialCustomTaxes: Record<string, number> = {};
@@ -702,6 +721,7 @@ export default function InvoiceModal({
       taxTotal: roundedTaxTotal,
       grandTotal: calculatedGrandTotal,
       status,
+      paidDate: status === 'paid' ? (invoice?.paidDate || new Date().toISOString().split('T')[0]) : undefined,
       items,
       createdAt: invoice ? invoice.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -1024,7 +1044,15 @@ export default function InvoiceModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShippingSameAsClient(false)}
+                  onClick={() => {
+                    setShippingSameAsClient(false);
+                    setShippedToName('');
+                    setShippedToPhone('');
+                    setShippedToCountry('');
+                    setShippedToState('');
+                    setShippedToAddress('');
+                    setShippedToGstin('');
+                  }}
                   className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-colors ${!shippingSameAsClient ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
                 >
                   No
@@ -1039,11 +1067,52 @@ export default function InvoiceModal({
                 </h3>
                 <input type="text" value={shippedToName} onChange={e => setShippedToName(e.target.value)} placeholder="Name" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
                 <div className="grid grid-cols-2 gap-3">
-                  <input type="text" value={shippedToPhone} onChange={e => setShippedToPhone(e.target.value)} placeholder="Phone" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
-                  <input type="text" value={shippedToState} onChange={e => setShippedToState(e.target.value)} placeholder="State" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
+                  <select
+                    value={Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode || ''}
+                    onChange={(e) => {
+                      const selectedCountry = Country.getCountryByCode(e.target.value);
+                      if (selectedCountry) {
+                        setShippedToCountry(selectedCountry.name);
+                        setShippedToState(''); // Reset state when country changes
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none"
+                  >
+                    <option value="" disabled>Country</option>
+                    {Country.getAllCountries().map((c) => (
+                      <option key={c.isoCode} value={c.isoCode}>{c.name}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={(() => {
+                      const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode;
+                      if (!cCode) return '';
+                      return State.getStatesOfCountry(cCode).find(s => s.name === shippedToState)?.isoCode || '';
+                    })()}
+                    onChange={(e) => {
+                      const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode;
+                      if (cCode) {
+                        const selectedState = State.getStateByCodeAndCountry(e.target.value, cCode);
+                        if (selectedState) {
+                          setShippedToState(selectedState.name);
+                        }
+                      }
+                    }}
+                    disabled={!shippedToCountry}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none disabled:opacity-50"
+                  >
+                    <option value="" disabled>State</option>
+                    {(() => {
+                      const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode;
+                      if (!cCode) return null;
+                      return State.getStatesOfCountry(cCode).map((st) => (
+                        <option key={st.isoCode} value={st.isoCode}>{st.name}</option>
+                      ));
+                    })()}
+                  </select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <input type="text" value={shippedToCountry} onChange={e => setShippedToCountry(e.target.value)} placeholder="Country" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
+                  <input type="text" value={shippedToPhone} onChange={e => setShippedToPhone(e.target.value)} placeholder="Phone" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
                   <input type="text" value={shippedToGstin} onChange={e => setShippedToGstin(e.target.value)} placeholder="GSTIN / UIN" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
                 </div>
                 <textarea value={shippedToAddress} onChange={e => setShippedToAddress(e.target.value)} placeholder="Shipping Address" rows={1} className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none resize-none" />
@@ -1202,7 +1271,12 @@ export default function InvoiceModal({
                         id="custom-tax-name"
                         type="text"
                         value={customTaxName}
-                        onChange={(e) => setCustomTaxName(e.target.value)}
+                        onChange={(e) => {
+                          setCustomTaxName(e.target.value);
+                          if (customTaxCols.length === 1) {
+                            setCustomTaxCols([e.target.value || 'Tax']);
+                          }
+                        }}
                         placeholder="e.g. VAT"
                         className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs rounded-lg dark:text-white focus:outline-none focus:border-sky-500"
                       />
@@ -1800,12 +1874,12 @@ export default function InvoiceModal({
                       Same as Billed To
                     </button>
                   </div>
-                  <EditableField value={shippedToName} onSave={setShippedToName} placeholder="Shipped To Name" className="font-bold text-sm text-gray-900" />
-                  <div className="flex items-center mt-1"><span className="w-24 text-gray-600">Party Mobile No</span><span className="mr-1">:</span> <EditableField value={shippedToPhone} onSave={setShippedToPhone} className="text-[11px]" /></div>
-                  <div className="flex items-center"><span className="w-24 text-gray-600">Country</span><span className="mr-1">:</span> <EditableField type="select" value={Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode || ''} options={Country.getAllCountries().map(c => ({ value: c.isoCode, label: c.name }))} onSave={(val) => { const selected = Country.getCountryByCode(val); if(selected) { setShippedToCountry(selected.name); setShippedToState(''); } }} placeholder="Select Country" className="text-[11px]" /></div>
-                  <div className="flex items-center"><span className="w-24 text-gray-600">State</span><span className="mr-1">:</span> <EditableField type="select" value={(() => { const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode; if (!cCode) return ''; return State.getStatesOfCountry(cCode).find(s => s.name === shippedToState)?.isoCode || ''; })()} options={(() => { const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode; if (!cCode) return []; return State.getStatesOfCountry(cCode).map(s => ({ value: s.isoCode, label: s.name })); })()} onSave={(val) => { const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode; if(cCode) { const selected = State.getStateByCodeAndCountry(val, cCode); if(selected) setShippedToState(selected.name); } }} placeholder="Select State" className="text-[11px]" /></div>
-                  <div className="flex items-start"><span className="w-24 text-gray-600 pt-1">Address</span><span className="mr-1 pt-1">:</span> <EditableField value={shippedToAddress} onSave={setShippedToAddress} type="textarea" className="text-[11px] leading-tight" /></div>
-                  <div className="flex items-center"><span className="w-24 text-gray-600">GSTIN / UIN</span><span className="mr-1">:</span> <EditableField value={shippedToGstin} onSave={setShippedToGstin} className="text-[11px] font-mono" /></div>
+                  <EditableField value={shippedToName} onSave={(val) => { setShippedToName(val); setShippingSameAsClient(false); }} placeholder="Shipped To Name" className="font-bold text-sm text-gray-900" />
+                  <div className="flex items-center mt-1"><span className="w-24 text-gray-600">Party Mobile No</span><span className="mr-1">:</span> <EditableField value={shippedToPhone} onSave={(val) => { setShippedToPhone(val); setShippingSameAsClient(false); }} className="text-[11px]" /></div>
+                  <div className="flex items-center"><span className="w-24 text-gray-600">Country</span><span className="mr-1">:</span> <EditableField type="select" value={Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode || ''} options={Country.getAllCountries().map(c => ({ value: c.isoCode, label: c.name }))} onSave={(val) => { const selected = Country.getCountryByCode(val); if(selected) { setShippedToCountry(selected.name); setShippedToState(''); setShippingSameAsClient(false); } }} placeholder="Select Country" className="text-[11px]" /></div>
+                  <div className="flex items-center"><span className="w-24 text-gray-600">State</span><span className="mr-1">:</span> <EditableField type="select" value={(() => { const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode; if (!cCode) return ''; return State.getStatesOfCountry(cCode).find(s => s.name === shippedToState)?.isoCode || ''; })()} options={(() => { const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode; if (!cCode) return []; return State.getStatesOfCountry(cCode).map(s => ({ value: s.isoCode, label: s.name })); })()} onSave={(val) => { const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode; if(cCode) { const selected = State.getStateByCodeAndCountry(val, cCode); if(selected) { setShippedToState(selected.name); setShippingSameAsClient(false); } } }} placeholder="Select State" className="text-[11px]" /></div>
+                  <div className="flex items-start"><span className="w-24 text-gray-600 pt-1">Address</span><span className="mr-1 pt-1">:</span> <EditableField value={shippedToAddress} onSave={(val) => { setShippedToAddress(val); setShippingSameAsClient(false); }} type="textarea" className="text-[11px] leading-tight" /></div>
+                  <div className="flex items-center"><span className="w-24 text-gray-600">GSTIN / UIN</span><span className="mr-1">:</span> <EditableField value={shippedToGstin} onSave={(val) => { setShippedToGstin(val); setShippingSameAsClient(false); }} className="text-[11px] font-mono" /></div>
                 </div>
               </div>
 
@@ -1878,11 +1952,13 @@ export default function InvoiceModal({
                             <EditableField 
                               value={colName} 
                               onSave={(val) => {
+                                if (!val.trim()) return;
+                                if (colIdx === 0) setCustomTaxName(val);
                                 const newCols = [...customTaxCols];
                                 const oldVal = newCols[colIdx];
-                                newCols[colIdx] = val || 'Tax';
+                                newCols[colIdx] = val;
                                 setCustomTaxCols(newCols);
-                                // Also update existing items
+                                // Update items that had this old tax col
                                 setItems(items.map(item => {
                                   const updated = { ...item };
                                   if (updated.customTaxes && oldVal in updated.customTaxes) {
@@ -2057,17 +2133,17 @@ export default function InvoiceModal({
                   {taxClassification.type === 'local' ? (
                     <>
                       <div className="flex justify-between text-gray-700">
-                        <span>CGST ({items.length > 0 ? (items[0].customTaxes?.['CGST'] ?? (items[0].taxPercentage / 2)) : 9}%)</span>
+                        <span>CGST ({items.length > 0 ? (items[0].customTaxes?.['CGST'] ?? (items[0].taxPercentage / 2)) : 0}%)</span>
                         <span className="font-mono">{currencySymbol} {items.reduce((sum, item) => sum + (item.rate * item.quantity * (1 - (item.discountPercentage || 0) / 100) * docDiscountRatio * (item.customTaxes?.['CGST'] ?? (item.taxPercentage / 2)) / 100), 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-gray-700 border-b border-gray-200 pb-1.5">
-                        <span>SGST ({items.length > 0 ? (items[0].customTaxes?.['SGST'] ?? (items[0].taxPercentage / 2)) : 9}%)</span>
+                        <span>SGST ({items.length > 0 ? (items[0].customTaxes?.['SGST'] ?? (items[0].taxPercentage / 2)) : 0}%)</span>
                         <span className="font-mono">{currencySymbol} {items.reduce((sum, item) => sum + (item.rate * item.quantity * (1 - (item.discountPercentage || 0) / 100) * docDiscountRatio * (item.customTaxes?.['SGST'] ?? (item.taxPercentage / 2)) / 100), 0).toFixed(2)}</span>
                       </div>
                     </>
                   ) : taxClassification.type === 'interstate' ? (
                     <div className="flex justify-between text-gray-700 border-b border-gray-200 pb-1.5">
-                      <span>IGST ({items.length > 0 ? items[0].taxPercentage : 18}%)</span>
+                      <span>IGST ({items.length > 0 ? items[0].taxPercentage : 0}%)</span>
                       <span className="font-mono">{currencySymbol} {roundedTaxTotal.toFixed(2)}</span>
                     </div>
                   ) : (

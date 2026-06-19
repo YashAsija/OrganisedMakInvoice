@@ -245,8 +245,22 @@ button:active, [role="button"]:active {
   }
 
   /* Keep line-height and text spacing crisp on physical paper */
+  /* Keep line-height and text spacing crisp on physical paper */
   tr, td, th {
     page-break-inside: avoid !important;
   }
 }
 
+/* ==========================================
+   HIDE SCROLLBARS GLOBALLY
+   ========================================== */
+/* Hide scrollbar for Chrome, Safari and Opera */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
