@@ -447,7 +447,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto">
       <div 
         id="profile-modal" 
-        className="relative w-full max-w-4xl bg-white dark:bg-slate-900 text-slate-805 dark:text-white rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col max-h-[95dvh] my-auto"
+        className="relative w-full max-w-6xl bg-white dark:bg-slate-900 text-slate-805 dark:text-white rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col max-h-[95dvh] my-auto"
       >
         {/* Hidden File Picker reference */}
         <input 
@@ -500,9 +500,75 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           </button>
         </div>
 
-        {/* Modal Form scroll container */}
-        <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Modal Form container with Sidebar */}
+        <form onSubmit={handleFormSubmit} className="flex-1 overflow-hidden flex flex-col md:flex-row">
           
+          {/* LEFT SIDEBAR (Tabs) */}
+          {!isOnboarding && (
+            <div className="md:w-64 lg:w-72 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 flex flex-row md:flex-col p-4 md:p-6 gap-2 overflow-x-auto md:overflow-y-auto shrink-0 hide-scrollbar">
+              <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2 hidden md:block px-2">Settings Menu</div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('company')}
+                className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
+                  activeTab === 'company'
+                    ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
+                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
+                }`}
+              >
+                <Building2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Company Profile</span>
+                <span className="sm:hidden">Company</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('banking')}
+                className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
+                  activeTab === 'banking'
+                    ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
+                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
+                }`}
+              >
+                <Landmark className="w-4 h-4" />
+                <span className="hidden sm:inline">Banking Details</span>
+                <span className="sm:hidden">Banking</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('billing')}
+                className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
+                  activeTab === 'billing'
+                    ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
+                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
+                }`}
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span className="hidden sm:inline">Billing Config</span>
+                <span className="sm:hidden">Billing</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('subscription')}
+                className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
+                  activeTab === 'subscription'
+                    ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
+                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
+                }`}
+              >
+                <Award className="w-4 h-4" />
+                <span className="hidden sm:inline">Subscription</span>
+                <span className="sm:hidden">Sub</span>
+              </button>
+            </div>
+          )}
+
+          {/* MAIN SCROLLABLE CONTENT */}
+          <div className="flex-1 flex flex-col overflow-y-auto">
+            <div className="p-6 md:p-8 space-y-8 flex-1">
+
+          {/* TAB 1: COMPANY */}
+          {activeTab === 'company' && (
+            <div className="space-y-6 animate-fade-in text-slate-805 dark:text-white">
           {/* TOP SECTION: Logo picker and Brand Identity Indicator Card */}
           <div className="grid md:grid-cols-12 gap-5 items-stretch">
             
@@ -586,54 +652,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
           </div>
 
-          {/* TAB SEGMENTED SWITCHER CONTROL */}
-          {!isOnboarding && (
-            <div className="p-1 bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-850 rounded-2xl flex flex-wrap gap-1 leading-none select-none">
-              <button
-                type="button"
-                onClick={() => setActiveTab('company')}
-                className={`flex-1 min-w-[80px] py-2.5 px-3 rounded-xl text-center text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  activeTab === 'company'
-                    ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
-                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-900/40'
-                }`}
-              >
-                <Building2 className="w-3.5 h-3.5" />
-                Company
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('banking')}
-                className={`flex-1 min-w-[80px] py-2.5 px-3 rounded-xl text-center text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  activeTab === 'banking'
-                    ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
-                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-900/40'
-                }`}
-              >
-                <Landmark className="w-3.5 h-3.5" />
-                Banking
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('billing')}
-                className={`flex-1 min-w-[80px] py-2.5 px-3 rounded-xl text-center text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  activeTab === 'billing'
-                    ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
-                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-900/40'
-                }`}
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5" />
-                Billing
-              </button>
-            </div>
-          )}
 
-          {/* TAB CONTENT PANELS */}
-          
-          {/* TAB 1: COMPANY */}
-          {activeTab === 'company' && (
-            <div className="space-y-4 animate-fade-in text-slate-805 dark:text-white">
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="company-name" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Business Name</label>
                   <input 
@@ -643,7 +663,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. INTEZ Systems"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
                   />
                 </div>
                 <div>
@@ -654,30 +674,19 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="e.g. INTEZ"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
                   />
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="company-gstin" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">GSTIN / Tax ID</label>
-                  <input 
-                    id="company-gstin"
-                    type="text"
-                    value={taxId}
-                    onChange={(e) => setTaxId(e.target.value)}
-                    placeholder="e.g. GSTIN99238"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-mono"
-                  />
-                </div>
+              <div className="grid md:grid-cols-3 gap-6">
                 <div>
                   <label htmlFor="company-country" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Country</label>
                   <select 
                     id="company-country"
                     value={Country.getAllCountries().find(c => c.name === country)?.isoCode || ''}
                     onChange={(e) => handleCountryChange(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium cursor-pointer"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium cursor-pointer"
                   >
                     <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-500">Select Country</option>
                     {Country.getAllCountries().map((c) => (
@@ -685,9 +694,6 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     ))}
                   </select>
                 </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="company-state" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">State</label>
                   <select 
@@ -698,7 +704,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                       return State.getStatesOfCountry(cCode).find(s => s.name === state)?.isoCode || '';
                     })()}
                     onChange={(e) => handleStateChange(e.target.value, country)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium cursor-pointer"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium cursor-pointer"
                   >
                     <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-500">Select State</option>
                     {(() => {
@@ -718,7 +724,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     value={stateCode}
                     onChange={(e) => setStateCode(e.target.value)}
                     placeholder="e.g. MH, 07"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-slate-50 dark:bg-slate-900/50 text-sm text-slate-805 dark:text-white focus:outline-none transition-all font-mono font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-slate-50 dark:bg-slate-900/50 text-sm text-slate-805 dark:text-white focus:outline-none shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-mono font-medium"
                   />
                 </div>
               </div>
@@ -731,11 +737,11 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="abcd, Main Business Block, Silicon Valley"
                   rows={2}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all resize-none"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 resize-none"
                 />
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="company-currency-symbol" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Currency Symbol</label>
                   <input 
@@ -744,7 +750,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     value={currencySymbol}
                     onChange={(e) => setCurrencySymbol(e.target.value)}
                     placeholder="e.g. Rp, $, ₹..."
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
                   />
                 </div>
                 <div>
@@ -755,13 +761,13 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value.replace(/[^\d\s+]/g, ''))}
                     placeholder="e.g. 9899728185"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
                   />
                   <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1">Mobile number is linked with login, orders and billing records.</p>
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-3 gap-6">
                 <div>
                   <label htmlFor="company-email" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Email *</label>
                   <input 
@@ -771,7 +777,18 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="e.g. crixlayxd@gmail.com"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="company-gstin" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">GSTIN / Tax ID</label>
+                  <input 
+                    id="company-gstin"
+                    type="text"
+                    value={taxId}
+                    onChange={(e) => setTaxId(e.target.value)}
+                    placeholder="e.g. GSTIN99238"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-mono"
                   />
                 </div>
                 <div>
@@ -782,7 +799,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     value={companyCode}
                     onChange={(e) => setCompanyCode(e.target.value)}
                     placeholder="e.g. C0045"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-mono font-medium uppercase"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-mono font-medium uppercase"
                   />
                 </div>
               </div>
@@ -873,8 +890,13 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
           {/* TAB 2: BANKING */}
           {activeTab === 'banking' && (
-            <div className="space-y-4 animate-fade-in text-slate-805 dark:text-white">
-              <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-6 animate-fade-in text-slate-805 dark:text-white">
+              <div className="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Landmark className="w-5 h-5 text-sky-500" />
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white">Bank Account Details</h3>
+                </div>
+              <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="bank-name" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Bank Name</label>
                   <input 
@@ -883,7 +905,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
                     placeholder="e.g. Axs"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
                   />
                 </div>
                 <div>
@@ -894,12 +916,12 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     value={accountNumber}
                     onChange={(e) => setAccountNumber(e.target.value)}
                     placeholder="e.g. 8612345678"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-mono font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-mono font-medium"
                   />
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="bank-ifsc" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">IFSC</label>
                   <input 
@@ -908,7 +930,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     value={ifsc}
                     onChange={(e) => setIfsc(e.target.value)}
                     placeholder="e.g. FVER1213454"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-mono uppercase font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-mono uppercase font-medium"
                   />
                 </div>
                 <div>
@@ -919,11 +941,12 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     value={upiId}
                     onChange={(e) => setUpiId(e.target.value)}
                     placeholder="e.g. uyt6543"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
                   />
                 </div>
               </div>
 
+              </div> {/* End Banking Card */}
               {/* Inline layout trigger button as seen in reference Image 3 */}
               {!isOnboarding && (
                 <div className="pt-4">
@@ -940,17 +963,21 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           )}
           {/* TAB 3: BILLING / CUSTOMIZATION */}
           {activeTab === 'billing' && (
-            <div className="space-y-4 animate-fade-in text-slate-805 dark:text-white">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="billing-prefix" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Invoice Prefix</label>
+            <div className="space-y-8 animate-fade-in text-slate-805 dark:text-white">
+              
+              {/* Card 1: Invoice Numbers */}
+              <div className="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 space-y-6 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-300">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Invoice Numbering</h3>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="billing-prefix" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Invoice Prefix</label>
                   <input 
                     id="billing-prefix"
                     type="text"
                     value={invoicePrefix}
                     onChange={(e) => setInvoicePrefix(e.target.value)}
                     placeholder="e.g. INV"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium uppercase"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
                   />
                 </div>
                 <div>
@@ -961,19 +988,23 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     value={startingInvoiceNumber}
                     onChange={(e) => setStartingInvoiceNumber(e.target.value)}
                     placeholder="1"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
                   />
                 </div>
               </div>
+            </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="billing-posted-edit" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Posted Invoice Edit</label>
+              {/* Card 2: Permissions & Features */}
+              <div className="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 space-y-6 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-300">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Permissions & Features</h3>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="billing-posted-edit" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Posted Invoice Edit</label>
                   <select 
                     id="billing-posted-edit"
                     value={postedInvoiceEdit}
                     onChange={(e) => setPostedInvoiceEdit(e.target.value as any)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium cursor-pointer"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium cursor-pointer"
                   >
                     <option value="Enabled" className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">Enabled</option>
                     <option value="Disabled" className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">Disabled</option>
@@ -985,7 +1016,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     id="billing-rate-edit"
                     value={materialRateEdit}
                     onChange={(e) => setMaterialRateEdit(e.target.value as any)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium cursor-pointer"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium cursor-pointer"
                   >
                     <option value="Enabled" className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">Enabled</option>
                     <option value="Disabled" className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">Disabled</option>
@@ -993,14 +1024,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="billing-categ-edit" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Material Categorization</label>
                   <select 
                     id="billing-categ-edit"
                     value={materialCategorization}
                     onChange={(e) => setMaterialCategorization(e.target.value as any)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium cursor-pointer"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium cursor-pointer"
                   >
                     <option value="Optional" className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">Optional</option>
                     <option value="Required" className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">Required</option>
@@ -1015,20 +1046,25 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     value={defaultTaxRate}
                     onChange={(e) => setDefaultTaxRate(parseFloat(e.target.value) || 0)}
                     placeholder="0"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
                   />
                 </div>
               </div>
+            </div>
 
-              <div>
-                <label htmlFor="billing-notes" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Default Notes</label>
+              {/* Card 3: Default Text & Terms */}
+              <div className="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 space-y-6 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-300">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Default Text & Terms</h3>
+                <div className="space-y-6">
+                  <div>
+                    <label htmlFor="billing-notes" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Default Notes</label>
                 <textarea 
                   id="billing-notes"
                   value={defaultNotes}
                   onChange={(e) => setDefaultNotes(e.target.value)}
                   placeholder="Thank you for your business."
                   rows={2}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all resize-none"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 resize-none"
                 />
               </div>
 
@@ -1040,10 +1076,13 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   onChange={(e) => setDefaultTerms(e.target.value)}
                   placeholder="Goods once sold will not be taken back or exchanged."
                   rows={2}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all resize-none"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 resize-none"
                 />
               </div>
 
+                </div>
+              </div>
+              
               {/* INTEGRATING OLD DESIGNER / THEME PROPS TO PRESERVE CAPABILITIES */}
               <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 space-y-4">
                 <div>
@@ -1051,7 +1090,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   <p className="text-[10px] text-slate-550 dark:text-slate-400">Preserve dynamic layout rendering setups for clients.</p>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="custom-font" className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Invoice Typography</label>
                     <select
@@ -1182,8 +1221,10 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
             </div>
           )}
 
-          {/* Bottom Dialog controls */}
-          <div className="pt-5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3 bg-slate-50 dark:bg-slate-950 p-6 -mx-6 -mb-6 rounded-b-[2rem]">
+            </div> {/* End of scrollable padding area */}
+
+            {/* Bottom Dialog controls */}
+            <div className="border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3 bg-white dark:bg-slate-900 p-5 md:px-8 mt-auto shrink-0 z-10 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
             {!isOnboarding && (
               <button
                 type="button"
@@ -1223,8 +1264,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 {isOnboarding ? 'Save Details' : 'Save Settings'}
               </button>
             )}
+            </div>
           </div>
-
         </form>
       </div>
     </div>

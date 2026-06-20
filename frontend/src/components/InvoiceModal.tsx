@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown } from 'lucide-react';
-import { Invoice, InvoiceItem, InvoiceStatus, DiscountType, PresetItem, ClientProfile, RecurringInterval, BusinessProfile } from '../types';
+import { Invoice, TaxClassification, InvoiceItem, InvoiceStatus, DiscountType, PresetItem, ClientProfile, RecurringInterval, BusinessProfile } from '../types';
 import { EditableField } from './EditableField';
 import { exportInvoicePDF } from '../lib/pdfExporter';
+import { toPng } from 'html-to-image';
+import jsPDF from 'jspdf';
+import { LivePreview } from './TemplateBuilder/LivePreview';
 import { Country, State } from 'country-state-city';
 
 interface InvoiceModalProps {
@@ -115,7 +118,7 @@ export default function InvoiceModal({
   const [taxMode, setTaxMode] = useState<'dynamic' | 'custom'>(invoice?.taxMode || 'dynamic');
   const [customTaxName, setCustomTaxName] = useState(invoice?.customTaxName || 'Tax');
   const [customTaxPercentage, setCustomTaxPercentage] = useState(invoice?.customTaxPercentage || 0);
-  const [customTaxType, setCustomTaxType] = useState<'local' | 'interstate'>(invoice?.customTaxType || 'local');
+  const [customTaxType, setCustomTaxType] = useState<TaxClassification>(invoice?.customTaxType || 'local');
   const [additionalTaxes, setAdditionalTaxes] = useState<{id: string, name: string, rate: number}[]>(invoice?.additionalTaxes || []);
   const [customTaxCols, setCustomTaxCols] = useState<string[]>(invoice?.customTaxCols && invoice.customTaxCols.length > 0 ? invoice.customTaxCols : ['Tax']);
 

@@ -296,7 +296,7 @@ export default function Homepage({
       <div className="max-w-[1400px] mx-auto px-2 sm:px-2 lg:px-0 py-8 md:pb-16 lg:pt-6 relative">
         
         {/* Desktop Navigation Area */}
-        <nav className="hidden sm:flex items-center justify-between gap-4 mb-12 border-b pb-5 border-slate-200/50 dark:border-neutral-800 bg-transparent relative z-20">
+        <nav className="hidden sm:flex items-center justify-between gap-4 mb-12 border-b pb-5 border-slate-200/50 dark:border-neutral-800 bg-transparent relative z-50">
           
           {/* Logo Brand */}
           <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
@@ -407,16 +407,13 @@ export default function Homepage({
             >
               Get Started
             </button>
-            <span className="text-xs text-slate-400 font-bold hidden xl:flex items-center gap-1 border-l pl-3 border-slate-200 dark:border-neutral-800">
-              <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
-              {isOnline ? 'Cloud active' : 'Offline'}
-            </span>
+
           </div>
 
         </nav>
 
         {/* Mobile Navigation Area */}
-        <nav className="flex sm:hidden flex-col gap-3.5 mb-12 border-b pb-5 border-slate-200/50 dark:border-neutral-800 bg-transparent relative z-20">
+        <nav className="flex sm:hidden flex-col gap-3.5 mb-12 border-b pb-5 border-slate-200/50 dark:border-neutral-800 bg-transparent relative z-50">
           
           {/* Mobile Top Row: Logo & Authentication Buttons */}
           <div className="flex items-center justify-between w-full">

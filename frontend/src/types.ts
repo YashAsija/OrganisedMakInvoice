@@ -56,6 +56,7 @@ export interface Invoice {
   recurringSettings?: RecurringSettings; // Optional recurring invoice setup
   parentInvoiceId?: string; // Tracks which recurring series this was auto-generated from
   selectedTemplateStyle?: 'minimal' | 'professional' | 'modern' | 'startup' | 'agency' | 'enterprise'; // Selected visual invoice layout style
+  selectedCustomTemplateId?: string;
   qrCodeTriggerUrl?: string; // Optional custom payment link (UPI, PayPal, Stripe etc)
   companyState?: string;
   companyCountry?: string;
@@ -82,7 +83,6 @@ export interface Invoice {
   shippedToGstin?: string;
   shippedToAddress?: string;
   clientGstin?: string;
-  customTaxCols?: string[];
 }
 
 export interface ClientProfile {
@@ -159,3 +159,72 @@ export interface PresetItem {
   quantity?: number;
 }
 
+export type TemplateSectionId = 'header' | 'companyInfo' | 'invoiceInfo' | 'billTo' | 'shipTo' | 'transport' | 'productTable' | 'taxEngine' | 'payment' | 'amountInWords' | 'terms' | 'signature' | 'footer';
+
+export interface TemplateSection {
+  id: TemplateSectionId;
+  visible: boolean;
+  order: number; // For drag and drop ordering
+  gridColumnSpan: number; // 1 to 12 for grid layouts
+  customLabels: Record<string, string>; // mapping internal field keys to custom labels
+  customStyles: Record<string, string>; // generic css overrides per section
+}
+
+export interface InvoiceTemplate {
+  id: string;
+  name: string;
+  description: string;
+  isDefault?: boolean;
+  category: 'Default' | 'GST' | 'Service' | 'Retail' | 'User';
+  
+  layout: {
+    type: 'Classic' | 'Modern' | 'Minimal' | 'Corporate' | 'GST Standard' | 'Retail' | 'Fully Custom';
+    pageSize: 'A4' | 'Letter';
+    orientation: 'Portrait' | 'Landscape';
+    margins: 'Compact' | 'Standard' | 'Wide' | 'Custom';
+    watermark: {
+      enabled: boolean;
+      text: string;
+      opacity: number;
+      position: 'Center' | 'Tile';
+      rotation: number;
+    }
+  };
+
+  sections: Record<TemplateSectionId, TemplateSection>;
+  
+  config: {
+    header: { showLogo: boolean; logoPosition: 'Left'|'Center'|'Right'; logoWidth: number; logoHeight: number; titleAlignment: 'Left'|'Center'|'Right'; invoiceTitle: string; };
+    company: { fields: string[]; };
+    invoiceInfo: { fields: string[]; customFields: { id: string; label: string; type: string; value: string; }[]; position: 'Left'|'Center'|'Right'; };
+    client: { fields: string[]; };
+    shipping: { fields: string[]; sameAsBilling: boolean; };
+    transport: { fields: string[]; };
+    table: {
+      columns: { id: string; visible: boolean; label: string; type: 'Text'|'Number'|'Currency'|'Percentage'|'Formula'; formula?: string; width?: string; order: number; }[];
+    };
+    tax: { showTaxableAmount: boolean; showCgstSgst: boolean; showIgst: boolean; showCess: boolean; showDiscount: boolean; showRoundOff: boolean; showTotal: boolean; enableHsnSummary: boolean; enableGstSummary: boolean; enableTaxBreakdown: boolean; };
+    payment: { generateQrCode: boolean; enableInstructions: boolean; customNote: string; };
+    amountInWords: { format: 'Indian' | 'International'; enabled: boolean; };
+    terms: { presetId: string; customText: string; };
+    signature: { showSignature: boolean; showStamp: boolean; position: 'Left'|'Center'|'Right'; width: number; height: number; signatoryName: string; designation: string; };
+    footer: { message: string; thankYouNote: string; supportContact: string; website: string; showPageNumbers: boolean; showGeneratedBy: boolean; customText: string; };
+  };
+
+  styleConfig: {
+    primaryColor: string;
+    secondaryColor: string;
+    accentColor: string;
+    fontFamily: string;
+    spacing: 'Compact' | 'Normal' | 'Spacious';
+    borderStyle: 'None' | 'Light' | 'Medium' | 'Heavy';
+    roundedCorners: boolean;
+    sectionBackgroundColors: Record<string, string>;
+    alternatingRowColors: boolean;
+    tableHeaderBackground: string;
+    tableHeaderTextColor: string;
+  };
+}
+
+
+export type TaxClassification = any;

@@ -36,11 +36,13 @@ import {
   Printer as PrintIcon,
   Smartphone,
   Check,
-  Menu
+  Menu,
+  Layout
 } from 'lucide-react';
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from '../types';
 import { BUSINESS_TEMPLATES } from '../lib/presets';
 import { exportInvoicePDF, exportCollectiveReportPDF } from '../lib/pdfExporter';
+import TemplateManager from './TemplateManager';
 
 interface DashboardProps {
   invoices: Invoice[];
@@ -397,9 +399,9 @@ export default function Dashboard({
           
           <button
             onClick={() => handleTabClick('dashboard')}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-semibold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
               activeTab === 'dashboard'
-                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-extrabold'
+                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-black'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
             }`}
           >
@@ -411,14 +413,26 @@ export default function Dashboard({
 
           <button
             onClick={() => handleTabClick('learn')}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-semibold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
               activeTab === 'learn'
-                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-extrabold'
+                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-black'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
             }`}
           >
             <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
             <span>Learn MakInvoice</span>
+          </button>
+
+          <button
+            onClick={() => handleTabClick('invoice_templates')}
+            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+              activeTab === 'invoice_templates'
+                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-black'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+            }`}
+          >
+            <Layout className="w-4 h-4 text-indigo-500" />
+            <span>Invoice Template Builder</span>
           </button>
 
           <button
@@ -434,9 +448,9 @@ export default function Dashboard({
 
           <button
             onClick={() => handleTabClick('invoices')}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-semibold transition-all flex items-center justify-between cursor-pointer ${
+            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
               activeTab === 'invoices'
-                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-extrabold'
+                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-black'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
             }`}
           >
@@ -451,9 +465,9 @@ export default function Dashboard({
 
           <button
             onClick={() => handleTabClick('clients')}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-semibold transition-all flex items-center justify-between cursor-pointer ${
+            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
               activeTab === 'clients'
-                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-extrabold'
+                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-black'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
             }`}
           >
@@ -468,9 +482,9 @@ export default function Dashboard({
 
           <button
             onClick={() => handleTabClick('reports')}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-semibold transition-all flex items-center justify-between cursor-pointer ${
+            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
               activeTab === 'reports'
-                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-extrabold'
+                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-black'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
             }`}
           >
@@ -496,7 +510,7 @@ export default function Dashboard({
             <div className="pl-2 space-y-0.5 border-l border-slate-100 dark:border-slate-800 ml-1.5 my-1">
               <button
                 onClick={() => handleTabClick('master_vendor')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-all block cursor-pointer ${
+                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
                   activeTab === 'master_vendor' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
@@ -504,7 +518,7 @@ export default function Dashboard({
               </button>
               <button
                 onClick={() => handleTabClick('master_hsn')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-all block cursor-pointer ${
+                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
                   activeTab === 'master_hsn' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
@@ -512,7 +526,7 @@ export default function Dashboard({
               </button>
               <button
                 onClick={() => handleTabClick('master_gl')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-all block cursor-pointer ${
+                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
                   activeTab === 'master_gl' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
@@ -537,7 +551,7 @@ export default function Dashboard({
             <div className="pl-2 space-y-0.5 border-l border-slate-100 dark:border-slate-800 ml-1.5 my-1">
               <button
                 onClick={() => handleTabClick('catalog_material')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-all block cursor-pointer ${
+                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
                   activeTab === 'catalog_material' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
@@ -545,7 +559,7 @@ export default function Dashboard({
               </button>
               <button
                 onClick={() => handleTabClick('catalog_category')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-all block cursor-pointer ${
+                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
                   activeTab === 'catalog_category' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
@@ -553,7 +567,7 @@ export default function Dashboard({
               </button>
               <button
                 onClick={() => handleTabClick('catalog_sub_category')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-all block cursor-pointer ${
+                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
                   activeTab === 'catalog_sub_category' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
@@ -561,7 +575,7 @@ export default function Dashboard({
               </button>
               <button
                 onClick={() => handleTabClick('catalog_mapping')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-all block cursor-pointer ${
+                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
                   activeTab === 'catalog_mapping' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
@@ -569,7 +583,7 @@ export default function Dashboard({
               </button>
               <button
                 onClick={() => handleTabClick('catalog_packing_unit')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-all block cursor-pointer ${
+                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
                   activeTab === 'catalog_packing_unit' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
@@ -577,7 +591,7 @@ export default function Dashboard({
               </button>
               <button
                 onClick={() => handleTabClick('catalog_measurement_unit')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-all block cursor-pointer ${
+                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
                   activeTab === 'catalog_measurement_unit' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
@@ -2018,6 +2032,13 @@ export default function Dashboard({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ------------------ TAB: INVOICE TEMPLATES ROUTE ------------------ */}
+        {activeTab === 'invoice_templates' && (
+          <div className="space-y-4">
+            <TemplateManager />
           </div>
         )}
 

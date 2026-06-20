@@ -89,6 +89,28 @@ function numberToWords(num: number): string {
 
 
 export function exportInvoicePDF(invoice: Invoice, profile: BusinessProfile, action: 'save' | 'datauri' | 'blob' = 'save'): string | Blob | void {
+  // Check for custom template
+  let customTemplate: any = null;
+  if ((invoice as any).selectedCustomTemplateId) {
+    try {
+      const saved = localStorage.getItem('makinvoice_custom_templates');
+      if (saved) {
+        const templates = JSON.parse(saved);
+        customTemplate = templates.find((t: any) => t.id === (invoice as any).selectedCustomTemplateId);
+      }
+    } catch (e) {}
+  }
+
+  const primaryRGB = customTemplate?.styleConfig?.primaryColor 
+    ? [
+        parseInt(customTemplate.styleConfig.primaryColor.slice(1, 3), 16),
+        parseInt(customTemplate.styleConfig.primaryColor.slice(3, 5), 16),
+        parseInt(customTemplate.styleConfig.primaryColor.slice(5, 7), 16)
+      ]
+    : [31, 41, 55];
+
+  const primaryColArray = primaryRGB as [number, number, number];
+
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const sym = getCurrencySymbol(profile.currency || 'INR');
   const W = 210, H = 297;
@@ -116,16 +138,29 @@ export function exportInvoicePDF(invoice: Invoice, profile: BusinessProfile, act
   let y = 15;
 
   // Header
-  T_txt(docType, W - mR, 15, { size: 22, bold: false, align: 'right', color: [31, 41, 55] });
+  
+  const finalDocType = customTemplate?.config?.header?.invoiceTitle || docType;
+  const tAlign = customTemplate?.config?.header?.titleAlignment === 'Left' ? 'left' : customTemplate?.config?.header?.titleAlignment === 'Center' ? 'center' : 'right';
+  const tX = tAlign === 'left' ? mL : tAlign === 'center' ? W/2 : W - mR;
+  T_txt(finalDocType.toUpperCase(), tX, 15, { size: 22, bold: true, align: tAlign, color: primaryColArray });
+
 
   const bizDetails = [];
+  
   const displayOwner = profile.ownerName || profile.displayName;
-  if (displayOwner) bizDetails.push(`Owner: ${displayOwner}`);
-  if (profile.mobile) bizDetails.push(`Phone: ${profile.mobile}`);
-  if (profile.email) bizDetails.push(`Email: ${profile.email}`);
-  if (profile.address) bizDetails.push(profile.address);
-  if (profile.state) bizDetails.push(`${profile.state} ${profile.stateCode ? '- '+profile.stateCode : ''}`);
-  if (profile.taxId) bizDetails.push(`GSTIN: ${profile.taxId}`);
+  const showCompName = customTemplate ? customTemplate.config.company.fields.includes('name') : true;
+  const showCompPhone = customTemplate ? customTemplate.config.company.fields.includes('phone') : true;
+  const showCompEmail = customTemplate ? customTemplate.config.company.fields.includes('email') : true;
+  const showCompAddress = customTemplate ? customTemplate.config.company.fields.includes('address') : true;
+  const showCompGstin = customTemplate ? customTemplate.config.company.fields.includes('gstin') : true;
+
+  if (displayOwner && showCompName) bizDetails.push(`Owner: ${displayOwner}`);
+  if (profile.mobile && showCompPhone) bizDetails.push(`Phone: ${profile.mobile}`);
+  if (profile.email && showCompEmail) bizDetails.push(`Email: ${profile.email}`);
+  if (profile.address && showCompAddress) bizDetails.push(profile.address);
+  if (profile.state && showCompAddress) bizDetails.push(`${profile.state} ${profile.stateCode ? '- '+profile.stateCode : ''}`);
+  if (profile.taxId && showCompGstin) bizDetails.push(`GSTIN: ${profile.taxId}`);
+
   
   // Calculate total height of the company details block
   doc.setFontSize(9);
@@ -137,7 +172,11 @@ export function exportInvoicePDF(invoice: Invoice, profile: BusinessProfile, act
   
   let textStartX = mL;
 
-  if (profile.logoUrl) {
+  
+  const showLogo = customTemplate ? customTemplate.config.header.showLogo : true;
+  if (showLogo && profile.logoUrl) {
+    const lPos = customTemplate?.config?.header?.logoPosition || 'Left';
+
     try {
       const imgProps = doc.getImageProperties(profile.logoUrl);
       const ratio = imgProps.width / imgProps.height;
@@ -152,7 +191,11 @@ export function exportInvoicePDF(invoice: Invoice, profile: BusinessProfile, act
     }
   }
 
-  T_txt(profile.name || 'My Business', textStartX, y, { size: 16, bold: true, color: [17, 24, 39] });
+  
+  if (showCompName) {
+    T_txt(profile.name || 'My Business', textStartX, y, { size: 16, bold: true, color: [17, 24, 39] });
+  }
+
   let textY = y + 6;
 
   bizDetails.forEach(line => {
@@ -240,8 +283,14 @@ export function exportInvoicePDF(invoice: Invoice, profile: BusinessProfile, act
   y = partyY + partyBoxHeight + 8;
   
   // Table header
-  doc.setFillColor(0, 0, 0);
-  doc.rect(mL, y, cW, 8, 'F');
+  
+  doc.setFillColor(primaryColArray[0], primaryColArray[1], primaryColArray[2]);
+  if (customTemplate?.styleConfig?.roundedCorners) {
+    doc.roundedRect(mL, y, cW, 8, 2, 2, 'F');
+  } else {
+    doc.rect(mL, y, cW, 8, 'F');
+  }
+
   
   const hasHSN = invoice.items.some(i => i.hsnCode || i.sacCode);
   const taxColCount = (taxMode === 'cgst_sgst') ? 2 : ((taxMode === 'generic' && invoice.customTaxCols) ? Math.max(1, invoice.customTaxCols.length) : 1);
@@ -472,7 +521,7 @@ export function exportInvoicePDF(invoice: Invoice, profile: BusinessProfile, act
       tRow(`CGST (${taxPct}%)`, fmt(cgstTotal, ''));
   } else {
       let activePct = invoice.items.length > 0 ? invoice.items[0].taxPercentage : 0;
-      if (taxMode === 'custom' || taxMode === 'generic') {
+      if (taxMode === 'generic') {
         if (taxMode === 'generic' && invoice.customTaxCols && invoice.customTaxCols.length > 0 && invoice.items.length > 0) {
           const firstItem = invoice.items[0];
           activePct = invoice.customTaxCols.reduce((sum, c) => sum + (firstItem.customTaxes?.[c] || 0), 0);
