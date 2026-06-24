@@ -1,11 +1,11 @@
 import { InvoiceTemplate } from '../types';
 
-const generateBaseTemplate = (id: string, name: string, category: string): InvoiceTemplate => ({
+const generateBaseTemplate = (id: string, name: string, category: InvoiceTemplate['category']): InvoiceTemplate => ({
   id,
   name,
   description: `${name} template configuration`,
   isDefault: false,
-  category: category as any,
+  category: category,
   layout: {
     type: 'Classic',
     pageSize: 'A4',
@@ -120,8 +120,8 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       tax: { showTaxableAmount: false, showCgstSgst: false, showIgst: false, showCess: false, showDiscount: false, showRoundOff: false, showTotal: true, enableHsnSummary: false, enableGstSummary: false, enableTaxBreakdown: true },
       table: {
         columns: [
-          { id: 'name', visible: true, label: 'Description', type: 'Text' as any, order: 1 },
-          { id: 'amount', visible: true, label: 'Total', type: 'Formula' as any, formula: 'qty*rate', order: 2 }
+          { id: 'name', visible: true, label: 'Description', type: 'Text', order: 1 },
+          { id: 'amount', visible: true, label: 'Total', type: 'Formula', formula: 'qty*rate', order: 2 }
         ]
       }
     },
@@ -181,11 +181,11 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       tax: { showTaxableAmount: false, showCgstSgst: true, showIgst: false, showCess: false, showDiscount: false, showRoundOff: true, showTotal: true, enableHsnSummary: false, enableGstSummary: false, enableTaxBreakdown: true },
       table: {
         columns: [
-          { id: 'sr', visible: true, label: '#', type: 'Number' as any, order: 1 },
-          { id: 'name', visible: true, label: 'Product', type: 'Text' as any, order: 2 },
-          { id: 'qty', visible: true, label: 'Qty', type: 'Number' as any, order: 3 },
-          { id: 'rate', visible: true, label: 'Price', type: 'Currency' as any, order: 4 },
-          { id: 'amount', visible: true, label: 'Total', type: 'Formula' as any, formula: 'qty*rate', order: 5 }
+          { id: 'sr', visible: true, label: '#', type: 'Number', order: 1 },
+          { id: 'name', visible: true, label: 'Product', type: 'Text', order: 2 },
+          { id: 'qty', visible: true, label: 'Qty', type: 'Number', order: 3 },
+          { id: 'rate', visible: true, label: 'Price', type: 'Currency', order: 4 },
+          { id: 'amount', visible: true, label: 'Total', type: 'Formula', formula: 'qty*rate', order: 5 }
         ]
       }
     },
@@ -216,13 +216,13 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       tax: { showTaxableAmount: true, showCgstSgst: true, showIgst: true, showCess: false, showDiscount: true, showRoundOff: true, showTotal: true, enableHsnSummary: true, enableGstSummary: false, enableTaxBreakdown: true },
       table: {
         columns: [
-          { id: 'sr', visible: true, label: 'Sr No', type: 'Number' as any, order: 1 },
-          { id: 'name', visible: true, label: 'Item Name', type: 'Text' as any, order: 2 },
-          { id: 'hsn', visible: true, label: 'HSN/SAC', type: 'Text' as any, order: 3 },
-          { id: 'qty', visible: true, label: 'Qty', type: 'Number' as any, order: 4 },
-          { id: 'rate', visible: true, label: 'Rate', type: 'Currency' as any, order: 5 },
-          { id: 'tax', visible: true, label: 'Tax %', type: 'Number' as any, order: 6 },
-          { id: 'amount', visible: true, label: 'Amount', type: 'Formula' as any, formula: 'qty*rate', order: 7 }
+          { id: 'sr', visible: true, label: 'Sr No', type: 'Number', order: 1 },
+          { id: 'name', visible: true, label: 'Item Name', type: 'Text', order: 2 },
+          { id: 'hsn', visible: true, label: 'HSN/SAC', type: 'Text', order: 3 },
+          { id: 'qty', visible: true, label: 'Qty', type: 'Number', order: 4 },
+          { id: 'rate', visible: true, label: 'Rate', type: 'Currency', order: 5 },
+          { id: 'tax', visible: true, label: 'Tax %', type: 'Number', order: 6 },
+          { id: 'amount', visible: true, label: 'Amount', type: 'Formula', formula: 'qty*rate', order: 7 }
         ]
       }
     },
@@ -250,10 +250,10 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       header: { showLogo: true, logoPosition: 'Left', logoWidth: 80, logoHeight: 40, titleAlignment: 'Right', invoiceTitle: 'INVOICE' },
       table: {
         columns: [
-          { id: 'name', visible: true, label: 'Service Description', type: 'Text' as any, order: 1 },
-          { id: 'qty', visible: true, label: 'Hours', type: 'Number' as any, order: 2 },
-          { id: 'rate', visible: true, label: 'Rate', type: 'Currency' as any, order: 3 },
-          { id: 'amount', visible: true, label: 'Amount', type: 'Formula' as any, formula: 'qty*rate', order: 4 }
+          { id: 'name', visible: true, label: 'Service Description', type: 'Text', order: 1 },
+          { id: 'qty', visible: true, label: 'Hours', type: 'Number', order: 2 },
+          { id: 'rate', visible: true, label: 'Rate', type: 'Currency', order: 3 },
+          { id: 'amount', visible: true, label: 'Amount', type: 'Formula', formula: 'qty*rate', order: 4 }
         ]
       }
     },
@@ -285,12 +285,12 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       amountInWords: { format: 'International', enabled: true },
       table: {
         columns: [
-          { id: 'sr', visible: true, label: 'Sr', type: 'Number' as any, order: 1 },
-          { id: 'name', visible: true, label: 'Product Description', type: 'Text' as any, order: 2 },
-          { id: 'hsn', visible: true, label: 'HSN', type: 'Text' as any, order: 3 },
-          { id: 'qty', visible: true, label: 'Qty', type: 'Number' as any, order: 4 },
-          { id: 'rate', visible: true, label: 'Unit Price', type: 'Currency' as any, order: 5 },
-          { id: 'amount', visible: true, label: 'Total Value', type: 'Formula' as any, formula: 'qty*rate', order: 6 }
+          { id: 'sr', visible: true, label: 'Sr', type: 'Number', order: 1 },
+          { id: 'name', visible: true, label: 'Product Description', type: 'Text', order: 2 },
+          { id: 'hsn', visible: true, label: 'HSN', type: 'Text', order: 3 },
+          { id: 'qty', visible: true, label: 'Qty', type: 'Number', order: 4 },
+          { id: 'rate', visible: true, label: 'Unit Price', type: 'Currency', order: 5 },
+          { id: 'amount', visible: true, label: 'Total Value', type: 'Formula', formula: 'qty*rate', order: 6 }
         ]
       }
     },
@@ -319,11 +319,11 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       client: { fields: ['name', 'address', 'phone'] },
       table: {
         columns: [
-          { id: 'sr', visible: true, label: '#', type: 'Number' as any, order: 1 },
-          { id: 'name', visible: true, label: 'Treatment / Medicine', type: 'Text' as any, order: 2 },
-          { id: 'qty', visible: true, label: 'Quantity', type: 'Number' as any, order: 3 },
-          { id: 'rate', visible: true, label: 'Cost', type: 'Currency' as any, order: 4 },
-          { id: 'amount', visible: true, label: 'Total', type: 'Formula' as any, formula: 'qty*rate', order: 5 }
+          { id: 'sr', visible: true, label: '#', type: 'Number', order: 1 },
+          { id: 'name', visible: true, label: 'Treatment / Medicine', type: 'Text', order: 2 },
+          { id: 'qty', visible: true, label: 'Quantity', type: 'Number', order: 3 },
+          { id: 'rate', visible: true, label: 'Cost', type: 'Currency', order: 4 },
+          { id: 'amount', visible: true, label: 'Total', type: 'Formula', formula: 'qty*rate', order: 5 }
         ]
       }
     },
@@ -361,10 +361,10 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       tax: { showTaxableAmount: false, showCgstSgst: false, showIgst: false, showCess: false, showDiscount: false, showRoundOff: false, showTotal: true, enableHsnSummary: false, enableGstSummary: false, enableTaxBreakdown: true },
       table: {
         columns: [
-          { id: 'name', visible: true, label: 'Item Description', type: 'Text' as any, order: 1 },
-          { id: 'qty', visible: true, label: 'Quantity', type: 'Number' as any, order: 2 },
-          { id: 'rate', visible: true, label: 'Price', type: 'Currency' as any, order: 3 },
-          { id: 'amount', visible: true, label: 'Amount', type: 'Formula' as any, formula: 'qty*rate', order: 4 }
+          { id: 'name', visible: true, label: 'Item Description', type: 'Text', order: 1 },
+          { id: 'qty', visible: true, label: 'Quantity', type: 'Number', order: 2 },
+          { id: 'rate', visible: true, label: 'Price', type: 'Currency', order: 3 },
+          { id: 'amount', visible: true, label: 'Amount', type: 'Formula', formula: 'qty*rate', order: 4 }
         ]
       }
     },

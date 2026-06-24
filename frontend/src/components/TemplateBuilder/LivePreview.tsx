@@ -90,8 +90,7 @@ export interface LivePreviewProps {
   onUpdateItemField?: (itemId: string, field: string, val: any) => void;
   onInteractiveAddItem?: () => void;
   onInteractiveRemoveItem?: (id: string) => void;
-  shippingSameAsClient?: boolean;
-  onUpdateShippingSameAsClient?: (val: boolean) => void;
+  onCopyBillingToShipping?: () => void;
   hasTransport?: boolean;
   onUpdateHasTransport?: (val: boolean) => void;
 }
@@ -109,8 +108,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   onUpdateItemField,
   onInteractiveAddItem,
   onInteractiveRemoveItem,
-  shippingSameAsClient,
-  onUpdateShippingSameAsClient,
+  onCopyBillingToShipping,
   hasTransport,
   onUpdateHasTransport
 }) => {
@@ -229,7 +227,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     const span = dynamicSpans[sectionId] || sections[sectionId as keyof typeof sections].gridColumnSpan;
     
     // Let grid naturally flow left if previous sibling is hidden.
-    let colStart = 'auto';
+    const colStart = 'auto';
     
     return {
       backgroundColor: bg || 'transparent',
@@ -529,13 +527,13 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   <div className={`border border-gray-300 p-2.5 h-full flex ${isAdjacent ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderLeft: isSecondCol ? 'none' : '1px solid #d1d5db' }}>
                     <div className={`flex justify-between items-center ${isAdjacent ? 'mb-1' : 'w-full mb-0'}`}>
                       <h3 className={`font-bold text-[11px] text-gray-800 uppercase`}>SHIPPED TO</h3>
-                      {isInteractive && onUpdateShippingSameAsClient && (
+                      {isInteractive && onCopyBillingToShipping && (
                          <button 
                            type="button"
-                           onClick={() => onUpdateShippingSameAsClient(!shippingSameAsClient)}
-                           className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded transition-colors hide-on-print ${shippingSameAsClient ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                           onClick={onCopyBillingToShipping}
+                           className="px-2 py-0.5 text-[9px] font-bold uppercase rounded transition-colors hide-on-print bg-slate-100 text-slate-500 hover:bg-slate-200"
                          >
-                           {shippingSameAsClient ? 'Same as Billed' : 'Same as Billed'}
+                           Copy from Billed
                          </button>
                       )}
                     </div>
@@ -586,13 +584,13 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               <div key="shipTo" style={getSectionStyle('shipTo')}>
                  <div className="flex justify-between items-center mb-[5px]">
                    <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', margin: 0 }}>Ship To</h4>
-                   {isInteractive && onUpdateShippingSameAsClient && (
+                   {isInteractive && onCopyBillingToShipping && (
                      <button 
                        type="button"
-                       onClick={() => onUpdateShippingSameAsClient(!shippingSameAsClient)}
-                       className={`print:hidden text-[9px] px-2 py-0.5 rounded border transition-colors ${shippingSameAsClient ? 'bg-sky-500 text-white border-sky-500 shadow-sm' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'}`}
+                       onClick={onCopyBillingToShipping}
+                       className="print:hidden text-[9px] px-2 py-0.5 rounded border transition-colors bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
                      >
-                        Same as Billed
+                        Copy from Billed
                      </button>
                    )}
                  </div>

@@ -352,7 +352,7 @@ export default function App() {
     if (invoices.length === 0) return;
     
     let clientsChanged = false;
-    let updatedClients = [...clients];
+    const updatedClients = [...clients];
 
     invoices.forEach(inv => {
       if (inv.clientName && inv.clientName.trim() !== '') {
@@ -802,7 +802,7 @@ export default function App() {
 
       if (todayStr < startDate) return;
 
-      let cursorDate = settings.lastGeneratedDate || startDate;
+      const cursorDate = settings.lastGeneratedDate || startDate;
       if (settings.lastGeneratedDate && settings.lastGeneratedDate >= todayStr) return;
 
       let tempLastGenerated = cursorDate;

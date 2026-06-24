@@ -7,10 +7,39 @@ import TemplateCreationHub from './TemplateBuilder/TemplateCreationHub';
 import { TEMPLATE_PRESETS } from '../lib/templatePresets';
 
 export default function TemplateManager() {
-  const [templates, setTemplates] = useState<InvoiceTemplate[]>([]);
+  const [templates, setTemplates] = useState<InvoiceTemplate[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('makinvoice_custom_templates');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error("Failed to parse templates", e);
+        }
+      }
+    }
+    return [];
+  });
+  
+  const [globalDefaultId, setGlobalDefaultId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const savedGlobalDefault = localStorage.getItem('makinvoice_global_default_template');
+      if (savedGlobalDefault) return savedGlobalDefault;
+      
+      const saved = localStorage.getItem('makinvoice_custom_templates');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const customDefault = parsed.find((t: InvoiceTemplate) => t.isDefault);
+          if (customDefault) return customDefault.id;
+        } catch (e) {}
+      }
+    }
+    return 'preset_modal_classic';
+  });
+  
   const [isBuilding, setIsBuilding] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<InvoiceTemplate | null>(null);
-  const [globalDefaultId, setGlobalDefaultId] = useState<string>('preset_modal_classic');
   
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
@@ -19,34 +48,14 @@ export default function TemplateManager() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('makinvoice_custom_templates');
-    if (saved) {
-      try {
-        setTemplates(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse templates", e);
-      }
-    }
-
-    const savedGlobalDefault = localStorage.getItem('makinvoice_global_default_template');
-    if (savedGlobalDefault) {
-      setGlobalDefaultId(savedGlobalDefault);
-    } else if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const customDefault = parsed.find((t: InvoiceTemplate) => t.isDefault);
-        if (customDefault) {
-          setGlobalDefaultId(customDefault.id);
-        }
-      } catch (e) {}
-    }
+    // Only needed if you want to sync state changes back or listen to events
   }, []);
 
   const handleSaveTemplate = (template: InvoiceTemplate) => {
     const exists = templates.some(t => t.id === template.id);
     let updated;
     
-    let finalTemplate = { ...template };
+    const finalTemplate = { ...template };
     if (finalTemplate.isDefault) {
       setGlobalDefaultId(finalTemplate.id);
       localStorage.setItem('makinvoice_global_default_template', finalTemplate.id);

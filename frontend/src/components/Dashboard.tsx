@@ -41,8 +41,20 @@ import {
 } from 'lucide-react';
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from '../types';
 import { BUSINESS_TEMPLATES } from '../lib/presets';
-import { exportInvoicePDF, exportInvoicePDFAsync, exportCollectiveReportPDF } from '../lib/pdfExporter';
+import { exportInvoicePDFAsync, exportCollectiveReportPDF } from '../lib/pdfExporter';
 import TemplateManager from './TemplateManager';
+
+export interface MasterVendor { id: string; name?: string; company?: string; email?: string; phone?: string; address?: string; category?: string; [key: string]: any; }
+export interface MasterHsnCode { id: string; code?: string; description?: string; gstRate?: number; [key: string]: any; }
+export interface MasterGlAccount { id: string; code?: string; name?: string; type?: string; [key: string]: any; }
+export interface MasterMaterial { id: string; name?: string; rate?: number; hsn?: string; uom?: string; category?: string; [key: string]: any; }
+export interface MasterCategory { id: string; name?: string; description?: string; [key: string]: any; }
+export interface MasterSubCategory { id: string; category?: string; name?: string; [key: string]: any; }
+export interface MasterMapping { id: string; item?: string; glAccount?: string; taxRate?: number; [key: string]: any; }
+export interface MasterPackingUnit { id: string; name?: string; [key: string]: any; }
+export interface MasterMeasurementUnit { id: string; name?: string; [key: string]: any; }
+export type MasterItemType = MasterVendor | MasterHsnCode | MasterGlAccount | MasterMaterial | MasterCategory | MasterSubCategory | MasterMapping | MasterPackingUnit | MasterMeasurementUnit;
+
 
 interface DashboardProps {
   invoices: Invoice[];
@@ -111,11 +123,11 @@ export default function Dashboard({
   const [isCatalogExpanded, setIsCatalogExpanded] = useState(true);
 
   // Reusable Master & Catalog form builders state
-  const [editingMasterItem, setEditingMasterItem] = useState<any | null>(null);
+  const [editingMasterItem, setEditingMasterItem] = useState<MasterItemType | null>(null);
   const [isMasterModalOpen, setIsMasterModalOpen] = useState(false);
 
   // Master databases seed
-  const [vendors, setVendors] = useState<any[]>(() => {
+  const [vendors, setVendors] = useState<MasterVendor[]>(() => {
     const cached = localStorage.getItem('makinvoice_masters_vendors');
     if (cached) return JSON.parse(cached);
     return [
@@ -125,7 +137,7 @@ export default function Dashboard({
     ];
   });
 
-  const [hsnCodes, setHsnCodes] = useState<any[]>(() => {
+  const [hsnCodes, setHsnCodes] = useState<MasterHsnCode[]>(() => {
     const cached = localStorage.getItem('makinvoice_masters_hsn');
     if (cached) return JSON.parse(cached);
     return [
@@ -136,7 +148,7 @@ export default function Dashboard({
     ];
   });
 
-  const [glAccounts, setGlAccounts] = useState<any[]>(() => {
+  const [glAccounts, setGlAccounts] = useState<MasterGlAccount[]>(() => {
     const cached = localStorage.getItem('makinvoice_masters_gl');
     if (cached) return JSON.parse(cached);
     return [
@@ -148,7 +160,7 @@ export default function Dashboard({
   });
 
   // Catalog Master database seed
-  const [materials, setMaterials] = useState<any[]>(() => {
+  const [materials, setMaterials] = useState<MasterMaterial[]>(() => {
     const cached = localStorage.getItem('makinvoice_masters_materials');
     if (cached) return JSON.parse(cached);
     return [
@@ -158,7 +170,7 @@ export default function Dashboard({
     ];
   });
 
-  const [categories, setCategories] = useState<any[]>(() => {
+  const [categories, setCategories] = useState<MasterCategory[]>(() => {
     const cached = localStorage.getItem('makinvoice_masters_categories');
     if (cached) return JSON.parse(cached);
     return [
@@ -168,7 +180,7 @@ export default function Dashboard({
     ];
   });
 
-  const [subCategories, setSubCategories] = useState<any[]>(() => {
+  const [subCategories, setSubCategories] = useState<MasterSubCategory[]>(() => {
     const cached = localStorage.getItem('makinvoice_masters_subcategories');
     if (cached) return JSON.parse(cached);
     return [
@@ -178,7 +190,7 @@ export default function Dashboard({
     ];
   });
 
-  const [mappings, setMappings] = useState<any[]>(() => {
+  const [mappings, setMappings] = useState<MasterMapping[]>(() => {
     const cached = localStorage.getItem('makinvoice_masters_mappings');
     if (cached) return JSON.parse(cached);
     return [
@@ -187,7 +199,7 @@ export default function Dashboard({
     ];
   });
 
-  const [packingUnits, setPackingUnits] = useState<any[]>(() => {
+  const [packingUnits, setPackingUnits] = useState<MasterPackingUnit[]>(() => {
     const cached = localStorage.getItem('makinvoice_masters_packing');
     if (cached) return JSON.parse(cached);
     return [
@@ -197,7 +209,7 @@ export default function Dashboard({
     ];
   });
 
-  const [measurementUnits, setMeasurementUnits] = useState<any[]>(() => {
+  const [measurementUnits, setMeasurementUnits] = useState<MasterMeasurementUnit[]>(() => {
     const cached = localStorage.getItem('makinvoice_masters_measurement');
     if (cached) return JSON.parse(cached);
     return [
@@ -213,7 +225,7 @@ export default function Dashboard({
     if (!invoices || invoices.length === 0) return;
     
     let changed = false;
-    let updatedMaterials = [...materials];
+    const updatedMaterials = [...materials];
 
     invoices.forEach(inv => {
       if (!inv.items) return;
@@ -1231,10 +1243,23 @@ export default function Dashboard({
   
   // Dialog overlay for live preview
   const [activePreviewInvoice, setActivePreviewInvoice] = useState<Invoice | null>(null);
+  const [previewDataUri, setPreviewDataUri] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
-  // Client Editor states
   const [isClientEditorOpen, setIsClientEditorOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<ClientProfile | null>(null);
+
+  useEffect(() => {
+    if (activePreviewInvoice) {
+      setIsPreviewLoading(true);
+      exportInvoicePDFAsync(activePreviewInvoice, profile, 'datauri')
+        .then(uri => setPreviewDataUri(uri as string))
+        .catch(err => { console.error('Preview error:', err); setPreviewDataUri(null); })
+        .finally(() => setIsPreviewLoading(false));
+    } else {
+      setPreviewDataUri(null);
+    }
+  }, [activePreviewInvoice, profile]);
   const [clientName, setClientName] = useState('');
   const [clientCompany, setClientCompany] = useState('');
   const [clientEmail, setClientEmail] = useState('');
@@ -1816,7 +1841,13 @@ export default function Dashboard({
 
                         <div className="flex gap-2">
                           <button
-                            onClick={() => exportInvoicePDF(inv, profile)}
+                            onClick={async () => {
+                              try {
+                                await exportInvoicePDFAsync(inv, profile, 'save');
+                              } catch (err: any) {
+                                alert('Failed to generate PDF: ' + (err.message || err.toString()));
+                              }
+                            }}
                             className="px-2 py-0.5 bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 hover:bg-sky-100 rounded-md text-[9px] font-medium flex items-center gap-0.5 cursor-pointer"
                           >
                             <FileDown className="w-3 h-3" />
@@ -1925,7 +1956,13 @@ export default function Dashboard({
                           <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-2">
                               <button
-                                onClick={() => exportInvoicePDF(inv, profile)}
+                                onClick={async () => {
+                                  try {
+                                    await exportInvoicePDFAsync(inv, profile, 'save');
+                                  } catch (err: any) {
+                                    alert('Failed to generate PDF: ' + (err.message || err.toString()));
+                                  }
+                                }}
                                 className="px-2 py-1 bg-sky-50 dark:bg-sky-955 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900 rounded-md text-[9px] font-medium flex items-center gap-0.5 cursor-pointer border border-transparent"
                                 title="Download Premium PDF Bill"
                               >
@@ -2866,23 +2903,34 @@ export default function Dashboard({
             {/* Scrollable Live Preview content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-100/50 dark:bg-slate-950/80 no-scrollbar">
               {(() => {
-                // If we are in preview mode, we can just use the legacy sync generator to show a quick approximation
-                // since html-to-image is too slow for a real-time reactive iframe without state management.
-                try {
-                  const pdfDataUri = exportInvoicePDF(activePreviewInvoice, profile, 'datauri') as string;
-                  const cleanPdfUri = pdfDataUri + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH';
-  
+                if (isPreviewLoading) {
                   return (
-                    <iframe 
-                      src={cleanPdfUri}
-                      scrolling="no"
-                      className="w-full h-auto aspect-[210/297] rounded-xl border border-slate-200 shadow-sm bg-white overflow-hidden"
-                      title="Invoice PDF Preview"
-                    />
+                    <div className="w-full h-auto aspect-[210/297] rounded-xl border border-slate-200 shadow-sm bg-white flex items-center justify-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-8 h-8 border-4 border-sky-600 border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-sm font-medium text-slate-500">Generating High-Fidelity Preview...</p>
+                      </div>
+                    </div>
                   );
-                } catch(e) {
-                  return <div className="p-4 text-center text-slate-500">Preview loading...</div>;
                 }
+
+                if (!previewDataUri) {
+                  return (
+                    <div className="w-full h-auto aspect-[210/297] rounded-xl border border-slate-200 shadow-sm bg-slate-50 flex items-center justify-center">
+                      <p className="text-sm text-slate-400">Failed to load preview</p>
+                    </div>
+                  );
+                }
+
+                const cleanPdfUri = previewDataUri + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH';
+                return (
+                  <iframe 
+                    src={cleanPdfUri}
+                    scrolling="no"
+                    className="w-full h-auto aspect-[210/297] rounded-xl border border-slate-200 shadow-sm bg-white overflow-hidden"
+                    title="Invoice PDF Preview"
+                  />
+                );
               })()}
 
                             {/* Action Toolbar buttons */}

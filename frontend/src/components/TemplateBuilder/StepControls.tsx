@@ -24,7 +24,7 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
             <select value={template.category} onChange={e => {
                const newCat = e.target.value as any;
                if (!updateFullTemplate) return;
-               let newTemplate = {...template, category: newCat};
+               const newTemplate = {...template, category: newCat};
                const preset = TEMPLATE_PRESETS.find(p => p.category === newCat);
                if (preset) {
                    newTemplate.sections = JSON.parse(JSON.stringify(preset.sections));
@@ -52,7 +52,7 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
                    updateLayout({ type: newType });
                    return;
                }
-               let newTemplate = JSON.parse(JSON.stringify(template));
+               const newTemplate = JSON.parse(JSON.stringify(template));
                newTemplate.layout.type = newType;
                
                // Reset all layout-driven attributes to a clean baseline

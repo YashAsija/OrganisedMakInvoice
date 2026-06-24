@@ -28,7 +28,7 @@ export const generateTemplateFromQuickState = (state: QuickBuilderState): Invoic
   const id = `tmpl_${Math.random().toString(36).substr(2, 9)}`;
   
   // Base style configuration depending on selected style
-  let styleConfig: InvoiceTemplate['styleConfig'] = {
+  const styleConfig: InvoiceTemplate['styleConfig'] = {
     primaryColor: state.branding.primaryColor,
     secondaryColor: state.branding.secondaryColor,
     accentColor: state.branding.primaryColor,
@@ -57,23 +57,21 @@ export const generateTemplateFromQuickState = (state: QuickBuilderState): Invoic
     styleConfig.sectionBackgroundColors = { header: state.branding.primaryColor }; // Filled header
   }
 
+  type ColumnConfig = InvoiceTemplate['config']['table']['columns'][0];
+
   // Table Configuration based on layout
-  let columns = [
-    { id: 'sr', visible: state.tableLayout !== 'Compact', label: '#', type: 'Number' as any, order: 1 },
-    { id: 'name', visible: true, label: 'Item Description', type: 'Text' as any, order: 2 },
-    { id: 'qty', visible: state.tableLayout !== 'Compact', label: 'Qty', type: 'Number' as any, order: 4 },
-    { id: 'rate', visible: state.tableLayout !== 'Compact', label: 'Rate', type: 'Currency' as any, order: 5 },
-    { id: 'amount', visible: true, label: 'Amount', type: 'Formula' as any, formula: 'qty*rate', order: 7 }
+  const columns: ColumnConfig[] = [
+    { id: 'sr', visible: state.tableLayout !== 'Compact', label: '#', type: 'Number', order: 1 },
+    { id: 'name', visible: true, label: 'Item Description', type: 'Text', order: 2 },
+    { id: 'qty', visible: state.tableLayout !== 'Compact', label: 'Qty', type: 'Number', order: 4 },
+    { id: 'rate', visible: state.tableLayout !== 'Compact', label: 'Rate', type: 'Currency', order: 5 },
+    { id: 'amount', visible: true, label: 'Amount', type: 'Formula', formula: 'qty*rate', order: 7 }
   ];
 
   if (state.tableLayout === 'Detailed') {
-    columns.push({ id: 'hsn', visible: state.sections.gst, label: 'HSN/SAC', type: 'Text' as any, order: 3 });
-    columns.push({ id: 'tax', visible: state.sections.gst, label: 'Tax %', type: 'Number' as any, order: 6 });
+    columns.push({ id: 'hsn', visible: state.sections.gst, label: 'HSN/SAC', type: 'Text', order: 3 });
+    columns.push({ id: 'tax', visible: state.sections.gst, label: 'Tax %', type: 'Number', order: 6 });
   }
-
-  // Adjust table layout spacing
-  let tableLayout = 'Standard';
-  if (state.tableLayout === 'Compact') tableLayout = 'Compact';
 
   return {
     id,

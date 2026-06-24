@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown } from 'lucide-react';
 import { Invoice, TaxClassification, InvoiceItem, InvoiceStatus, DiscountType, PresetItem, ClientProfile, RecurringInterval, BusinessProfile, InvoiceTemplate } from '../types';
 import { EditableField } from './EditableField';
-import { exportInvoicePDF, exportInvoicePDFAsync } from '../lib/pdfExporter';
+import { exportInvoicePDFAsync } from '../lib/pdfExporter';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { LivePreview } from './TemplateBuilder/LivePreview';
@@ -65,7 +65,7 @@ export default function InvoiceModal({
   const [shippedToCountry, setShippedToCountry] = useState('');
   const [shippedToGstin, setShippedToGstin] = useState('');
   const [shippedToAddress, setShippedToAddress] = useState('');
-  const [shippingSameAsClient, setShippingSameAsClient] = useState(false);
+
 
   // Active Template
   const [activeTemplate, setActiveTemplate] = useState<InvoiceTemplate>(TEMPLATE_PRESETS[0]);
@@ -249,9 +249,7 @@ export default function InvoiceModal({
       setShippedToGstin(invoice.shippedToGstin || '');
       setShippedToAddress(invoice.shippedToAddress || '');
       if (invoice.shippedToName || invoice.shippedToAddress) {
-        setShippingSameAsClient(false);
-      } else {
-        setShippingSameAsClient(true);
+
       }
 
       // Geographic/tax options loader
@@ -344,20 +342,6 @@ export default function InvoiceModal({
     }
   }, [invoice, isOpen, defaultTaxRate]);
 
-
-  // Sync shipping details continuously when shippingSameAsClient is active
-  useEffect(() => {
-    if (shippingSameAsClient) {
-      setShippedToName(clientName);
-      setShippedToPhone(clientPhone);
-      // Note: clientEmail and clientPan (if it exists) should be copied. MakInvoice doesn't seem to have clientPan in state, but we'll copy email.
-      setShippedToEmail(clientEmail);
-      setShippedToCountry(clientCountry);
-      setShippedToState(clientState);
-      setShippedToAddress(clientAddress);
-      setShippedToGstin(clientGstin);
-    }
-  }, [shippingSameAsClient, clientName, clientPhone, clientEmail, clientCountry, clientState, clientAddress, clientGstin]);
 
   // Auto-clear transport details if hasTransport is false
   useEffect(() => {
@@ -562,11 +546,8 @@ export default function InvoiceModal({
 
   // --- GEOGRAPHIC TAX CLASSIFICATION ---
   const taxClassification = React.useMemo<TaxClassification>(() => {
-    const activeShippedToState = shippingSameAsClient ? undefined : shippedToState;
-    const targetState = (activeShippedToState || clientState || '').trim().toLowerCase();
-    
-    const activeShippedToCountry = shippingSameAsClient ? undefined : shippedToCountry;
-    const targetCountry = (activeShippedToCountry || clientCountry || '').trim().toLowerCase() || 'india';
+    const targetState = (shippedToState || clientState || '').trim().toLowerCase();
+    const targetCountry = (shippedToCountry || clientCountry || '').trim().toLowerCase() || 'india';
     const compCountry = (companyCountry || 'india').trim().toLowerCase();
     const compState = (companyState || '').trim().toLowerCase();
 
@@ -675,6 +656,7 @@ export default function InvoiceModal({
     }
 
     return {
+      // eslint-disable-next-line react-hooks/purity
       id: invoice ? invoice.id : `inv_preview_${Math.random().toString(36).substr(2, 9)}`,
       userId: invoice ? invoice.userId : 'local',
       invoiceType,
@@ -728,17 +710,16 @@ export default function InvoiceModal({
       driverMobile: driverMobile.trim() || undefined,
       station: station.trim() || undefined,
       ewayBillNo: ewayBillNo.trim() || undefined,
-      shippedToName: shippingSameAsClient ? undefined : (shippedToName.trim() || undefined),
-      shippedToPhone: shippingSameAsClient ? undefined : (shippedToPhone.trim() || undefined),
-      shippedToEmail: shippingSameAsClient ? undefined : (shippedToEmail.trim() || undefined),
-      shippedToPan: shippingSameAsClient ? undefined : (shippedToPan.trim() || undefined),
-      shippedToState: shippingSameAsClient ? undefined : (shippedToState.trim() || undefined),
-      shippedToCountry: shippingSameAsClient ? undefined : (shippedToCountry.trim() || undefined),
-      shippedToGstin: shippingSameAsClient ? undefined : (shippedToGstin.trim() || undefined),
-      shippedToAddress: shippingSameAsClient ? undefined : (shippedToAddress.trim() || undefined),
-      customTaxCols,
-      shippingSameAsClient,
-    } as Invoice & { shippingSameAsClient?: boolean };
+      shippedToName: shippedToName.trim() || undefined,
+      shippedToPhone: shippedToPhone.trim() || undefined,
+      shippedToEmail: shippedToEmail.trim() || undefined,
+      shippedToPan: shippedToPan.trim() || undefined,
+      shippedToState: shippedToState.trim() || undefined,
+      shippedToCountry: shippedToCountry.trim() || undefined,
+      shippedToGstin: shippedToGstin.trim() || undefined,
+      shippedToAddress: shippedToAddress.trim() || undefined,
+      customTaxCols
+    } as Invoice;
   };
 
   // Memoized invoice data — placed AFTER buildTempInvoice to avoid temporal dead zone
@@ -748,7 +729,7 @@ export default function InvoiceModal({
     clientAddress, clientGstin, clientState, clientCountry, notes, invoiceTerms,
     items, discountType, discountValue, shippedToName, shippedToPhone,
     shippedToEmail, shippedToPan, shippedToState, shippedToCountry,
-    shippedToGstin, shippedToAddress, shippingSameAsClient,
+    shippedToGstin, shippedToAddress,
     transport, vehicleNo, driverMobile, station, ewayBillNo, grRrNo,
     placeOfSupply, calculatedSubtotal, roundedTaxTotal, calculatedGrandTotal,
     poNumber, referenceNumber, invoiceType
@@ -884,13 +865,13 @@ export default function InvoiceModal({
       driverMobile: driverMobile.trim() || undefined,
       station: station.trim() || undefined,
       ewayBillNo: ewayBillNo.trim() || undefined,
-      shippedToName: shippingSameAsClient ? undefined : (shippedToName.trim() || undefined),
-      shippedToPhone: shippingSameAsClient ? undefined : (shippedToPhone.trim() || undefined),
-      shippedToEmail: shippingSameAsClient ? undefined : (shippedToEmail.trim() || undefined),
-      shippedToPan: shippingSameAsClient ? undefined : (shippedToPan.trim() || undefined),
-      shippedToState: shippingSameAsClient ? undefined : (shippedToState.trim() || undefined),
-      shippedToGstin: shippingSameAsClient ? undefined : (shippedToGstin.trim() || undefined),
-      shippedToAddress: shippingSameAsClient ? undefined : (shippedToAddress.trim() || undefined)
+      shippedToName: shippedToName.trim() || undefined,
+      shippedToPhone: shippedToPhone.trim() || undefined,
+      shippedToEmail: shippedToEmail.trim() || undefined,
+      shippedToPan: shippedToPan.trim() || undefined,
+      shippedToState: shippedToState.trim() || undefined,
+      shippedToGstin: shippedToGstin.trim() || undefined,
+      shippedToAddress: shippedToAddress.trim() || undefined
     });
 
     onClose();
@@ -1172,36 +1153,9 @@ export default function InvoiceModal({
             </div>
 
             <div className="flex items-center justify-between pt-2">
-              <span className="text-[11px] font-medium text-slate-500 uppercase">Shipping details same as client?</span>
-              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
-                <button
-                  type="button"
-                  onClick={() => setShippingSameAsClient(true)}
-                  className={`px-3 py-1 text-[10px] font-medium uppercase rounded-md transition-colors ${shippingSameAsClient ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-                >
-                  Yes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShippingSameAsClient(false);
-                    setShippedToName('');
-                    setShippedToPhone('');
-      setShippedToEmail('');
-      setShippedToPan('');
-                    setShippedToCountry('');
-                    setShippedToState('');
-                    setShippedToAddress('');
-                    setShippedToGstin('');
-                  }}
-                  className={`px-3 py-1 text-[10px] font-medium uppercase rounded-md transition-colors ${!shippingSameAsClient ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-                >
-                  No
-                </button>
-              </div>
             </div>
 
-            {!shippingSameAsClient && (
+            {(
               <div className="space-y-3 pt-3 border-t border-slate-150 dark:border-slate-800">
                 <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
                   Shipped To Details
@@ -1271,27 +1225,6 @@ export default function InvoiceModal({
               <h3 className="text-xs font-medium uppercase tracking-wider text-slate-400">
                 Transport Details
               </h3>
-              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
-                <button
-                  type="button"
-                  onClick={() => setHasTransport(true)}
-                  className={`px-3 py-1 text-[10px] font-medium uppercase rounded-md transition-colors ${hasTransport ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-                >
-                  Yes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHasTransport(false);
-                    // Clear values when turning off
-                    setPlaceOfSupply(''); setTransport(''); setGrRrNo(''); setVehicleNo('');
-                    setDriverMobile(''); setStation(''); setEwayBillNo('');
-                  }}
-                  className={`px-3 py-1 text-[10px] font-medium uppercase rounded-md transition-colors ${!hasTransport ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-                >
-                  No
-                </button>
-              </div>
             </div>
             
             {hasTransport && (
@@ -1931,32 +1864,7 @@ export default function InvoiceModal({
                  businessProfile={profile} 
                  currencySymbol={currencySymbol} 
                  isInteractive={true} 
-                 shippingSameAsClient={shippingSameAsClient}
-                 onUpdateShippingSameAsClient={(val) => {
-                   setShippingSameAsClient(val);
-                   if (!val) {
-                     setShippedToName('');
-                     setShippedToPhone('');
-                     setShippedToEmail('');
-                     setShippedToPan('');
-                     setShippedToCountry('');
-                     setShippedToState('');
-                     setShippedToAddress('');
-                     setShippedToGstin('');
-                   }
-                 }}
-                 hasTransport={hasTransport}
-                 onUpdateHasTransport={(val) => {
-                   setHasTransport(val);
-                   if (!val) {
-                     setTransport('');
-                     setVehicleNo('');
-                     setDriverMobile('');
-                     setStation('');
-                     setEwayBillNo('');
-                     setGrRrNo('');
-                   }
-                 }}
+
                  onUpdateField={(field, val) => {
                     if(field==='invoiceNumber') setInvoiceNumber(val);
                     if(field==='date') setDate(val);
@@ -1990,10 +1898,20 @@ export default function InvoiceModal({
                  }}
                  onInteractiveAddItem={handleAddItem}
                  onInteractiveRemoveItem={handleInteractiveRemoveItem}
-
                  onUpdateItemField={(itemId, field, val) => {
                      setItems(prev => prev.map(item => item.id === itemId ? { ...item, [field]: val } : item));
                  }}
+                 onCopyBillingToShipping={() => {
+                   setShippedToName(clientName);
+                   setShippedToPhone(clientPhone);
+                   setShippedToEmail(clientEmail);
+                   setShippedToCountry(clientCountry);
+                   setShippedToState(clientState);
+                   setShippedToAddress(clientAddress);
+                   setShippedToGstin(clientGstin);
+                 }}
+                 hasTransport={hasTransport}
+                 onUpdateHasTransport={setHasTransport}
                />
             </div>
           ) : null}

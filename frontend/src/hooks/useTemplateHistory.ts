@@ -4,20 +4,21 @@ import { InvoiceTemplate } from '../types';
 export function useTemplateHistory(initialTemplate: InvoiceTemplate) {
   const upgradeTemplate = (template: InvoiceTemplate) => {
     if (!template?.config?.table?.columns) return template;
-    const upgraded = JSON.parse(JSON.stringify(template));
+    const upgraded = JSON.parse(JSON.stringify(template)) as InvoiceTemplate;
     const columns = upgraded.config.table.columns;
-    if (!columns.find((c: any) => c.id === 'hsn')) {
+    type ColType = InvoiceTemplate['config']['table']['columns'][0];
+    if (!columns.find((c: ColType) => c.id === 'hsn')) {
       columns.push({ id: 'hsn', visible: false, label: 'HSN/SAC', type: 'Text', order: 3 });
     }
-    if (!columns.find((c: any) => c.id === 'tax')) {
+    if (!columns.find((c: ColType) => c.id === 'tax')) {
       columns.push({ id: 'tax', visible: false, label: 'Tax %', type: 'Number', order: 6 });
     }
     const desiredOrder = ['sr', 'name', 'hsn', 'qty', 'rate', 'tax', 'amount'];
-    columns.forEach((col: any) => {
+    columns.forEach((col: ColType) => {
       const idx = desiredOrder.indexOf(col.id);
       if (idx !== -1) col.order = idx + 1;
     });
-    upgraded.config.table.columns = columns.sort((a: any, b: any) => a.order - b.order);
+    upgraded.config.table.columns = columns.sort((a: ColType, b: ColType) => a.order - b.order);
     return upgraded;
   };
 
