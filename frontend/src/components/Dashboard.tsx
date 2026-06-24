@@ -41,7 +41,7 @@ import {
 } from 'lucide-react';
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from '../types';
 import { BUSINESS_TEMPLATES } from '../lib/presets';
-import { exportInvoicePDF, exportCollectiveReportPDF } from '../lib/pdfExporter';
+import { exportInvoicePDF, exportInvoicePDFAsync, exportCollectiveReportPDF } from '../lib/pdfExporter';
 import TemplateManager from './TemplateManager';
 
 interface DashboardProps {
@@ -1153,16 +1153,15 @@ export default function Dashboard({
     document.body.removeChild(link);
   };
 
-  const handleBulkExportPDF = () => {
+  const handleBulkExportPDF = async () => {
     const selected = invoices.filter(inv => selectedInvoiceIds.includes(inv.id));
     if (selected.length === 0) return;
     
     // Sequentially download each document safely
-    selected.forEach((inv, index) => {
-      setTimeout(() => {
-        exportInvoicePDF(inv, profile);
-      }, index * 250); // slight stagger prevents navigation block warnings
-    });
+    for (let i = 0; i < selected.length; i++) {
+        await exportInvoicePDFAsync(selected[i], profile);
+        await new Promise(r => setTimeout(r, 250));
+    }
   };
 
   const handleExportAllCSV = () => {
@@ -1476,9 +1475,9 @@ export default function Dashboard({
     URL.revokeObjectURL(url);
   };
 
-  const triggerWhatsAppShare = (inv: Invoice) => {
+  const triggerWhatsAppShare = async (inv: Invoice) => {
     // Export PDF then open WhatsApp with a download note
-    exportInvoicePDF(inv, profile);
+    await exportInvoicePDFAsync(inv, profile);
     setTimeout(() => {
       const sym = profile.currency === 'INR' ? '₹' : (profile.currency === 'USD' ? '$' : profile.currency + ' ');
       const message = `Hi ${inv.clientName || 'Client'}, please find your Invoice ${inv.invoiceNumber} from ${profile.name || 'us'} for ${sym}${inv.grandTotal.toFixed(2)} (Due: ${inv.dueDate}). The PDF has been downloaded to your device. Thank you!`;
@@ -1487,9 +1486,9 @@ export default function Dashboard({
     }, 600);
   };
 
-  const triggerEmailShare = (inv: Invoice) => {
+  const triggerEmailShare = async (inv: Invoice) => {
     // Export PDF then open email client
-    exportInvoicePDF(inv, profile);
+    await exportInvoicePDFAsync(inv, profile);
     setTimeout(() => {
       const sym = profile.currency === 'INR' ? '₹' : (profile.currency === 'USD' ? '$' : profile.currency + ' ');
       const subject = `Invoice ${inv.invoiceNumber} from ${profile.name}`;
@@ -2274,8 +2273,8 @@ export default function Dashboard({
                       return;
                     }
                     reportedInvoices.forEach((inv, index) => {
-                      setTimeout(() => {
-                        exportInvoicePDF(inv, profile);
+                      setTimeout(async () => {
+                        await exportInvoicePDFAsync(inv, profile);
                       }, index * 350); // slight delay avoids browser block errors
                     });
                   }}
@@ -2867,17 +2866,23 @@ export default function Dashboard({
             {/* Scrollable Live Preview content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-100/50 dark:bg-slate-950/80 no-scrollbar">
               {(() => {
-                const pdfDataUri = exportInvoicePDF(activePreviewInvoice, profile, 'datauri') as string;
-                const cleanPdfUri = pdfDataUri + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH';
-
-                return (
-                  <iframe 
-                    src={cleanPdfUri}
-                    scrolling="no"
-                    className="w-full h-auto aspect-[210/297] rounded-xl border border-slate-200 shadow-sm bg-white overflow-hidden"
-                    title="Invoice PDF Preview"
-                  />
-                );
+                // If we are in preview mode, we can just use the legacy sync generator to show a quick approximation
+                // since html-to-image is too slow for a real-time reactive iframe without state management.
+                try {
+                  const pdfDataUri = exportInvoicePDF(activePreviewInvoice, profile, 'datauri') as string;
+                  const cleanPdfUri = pdfDataUri + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH';
+  
+                  return (
+                    <iframe 
+                      src={cleanPdfUri}
+                      scrolling="no"
+                      className="w-full h-auto aspect-[210/297] rounded-xl border border-slate-200 shadow-sm bg-white overflow-hidden"
+                      title="Invoice PDF Preview"
+                    />
+                  );
+                } catch(e) {
+                  return <div className="p-4 text-center text-slate-500">Preview loading...</div>;
+                }
               })()}
 
                             {/* Action Toolbar buttons */}
@@ -2886,8 +2891,8 @@ export default function Dashboard({
                 
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => {
-                      exportInvoicePDF(activePreviewInvoice, profile);
+                    onClick={async () => {
+                      await exportInvoicePDFAsync(activePreviewInvoice, profile);
                     }}
                     className="flex items-center justify-center gap-1.5 p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium cursor-pointer transition-all shadow-sm active:scale-95"
                   >
@@ -2920,8 +2925,8 @@ export default function Dashboard({
                   </button>
 
                   <button
-                    onClick={() => {
-                      exportInvoicePDF(activePreviewInvoice, profile);
+                    onClick={async () => {
+                      await exportInvoicePDFAsync(activePreviewInvoice, profile);
                     }}
                     className="col-span-2 flex items-center justify-center gap-1.5 p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-805 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-102 rounded-xl text-xs font-medium cursor-pointer transition-all"
                   >

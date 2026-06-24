@@ -1,5 +1,11 @@
 import { jsPDF } from 'jspdf';
 import { Invoice, BusinessProfile } from '../types';
+import { toPng } from 'html-to-image';
+import { createRoot } from 'react-dom/client';
+import React from 'react';
+import { LivePreview } from '../components/TemplateBuilder/LivePreview';
+import { TEMPLATE_PRESETS } from './templatePresets';
+
 
 // ─── CURRENCY HELPER ────────────────────────────────────────────────────────
 function getCurrencySymbol(code: string): string {
@@ -148,11 +154,11 @@ export function exportInvoicePDF(invoice: Invoice, profile: BusinessProfile, act
   const bizDetails = [];
   
   const displayOwner = profile.ownerName || profile.displayName;
-  const showCompName = customTemplate ? customTemplate.config.company.fields.includes('name') : true;
-  const showCompPhone = customTemplate ? customTemplate.config.company.fields.includes('phone') : true;
-  const showCompEmail = customTemplate ? customTemplate.config.company.fields.includes('email') : true;
-  const showCompAddress = customTemplate ? customTemplate.config.company.fields.includes('address') : true;
-  const showCompGstin = customTemplate ? customTemplate.config.company.fields.includes('gstin') : true;
+  const showCompName = customTemplate ? customTemplate?.config?.company?.fields?.includes('name') ?? true : true;
+  const showCompPhone = customTemplate ? customTemplate?.config?.company?.fields?.includes('phone') ?? true : true;
+  const showCompEmail = customTemplate ? customTemplate?.config?.company?.fields?.includes('email') ?? true : true;
+  const showCompAddress = customTemplate ? customTemplate?.config?.company?.fields?.includes('address') ?? true : true;
+  const showCompGstin = customTemplate ? customTemplate?.config?.company?.fields?.includes('gstin') ?? true : true;
 
   if (displayOwner && showCompName) bizDetails.push(`Owner: ${displayOwner}`);
   if (profile.mobile && showCompPhone) bizDetails.push(`Phone: ${profile.mobile}`);
@@ -173,7 +179,7 @@ export function exportInvoicePDF(invoice: Invoice, profile: BusinessProfile, act
   let textStartX = mL;
 
   
-  const showLogo = customTemplate ? customTemplate.config.header.showLogo : true;
+  const showLogo = customTemplate ? customTemplate?.config?.header?.showLogo ?? true : true;
   if (showLogo && profile.logoUrl) {
     const lPos = customTemplate?.config?.header?.logoPosition || 'Left';
 
@@ -186,8 +192,13 @@ export function exportInvoicePDF(invoice: Invoice, profile: BusinessProfile, act
       doc.addImage(profile.logoUrl, 'PNG', mL, y - 5.5, logoWidth, blockHeight);
       textStartX = mL + logoWidth + 4; // Offset text to the right of the logo
     } catch (e) {
-      doc.addImage(profile.logoUrl, 'PNG', mL, y - 5.5, blockHeight, blockHeight);
-      textStartX = mL + blockHeight + 4;
+      try {
+        doc.addImage(profile.logoUrl, 'PNG', mL, y - 5.5, blockHeight, blockHeight);
+        textStartX = mL + blockHeight + 4;
+      } catch (innerErr) {
+        console.warn('Failed to add logo to PDF:', innerErr);
+        // Continue without logo
+      }
     }
   }
 
@@ -720,4 +731,138 @@ export function exportCollectiveReportPDF(
   }
 
   doc.save(`ledger_${periodName.toLowerCase().replace(/\s+/g,'_')}.pdf`);
+}
+
+import { InvoiceTemplate } from '../types';
+
+export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessProfile, action: 'save' | 'datauri' | 'blob' = 'save', templateOverride?: InvoiceTemplate): Promise<string | Blob | void> {
+  // Use the provided template override if available (exact instance from modal = no race condition)
+  // Otherwise fall back to the global default from localStorage
+  let activeTemplate: InvoiceTemplate = templateOverride || TEMPLATE_PRESETS[0];
+
+  if (!templateOverride) {
+    const globalDefaultId = localStorage.getItem('makinvoice_global_default_template');
+    if (globalDefaultId) {
+      let foundCustom = false;
+      const saved = localStorage.getItem('makinvoice_custom_templates');
+      if (saved) {
+        try {
+          const templates = JSON.parse(saved);
+          const custom = templates.find((t: any) => t.id === globalDefaultId);
+          if (custom) {
+            activeTemplate = custom;
+            foundCustom = true;
+          }
+        } catch (e) {}
+      }
+      if (!foundCustom) {
+        const preset = TEMPLATE_PRESETS.find(t => t.id === globalDefaultId);
+        if (preset) activeTemplate = preset;
+      }
+    }
+  }
+
+  // Create a hidden container within viewport bounds to prevent blank captures
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.top = '0';
+  container.style.left = '0';
+  container.style.zIndex = '-9999'; // Hide behind app
+  container.style.width = activeTemplate.layout.pageSize === 'A4' ? '794px' : '816px';
+  container.style.minHeight = activeTemplate.layout.pageSize === 'A4' ? '1123px' : '1056px';
+  container.style.backgroundColor = 'white';
+  document.body.appendChild(container);
+
+  const currencySymbol = getCurrencySymbol(profile.currency || 'INR');
+
+  // We need to resolve the taxMode and apply it properly to the invoice data
+  const taxMode = resolveTaxMode(invoice, profile);
+  const tempInvoice = { ...invoice };
+  if (taxMode === 'cgst_sgst' || taxMode === 'igst') {
+    tempInvoice.items = tempInvoice.items.map(item => {
+      const customTaxes = { ...item.customTaxes };
+      if (taxMode === 'cgst_sgst') {
+         customTaxes['CGST'] = item.taxPercentage / 2;
+         customTaxes['SGST'] = item.taxPercentage / 2;
+         delete customTaxes['IGST'];
+      } else {
+         customTaxes['IGST'] = item.taxPercentage;
+         delete customTaxes['CGST'];
+         delete customTaxes['SGST'];
+      }
+      return { ...item, customTaxes };
+    });
+  }
+
+  const root = createRoot(container);
+  
+  // Render the template
+  root.render(
+    React.createElement(LivePreview, {
+      template: activeTemplate,
+      invoiceData: tempInvoice,
+      businessProfile: profile,
+      currencySymbol: currencySymbol,
+      isInteractive: false,
+      isPrintMode: true
+    })
+  );
+
+  // Wait for React to render and images to load fully
+  await new Promise(r => setTimeout(r, 1500));
+
+  try {
+    // Patch CSSStyleSheet to ignore SecurityError from cross-origin stylesheets (like extensions or missing CORS)
+    const originalCssRules = Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'cssRules');
+    if (originalCssRules) {
+      Object.defineProperty(CSSStyleSheet.prototype, 'cssRules', {
+        get() {
+          try {
+            return originalCssRules.get?.call(this) || [];
+          } catch (e) {
+            return []; // Ignore SecurityError
+          }
+        },
+        configurable: true
+      });
+    }
+
+    const dataUrl = await Promise.race([
+      toPng(container, { quality: 1, pixelRatio: 2 }),
+      new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 10000))
+    ]);
+    
+    // Restore original
+    if (originalCssRules) {
+      Object.defineProperty(CSSStyleSheet.prototype, 'cssRules', originalCssRules);
+    }
+
+    const containerWidth = container.offsetWidth || 794;
+    const containerHeight = container.offsetHeight || 1123;
+    
+    root.unmount();
+    if (container.parentNode) {
+      document.body.removeChild(container);
+    }
+    
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (containerHeight * pdfWidth) / containerWidth;
+    pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    
+    if (action === 'save') {
+      pdf.save(`${invoice.invoiceNumber}.pdf`);
+    } else if (action === 'datauri') {
+      return pdf.output('datauristring');
+    } else if (action === 'blob') {
+      return pdf.output('blob');
+    }
+  } catch (err) {
+    console.error('PDF Generation Failed', err);
+    try { root.unmount(); } catch (e) {}
+    if (container.parentNode) {
+      try { document.body.removeChild(container); } catch (e) {}
+    }
+    throw err;
+  }
 }

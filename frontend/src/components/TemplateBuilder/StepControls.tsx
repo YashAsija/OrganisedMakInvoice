@@ -1,5 +1,6 @@
 import React from 'react';
 import { InvoiceTemplate } from '../../types';
+import { TEMPLATE_PRESETS } from '../../lib/templatePresets';
 
 interface StepControlsProps {
   stepId: string;
@@ -7,20 +8,89 @@ interface StepControlsProps {
   updateLayout: (data: any) => void;
   updateConfig: (section: keyof InvoiceTemplate['config'], data: any) => void;
   updateStyle: (data: any) => void;
+  updateFullTemplate?: (template: InvoiceTemplate) => void;
+  isEditingSystemPreset?: boolean;
 }
 
-export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, updateLayout, updateConfig, updateStyle }) => {
+export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, updateLayout, updateConfig, updateStyle, updateFullTemplate, isEditingSystemPreset }) => {
   const { layout, config, styleConfig } = template;
 
   if (stepId === 'layout') {
     return (
       <div className="space-y-4">
-        <div>
-          <label className="text-xs font-bold text-slate-700 mb-1 block">Layout Type</label>
-          <select value={layout.type} onChange={e => updateLayout({ type: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm">
-            {['Classic', 'Modern', 'Minimal', 'Corporate', 'GST Standard', 'Retail', 'Fully Custom'].map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
+        {!isEditingSystemPreset && (
+          <div>
+            <label className="text-xs font-bold text-slate-700 mb-1 block">Category Theme Preset</label>
+            <select value={template.category} onChange={e => {
+               const newCat = e.target.value as any;
+               if (!updateFullTemplate) return;
+               let newTemplate = {...template, category: newCat};
+               const preset = TEMPLATE_PRESETS.find(p => p.category === newCat);
+               if (preset) {
+                   newTemplate.sections = JSON.parse(JSON.stringify(preset.sections));
+                   newTemplate.config = JSON.parse(JSON.stringify(preset.config));
+                   newTemplate.styleConfig = JSON.parse(JSON.stringify(preset.styleConfig));
+                   newTemplate.layout = JSON.parse(JSON.stringify(preset.layout));
+               }
+               updateFullTemplate(newTemplate);
+            }} className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-indigo-50 border-indigo-100 text-indigo-900 focus:ring-indigo-500">
+              <option value="User">User Custom</option>
+              <option value="GST">GST Standard</option>
+              <option value="Service">Service</option>
+              <option value="Retail">Retail</option>
+              <option value="Default">Default Standard</option>
+            </select>
+            <p className="text-[10px] text-slate-500 mt-1">Warning: Changing category will reset all fields and sections to match the preset theme.</p>
+          </div>
+        )}
+        {!isEditingSystemPreset && (
+          <div>
+            <label className="text-xs font-bold text-slate-700 mb-1 block">Layout Type</label>
+            <select value={layout.type} onChange={e => {
+               const newType = e.target.value as any;
+               if (!updateFullTemplate) {
+                   updateLayout({ type: newType });
+                   return;
+               }
+               let newTemplate = JSON.parse(JSON.stringify(template));
+               newTemplate.layout.type = newType;
+               
+               // Reset all layout-driven attributes to a clean baseline
+               newTemplate.styleConfig.spacing = 'Standard';
+               newTemplate.styleConfig.borderStyle = 'Light';
+               newTemplate.styleConfig.roundedCorners = true;
+               newTemplate.styleConfig.fontFamily = 'Inter';
+               newTemplate.styleConfig.tableHeaderBackground = newTemplate.styleConfig.primaryColor || '#4f46e5';
+               newTemplate.styleConfig.tableHeaderTextColor = '#ffffff';
+               newTemplate.styleConfig.sectionBackgroundColors = {};
+
+               // Apply unique attributes per layout type
+               if (newType === 'Corporate') {
+                  newTemplate.styleConfig.borderStyle = 'Heavy';
+                  newTemplate.styleConfig.roundedCorners = false;
+                  newTemplate.styleConfig.fontFamily = 'Roboto';
+                  newTemplate.styleConfig.tableHeaderBackground = '#1e3a8a';
+               } else if (newType === 'Minimal') {
+                  newTemplate.styleConfig.borderStyle = 'None';
+                  newTemplate.styleConfig.tableHeaderBackground = '#f8fafc';
+                  newTemplate.styleConfig.tableHeaderTextColor = '#0f172a';
+               } else if (newType === 'Modern') {
+                  newTemplate.styleConfig.fontFamily = 'Outfit';
+                  newTemplate.styleConfig.sectionBackgroundColors = { header: newTemplate.styleConfig.primaryColor || '#4f46e5' };
+               } else if (newType === 'Retail') {
+                  newTemplate.styleConfig.spacing = 'Compact';
+                  newTemplate.styleConfig.borderStyle = 'None';
+                  newTemplate.styleConfig.roundedCorners = false;
+               } else if (newType === 'Fully Custom') {
+                  // Allow user to define everything manually without enforcing preset constraints
+               }
+               
+               updateFullTemplate(newTemplate);
+            }} className="w-full p-2 border border-slate-200 rounded-lg text-sm">
+              {['Classic', 'Modern', 'Minimal', 'Corporate', 'GST Standard', 'Retail', 'Modal Classic', 'Fully Custom'].map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+        )}
         <div>
           <label className="text-xs font-bold text-slate-700 mb-1 block">Page Size</label>
           <select value={layout.pageSize} onChange={e => updateLayout({ pageSize: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm">
@@ -55,7 +125,13 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
         </div>
         <div>
           <label className="text-xs font-bold text-slate-700 mb-1 block">Logo Position</label>
-          <select value={config.header.logoPosition} onChange={e => updateConfig('header', { logoPosition: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm">
+          <select value={config.header.logoPosition} onChange={e => {
+            const newPos = e.target.value as 'Left'|'Center'|'Right';
+            let titleAlign = config.header.titleAlignment;
+            if (newPos === 'Left') titleAlign = 'Right';
+            if (newPos === 'Right') titleAlign = 'Left';
+            updateConfig('header', { logoPosition: newPos, titleAlignment: titleAlign });
+          }} className="w-full p-2 border border-slate-200 rounded-lg text-sm">
             {['Left', 'Center', 'Right'].map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
@@ -137,11 +213,8 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
   if (stepId === 'shipping') {
     return (
       <div className="space-y-4">
-         <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-4">
-            <input type="checkbox" checked={config.shipping.sameAsBilling} onChange={e => updateConfig('shipping', { sameAsBilling: e.target.checked })} />
-            Same as Billing (Collapse section if true)
-         </label>
-        {!config.shipping.sameAsBilling && ['name', 'address', 'gstin', 'phone'].map(field => (
+        <p className="text-xs text-slate-500 mb-2">Select fields to display for Ship To section.</p>
+        {['name', 'address', 'gstin', 'pan', 'phone', 'email'].map(field => (
            <label key={field} className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
               <input type="checkbox" checked={config.shipping.fields.includes(field)} onChange={e => {
                  const newFields = e.target.checked ? [...config.shipping.fields, field] : config.shipping.fields.filter(f => f !== field);
@@ -244,6 +317,110 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
               <input type="checkbox" checked={styleConfig.alternatingRowColors} onChange={e => updateStyle({ alternatingRowColors: e.target.checked })} />
               Alternating Table Row Colors
            </label>
+        </div>
+      </div>
+    );
+  }
+
+  if (stepId === 'transport') {
+    return (
+      <div className="space-y-4">
+        <p className="text-xs text-slate-500 mb-2">Select fields to display for Transport section.</p>
+        {['vehicleNo', 'transportName', 'eWayBillNo', 'station', 'driverMobileNo'].map(field => (
+           <label key={field} className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
+              <input type="checkbox" checked={config.transport.fields.includes(field)} onChange={e => {
+                 const newFields = e.target.checked ? [...config.transport.fields, field] : config.transport.fields.filter(f => f !== field);
+                 updateConfig('transport', { fields: newFields });
+              }} />
+              Show {field === 'eWayBillNo' ? 'E-Way Bill No' : field === 'station' ? 'Station' : field === 'driverMobileNo' ? 'Driver Mobile No' : field === 'vehicleNo' ? 'Vehicle No' : 'Transport Name'}
+           </label>
+        ))}
+      </div>
+    );
+  }
+
+  if (stepId === 'amountInWords') {
+    return (
+      <div className="space-y-4">
+        <div>
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
+              <input type="checkbox" checked={config.amountInWords.enabled} onChange={e => updateConfig('amountInWords', { enabled: e.target.checked })} />
+              Enable Amount in Words
+           </label>
+        </div>
+        <div>
+          <label className="text-xs font-bold text-slate-700 mb-1 block">Format</label>
+          <select value={config.amountInWords.format} onChange={e => updateConfig('amountInWords', { format: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm">
+            {['Indian', 'International'].map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+      </div>
+    );
+  }
+
+  if (stepId === 'terms') {
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="text-xs font-bold text-slate-700 mb-1 block">Terms & Conditions</label>
+          <textarea value={config.terms.customText} onChange={e => updateConfig('terms', { customText: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm h-32" />
+        </div>
+      </div>
+    );
+  }
+
+  if (stepId === 'signature') {
+    return (
+      <div className="space-y-4">
+        <div>
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
+              <input type="checkbox" checked={config.signature.showSignature} onChange={e => updateConfig('signature', { showSignature: e.target.checked })} />
+              Show Signature Block
+           </label>
+        </div>
+        <div>
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
+              <input type="checkbox" checked={config.signature.showStamp} onChange={e => updateConfig('signature', { showStamp: e.target.checked })} />
+              Show Stamp Area
+           </label>
+        </div>
+        <div>
+          <label className="text-xs font-bold text-slate-700 mb-1 block">Signatory Name</label>
+          <input type="text" value={config.signature.signatoryName} onChange={e => updateConfig('signature', { signatoryName: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
+        </div>
+        <div>
+          <label className="text-xs font-bold text-slate-700 mb-1 block">Designation</label>
+          <input type="text" value={config.signature.designation} onChange={e => updateConfig('signature', { designation: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
+        </div>
+      </div>
+    );
+  }
+
+  if (stepId === 'footer') {
+    return (
+      <div className="space-y-4">
+        <div>
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
+              <input type="checkbox" checked={config.footer.showPageNumbers} onChange={e => updateConfig('footer', { showPageNumbers: e.target.checked })} />
+              Show Page Numbers
+           </label>
+        </div>
+        <div>
+          <label className="text-xs font-bold text-slate-700 mb-1 block">Footer Message</label>
+          <input type="text" value={config.footer.message} onChange={e => updateConfig('footer', { message: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
+        </div>
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-bold text-slate-700">Contact / Website</label>
+            <button 
+              type="button"
+              onClick={() => updateConfig('footer', { supportContact: '', website: '' })} 
+              className="text-[10px] text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded transition-colors"
+            >
+              Remove
+            </button>
+          </div>
+          <input type="text" value={config.footer.supportContact} onChange={e => updateConfig('footer', { supportContact: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" placeholder="contact@example.com / www.example.com" />
         </div>
       </div>
     );

@@ -56,7 +56,7 @@ export interface Invoice {
   recurringSettings?: RecurringSettings; // Optional recurring invoice setup
   parentInvoiceId?: string; // Tracks which recurring series this was auto-generated from
   selectedTemplateStyle?: 'minimal' | 'professional' | 'modern' | 'startup' | 'agency' | 'enterprise'; // Selected visual invoice layout style
-  selectedCustomTemplateId?: string;
+  selectedCustomTemplateId?: string; // Tracks which template was specifically chosen or defaulted for this invoice
   qrCodeTriggerUrl?: string; // Optional custom payment link (UPI, PayPal, Stripe etc)
   companyState?: string;
   companyCountry?: string;
@@ -78,6 +78,8 @@ export interface Invoice {
   ewayBillNo?: string;
   shippedToName?: string;
   shippedToPhone?: string;
+  shippedToEmail?: string;
+  shippedToPan?: string;
   shippedToState?: string;
   shippedToCountry?: string;
   shippedToGstin?: string;
@@ -115,6 +117,8 @@ export interface BusinessProfile {
   phone: string;
   address: string;
   taxId: string;
+  pan?: string;
+  website?: string;
   logoUrl?: string;
   signature?: string; // Base64 data URI of drawn signature
   currency: string;
@@ -178,7 +182,7 @@ export interface InvoiceTemplate {
   category: 'Default' | 'GST' | 'Service' | 'Retail' | 'User';
   
   layout: {
-    type: 'Classic' | 'Modern' | 'Minimal' | 'Corporate' | 'GST Standard' | 'Retail' | 'Fully Custom';
+    type: 'Classic' | 'Modern' | 'Minimal' | 'Corporate' | 'GST Standard' | 'Retail' | 'Fully Custom' | 'Modal Classic';
     pageSize: 'A4' | 'Letter';
     orientation: 'Portrait' | 'Landscape';
     margins: 'Compact' | 'Standard' | 'Wide' | 'Custom';

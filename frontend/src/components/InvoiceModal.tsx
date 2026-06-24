@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown } from 'lucide-react';
-import { Invoice, TaxClassification, InvoiceItem, InvoiceStatus, DiscountType, PresetItem, ClientProfile, RecurringInterval, BusinessProfile } from '../types';
+import { Invoice, TaxClassification, InvoiceItem, InvoiceStatus, DiscountType, PresetItem, ClientProfile, RecurringInterval, BusinessProfile, InvoiceTemplate } from '../types';
 import { EditableField } from './EditableField';
-import { exportInvoicePDF } from '../lib/pdfExporter';
+import { exportInvoicePDF, exportInvoicePDFAsync } from '../lib/pdfExporter';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { LivePreview } from './TemplateBuilder/LivePreview';
 import { Country, State } from 'country-state-city';
+import { TEMPLATE_PRESETS } from '../lib/templatePresets';
 
 interface InvoiceModalProps {
   invoice: Invoice | null; // null means create new
@@ -34,7 +35,7 @@ export default function InvoiceModal({
   onSave 
 }: InvoiceModalProps) {
   // GUI Preview and Form Edit State
-  const [activeMode, setActiveMode] = useState<'edit' | 'preview' | 'editable'>('edit');
+  const [activeMode, setActiveMode] = useState<'edit' | 'preview' | 'editable'>('editable');
   // Client details
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [date, setDate] = useState('');
@@ -58,11 +59,16 @@ export default function InvoiceModal({
   const [ewayBillNo, setEwayBillNo] = useState('');
   const [shippedToName, setShippedToName] = useState('');
   const [shippedToPhone, setShippedToPhone] = useState('');
+  const [shippedToEmail, setShippedToEmail] = useState('');
+  const [shippedToPan, setShippedToPan] = useState('');
   const [shippedToState, setShippedToState] = useState('');
   const [shippedToCountry, setShippedToCountry] = useState('');
   const [shippedToGstin, setShippedToGstin] = useState('');
   const [shippedToAddress, setShippedToAddress] = useState('');
-  const [shippingSameAsClient, setShippingSameAsClient] = useState(true);
+  const [shippingSameAsClient, setShippingSameAsClient] = useState(false);
+
+  // Active Template
+  const [activeTemplate, setActiveTemplate] = useState<InvoiceTemplate>(TEMPLATE_PRESETS[0]);
 
   // Advanced features and billing options
   const [invoiceType, setInvoiceType] = useState<'invoice' | 'estimate'>('invoice');
@@ -122,6 +128,79 @@ export default function InvoiceModal({
   const [additionalTaxes, setAdditionalTaxes] = useState<{id: string, name: string, rate: number}[]>(invoice?.additionalTaxes || []);
   const [customTaxCols, setCustomTaxCols] = useState<string[]>(invoice?.customTaxCols && invoice.customTaxCols.length > 0 ? invoice.customTaxCols : ['Tax']);
 
+  // Helper: load the correct default template from storage
+  const loadDefaultTemplate = useCallback(() => {
+    // If editing an existing invoice, use its explicitly selected template
+    if (invoice?.selectedCustomTemplateId) {
+      const savedCustom = localStorage.getItem('makinvoice_custom_templates');
+      if (savedCustom) {
+        try {
+          const parsed = JSON.parse(savedCustom);
+          const match = parsed.find((t: InvoiceTemplate) => t.id === invoice.selectedCustomTemplateId);
+          if (match) {
+            setActiveTemplate(match);
+            return;
+          }
+        } catch(e) {}
+      }
+      const systemMatch = TEMPLATE_PRESETS.find(t => t.id === invoice.selectedCustomTemplateId);
+      if (systemMatch) {
+        setActiveTemplate(systemMatch);
+        return;
+      }
+    }
+
+    const defaultTemplateId = localStorage.getItem('makinvoice_global_default_template');
+    let loadedTemplate = TEMPLATE_PRESETS[0];
+
+    if (defaultTemplateId) {
+      let foundCustom = false;
+      const savedCustom = localStorage.getItem('makinvoice_custom_templates');
+      if (savedCustom) {
+        try {
+          const parsed = JSON.parse(savedCustom);
+          const customMatch = parsed.find((t: InvoiceTemplate) => t.id === defaultTemplateId);
+          if (customMatch) {
+            loadedTemplate = customMatch;
+            foundCustom = true;
+          }
+        } catch(e) {}
+      }
+      if (!foundCustom) {
+        const systemMatch = TEMPLATE_PRESETS.find(t => t.id === defaultTemplateId);
+        if (systemMatch) loadedTemplate = systemMatch;
+      }
+    } else {
+      const savedCustom = localStorage.getItem('makinvoice_custom_templates');
+      if (savedCustom) {
+        try {
+          const parsed = JSON.parse(savedCustom);
+          const customDefault = parsed.find((t: InvoiceTemplate) => t.isDefault);
+          if (customDefault) loadedTemplate = customDefault;
+        } catch(e) {}
+      }
+    }
+    setActiveTemplate(loadedTemplate);
+  }, [invoice]);
+
+  // Load template whenever the modal opens (not on every clientCountry change)
+  useEffect(() => {
+    if (isOpen) {
+      loadDefaultTemplate();
+    }
+  }, [isOpen, loadDefaultTemplate]);
+
+  // Listen for template changes made in TemplateManager while modal is open
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'makinvoice_global_default_template' || e.key === 'makinvoice_custom_templates') {
+        loadDefaultTemplate();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [loadDefaultTemplate]);
+
   useEffect(() => {
     if (clientCountry && clientCountry !== 'India' && clientCountry !== 'IN') {
       setTaxMode('custom');
@@ -163,6 +242,8 @@ export default function InvoiceModal({
       setEwayBillNo(invoice.ewayBillNo || '');
       setShippedToName(invoice.shippedToName || '');
       setShippedToPhone(invoice.shippedToPhone || '');
+      setShippedToEmail(invoice.shippedToEmail || '');
+      setShippedToPan(invoice.shippedToPan || '');
       setShippedToState(invoice.shippedToState || '');
       setShippedToCountry(invoice.shippedToCountry || '');
       setShippedToGstin(invoice.shippedToGstin || '');
@@ -239,6 +320,8 @@ export default function InvoiceModal({
       setEwayBillNo('');
       setShippedToName('');
       setShippedToPhone('');
+      setShippedToEmail('');
+      setShippedToPan('');
       setShippedToState('');
       setShippedToCountry('');
       setShippedToGstin('');
@@ -261,17 +344,40 @@ export default function InvoiceModal({
     }
   }, [invoice, isOpen, defaultTaxRate]);
 
+
   // Sync shipping details continuously when shippingSameAsClient is active
   useEffect(() => {
     if (shippingSameAsClient) {
       setShippedToName(clientName);
       setShippedToPhone(clientPhone);
+      // Note: clientEmail and clientPan (if it exists) should be copied. MakInvoice doesn't seem to have clientPan in state, but we'll copy email.
+      setShippedToEmail(clientEmail);
       setShippedToCountry(clientCountry);
       setShippedToState(clientState);
       setShippedToAddress(clientAddress);
       setShippedToGstin(clientGstin);
     }
-  }, [shippingSameAsClient, clientName, clientPhone, clientCountry, clientState, clientAddress, clientGstin]);
+  }, [shippingSameAsClient, clientName, clientPhone, clientEmail, clientCountry, clientState, clientAddress, clientGstin]);
+
+  // Auto-clear transport details if hasTransport is false
+  useEffect(() => {
+    if (!hasTransport) {
+      setTransport('');
+      setVehicleNo('');
+      setDriverMobile('');
+      setStation('');
+      setEwayBillNo('');
+      setGrRrNo('');
+    } else {
+      if (transport === 'N/A') setTransport('');
+      if (vehicleNo === 'N/A') setVehicleNo('');
+      if (driverMobile === 'N/A') setDriverMobile('');
+      if (station === 'N/A') setStation('');
+      if (ewayBillNo === 'N/A') setEwayBillNo('');
+      if (grRrNo === 'N/A') setGrRrNo('');
+    }
+  }, [hasTransport]);
+
 
   // --- DYNAMIC SELECTION LISTS FROM PAST DATA & PRESETS ---
   const pastNames = React.useMemo(() => {
@@ -554,15 +660,18 @@ export default function InvoiceModal({
   const roundedTaxTotal = parseFloat(calculatedTaxTotal.toFixed(2));
   const calculatedGrandTotal = parseFloat(Math.max(0, (finalDiscountedSubtotal + roundedTaxTotal)).toFixed(2));
 
-  const buildTempInvoice = (): Invoice | null => {
-    if (invoiceType !== 'estimate' && !clientName.trim()) {
-      alert('Client Name is required to export PDF.');
-      return null;
-    }
 
-    if (items.length === 0) {
-      alert('Please add at least one line item to build the PDF.');
-      return null;
+  const buildTempInvoice = (silent = false): Invoice | null => {
+    if (!silent) {
+      if (invoiceType !== 'estimate' && !clientName.trim()) {
+        alert('Client Name is required to export PDF.');
+        return null;
+      }
+
+      if (items.length === 0) {
+        alert('Please add at least one line item to build the PDF.');
+        return null;
+      }
     }
 
     return {
@@ -573,6 +682,7 @@ export default function InvoiceModal({
       referenceNumber: referenceNumber.trim() || undefined,
       poNumber: poNumber.trim() || undefined,
       selectedTemplateStyle,
+      selectedCustomTemplateId: activeTemplate.id,
       qrCodeTriggerUrl: qrCodeTriggerUrl.trim() || undefined,
       date,
       dueDate,
@@ -620,13 +730,29 @@ export default function InvoiceModal({
       ewayBillNo: ewayBillNo.trim() || undefined,
       shippedToName: shippingSameAsClient ? undefined : (shippedToName.trim() || undefined),
       shippedToPhone: shippingSameAsClient ? undefined : (shippedToPhone.trim() || undefined),
+      shippedToEmail: shippingSameAsClient ? undefined : (shippedToEmail.trim() || undefined),
+      shippedToPan: shippingSameAsClient ? undefined : (shippedToPan.trim() || undefined),
       shippedToState: shippingSameAsClient ? undefined : (shippedToState.trim() || undefined),
       shippedToCountry: shippingSameAsClient ? undefined : (shippedToCountry.trim() || undefined),
       shippedToGstin: shippingSameAsClient ? undefined : (shippedToGstin.trim() || undefined),
       shippedToAddress: shippingSameAsClient ? undefined : (shippedToAddress.trim() || undefined),
       customTaxCols,
-    };
+      shippingSameAsClient,
+    } as Invoice & { shippingSameAsClient?: boolean };
   };
+
+  // Memoized invoice data — placed AFTER buildTempInvoice to avoid temporal dead zone
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const liveInvoiceData = useMemo(() => buildTempInvoice(true), [
+    invoiceNumber, date, dueDate, clientName, clientEmail, clientPhone,
+    clientAddress, clientGstin, clientState, clientCountry, notes, invoiceTerms,
+    items, discountType, discountValue, shippedToName, shippedToPhone,
+    shippedToEmail, shippedToPan, shippedToState, shippedToCountry,
+    shippedToGstin, shippedToAddress, shippingSameAsClient,
+    transport, vehicleNo, driverMobile, station, ewayBillNo, grRrNo,
+    placeOfSupply, calculatedSubtotal, roundedTaxTotal, calculatedGrandTotal,
+    poNumber, referenceNumber, invoiceType
+  ]);
 
   const handleUpdateItemCustomTax = (id: string, colName: string, value: number) => {
     setItems(items.map(i => {
@@ -681,10 +807,14 @@ export default function InvoiceModal({
     setItems(items.filter(item => item.id !== id));
   };
 
-  const handleDirectExportPDF = () => {
+  const handleDirectExportPDF = async () => {
     const tempInvoice = buildTempInvoice();
     if (tempInvoice) {
-      exportInvoicePDF(tempInvoice, profile);
+      try {
+        await exportInvoicePDFAsync(tempInvoice, profile, 'save', activeTemplate);
+      } catch (err: any) {
+        alert('Failed to export PDF: ' + (err.message || err.toString()));
+      }
     }
   };
 
@@ -756,6 +886,8 @@ export default function InvoiceModal({
       ewayBillNo: ewayBillNo.trim() || undefined,
       shippedToName: shippingSameAsClient ? undefined : (shippedToName.trim() || undefined),
       shippedToPhone: shippingSameAsClient ? undefined : (shippedToPhone.trim() || undefined),
+      shippedToEmail: shippingSameAsClient ? undefined : (shippedToEmail.trim() || undefined),
+      shippedToPan: shippingSameAsClient ? undefined : (shippedToPan.trim() || undefined),
       shippedToState: shippingSameAsClient ? undefined : (shippedToState.trim() || undefined),
       shippedToGstin: shippingSameAsClient ? undefined : (shippedToGstin.trim() || undefined),
       shippedToAddress: shippingSameAsClient ? undefined : (shippedToAddress.trim() || undefined)
@@ -767,7 +899,7 @@ export default function InvoiceModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center p-0 md:p-4 bg-slate-900/65 backdrop-blur-sm overflow-y-auto overflow-x-hidden">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4 bg-slate-900/65 backdrop-blur-sm overflow-y-auto overflow-x-hidden">
       <div 
         id="invoice-editor" 
         className="w-full h-full md:h-auto md:max-h-[92dvh] max-w-full md:max-w-4xl lg:max-w-5xl bg-white dark:bg-slate-900 rounded-none md:rounded-3xl overflow-hidden shadow-2xl flex flex-col border-none md:border md:border-slate-100 dark:md:border-slate-800 transition-all duration-300 md:my-auto"
@@ -795,20 +927,9 @@ export default function InvoiceModal({
           </button>
         </div>
 
-        {/* Toggle Mode Tab */}
-        <div className="flex border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/45 p-2.5 gap-2.5 justify-center select-none items-center">
-          <button
-            type="button"
-            onClick={() => setActiveMode('edit')}
-            className={`px-4 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2 cursor-pointer ${
-              activeMode === 'edit'
-                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-extrabold'
-                : 'text-slate-650 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-            }`}
-          >
-            <span>✍️ Draft Information</span>
-          </button>
-
+        {/* Toggle Mode Tab + Template Switcher */}
+        <div className="flex border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/45 px-3 py-2 gap-2 select-none items-center flex-wrap">
+          {/* Primary tab: Interactive Layout */}
           <button
             type="button"
             onClick={() => setActiveMode('editable')}
@@ -818,8 +939,23 @@ export default function InvoiceModal({
                 : 'text-slate-650 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800/60'
             }`}
           >
-            <span>✨ Interactive Editable Layout</span>
+            <span>✨ Invoice Layout</span>
           </button>
+
+          {/* Secondary tab: Advanced Settings */}
+          <button
+            type="button"
+            onClick={() => setActiveMode('edit')}
+            className={`px-4 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2 cursor-pointer ${
+              activeMode === 'edit'
+                ? 'bg-slate-700 text-white shadow-md shadow-slate-950/10 font-extrabold'
+                : 'text-slate-650 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+            }`}
+          >
+            <span>⚙️ Advanced Settings</span>
+          </button>
+
+
         </div>
 
         {/* Scrollable Contents */}
@@ -1051,6 +1187,8 @@ export default function InvoiceModal({
                     setShippingSameAsClient(false);
                     setShippedToName('');
                     setShippedToPhone('');
+      setShippedToEmail('');
+      setShippedToPan('');
                     setShippedToCountry('');
                     setShippedToState('');
                     setShippedToAddress('');
@@ -1116,6 +1254,8 @@ export default function InvoiceModal({
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <input type="text" value={shippedToPhone} onChange={e => setShippedToPhone(e.target.value)} placeholder="Phone" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
+                  <input type="email" value={shippedToEmail} onChange={e => setShippedToEmail(e.target.value)} placeholder="Email" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
+                  <input type="text" value={shippedToPan} onChange={e => setShippedToPan(e.target.value)} placeholder="PAN" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
                   <input type="text" value={shippedToGstin} onChange={e => setShippedToGstin(e.target.value)} placeholder="GSTIN / UIN" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
                 </div>
                 <textarea value={shippedToAddress} onChange={e => setShippedToAddress(e.target.value)} placeholder="Shipping Address" rows={1} className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none resize-none" />
@@ -1781,455 +1921,80 @@ export default function InvoiceModal({
             </div>
           </div>
           ) : activeMode === 'editable' ? (
-            <div className="w-full max-w-[800px] mx-auto bg-white p-8 sm:p-12 shadow-2xl relative text-black text-xs font-sans min-h-[1130px] border border-slate-200">
-              <div className="flex justify-between items-start mb-6 border-b border-gray-200 pb-4">
-                <div className="w-2/3 flex gap-4 items-stretch">
-                  {profile.logoUrl && (
-                    <div className="shrink-0 flex max-w-[150px]">
-                      <img src={profile.logoUrl} alt="Company Logo" className="object-contain h-full mix-blend-multiply" />
-                    </div>
-                  )}
-                  <div className="space-y-1">
-                    <h1 className="text-xl font-medium uppercase text-gray-900 mb-2">{profile.name || 'Company Name'}</h1>
-                    { (profile.ownerName || profile.displayName) && <p className="text-gray-600 font-medium">Owner: {profile.ownerName || profile.displayName}</p>}
-                    {profile.mobile && <p className="text-gray-600">Phone: {profile.mobile}</p>}
-                    {profile.email && <p className="text-gray-600">Email: {profile.email}</p>}
-                    {profile.address && <p className="text-gray-600 whitespace-pre-wrap">{profile.address}</p>}
-                    {profile.state && <p className="text-gray-600">{profile.state} {profile.stateCode ? `- ${profile.stateCode}` : ''}</p>}
-                    {profile.taxId && <p className="text-gray-600">GSTIN: {profile.taxId}</p>}
-                  </div>
-                </div>
-                <div className="w-1/3 text-right">
-                  <select 
-                    value={invoiceType}
-                    onChange={(e) => setInvoiceType(e.target.value as 'invoice' | 'estimate')}
-                    className="text-3xl text-gray-800 font-light tracking-widest uppercase mb-4 bg-transparent border-none appearance-none outline-none text-right cursor-pointer hover:bg-slate-50 transition-colors"
-                    title="Change Document Type"
-                  >
-                    <option value="invoice">TAX INVOICE</option>
-                    <option value="estimate">QUOTE</option>
-                  </select>
-                </div>
-              </div>
 
-              {invoiceType !== 'estimate' && (
-                <div className="flex mb-1 border border-gray-300 relative group">
-                  <div className="absolute -top-3 right-2 hide-on-print opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md shadow-sm text-[10px] z-10">
-                    <span className="font-medium text-sky-800">Transport?</span>
-                    <button type="button" onClick={() => { setHasTransport(true); if(transport==='N/A') setTransport(''); if(vehicleNo==='N/A') setVehicleNo(''); if(driverMobile==='N/A') setDriverMobile(''); if(station==='N/A') setStation(''); if(ewayBillNo==='N/A') setEwayBillNo(''); }} className={`px-2 py-0.5 rounded transition-colors ${hasTransport ? 'bg-sky-500 text-white shadow-inner' : 'bg-white text-sky-700 hover:bg-sky-100'}`}>Yes</button>
-                    <button type="button" onClick={() => { setHasTransport(false); setTransport('N/A'); setVehicleNo('N/A'); setDriverMobile('N/A'); setStation('N/A'); setEwayBillNo('N/A'); }} className={`px-2 py-0.5 rounded transition-colors ${!hasTransport ? 'bg-slate-500 text-white shadow-inner' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>No</button>
-                  </div>
+            <div className="w-full mx-auto bg-slate-50 p-4 sm:p-8 relative min-h-[1130px] border border-slate-200" id="pdf-export-content-editable">
+               
+               <LivePreview 
+ 
+                 template={activeTemplate} 
+                 invoiceData={liveInvoiceData || invoice || {}} 
+                 businessProfile={profile} 
+                 currencySymbol={currencySymbol} 
+                 isInteractive={true} 
+                 shippingSameAsClient={shippingSameAsClient}
+                 onUpdateShippingSameAsClient={(val) => {
+                   setShippingSameAsClient(val);
+                   if (!val) {
+                     setShippedToName('');
+                     setShippedToPhone('');
+                     setShippedToEmail('');
+                     setShippedToPan('');
+                     setShippedToCountry('');
+                     setShippedToState('');
+                     setShippedToAddress('');
+                     setShippedToGstin('');
+                   }
+                 }}
+                 hasTransport={hasTransport}
+                 onUpdateHasTransport={(val) => {
+                   setHasTransport(val);
+                   if (!val) {
+                     setTransport('');
+                     setVehicleNo('');
+                     setDriverMobile('');
+                     setStation('');
+                     setEwayBillNo('');
+                     setGrRrNo('');
+                   }
+                 }}
+                 onUpdateField={(field, val) => {
+                    if(field==='invoiceNumber') setInvoiceNumber(val);
+                    if(field==='date') setDate(val);
+                    if(field==='dueDate') setDueDate(val);
+                    if(field==='clientName') setClientName(val);
+                    if(field==='clientEmail') setClientEmail(val);
+                    if(field==='clientPhone') setClientPhone(val);
+                    if(field==='clientAddress') setClientAddress(val);
+                    if(field==='clientGstin') setClientGstin(val);
+                    if(field==='clientState') setClientState(val);
+                    if(field==='clientCountry') setClientCountry(val);
+                    if(field==='shippedToName') setShippedToName(val);
+                    if(field==='shippedToPhone') setShippedToPhone(val);
+                    if(field==='shippedToEmail') setShippedToEmail(val);
+                    if(field==='shippedToPan') setShippedToPan(val);
+                    if(field==='shippedToAddress') setShippedToAddress(val);
+                    if(field==='shippedToGstin') setShippedToGstin(val);
+                    if(field==='shippedToState') setShippedToState(val);
+                    if(field==='shippedToCountry') setShippedToCountry(val);
+                    if(field==='placeOfSupply') setPlaceOfSupply(val);
+                    if(field==='grRrNo') setGrRrNo(val);
+                    if(field==='transport') setTransport(val);
+                    if(field==='vehicleNo') setVehicleNo(val);
+                    if(field==='driverMobile') setDriverMobile(val);
+                    if(field==='station') setStation(val);
+                    if(field==='ewayBillNo') setEwayBillNo(val);
+                    if(field==='invoiceTerms') setInvoiceTerms(val);
+                    if(field==='notes') setNotes(val);
+                    if(field==='poNumber') setPoNumber(val);
+                    if(field==='referenceNumber') setReferenceNumber(val);
+                 }}
+                 onInteractiveAddItem={handleAddItem}
+                 onInteractiveRemoveItem={handleInteractiveRemoveItem}
 
-                  <div className="w-1/2 border-r border-gray-300 p-2.5 space-y-1.5">
-                    <div className="flex items-center"><span className="w-24 font-medium text-gray-700">Invoice No.</span><span className="mr-1">:</span> <EditableField value={invoiceNumber} onSave={setInvoiceNumber} className="font-mono text-[11px]" /></div>
-                    <div className="flex items-center"><span className="w-24 font-medium text-gray-700">Dated</span><span className="mr-1">:</span> <EditableField value={date} onSave={setDate} className="font-mono text-[11px]" /></div>
-                    <div className="flex items-center"><span className="w-24 font-medium text-gray-700">Place Of Supply</span><span className="mr-1">:</span> <EditableField value={placeOfSupply} onSave={setPlaceOfSupply} className="text-[11px]" /></div>
-                    <div className="flex items-center"><span className="w-24 font-medium text-gray-700">GR/RR No.</span><span className="mr-1">:</span> <EditableField value={grRrNo} onSave={setGrRrNo} className="text-[11px]" /></div>
-                    <div className="flex items-center"><span className="w-24 font-medium text-gray-700">Transport</span><span className="mr-1">:</span> <EditableField value={transport} onSave={setTransport} className="text-[11px]" /></div>
-                  </div>
-                  <div className="w-1/2 p-2.5 space-y-1.5">
-                    <div className="flex items-center"><span className="w-28 font-medium text-gray-700">Vehicle No.</span><span className="mr-1">:</span> <EditableField value={vehicleNo} onSave={setVehicleNo} className="text-[11px]" /></div>
-                    <div className="flex items-center"><span className="w-28 font-medium text-gray-700">Driver Mobile</span><span className="mr-1">:</span> <EditableField value={driverMobile} onSave={setDriverMobile} className="text-[11px]" /></div>
-                    <div className="flex items-center"><span className="w-28 font-medium text-gray-700">Station</span><span className="mr-1">:</span> <EditableField value={station} onSave={setStation} className="text-[11px]" /></div>
-                    <div className="flex items-center"><span className="w-28 font-medium text-gray-700">E-Way Bill No.</span><span className="mr-1">:</span> <EditableField value={ewayBillNo} onSave={setEwayBillNo} className="text-[11px]" /></div>
-                    <div className="flex items-center"><span className="w-28 font-medium text-gray-700">Purchase Order</span><span className="mr-1">:</span> <EditableField value={poNumber} onSave={setPoNumber} className="text-[11px]" /></div>
-                  </div>
-                </div>
-              )}
-              {invoiceType === 'estimate' && (
-                <div className="flex mb-1 border border-gray-300">
-                  <div className="w-1/2 border-r border-gray-300 p-2.5 space-y-1.5">
-                    <div className="flex items-center"><span className="w-24 font-medium text-gray-700">Quote No.</span><span className="mr-1">:</span> <EditableField value={invoiceNumber} onSave={setInvoiceNumber} className="font-mono text-[11px]" /></div>
-                    <div className="flex items-center"><span className="w-24 font-medium text-gray-700">Dated</span><span className="mr-1">:</span> <EditableField value={date} onSave={setDate} className="font-mono text-[11px]" /></div>
-                    <div className="flex items-center"><span className="w-24 font-medium text-gray-700">Place Of Supply</span><span className="mr-1">:</span> <EditableField value={placeOfSupply} onSave={setPlaceOfSupply} className="text-[11px]" /></div>
-                  </div>
-                  <div className="w-1/2 p-2.5 space-y-1.5">
-                    <div className="flex items-center"><span className="w-28 font-medium text-gray-700">Purchase Order</span><span className="mr-1">:</span> <EditableField value={poNumber} onSave={setPoNumber} className="text-[11px]" /></div>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex mb-6 border border-gray-300">
-                <div className="w-1/2 border-r border-gray-300 p-2.5 space-y-1">
-                  <h3 className="font-medium text-gray-800 uppercase mb-2">Billed To</h3>
-                  <EditableField value={clientName} onSave={setClientName} placeholder="Client Name" className="font-medium text-sm text-gray-900" />
-                  <div className="flex items-center mt-1"><span className="w-24 text-gray-600">Party Mobile No</span><span className="mr-1">:</span> <EditableField value={clientPhone} onSave={setClientPhone} className="text-[11px]" /></div>
-                  <div className="flex items-center"><span className="w-24 text-gray-600">Country</span><span className="mr-1">:</span> <EditableField type="select" value={Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode || ''} options={Country.getAllCountries().map(c => ({ value: c.isoCode, label: c.name }))} onSave={(val) => { const selected = Country.getCountryByCode(val); if(selected) { setClientCountry(selected.name); setClientState(''); } }} placeholder="Select Country" className="text-[11px]" /></div>
-                  <div className="flex items-center"><span className="w-24 text-gray-600">State</span><span className="mr-1">:</span> <EditableField type="select" value={(() => { const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode; if (!cCode) return ''; return State.getStatesOfCountry(cCode).find(s => s.name === clientState)?.isoCode || ''; })()} options={(() => { const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode; if (!cCode) return []; return State.getStatesOfCountry(cCode).map(s => ({ value: s.isoCode, label: s.name })); })()} onSave={(val) => { const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode; if(cCode) { const selected = State.getStateByCodeAndCountry(val, cCode); if(selected) setClientState(selected.name); } }} placeholder="Select State" className="text-[11px]" /></div>
-                  <div className="flex items-start"><span className="w-24 text-gray-600 pt-1">Address</span><span className="mr-1 pt-1">:</span> <EditableField value={clientAddress} onSave={setClientAddress} type="textarea" className="text-[11px] leading-tight" /></div>
-                  <div className="flex items-center"><span className="w-24 text-gray-600">GSTIN / UIN</span><span className="mr-1">:</span> <EditableField value={clientGstin} onSave={setClientGstin} className="text-[11px] font-mono" /></div>
-                </div>
-                <div className="w-1/2 p-2.5 space-y-1 relative group/shipped">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-medium text-gray-800 uppercase">Shipped To</h3>
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        setShippedToName(clientName);
-                        setShippedToPhone(clientPhone);
-                        setShippedToCountry(clientCountry);
-                        setShippedToState(clientState);
-                        setShippedToAddress(clientAddress);
-                        setShippedToGstin(clientGstin);
-                      }}
-                      className="hide-on-print text-[9px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded border border-gray-300 transition-colors opacity-0 group-hover/shipped:opacity-100"
-                    >
-                      Same as Billed To
-                    </button>
-                  </div>
-                  <EditableField value={shippedToName} onSave={(val) => { setShippedToName(val); setShippingSameAsClient(false); }} placeholder="Shipped To Name" className="font-medium text-sm text-gray-900" />
-                  <div className="flex items-center mt-1"><span className="w-24 text-gray-600">Party Mobile No</span><span className="mr-1">:</span> <EditableField value={shippedToPhone} onSave={(val) => { setShippedToPhone(val); setShippingSameAsClient(false); }} className="text-[11px]" /></div>
-                  <div className="flex items-center"><span className="w-24 text-gray-600">Country</span><span className="mr-1">:</span> <EditableField type="select" value={Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode || ''} options={Country.getAllCountries().map(c => ({ value: c.isoCode, label: c.name }))} onSave={(val) => { const selected = Country.getCountryByCode(val); if(selected) { setShippedToCountry(selected.name); setShippedToState(''); setShippingSameAsClient(false); } }} placeholder="Select Country" className="text-[11px]" /></div>
-                  <div className="flex items-center"><span className="w-24 text-gray-600">State</span><span className="mr-1">:</span> <EditableField type="select" value={(() => { const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode; if (!cCode) return ''; return State.getStatesOfCountry(cCode).find(s => s.name === shippedToState)?.isoCode || ''; })()} options={(() => { const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode; if (!cCode) return []; return State.getStatesOfCountry(cCode).map(s => ({ value: s.isoCode, label: s.name })); })()} onSave={(val) => { const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode; if(cCode) { const selected = State.getStateByCodeAndCountry(val, cCode); if(selected) { setShippedToState(selected.name); setShippingSameAsClient(false); } } }} placeholder="Select State" className="text-[11px]" /></div>
-                  <div className="flex items-start"><span className="w-24 text-gray-600 pt-1">Address</span><span className="mr-1 pt-1">:</span> <EditableField value={shippedToAddress} onSave={(val) => { setShippedToAddress(val); setShippingSameAsClient(false); }} type="textarea" className="text-[11px] leading-tight" /></div>
-                  <div className="flex items-center"><span className="w-24 text-gray-600">GSTIN / UIN</span><span className="mr-1">:</span> <EditableField value={shippedToGstin} onSave={(val) => { setShippedToGstin(val); setShippingSameAsClient(false); }} className="text-[11px] font-mono" /></div>
-                </div>
-              </div>
-
-              <table className="w-full mb-6 text-left border-collapse border border-gray-300">
-                <thead>
-                  <tr className="bg-black text-white text-[10.5px] uppercase tracking-wide">
-                    <th className="py-2.5 px-3 border border-gray-300 w-10 text-center">Sl</th>
-                    <th className="py-2.5 px-3 border border-gray-300 text-center">Item Description</th>
-                    <th className="py-2.5 px-3 border border-gray-300 w-16 text-center">HSN</th>
-                    <th className="py-2.5 px-3 border border-gray-300 w-16 text-center">Qty</th>
-                    <th className="py-2.5 px-3 border border-gray-300 w-24 text-center">Rate</th>
-                    {taxClassification.type === 'local' ? (
-                      <>
-                        <th className="py-2.5 px-3 border border-gray-300 w-24 text-center relative group">
-                          <button 
-                            type="button" 
-                            onClick={() => {
-                              if (items.length <= 1) return;
-                              const firstVal = items[0].customTaxes?.['CGST'] ?? (items[0].taxPercentage / 2);
-                              setItems(items.map((item, idx) => {
-                                if (idx === 0) return item;
-                                return { ...item, customTaxes: { ...(item.customTaxes || {}), 'CGST': firstVal } };
-                              }));
-                            }}
-                            className="absolute left-1.5 top-1/2 -translate-y-1/2 text-sky-400 hover:text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-100 rounded p-0.5 hide-on-print"
-                            title="Fill all rows with 1st row's value"
-                          >
-                            <ArrowDown className="w-3.5 h-3.5" />
-                          </button>
-                          CGST%
-                        </th>
-                        <th className="py-2.5 px-3 border border-gray-300 w-24 text-center relative group">
-                          <button 
-                            type="button" 
-                            onClick={() => {
-                              if (items.length <= 1) return;
-                              const firstVal = items[0].customTaxes?.['SGST'] ?? (items[0].taxPercentage / 2);
-                              setItems(items.map((item, idx) => {
-                                if (idx === 0) return item;
-                                return { ...item, customTaxes: { ...(item.customTaxes || {}), 'SGST': firstVal } };
-                              }));
-                            }}
-                            className="absolute left-1.5 top-1/2 -translate-y-1/2 text-sky-400 hover:text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-100 rounded p-0.5 hide-on-print"
-                            title="Fill all rows with 1st row's value"
-                          >
-                            <ArrowDown className="w-3.5 h-3.5" />
-                          </button>
-                          SGST%
-                        </th>
-                      </>
-                    ) : taxClassification.type === 'custom' ? (
-                      <>
-                        {customTaxCols.map((colName, colIdx) => (
-                          <th key={colIdx} className="py-2.5 pl-6 pr-6 border border-gray-300 w-28 text-center bg-slate-800 text-white relative group">
-                            <button 
-                              type="button" 
-                              onClick={() => {
-                                if (items.length <= 1) return;
-                                const firstVal = items[0].customTaxes?.[colName] || 0;
-                                setItems(items.map((item, idx) => {
-                                  if (idx === 0) return item;
-                                  return { ...item, customTaxes: { ...(item.customTaxes || {}), [colName]: firstVal } };
-                                }));
-                              }}
-                              className="absolute left-1.5 top-1/2 -translate-y-1/2 text-sky-400 hover:text-sky-300 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 rounded p-0.5"
-                              title="Fill all rows with 1st row's value"
-                            >
-                              <ArrowDown className="w-3.5 h-3.5" />
-                            </button>
-                            <EditableField 
-                              value={colName} 
-                              onSave={(val) => {
-                                if (!val.trim()) return;
-                                if (colIdx === 0) setCustomTaxName(val);
-                                const newCols = [...customTaxCols];
-                                const oldVal = newCols[colIdx];
-                                newCols[colIdx] = val;
-                                setCustomTaxCols(newCols);
-                                // Update items that had this old tax col
-                                setItems(items.map(item => {
-                                  const updated = { ...item };
-                                  if (updated.customTaxes && oldVal in updated.customTaxes) {
-                                    updated.customTaxes[val || 'Tax'] = updated.customTaxes[oldVal];
-                                    delete updated.customTaxes[oldVal];
-                                  }
-                                  return updated;
-                                }));
-                              }} 
-                              placeholder="Tax Name" 
-                              className="text-center font-medium text-white uppercase inline" 
-                            /> %
-                            <button 
-                              type="button" 
-                              onClick={() => {
-                                const newCols = [...customTaxCols];
-                                newCols.splice(colIdx, 1);
-                                setCustomTaxCols(newCols);
-                              }}
-                              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-rose-400 hover:text-rose-300 opacity-0 group-hover:opacity-100 transition-opacity hide-on-print bg-slate-800 rounded p-0.5"
-                              title="Remove Tax Column"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </th>
-                        ))}
-                        <th className="py-2.5 px-2 border border-gray-300 w-12 text-center">
-                          <button type="button" onClick={() => setCustomTaxCols([...customTaxCols, `Tax ${customTaxCols.length + 1}`])} className="text-sky-300 hover:text-white bg-white/10 rounded px-1" title="Add Tax Column">+</button>
-                        </th>
-                      </>
-                    ) : (
-                      <th className="py-2.5 px-3 border border-gray-300 w-24 text-center relative group">
-                        <button 
-                          type="button" 
-                          onClick={() => {
-                            if (items.length <= 1) return;
-                            const firstTax = items[0].taxPercentage;
-                            setItems(items.map((item, idx) => idx === 0 ? item : { ...item, taxPercentage: firstTax }));
-                          }}
-                          className="absolute left-1.5 top-1/2 -translate-y-1/2 text-sky-400 hover:text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-100 rounded p-0.5 hide-on-print"
-                          title="Fill all rows with 1st row's value"
-                        >
-                          <ArrowDown className="w-3.5 h-3.5" />
-                        </button>
-                        IGST%
-                      </th>
-                    )}
-                    <th className="py-2.5 pl-3 pr-8 border border-gray-300 w-32 text-center">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-300">
-                  {items.map((item, index) => {
-                    let itemTaxRate = 0;
-                    if (taxClassification.type === 'local') {
-                      const cgst = item.customTaxes?.['CGST'] ?? (item.taxPercentage / 2);
-                      const sgst = item.customTaxes?.['SGST'] ?? (item.taxPercentage / 2);
-                      itemTaxRate = cgst + sgst;
-                    } else if (taxClassification.type !== 'custom') {
-                      itemTaxRate = taxClassification.zeroTax ? 0 : item.taxPercentage;
-                    } else {
-                      if (item.customTaxes) {
-                        itemTaxRate = customTaxCols.reduce((acc, col) => acc + (item.customTaxes![col] || 0), 0);
-                      } else {
-                        itemTaxRate = customTaxPercentage || 0;
-                      }
-                    }
-                    const base = item.rate * item.quantity;
-                    const taxable = base * (1 - (item.discountPercentage || 0) / 100);
-                    const amt = taxable + (taxable * itemTaxRate / 100);
-                    return (
-                      <tr key={item.id} className="align-top hover:bg-slate-50 transition-colors group">
-                        <td className="py-3 px-3 text-center border-r border-gray-300 text-gray-500">{index + 1}</td>
-                        <td className="py-3 px-3 text-center border-r border-gray-300">
-                          <EditableField value={item.name} onSave={(v) => handleUpdateItem(item.id, 'name', v)} className="text-center font-medium text-gray-800 text-[11.5px]" />
-                          <EditableField value={item.description || ''} onSave={(v) => handleUpdateItem(item.id, 'description', v)} type="textarea" className="text-center text-gray-500 text-[10px] mt-0.5 leading-snug" placeholder="Description..." />
-                        </td>
-                        <td className="py-3 px-3 text-center border-r border-gray-300">
-                          <EditableField value={item.hsnCode || ''} onSave={(v) => handleUpdateItem(item.id, 'hsnCode', v)} className="text-center text-[10px] text-gray-500 font-mono" />
-                        </td>
-                        <td className="py-3 px-3 text-center border-r border-gray-300">
-                          <div className="flex flex-col items-center gap-0.5">
-                            <EditableField value={item.quantity} onSave={(v) => handleUpdateItem(item.id, 'quantity', parseFloat(v) || 0)} type="number" className="text-center font-medium w-full" />
-                            <EditableField value={item.quantityType || ''} onSave={(v) => handleUpdateItem(item.id, 'quantityType', v)} className="text-center text-[9px] text-gray-400 w-12" placeholder="type" />
-                          </div>
-                        </td>
-                        <td className="py-3 px-3 text-center border-r border-gray-300">
-                          <EditableField value={item.rate} onSave={(v) => handleUpdateItem(item.id, 'rate', parseFloat(v) || 0)} type="number" className="text-center font-mono" />
-                        </td>
-                        {taxClassification.type === 'local' ? (
-                          <>
-                            <td className="py-3 px-3 text-center border-r border-gray-300">
-                              <EditableField value={item.customTaxes?.['CGST'] ?? (item.taxPercentage / 2)} onSave={(v) => handleUpdateItemCustomTax(item.id, 'CGST', parseFloat(v) || 0)} type="number" className="text-center font-mono text-gray-500" suffix="%" />
-                            </td>
-                            <td className="py-3 px-3 text-center border-r border-gray-300">
-                              <EditableField value={item.customTaxes?.['SGST'] ?? (item.taxPercentage / 2)} onSave={(v) => handleUpdateItemCustomTax(item.id, 'SGST', parseFloat(v) || 0)} type="number" className="text-center font-mono text-gray-500" suffix="%" />
-                            </td>
-                          </>
-                        ) : taxClassification.type === 'custom' ? (
-                          <>
-                            {customTaxCols.map(colName => (
-                              <td key={colName} className="py-3 px-1.5 text-center border-r border-gray-300">
-                                <EditableField 
-                                  value={item.customTaxes?.[colName] || 0} 
-                                  onSave={(v) => handleUpdateItemCustomTax(item.id, colName, parseFloat(v) || 0)} 
-                                  type="number" 
-                                  className="text-center font-mono text-gray-500 w-12" 
-                                  suffix="%"
-                                />
-                              </td>
-                            ))}
-                            <td className="border-r border-gray-300 bg-slate-50/50"></td>
-                          </>
-                        ) : (
-                          <td className="py-3 px-3 text-center border-r border-gray-300">
-                            <EditableField value={item.taxPercentage} onSave={(v) => handleUpdateItem(item.id, 'taxPercentage', parseFloat(v) || 0)} type="number" className="text-center font-mono text-gray-500" suffix="%" />
-                          </td>
-                        )}
-                        <td className="py-3 pl-3 pr-8 text-center font-medium text-gray-900 font-mono relative">
-                          {amt.toFixed(2)}
-                          <button 
-                            type="button" 
-                            onClick={() => handleInteractiveRemoveItem(item.id)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-rose-400 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity hide-on-print"
-                            title="Remove item"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {items.length === 0 && (
-                    <tr>
-                      <td colSpan={taxClassification.type === 'local' ? 8 : 7} className="py-8 text-center text-gray-400 italic">No items added yet. Click the button below to add one.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-              <div className="flex justify-start mb-6 hide-on-print">
-                <button 
-                  type="button" 
-                  onClick={handleAddItem}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sky-600 hover:bg-sky-50 rounded-lg text-xs font-medium transition-colors border border-sky-100"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Add New Item
-                </button>
-              </div>
-
-              <div className="flex justify-between items-start pt-2 border-t-2 border-gray-300">
-                <div className="w-7/12 pr-6 space-y-4">
-                  <div>
-                    <span className="font-medium text-gray-800 text-[10px] uppercase block mb-0.5">Notes:</span>
-                    <EditableField value={notes} onSave={setNotes} type="textarea" placeholder="Thank you for your business!" className="text-gray-600 text-[10px] leading-relaxed" />
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-800 text-[10px] uppercase block mb-0.5">Banking Information:</span>
-                    <EditableField value={invoiceTerms} onSave={setInvoiceTerms} type="textarea" placeholder="Bank Name: XYZ\nAccount: 1234\nIFSC: XYZ123" className="text-gray-600 text-[10px] leading-relaxed" />
-                  </div>
-                </div>
-                <div className="w-5/12 space-y-1.5 text-[11px]">
-                  <div className="flex justify-between text-gray-700">
-                    <span>Sub Total</span>
-                    <span className="font-mono">{currencySymbol} {calculatedSubtotal.toFixed(2)}</span>
-                  </div>
-                  {totalItemDiscounts > 0 && (
-                    <div className="flex justify-between text-gray-700">
-                      <span>Discount</span>
-                      <span className="font-mono">-{currencySymbol} {totalItemDiscounts.toFixed(2)}</span>
-                    </div>
-                  )}
-                  {taxClassification.type === 'local' ? (
-                    <>
-                      <div className="flex justify-between text-gray-700">
-                        <span>CGST ({items.length > 0 ? (items[0].customTaxes?.['CGST'] ?? (items[0].taxPercentage / 2)) : 0}%)</span>
-                        <span className="font-mono">{currencySymbol} {items.reduce((sum, item) => sum + (item.rate * item.quantity * (1 - (item.discountPercentage || 0) / 100) * docDiscountRatio * (item.customTaxes?.['CGST'] ?? (item.taxPercentage / 2)) / 100), 0).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-gray-700 border-b border-gray-200 pb-1.5">
-                        <span>SGST ({items.length > 0 ? (items[0].customTaxes?.['SGST'] ?? (items[0].taxPercentage / 2)) : 0}%)</span>
-                        <span className="font-mono">{currencySymbol} {items.reduce((sum, item) => sum + (item.rate * item.quantity * (1 - (item.discountPercentage || 0) / 100) * docDiscountRatio * (item.customTaxes?.['SGST'] ?? (item.taxPercentage / 2)) / 100), 0).toFixed(2)}</span>
-                      </div>
-                    </>
-                  ) : taxClassification.type === 'interstate' ? (
-                    <div className="flex justify-between text-gray-700 border-b border-gray-200 pb-1.5">
-                      <span>IGST ({items.length > 0 ? items[0].taxPercentage : 0}%)</span>
-                      <span className="font-mono">{currencySymbol} {roundedTaxTotal.toFixed(2)}</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col border-b border-gray-200 pb-1.5">
-                      {customTaxCols.length > 0 ? customTaxCols.map(col => {
-                        const colTotal = items.reduce((sum, item) => sum + (item.rate * item.quantity * (1 - (item.discountPercentage || 0) / 100) * docDiscountRatio * (item.customTaxes?.[col] || 0) / 100), 0);
-                        return (
-                          <div key={col} className="flex justify-between text-gray-700 mt-1">
-                            <span>{col} ({items.length > 0 ? (items[0].customTaxes?.[col] || 0) : 0}%)</span>
-                            <span className="font-mono">{currencySymbol} {colTotal.toFixed(2)}</span>
-                          </div>
-                        );
-                      }) : (
-                        <div className="flex justify-between text-gray-700">
-                          <span className="flex items-center gap-2">
-                            <EditableField value={customTaxName || 'Tax'} onSave={setCustomTaxName} placeholder="Tax Name" className="w-24 font-medium text-gray-800" />
-                          </span>
-                          <span className="font-mono">{currencySymbol} {roundedTaxTotal.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {additionalTaxes.map((tax, idx) => (
-                        <div key={tax.id} className="flex justify-between text-gray-700 mt-1 group relative">
-                          <span className="flex items-center gap-2">
-                            <EditableField value={tax.name} onSave={(val) => setAdditionalTaxes(prev => prev.map(t => t.id === tax.id ? { ...t, name: val } : t))} placeholder="Extra Tax" className="w-24 text-gray-600 text-[10px]" />
-                            <EditableField value={tax.rate} onSave={(val) => setAdditionalTaxes(prev => prev.map(t => t.id === tax.id ? { ...t, rate: parseFloat(val) || 0 } : t))} type="number" suffix="%" className="w-12 text-[10px]" />
-                            <button type="button" onClick={() => setAdditionalTaxes(prev => prev.filter(t => t.id !== tax.id))} className="text-rose-400 opacity-0 group-hover:opacity-100 hide-on-print"><Trash2 className="w-3 h-3" /></button>
-                          </span>
-                        </div>
-                      ))}
-                      <div className="mt-1 hide-on-print">
-                        <button type="button" onClick={() => setAdditionalTaxes(prev => [...prev, { id: `tax_${Date.now()}`, name: 'Extra Tax', rate: 5 }])} className="text-[10px] text-sky-600 font-medium hover:underline">+ Add Extra Tax</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Document Level Discount Input */}
-                  {discountType !== 'none' ? (
-                    <div className="flex justify-between items-center text-gray-700 pt-1.5 pb-1.5 group relative">
-                      <div className="flex items-center gap-1.5">
-                        <select 
-                          value={discountType} 
-                          onChange={(e) => setDiscountType(e.target.value as DiscountType)}
-                          className="bg-transparent border border-gray-200 rounded px-1 py-0.5 text-[10px] text-gray-700 outline-none focus:border-sky-300"
-                        >
-                          <option value="flat">Flat Discount</option>
-                          <option value="percent">Percentage (%)</option>
-                        </select>
-                        <EditableField 
-                          value={discountValue} 
-                          onSave={(val) => setDiscountValue(parseFloat(val) || 0)} 
-                          type="number" 
-                          className="w-12 text-[11px]" 
-                        />
-                        <button type="button" onClick={() => { setDiscountType('none'); setDiscountValue(0); }} className="text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity hide-on-print ml-1" title="Remove discount">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      <span className="font-mono">-{currencySymbol} {calculatedDiscountTotal.toFixed(2)}</span>
-                    </div>
-                  ) : (
-                    <div className="pt-1.5 pb-1.5 hide-on-print">
-                      <button type="button" onClick={() => setDiscountType('flat')} className="text-[10px] text-emerald-600 font-medium hover:underline">
-                        + Add Discount
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between font-medium text-[13px] text-gray-900 pt-1.5 border-t border-gray-200">
-                    <span>TOTAL</span>
-                    <span className="font-mono">{currencySymbol} {calculatedGrandTotal.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Signature block placeholder */}
-              <div className="mt-16 flex justify-end">
-                <div className="text-center text-gray-400">
-                  <div className="h-16 w-32 border-b border-gray-300 mb-2 flex items-end justify-center pb-1">
-                    {profile.signature && <img src={profile.signature} alt="Signature" className="max-h-14 max-w-full" />}
-                  </div>
-                  <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wider">Authorized Signatory</span>
-                </div>
-              </div>
+                 onUpdateItemField={(itemId, field, val) => {
+                     setItems(prev => prev.map(item => item.id === itemId ? { ...item, [field]: val } : item));
+                 }}
+               />
             </div>
           ) : null}
 
