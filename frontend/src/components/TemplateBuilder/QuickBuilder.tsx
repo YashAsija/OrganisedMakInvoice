@@ -24,6 +24,7 @@ const INITIAL_STATE: QuickBuilderState = {
     company: true,
     customer: true,
     gst: true,
+    shipTo: false,
     transport: false,
     payment: true,
     qrCode: false,
@@ -136,7 +137,7 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
           {currentStep === 1 && (
             <div className="space-y-6 animate-in slide-in-from-left-4 fade-in duration-300">
               <h3 className="text-xl font-bold text-slate-800">What type of document are you creating?</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {['Invoice', 'Estimate', 'Proforma', 'Credit Note'].map(type => (
                   <button
                     key={type}
@@ -157,7 +158,7 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
           {currentStep === 2 && (
             <div className="space-y-6 animate-in slide-in-from-left-4 fade-in duration-300">
               <h3 className="text-xl font-bold text-slate-800">Choose a Base Style</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {['Modern', 'Corporate', 'Minimal', 'Premium'].map(style => (
                   <button
                     key={style}
@@ -225,18 +226,32 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
               <h3 className="text-xl font-bold text-slate-800">Toggle Sections</h3>
               <p className="text-sm text-slate-500 mb-4">Turn on the sections you need. You can always change this later.</p>
               
-              <div className="grid grid-cols-1 gap-3">
-                {Object.entries(state.sections).map(([key, value]) => (
-                  <label key={key} className="flex items-center justify-between p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
-                    <span className="text-sm font-medium text-slate-700 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                    <input 
-                      type="checkbox" 
-                      checked={value} 
-                      onChange={e => setState({...state, sections: {...state.sections, [key]: e.target.checked}})} 
-                      className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600" 
-                    />
-                  </label>
-                ))}
+              <div className="grid grid-cols-1 gap-3 max-h-[380px] overflow-y-auto pr-1">
+                {[
+                  { key: 'company', label: 'Company' },
+                  { key: 'customer', label: 'Customer (Bill To)' },
+                  { key: 'shipTo', label: 'Ship To' },
+                  { key: 'gst', label: 'Gst' },
+                  { key: 'transport', label: 'Transport' },
+                  { key: 'payment', label: 'Payment' },
+                  { key: 'qrCode', label: 'Qr Code' },
+                  { key: 'signature', label: 'Signature' },
+                  { key: 'terms', label: 'Terms' },
+                  { key: 'notes', label: 'Notes' }
+                ].map(({ key, label }) => {
+                  const value = state.sections[key as keyof typeof state.sections];
+                  return (
+                    <label key={key} className="flex items-center justify-between p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                      <span className="text-sm font-medium text-slate-700">{label}</span>
+                      <input 
+                        type="checkbox" 
+                        checked={value} 
+                        onChange={e => setState({...state, sections: {...state.sections, [key]: e.target.checked}})} 
+                        className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer" 
+                      />
+                    </label>
+                  );
+                })}
               </div>
             </div>
           )}

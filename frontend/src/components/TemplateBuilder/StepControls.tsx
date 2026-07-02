@@ -1,6 +1,6 @@
 import React from 'react';
 import { InvoiceTemplate } from '../../types';
-import { TEMPLATE_PRESETS } from '../../lib/templatePresets';
+import { TEMPLATE_PRESETS, ensureAllColumns } from '../../lib/templatePresets';
 
 interface StepControlsProps {
   stepId: string;
@@ -232,14 +232,22 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
       <div className="space-y-4">
         <p className="text-xs text-slate-500 mb-2">Manage columns for your product table.</p>
         <div className="space-y-2 border border-slate-200 rounded-lg p-2 bg-slate-50">
-           {config.table.columns.sort((a,b) => a.order - b.order).map(col => (
+           {ensureAllColumns(config.table.columns).map(col => (
              <div key={col.id} className="flex items-center gap-2 bg-white p-2 rounded border border-slate-100">
-               <input type="checkbox" checked={col.visible} onChange={e => {
-                 const newCols = config.table.columns.map(c => c.id === col.id ? { ...c, visible: e.target.checked } : c);
-                 updateConfig('table', { columns: newCols });
-               }} />
+               <input 
+                 type="checkbox" 
+                 checked={['name', 'qty', 'rate', 'amount'].includes(col.id) ? true : col.visible} 
+                 disabled={['name', 'qty', 'rate', 'amount'].includes(col.id)}
+                 onChange={e => {
+                   if (['name', 'qty', 'rate', 'amount'].includes(col.id)) return;
+                   const allCols = ensureAllColumns(config.table.columns);
+                   const newCols = allCols.map(c => c.id === col.id ? { ...c, visible: e.target.checked } : c);
+                   updateConfig('table', { columns: newCols });
+                 }} 
+               />
                <input type="text" value={col.label} onChange={e => {
-                 const newCols = config.table.columns.map(c => c.id === col.id ? { ...c, label: e.target.value } : c);
+                 const allCols = ensureAllColumns(config.table.columns);
+                 const newCols = allCols.map(c => c.id === col.id ? { ...c, label: e.target.value } : c);
                  updateConfig('table', { columns: newCols });
                }} className="flex-1 text-xs p-1 border border-slate-200 rounded" />
                <span className="text-[10px] text-slate-400 bg-slate-100 px-1 rounded">{col.type}</span>

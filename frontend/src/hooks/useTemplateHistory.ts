@@ -32,11 +32,10 @@ export function useTemplateHistory(initialTemplate: InvoiceTemplate) {
 
   const updateTemplate = useCallback((newTemplate: InvoiceTemplate) => {
     setHistory(prev => {
-      // Discard future history if we're making a new change after an undo
       const past = prev.slice(0, currentIndex + 1);
       return [...past, newTemplate];
     });
-    setCurrentIndex(prev => prev + 1);
+    setCurrentIndex(currentIndex + 1);
   }, [currentIndex]);
 
   const undo = useCallback(() => {

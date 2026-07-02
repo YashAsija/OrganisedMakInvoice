@@ -28,30 +28,30 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
     flexDirection: 'column'
   };
 
-  const compName = businessProfile?.name || "Acme Design Studio";
-  const compAddr = businessProfile?.address || "Platina Building, BKC, Bandra East\\nMumbai, Maharashtra, 400051\\nDelhi - 07";
-  const compEmail = businessProfile?.email || "guest@makinvoice.local";
-  const compPhone = businessProfile?.phone || "+91 9876543210";
-  const compGst = businessProfile?.taxId || "27AAAAA1111A1Z1";
+  const compName = businessProfile?.name || "";
+  const compAddr = businessProfile?.address || "";
+  const compEmail = businessProfile?.email || "";
+  const compPhone = businessProfile?.phone || "";
+  const compGst = businessProfile?.taxId || "";
   
   const invNo = invoiceData?.invoiceNumber || "INV-2026-8528";
-  const date = invoiceData?.date || "2026-06-22";
-  const placeOfSupply = invoiceData?.placeOfSupply || "N/A";
-  const grRrNo = invoiceData?.grRrNo || "N/A";
-  const transport = invoiceData?.transport || "N/A";
+  const date = invoiceData?.date || "";
+  const placeOfSupply = invoiceData?.placeOfSupply || "";
+  const grRrNo = invoiceData?.grRrNo || "";
+  const transport = invoiceData?.transport || "";
   
-  const vehicleNo = invoiceData?.vehicleNo || "N/A";
-  const driverMobile = invoiceData?.driverMobile || "N/A";
-  const station = invoiceData?.station || "N/A";
-  const ewayBillNo = invoiceData?.ewayBillNo || "N/A";
-  const poNumber = invoiceData?.poNumber || "N/A";
+  const vehicleNo = invoiceData?.vehicleNo || "";
+  const driverMobile = invoiceData?.driverMobile || "";
+  const station = invoiceData?.station || "";
+  const ewayBillNo = invoiceData?.ewayBillNo || "";
+  const poNumber = invoiceData?.poNumber || "";
   
-  const clientName = invoiceData?.clientName || "ABC";
-  const clientPhone = invoiceData?.clientPhone || "N/A";
-  const clientCountry = invoiceData?.clientCountry || "India";
-  const clientState = invoiceData?.clientState || "N/A";
-  const clientGstin = invoiceData?.clientGstin || "N/A";
-  const clientAddress = invoiceData?.clientAddress || "N/A";
+  const clientName = invoiceData?.clientName || "";
+  const clientPhone = invoiceData?.clientPhone || "";
+  const clientCountry = invoiceData?.clientCountry || "";
+  const clientState = invoiceData?.clientState || "";
+  const clientGstin = invoiceData?.clientGstin || "";
+  const clientAddress = invoiceData?.clientAddress || "";
 
   const shipName = invoiceData?.shippedToName || clientName;
   const shipPhone = invoiceData?.shippedToPhone || clientPhone;
@@ -60,9 +60,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
   const shipGstin = invoiceData?.shippedToGstin || clientGstin;
   const shipAddress = invoiceData?.shippedToAddress || clientAddress;
 
-  const items = invoiceData?.items && invoiceData.items.length > 0 ? invoiceData.items : [
-    { id: '1', name: 'New Item', quantity: 1, rate: 0.00, taxPercentage: 0, description: '' }
-  ];
+  const items = invoiceData?.items && invoiceData.items.length > 0 ? invoiceData.items : [];
 
   const subTotal = invoiceData?.subtotal || 0;
   const taxTotal = invoiceData?.taxTotal || 0;
@@ -78,12 +76,19 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
       {(sections.header?.visible !== false || sections.companyInfo?.visible !== false) && (
         <div className="flex justify-between items-start mb-6">
           <div style={{ textAlign: config.header.logoPosition === 'Center' ? 'center' : 'left', width: config.header.logoPosition === 'Center' ? '100%' : 'auto' }}>
-            {sections.header?.visible !== false && config.header.showLogo && (
+            {sections.header?.visible !== false && config.header.showLogo && businessProfile?.logoUrl && (
               <div style={{
-                width: config.header.logoWidth, height: config.header.logoHeight, 
-                background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                marginBottom: '10px', margin: config.header.logoPosition === 'Center' ? '0 auto 10px auto' : '0 0 10px 0'
-              }} className="text-[12px] font-bold text-slate-400">LOGO</div>
+                width: config.header.logoWidth * 1.4, height: config.header.logoHeight * 1.4, 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                marginBottom: '10px', margin: config.header.logoPosition === 'Center' ? '0 auto 10px auto' : '0 0 10px 0',
+                overflow: 'hidden'
+              }}>
+                <img 
+                  src={businessProfile.logoUrl} 
+                  alt="Company Logo" 
+                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                />
+              </div>
             )}
             
             {sections.companyInfo?.visible !== false && (
@@ -137,10 +142,15 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
                 <h3 className="font-bold text-[11px] text-gray-800 uppercase mb-2">BILLED TO</h3>
                 {config.client.fields.includes('name') && <div className="text-[12px] font-medium text-gray-900 mb-1">{clientName}</div>}
                 {config.client.fields.includes('phone') && <div className={rowStyle}><span className={labelStyle}>Party Mobile No</span><span className="mr-2">:</span><span className={valStyle}>{clientPhone}</span></div>}
-                <div className={rowStyle}><span className={labelStyle}>Country</span><span className="mr-2">:</span><span className={valStyle}>{clientCountry}</span></div>
-                <div className={rowStyle}><span className={labelStyle}>State</span><span className="mr-2">:</span><span className={valStyle}>{clientState}</span></div>
-                {config.client.fields.includes('address') && <div className={rowStyle}><span className={labelStyle}>Address</span><span className="mr-2">:</span><span className={valStyle}>{clientAddress}</span></div>}
+                {config.client.fields.includes('address') && (
+                  <>
+                    <div className={rowStyle}><span className={labelStyle}>Country</span><span className="mr-2">:</span><span className={valStyle}>{clientCountry}</span></div>
+                    <div className={rowStyle}><span className={labelStyle}>State</span><span className="mr-2">:</span><span className={valStyle}>{clientState}</span></div>
+                    <div className={rowStyle}><span className={labelStyle}>Address</span><span className="mr-2">:</span><span className={valStyle}>{clientAddress}</span></div>
+                  </>
+                )}
                 {config.client.fields.includes('gstin') && <div className={rowStyle}><span className={labelStyle}>GSTIN / UIN</span><span className="mr-2">:</span><span className={valStyle}>{clientGstin}</span></div>}
+                {config.client.fields.includes('pan') && <div className={rowStyle}><span className={labelStyle}>PAN</span><span className="mr-2">:</span><span className={valStyle}>{invoiceData?.clientPan || 'ABCDE1234F'}</span></div>}
               </>
             )}
           </div>
@@ -150,10 +160,15 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
                 <h3 className="font-bold text-[11px] text-gray-800 uppercase mb-2">SHIPPED TO</h3>
                 {config.shipping.fields.includes('name') && <div className="text-[12px] font-medium text-gray-900 mb-1">{shipName}</div>}
                 {config.shipping.fields.includes('phone') && <div className={rowStyle}><span className={labelStyle}>Party Mobile No</span><span className="mr-2">:</span><span className={valStyle}>{shipPhone}</span></div>}
-                <div className={rowStyle}><span className={labelStyle}>Country</span><span className="mr-2">:</span><span className={valStyle}>{shipCountry}</span></div>
-                <div className={rowStyle}><span className={labelStyle}>State</span><span className="mr-2">:</span><span className={valStyle}>{shipState}</span></div>
-                {config.shipping.fields.includes('address') && <div className={rowStyle}><span className={labelStyle}>Address</span><span className="mr-2">:</span><span className={valStyle}>{shipAddress}</span></div>}
+                 {config.shipping.fields.includes('address') && (
+                   <>
+                     <div className={rowStyle}><span className={labelStyle}>Country</span><span className="mr-2">:</span><span className={valStyle}>{shipCountry}</span></div>
+                     <div className={rowStyle}><span className={labelStyle}>State</span><span className="mr-2">:</span><span className={valStyle}>{shipState}</span></div>
+                     <div className={rowStyle}><span className={labelStyle}>Address</span><span className="mr-2">:</span><span className={valStyle}>{shipAddress}</span></div>
+                   </>
+                 )}
                 {config.shipping.fields.includes('gstin') && <div className={rowStyle}><span className={labelStyle}>GSTIN / UIN</span><span className="mr-2">:</span><span className={valStyle}>{shipGstin}</span></div>}
+                {config.shipping.fields.includes('pan') && <div className={rowStyle}><span className={labelStyle}>PAN</span><span className="mr-2">:</span><span className={valStyle}>{invoiceData?.shippedToPan || 'WXYZ9876E'}</span></div>}
               </>
             )}
           </div>
@@ -186,9 +201,9 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
                     </td>
                   )}
                   {config.table.columns.find(c => c.id === 'quantity')?.visible && <td className="py-3 px-3 text-center font-bold border-r border-gray-300">{item.quantity}</td>}
-                  {config.table.columns.find(c => c.id === 'rate')?.visible && <td className="py-3 px-3 text-center border-r border-gray-300 text-gray-600">{item.rate.toFixed(2)}</td>}
-                  {config.table.columns.find(c => c.id === 'tax')?.visible && <td className="py-3 px-3 text-center border-r border-gray-300 text-gray-500">{item.taxPercentage}%</td>}
-                  {config.table.columns.find(c => c.id === 'amount')?.visible && <td className="py-3 px-3 text-right border-r border-gray-300 font-bold">{amt.toFixed(2)}</td>}
+                  {config.table.columns.find(c => c.id === 'rate')?.visible && <td className="py-3 px-3 text-right border-r border-gray-300 text-gray-600 font-bold">{currencySymbol}{item.rate.toFixed(2)}</td>}
+                  {config.table.columns.find(c => c.id === 'tax')?.visible && <td className="py-3 px-3 text-right border-r border-gray-300 text-gray-500 font-bold">{item.taxPercentage}%</td>}
+                  {config.table.columns.find(c => c.id === 'amount')?.visible && <td className="py-3 px-3 text-right border-r border-gray-300 font-bold">{currencySymbol}{amt.toFixed(2)}</td>}
                 </tr>
               );
             })}

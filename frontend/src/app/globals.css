@@ -37,11 +37,15 @@ img {
   height: auto;
 }
 
-/* Prevent inputs from expanding beyond viewport on iOS */
+/* Prevent inputs from expanding beyond viewport on iOS and improve touch tap response */
 input,
 textarea,
-select {
+select,
+button,
+a,
+[role="button"] {
   max-width: 100%;
+  touch-action: manipulation;
 }
 
 @theme {
@@ -183,10 +187,33 @@ body {
 
 /* Smooth active feedback */
 button, [role="button"] {
-  transition: transform 0.1s ease, background-color 0.2s ease, opacity 0.2s ease;
+  transition: transform 0.1s ease, background-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
 }
 button:active, [role="button"]:active {
   transform: scale(0.98);
+}
+
+/* Safe area padding utilities */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.px-safe { 
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right); 
+}
+
+/* Sidebar Animation */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Global keyboard accessibility */
+*:focus-visible {
+  outline: 2px solid var(--color-sky-500, #0ea5e9);
+  outline-offset: 2px;
 }
 
 @variant dark (.dark &);
@@ -244,22 +271,33 @@ button:active, [role="button"]:active {
   }
 
   /* Keep line-height and text spacing crisp on physical paper */
-  /* Keep line-height and text spacing crisp on physical paper */
   tr, td, th {
     page-break-inside: avoid !important;
   }
 }
 
 /* ==========================================
-   HIDE SCROLLBARS GLOBALLY
+   SCROLLBAR REMOVAL (Hides scrollbar globally)
    ========================================== */
-/* Hide scrollbar for Chrome, Safari and Opera */
-::-webkit-scrollbar {
-  display: none;
+*::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+div::-webkit-scrollbar,
+section::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
-/* Hide scrollbar for IE, Edge and Firefox */
 * {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+.editable-placeholder:empty::before,
+.editable-placeholder.is-empty::before {
+  content: attr(data-placeholder) !important;
+  color: #94a3b8 !important; /* slate-400 */
+  opacity: 0.7 !important;
+  display: inline-block !important;
 }

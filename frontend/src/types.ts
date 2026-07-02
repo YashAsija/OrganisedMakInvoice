@@ -85,6 +85,7 @@ export interface Invoice {
   shippedToGstin?: string;
   shippedToAddress?: string;
   clientGstin?: string;
+  clientPan?: string;
 }
 
 export interface ClientProfile {
@@ -151,6 +152,13 @@ export interface BusinessProfile {
   materialCategorization?: 'Optional' | 'Required';
   defaultNotes?: string;
   defaultTerms?: string;
+  
+  // Tax Configuration Tab
+  taxMode?: 'dynamic' | 'custom';
+  customTaxName?: string;
+  customTaxPercentage?: number;
+  customTaxCols?: string[];
+  additionalTaxes?: { id: string, name: string, rate: number }[];
 }
 
 export interface PresetItem {

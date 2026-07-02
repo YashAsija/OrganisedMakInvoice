@@ -26,7 +26,9 @@ import {
   Phone,
   Mail,
   KeyRound,
-  RefreshCw
+  RefreshCw,
+  Menu,
+  X
 } from 'lucide-react';
 
 interface HomepageProps {
@@ -62,6 +64,12 @@ export default function Homepage({
   
   // Accordion faq active tab state
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+
+  // Mobile nav state
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
+  // Inline form errors
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Scroll to top state
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -175,35 +183,37 @@ export default function Homepage({
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormErrors({});
+
     if (authMode === 'signup') {
       if (!formData.name.trim()) {
-        alert('Please fill out Your Name.');
+        setFormErrors({ name: 'Please fill out Your Name.' });
         return;
       }
       if (!formData.companyName.trim()) {
-        alert('Please fill out Your Company Name.');
+        setFormErrors({ companyName: 'Please fill out Your Company Name.' });
         return;
       }
       if (!formData.phone.trim()) {
-        alert('Please fill out your Phone Number.');
+        setFormErrors({ phone: 'Please fill out your Phone Number.' });
         return;
       }
       if (!formData.email.trim()) {
-        alert('Please fill out your Email Address.');
+        setFormErrors({ email: 'Please fill out your Email Address.' });
         return;
       }
     } else {
       if (loginMethod === 'email' && !formData.email.trim()) {
-        alert('Please enter your Registered Email Address.');
+        setFormErrors({ email: 'Please enter your Registered Email Address.' });
         return;
       }
       if (loginMethod === 'phone_otp') {
         if (!formData.phone.trim()) {
-          alert('Please enter your Phone Number.');
+          setFormErrors({ phone: 'Please enter your Phone Number.' });
           return;
         }
         if (otpSent && otpValue.length < 4) {
-          alert('Please enter the OTP sent to your phone.');
+          setFormErrors({ otp: 'Please enter the OTP sent to your phone.' });
           return;
         }
         // Simulate OTP send
@@ -413,10 +423,10 @@ export default function Homepage({
         </nav>
 
         {/* Mobile Navigation Area */}
-        <nav className="flex sm:hidden flex-col gap-3.5 mb-12 border-b pb-5 border-slate-200/50 dark:border-neutral-800 bg-transparent relative z-50">
+        <nav className="flex sm:hidden flex-col mb-12 bg-transparent relative z-50">
           
           {/* Mobile Top Row: Logo & Authentication Buttons */}
-          <div className="flex items-center justify-between w-full">
+          <div className={`flex items-center justify-between w-full pb-4 ${isMobileNavOpen ? 'border-none' : 'border-b border-slate-200/50 dark:border-neutral-800'}`}>
             
             {/* Logo Brand */}
             <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
@@ -431,117 +441,105 @@ export default function Homepage({
               </div>
             </div>
 
-            {/* Authentication Buttons */}
-            <div className="flex items-center gap-1.5">
-              {/* Mobile Language Dropdown */}
-              <div className="relative">
+            {/* Hamburger Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+              className="p-2 text-slate-600 dark:text-slate-350 hover:text-sky-500 dark:hover:text-sky-400 cursor-pointer transition-all rounded-lg hover:bg-slate-100/60 dark:hover:bg-neutral-900 border border-slate-200/40 dark:border-neutral-800/60"
+            >
+              {isMobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+
+          {/* Mobile Side Drawer Menu */}
+          {/* Backdrop */}
+          {isMobileNavOpen && (
+            <div 
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] sm:hidden transition-opacity"
+              onClick={() => setIsMobileNavOpen(false)}
+            />
+          )}
+          
+          {/* Drawer Panel */}
+          <div className={`fixed inset-y-0 right-0 z-[70] w-72 bg-white dark:bg-neutral-950 border-l border-slate-200/50 dark:border-neutral-800 shadow-2xl transform transition-transform duration-300 ease-in-out sm:hidden ${isMobileNavOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className="flex flex-col h-full p-5">
+              
+              <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-neutral-800/60">
+                <span className="text-sm font-black tracking-tight text-slate-805">
+                  Menu
+                </span>
                 <button
                   type="button"
-                  onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-                  className="flex items-center justify-center p-2 text-slate-600 dark:text-slate-350 hover:text-sky-500 dark:hover:text-sky-400 cursor-pointer transition-all rounded-lg hover:bg-slate-100/60 dark:hover:bg-neutral-900 border border-slate-200/40 dark:border-neutral-800/60"
-                  aria-label="Change Language"
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className="p-1.5 text-slate-500 hover:text-rose-500 transition-colors rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
                 >
-                  <Globe className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="text-[10px] uppercase font-black ml-1 font-mono text-slate-500 dark:text-slate-400">{selectedLanguage.code}</span>
+                  <X className="w-5 h-5" />
                 </button>
-
-                {isLangDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsLangDropdownOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-44 rounded-xl bg-white dark:bg-neutral-900 border border-slate-200/80 dark:border-neutral-800/80 p-1 shadow-lg z-50 animate-fade-in text-left">
-                      <p className="text-[8px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase px-2 py-0.5 select-none">Select Language</p>
-                      {availableLanguages.map((lang) => (
-                        <button
-                          key={lang.code}
-                          type="button"
-                          onClick={() => handleSelectLanguage(lang)}
-                          className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
-                            selectedLanguage.code === lang.code
-                              ? 'bg-sky-500/10 text-sky-500'
-                              : 'text-slate-600 dark:text-slate-250 hover:bg-slate-50 dark:hover:bg-neutral-800'
-                          }`}
-                        >
-                          <span className="flex flex-col text-left">
-                            <span className="font-extrabold">{lang.native}</span>
-                            <span className="text-[8px] text-slate-400">{lang.label}</span>
-                          </span>
-                          {selectedLanguage.code === lang.code ? (
-                            <Check className="w-3 h-3 text-sky-500" />
-                          ) : lang.isPlaceholder ? (
-                            <span className="text-[7px] bg-slate-100 dark:bg-neutral-850 px-1 py-0.5 rounded text-slate-400 dark:text-slate-500 font-extrabold uppercase scale-90">Soon</span>
-                          ) : null}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
               </div>
 
-              <button
-                type="button"
-                onClick={() => handleNavScroll('auth-section', 'login')}
-                className="px-2.5 py-1.5 text-slate-700 dark:text-slate-200 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-normal cursor-pointer transition-all rounded-lg hover:bg-slate-100/70 dark:hover:bg-neutral-900"
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => handleNavScroll('auth-section', 'signup')}
-                className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-extrabold text-xs tracking-normal rounded-lg shadow-md shadow-sky-500/10 cursor-pointer transition-all"
-              >
-                Get Started
-              </button>
+              <div className="flex flex-col gap-3 mb-8">
+                <button
+                  type="button"
+                  onClick={() => { handleNavScroll('features-section'); setIsMobileNavOpen(false); }}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-neutral-900/50 border border-slate-100 dark:border-neutral-800/60 hover:border-sky-500/30 transition-all text-left"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-500 flex items-center justify-center shrink-0">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Features & Tools</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { handleNavScroll('faq-section'); setIsMobileNavOpen(false); }}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-neutral-900/50 border border-slate-100 dark:border-neutral-800/60 hover:border-emerald-500/30 transition-all text-left"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                    <HelpCircle className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Common Questions</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { handleNavScroll('how-to-use-section'); setIsMobileNavOpen(false); }}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-neutral-900/50 border border-slate-100 dark:border-neutral-800/60 hover:border-indigo-500/30 transition-all text-left"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">User Guide</span>
+                </button>
+              </div>
+
+              <div className="mt-auto space-y-3">
+                <button
+                  type="button"
+                  onClick={() => { handleNavScroll('auth-section', 'login'); setIsMobileNavOpen(false); }}
+                  className="w-full py-3 text-slate-700 dark:text-slate-200 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all rounded-xl bg-slate-100/50 hover:bg-slate-100/70 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-slate-200/40 dark:border-neutral-800/60 text-center"
+                >
+                  Sign In to Account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { handleNavScroll('auth-section', 'signup'); setIsMobileNavOpen(false); }}
+                  className="w-full py-3 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-extrabold text-xs tracking-wide rounded-xl shadow-lg shadow-sky-500/20 cursor-pointer transition-all text-center"
+                >
+                  Create New Workspace
+                </button>
+              </div>
+              
             </div>
-
           </div>
-
-          {/* Mobile Bottom Row: Centered links underneath */}
-          <div className="flex items-center justify-center gap-1 w-full border-t border-slate-100/50 dark:border-neutral-900/40 pt-2.5">
-            <button
-              type="button"
-              onClick={() => handleNavScroll('features-section')}
-              className="text-slate-600 dark:text-slate-350 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-[11px] tracking-wide cursor-pointer transition-all px-2.5 py-1.5 rounded-lg hover:bg-slate-100/60 dark:hover:bg-neutral-900"
-            >
-              <span className="flex items-center gap-1">
-                <Layers className="w-3 h-3" />
-                Features
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleNavScroll('faq-section')}
-              className="text-slate-600 dark:text-slate-355 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-[11px] tracking-wide cursor-pointer transition-all px-2.5 py-1.5 rounded-lg hover:bg-slate-100/60 dark:hover:bg-neutral-900"
-            >
-              <span className="flex items-center gap-1">
-                <HelpCircle className="w-3 h-3" />
-                FAQ
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleNavScroll('how-to-use-section')}
-              className="text-slate-600 dark:text-slate-355 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-[11px] tracking-wide cursor-pointer transition-all px-2.5 py-1.5 rounded-lg hover:bg-slate-100/60 dark:hover:bg-neutral-900"
-            >
-              <span className="flex items-center gap-1">
-                <BookOpen className="w-3 h-3" />
-                How to Use
-              </span>
-            </button>
-          </div>
-
         </nav>
 
         {/* Hero Grid Section */}
-        <div className="grid lg:grid-cols-12 gap-8 lg:gap-16 items-center overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center overflow-hidden">
           
           {/* Left: Headline & Key Details */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:col-span-7 space-y-6"
+            className="lg:col-span-7 space-y-6 order-2 lg:order-1"
           >
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-sky-500/10 dark:bg-sky-505/15 text-sky-600 dark:text-sky-400 rounded-full text-xs font-bold leading-none animate-fade-in">
               <Sparkles className="w-3.5 h-3.5" />
@@ -627,7 +625,7 @@ export default function Homepage({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:col-span-5 flex flex-col items-center justify-start lg:mt-0 mt-8 relative"
+            className="lg:col-span-5 flex flex-col items-center justify-start lg:mt-0 mt-8 relative order-1 lg:order-2"
           >
             {/* Live Interactive Control Panel */}
             <div className="w-full max-w-[390px] xl:max-w-[430px] mb-4 bg-white/75 dark:bg-neutral-900/80 backdrop-blur-md rounded-2xl p-3 border border-slate-200/60 dark:border-neutral-800/85 shadow-md relative z-30 transition-all text-xs">
@@ -723,7 +721,8 @@ export default function Homepage({
             </div>
 
             {/* Mockup Canvas Screen */}
-            <div className="w-full max-w-full sm:max-w-[420px] h-[400px] sm:h-[480px] lg:h-[500px] relative overflow-hidden">
+            <div className="w-full max-w-[100vw] sm:max-w-[420px] overflow-x-auto no-scrollbar pb-6 -mx-2 px-2 sm:mx-0 sm:px-0">
+              <div className="w-[380px] sm:w-full h-[400px] sm:h-[480px] lg:h-[500px] relative shrink-0 overflow-hidden rounded-3xl">
               
               {/* Background glowing visual accents */}
               <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full blur-3xl pointer-events-none transition-colors duration-500 ${
@@ -963,6 +962,7 @@ export default function Homepage({
 
               </div>
 
+            </div>
             </div>
 
           </motion.div>
@@ -1224,10 +1224,11 @@ export default function Homepage({
                           type="text"
                           required
                           value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setFormErrors(prev => ({...prev, name: ''})); }}
                           placeholder="e.g. John Doe"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all"
+                          className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.name ? 'border-rose-500 focus:ring-rose-500' : formData.name ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-800 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
                         />
+                        {formErrors.name && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.name}</p>}
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 mb-1">Company Name *</label>
@@ -1235,10 +1236,11 @@ export default function Homepage({
                           type="text"
                           required
                           value={formData.companyName}
-                          onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                          onChange={(e) => { setFormData({ ...formData, companyName: e.target.value }); setFormErrors(prev => ({...prev, companyName: ''})); }}
                           placeholder="e.g. Acme Tech Solutions"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all"
+                          className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.companyName ? 'border-rose-500 focus:ring-rose-500' : formData.companyName ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-800 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
                         />
+                        {formErrors.companyName && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.companyName}</p>}
                       </div>
                     </div>
                     <div>
@@ -1247,10 +1249,11 @@ export default function Homepage({
                         type="tel"
                         required
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); setFormErrors(prev => ({...prev, phone: ''})); }}
                         placeholder="e.g. +91 98765 43210"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all"
+                        className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.phone ? 'border-rose-500 focus:ring-rose-500' : formData.phone ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-800 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
                       />
+                      {formErrors.phone && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.phone}</p>}
                     </div>
                   </div>
                 )}
@@ -1260,10 +1263,11 @@ export default function Homepage({
                     type="email"
                     required
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) => { setFormData({ ...formData, email: e.target.value }); setFormErrors(prev => ({...prev, email: ''})); }}
                     placeholder="sales@yourcompany.com"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all"
+                    className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.email ? 'border-rose-500 focus:ring-rose-500' : formData.email ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-800 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
                   />
+                  {formErrors.email && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.email}</p>}
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 mb-1">Password *</label>
@@ -1273,7 +1277,7 @@ export default function Homepage({
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder="••••••••"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all"
+                    className="w-full px-3 py-3 sm:py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all"
                   />
                   {formData.password && (
                     <div className="mt-2 space-y-1.5 animate-fade-in">
@@ -1294,20 +1298,22 @@ export default function Homepage({
                     </div>
                   )}
                 </div>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-500 disabled:bg-neutral-800 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-sky-600/15 cursor-pointer mt-2"
-                >
-                  {isLoading ? (
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Mail className="w-3.5 h-3.5" />
-                      <span>{authMode === 'signup' ? 'Create Account with Email' : 'Sign In with Email'}</span>
-                    </>
-                  )}
-                </button>
+                <div className="sticky bottom-0 p-4 bg-white/80 backdrop-blur-md dark:bg-neutral-900/80 border-t border-slate-200 dark:border-neutral-800 -mx-5 -mb-5 mt-4 sm:relative sm:p-0 sm:bg-transparent sm:border-0 sm:m-0 sm:mt-2 z-40 pb-safe">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-3.5 sm:py-2.5 px-4 bg-sky-600 hover:bg-sky-500 disabled:bg-neutral-800 text-white rounded-xl text-sm sm:text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-sky-600/15 cursor-pointer"
+                  >
+                    {isLoading ? (
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                        <span>{authMode === 'signup' ? 'Create Account with Email' : 'Sign In with Email'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </form>
             )}
 
@@ -1323,10 +1329,11 @@ export default function Homepage({
                           type="text"
                           required
                           value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setFormErrors(prev => ({...prev, name: ''})); }}
                           placeholder="e.g. John Doe"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-emerald-500 focus:outline-none transition-all"
+                          className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.name ? 'border-rose-500 focus:ring-rose-500' : formData.name ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-800 focus:ring-emerald-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
                         />
+                        {formErrors.name && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.name}</p>}
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 mb-1">Company Name *</label>
@@ -1334,10 +1341,11 @@ export default function Homepage({
                           type="text"
                           required
                           value={formData.companyName}
-                          onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                          onChange={(e) => { setFormData({ ...formData, companyName: e.target.value }); setFormErrors(prev => ({...prev, companyName: ''})); }}
                           placeholder="e.g. Acme Tech Solutions"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-emerald-500 focus:outline-none transition-all"
+                          className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.companyName ? 'border-rose-500 focus:ring-rose-500' : formData.companyName ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-800 focus:ring-emerald-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
                         />
+                        {formErrors.companyName && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.companyName}</p>}
                       </div>
                     </div>
                   </div>
@@ -1352,11 +1360,12 @@ export default function Homepage({
                       type="tel"
                       required
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); setFormErrors(prev => ({...prev, phone: ''})); }}
                       disabled={otpSent}
                       placeholder="e.g. +91 98765 43210"
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-emerald-500 focus:outline-none transition-all disabled:opacity-60"
+                      className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.phone ? 'border-rose-500 focus:ring-rose-500' : formData.phone ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-800 focus:ring-emerald-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all disabled:opacity-60`}
                     />
+                    {formErrors.phone && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.phone}</p>}
                     {otpSent && (
                       <button
                         type="button"
@@ -1381,12 +1390,13 @@ export default function Homepage({
                         inputMode="numeric"
                         maxLength={6}
                         value={otpValue}
-                        onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ''))}
+                        onChange={(e) => { setOtpValue(e.target.value.replace(/\D/g, '')); setFormErrors(prev => ({...prev, otp: ''})); }}
                         placeholder="• • • • • •"
-                        className="flex-1 px-4 py-3 rounded-xl border-2 border-emerald-200 dark:border-emerald-800/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-slate-805 dark:text-white text-base font-mono font-black tracking-[0.4em] focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all text-center placeholder:tracking-[0.2em] placeholder:text-slate-300"
+                        className={`flex-1 px-4 py-4 sm:py-3 rounded-xl border-2 ${formErrors.otp ? 'border-rose-500 focus:ring-rose-500' : 'border-emerald-200 dark:border-emerald-800/40 focus:ring-emerald-500'} bg-emerald-50/50 dark:bg-emerald-950/20 text-slate-805 dark:text-white text-base font-mono font-black tracking-[0.4em] focus:ring-2 focus:outline-none transition-all text-center placeholder:tracking-[0.2em] placeholder:text-slate-300`}
                         autoFocus
                       />
                     </div>
+                    {formErrors.otp && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.otp}</p>}
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 flex items-center gap-1">
                       <KeyRound className="w-3 h-3" />
                       <span>OTP sent via SMS. For demo, use <span className="font-black text-emerald-500">1234</span></span>
@@ -1394,20 +1404,22 @@ export default function Homepage({
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/15 cursor-pointer mt-2"
-                >
-                  {isLoading ? (
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>{otpSent ? 'Verify OTP & Sign In' : (authMode === 'signup' ? 'Send OTP to Sign Up' : 'Send OTP to Sign In')}</span>
-                    </>
-                  )}
-                </button>
+                <div className="sticky bottom-0 p-4 bg-white/80 backdrop-blur-md dark:bg-neutral-900/80 border-t border-slate-200 dark:border-neutral-800 -mx-5 -mb-5 mt-4 sm:relative sm:p-0 sm:bg-transparent sm:border-0 sm:m-0 sm:mt-2 z-40 pb-safe">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-3.5 sm:py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 text-white rounded-xl text-sm sm:text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/15 cursor-pointer"
+                  >
+                    {isLoading ? (
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Phone className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                        <span>{otpSent ? 'Verify OTP & Sign In' : (authMode === 'signup' ? 'Send OTP to Sign Up' : 'Send OTP to Sign In')}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </form>
             )}
 

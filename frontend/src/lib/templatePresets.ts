@@ -405,3 +405,35 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
     }
   }
 ];
+
+export function ensureAllColumns(existingCols: any[]): any[] {
+  const defaultCols = [
+    { id: 'sr', visible: true, label: 'Sr No', type: 'Number', order: 1 },
+    { id: 'name', visible: true, label: 'Item Name', type: 'Text', order: 2 },
+    { id: 'hsn', visible: false, label: 'HSN/SAC', type: 'Text', order: 3 },
+    { id: 'qty', visible: true, label: 'Qty', type: 'Number', order: 4 },
+    { id: 'rate', visible: true, label: 'Rate', type: 'Currency', order: 5 },
+    { id: 'tax', visible: false, label: 'Tax %', type: 'Number', order: 6 },
+    { id: 'amount', visible: true, label: 'Amount', type: 'Formula', formula: 'qty*rate', order: 7 }
+  ];
+
+  if (!existingCols || existingCols.length === 0) return defaultCols;
+
+  // Build final list keeping existing configurations (labels, order, visible status etc.)
+  const result = defaultCols.map(def => {
+    const match = existingCols.find(c => c.id === def.id);
+    if (match) {
+      const isRequired = ['name', 'qty', 'rate', 'amount'].includes(def.id);
+      return {
+        ...def,
+        ...match,
+        // Override visible status if it's a required column
+        visible: isRequired ? true : match.visible
+      };
+    }
+    return def;
+  });
+
+  // Sort by order
+  return result.sort((a, b) => a.order - b.order);
+}

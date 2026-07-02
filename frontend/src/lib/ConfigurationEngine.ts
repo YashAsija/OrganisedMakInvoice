@@ -14,6 +14,7 @@ export interface QuickBuilderState {
     company: boolean;
     customer: boolean;
     gst: boolean;
+    shipTo: boolean;
     transport: boolean;
     payment: boolean;
     qrCode: boolean;
@@ -91,7 +92,7 @@ export const generateTemplateFromQuickState = (state: QuickBuilderState): Invoic
       companyInfo: { id: 'companyInfo', visible: state.sections.company, order: 2, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
       invoiceInfo: { id: 'invoiceInfo', visible: true, order: 3, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
       billTo: { id: 'billTo', visible: state.sections.customer, order: 4, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
-      shipTo: { id: 'shipTo', visible: state.sections.transport, order: 5, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
+      shipTo: { id: 'shipTo', visible: state.sections.shipTo, order: 5, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
       transport: { id: 'transport', visible: state.sections.transport, order: 6, gridColumnSpan: 12, customLabels: {}, customStyles: {} },
       productTable: { id: 'productTable', visible: true, order: 7, gridColumnSpan: 12, customLabels: {}, customStyles: {} },
       taxEngine: { id: 'taxEngine', visible: state.sections.gst, order: 8, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
@@ -111,9 +112,9 @@ export const generateTemplateFromQuickState = (state: QuickBuilderState): Invoic
       },
       company: { fields: ['name', 'address', state.sections.gst ? 'gstin' : '', 'email', 'phone'].filter(Boolean) },
       invoiceInfo: { fields: ['invoiceNumber', 'invoiceDate', 'dueDate'], customFields: [], position: 'Right' },
-      client: { fields: ['name', 'address', state.sections.gst ? 'gstin' : ''].filter(Boolean) },
+      client: { fields: ['name', 'address'] },
       shipping: { fields: ['name', 'address'], sameAsBilling: true },
-      transport: { fields: ['vehicleNo', 'transportName'] },
+      transport: { fields: ['vehicleNo', 'poNumber', 'station', 'driverMobileNo'] },
       table: {
         columns: columns.sort((a, b) => a.order - b.order)
       },

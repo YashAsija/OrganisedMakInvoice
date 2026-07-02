@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, LayoutTemplate, FileText, Check, Trash2, Edit2, Copy, Download, Upload, Search, Filter } from 'lucide-react';
 import { InvoiceTemplate } from '../types';
 import { LivePreview } from './TemplateBuilder/LivePreview';
+import { exportInvoicePDFAsync } from '../lib/pdfExporter';
 
 import TemplateCreationHub from './TemplateBuilder/TemplateCreationHub';
 import { TEMPLATE_PRESETS } from '../lib/templatePresets';
@@ -44,6 +45,7 @@ export default function TemplateManager() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [activeLibraryTab, setActiveLibraryTab] = useState<'my_templates' | 'system'>('my_templates');
+  const [sortBy, setSortBy] = useState<'latest' | 'oldest' | 'detailed' | 'less_detailed'>('latest');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,21 +55,19 @@ export default function TemplateManager() {
 
   const handleSaveTemplate = (template: InvoiceTemplate) => {
     const exists = templates.some(t => t.id === template.id);
-    let updated;
+    let updated = templates;
     
-    const finalTemplate = { ...template };
+    const finalTemplate = { ...template, updatedAt: Date.now() };
     if (finalTemplate.isDefault) {
       setGlobalDefaultId(finalTemplate.id);
       localStorage.setItem('makinvoice_global_default_template', finalTemplate.id);
       updated = templates.map(t => ({ ...t, isDefault: false }));
-    } else {
-      updated = [...templates];
     }
 
     if (exists) {
-      updated = updated.map(t => t.id === finalTemplate.id ? finalTemplate : t);
+      updated = [finalTemplate, ...updated.filter(t => t.id !== finalTemplate.id)];
     } else {
-      updated = [...updated, finalTemplate];
+      updated = [finalTemplate, ...updated];
     }
     
     setTemplates(updated);
@@ -101,21 +101,58 @@ export default function TemplateManager() {
       ...template,
       id: `tmpl_${Math.random().toString(36).substr(2, 9)}`,
       name: `${template.name} (Copy)`,
-      isDefault: false
+      isDefault: false,
+      updatedAt: Date.now()
     };
-    const updated = [...templates, dupe];
+    const updated = [dupe, ...templates];
     setTemplates(updated);
     localStorage.setItem('makinvoice_custom_templates', JSON.stringify(updated));
   };
   
-  const handleExport = (template: InvoiceTemplate) => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(template));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href",     dataStr);
-    downloadAnchorNode.setAttribute("download", template.name.replace(/\s+/g, '_') + "_template.json");
-    document.body.appendChild(downloadAnchorNode); // required for firefox
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+  const handleExportPDF = async (template: InvoiceTemplate) => {
+    const mockProfile = {
+      name: 'Shiv Hardware',
+      address: '123 Business Block, Main Street, New Delhi, India',
+      gstin: '07AAAAA1111A1Z1',
+      phone: '+91 9899728185',
+      email: 'contact@shivhardware.com',
+      website: 'www.shivhardware.com',
+      currency: 'INR'
+    };
+
+    const mockInvoice = {
+      id: 'mock_inv',
+      invoiceNumber: 'INV-2023-001',
+      date: new Date().toISOString().split('T')[0],
+      dueDate: new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString().split('T')[0],
+      clientName: 'Sameer Enterprises',
+      clientAddress: 'Plot No. 45, Phase 3, Okhla Industrial Area, New Delhi',
+      clientCountry: 'India',
+      clientState: 'N/A',
+      clientPhone: '+91 9999988888',
+      clientEmail: 'sameer@enterprises.com',
+      items: [
+        { id: 'item-1', description: 'Premium Steel Screws', hsn: '7318', quantity: 150, rate: 2.50, taxPercentage: 18, amount: 375.00 },
+        { id: 'item-2', description: 'Heavy Duty Wall Anchors', hsn: '3926', quantity: 200, rate: 1.20, taxPercentage: 18, amount: 240.00 }
+      ],
+      subTotal: 615.00,
+      taxAmount: 110.70,
+      grandTotal: 725.70,
+      taxRate: 18,
+      poNumber: 'PO-99238',
+      vehicleNo: 'MH 12 AB 1234',
+      station: 'Mumbai HQ',
+      driverMobileNo: '+91 9876543210',
+      transportName: 'Fast Logistics',
+      eWayBillNo: '123456789012'
+    };
+
+    try {
+      await exportInvoicePDFAsync(mockInvoice as any, mockProfile as any, 'save', template);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to generate PDF');
+    }
   };
   
   const handleImportClick = () => {
@@ -133,7 +170,8 @@ export default function TemplateManager() {
            json.id = `tmpl_${Math.random().toString(36).substr(2, 9)}`;
            json.isDefault = false;
            json.name = `${json.name} (Imported)`;
-           const updated = [...templates, json];
+           json.updatedAt = Date.now();
+           const updated = [json, ...templates];
            setTemplates(updated);
            localStorage.setItem('makinvoice_custom_templates', JSON.stringify(updated));
         } else {
@@ -172,6 +210,27 @@ export default function TemplateManager() {
     const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = activeCategory === 'All' || t.category === activeCategory;
     return matchesSearch && matchesCategory;
+  });
+
+  const getVisibleSectionsCount = (t: InvoiceTemplate) => Object.values(t.sections).filter(s => s.visible).length;
+
+  const sortedTemplates = [...filteredTemplates].sort((a, b) => {
+    const timeA = (a as any).updatedAt || (sourceTemplates.indexOf(a) + 1);
+    const timeB = (b as any).updatedAt || (sourceTemplates.indexOf(b) + 1);
+
+    if (sortBy === 'oldest') {
+      return timeA - timeB;
+    }
+    if (sortBy === 'latest') {
+      return timeB - timeA;
+    }
+    if (sortBy === 'detailed') {
+      return getVisibleSectionsCount(b) - getVisibleSectionsCount(a);
+    }
+    if (sortBy === 'less_detailed') {
+      return getVisibleSectionsCount(a) - getVisibleSectionsCount(b);
+    }
+    return 0;
   });
 
   return (
@@ -225,7 +284,7 @@ export default function TemplateManager() {
       </div>
 
       {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-4 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input 
@@ -236,22 +295,37 @@ export default function TemplateManager() {
             className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
           />
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap pb-1 sm:pb-0">
-          <Filter className="w-4 h-4 text-slate-400 mr-1" />
-          {categories.map(cat => (
-             <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${activeCategory === cat ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
-             >
-                {cat}
-             </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Filter className="w-4 h-4 text-slate-400 mr-1" />
+            {categories.map(cat => (
+               <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${activeCategory === cat ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+               >
+                  {cat}
+               </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 border-l border-slate-200 dark:border-slate-800 pl-4 h-6">
+            <span className="text-xs font-bold text-slate-400 dark:text-slate-500">Sort:</span>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as any)}
+              className="p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white cursor-pointer transition-all"
+            >
+              <option value="latest">Latest</option>
+              <option value="oldest">Oldest</option>
+              <option value="detailed">Detailed</option>
+              <option value="less_detailed">Less Detailed</option>
+            </select>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredTemplates.map(template => (
+        {sortedTemplates.map(template => (
           <div key={template.id} className={`flex flex-col bg-white dark:bg-slate-900 border ${template.isDefault ? 'border-indigo-500 ring-1 ring-indigo-500/20' : 'border-slate-200 dark:border-slate-800'} rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all group relative`}>
             {template.isDefault && (
                <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden z-10">
@@ -302,12 +376,12 @@ export default function TemplateManager() {
                   <Copy className="w-3.5 h-3.5" />
                 </button>
                  <button 
-                  onClick={() => handleExport(template)}
-                  className="px-2.5 py-1.5 text-[11px] font-bold bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg transition-colors flex items-center justify-center"
-                  title="Export JSON"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                </button>
+                   onClick={() => handleExportPDF(template)}
+                   className="px-2.5 py-1.5 text-[11px] font-bold bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg transition-colors flex items-center justify-center"
+                   title="Download PDF"
+                 >
+                   <Download className="w-3.5 h-3.5" />
+                 </button>
               </div>
               <div className="flex items-center gap-2 border-t border-slate-100 dark:border-slate-800 pt-2">
                 {!template.isDefault && (

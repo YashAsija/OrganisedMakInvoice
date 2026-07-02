@@ -43,6 +43,8 @@ import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Exp
 import { BUSINESS_TEMPLATES } from '../lib/presets';
 import { exportInvoicePDFAsync, exportCollectiveReportPDF } from '../lib/pdfExporter';
 import TemplateManager from './TemplateManager';
+import { TEMPLATE_PRESETS } from '../lib/templatePresets';
+import { LivePreview } from './TemplateBuilder/LivePreview';
 
 export interface MasterVendor { id: string; name?: string; company?: string; email?: string; phone?: string; address?: string; category?: string; [key: string]: any; }
 export interface MasterHsnCode { id: string; code?: string; description?: string; gstRate?: number; [key: string]: any; }
@@ -119,6 +121,7 @@ export default function Dashboard({
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, []);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [isDesktopSidebarExpanded, setIsDesktopSidebarExpanded] = useState(true);
   const [isMasterExpanded, setIsMasterExpanded] = useState(true);
   const [isCatalogExpanded, setIsCatalogExpanded] = useState(true);
 
@@ -910,12 +913,12 @@ export default function Dashboard({
               >
                 {fields.map((f, idx3) => (
                   <div key={idx3}>
-                    <label className="block text-[8px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">{f.label}</label>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">{f.label}</label>
                     {f.type === 'select' ? (
                       <select
                         value={editingMasterItem[f.key] || ''}
                         onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: e.target.value })}
-                        className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-150 dark:border-slate-850 rounded-xl text-[10px] font-medium text-slate-800 dark:text-white focus:outline-none"
+                        className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
                         required
                       >
                         <option value="">Select type</option>
@@ -928,7 +931,7 @@ export default function Dashboard({
                         type={f.type}
                         value={editingMasterItem[f.key] || ''}
                         onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: f.type === 'number' ? parseFloat(e.target.value) : e.target.value })}
-                        className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-150 dark:border-slate-850 rounded-xl text-[10px] font-medium text-slate-800 dark:text-white focus:outline-none"
+                        className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
                         required
                       />
                     )}
@@ -1684,9 +1687,21 @@ export default function Dashboard({
       <main className="w-full max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4 pt-4 md:pt-6 space-y-4 md:space-y-0 md:flex md:gap-6 lg:gap-8 md:items-start overflow-hidden">
         
         {/* DESKTOP BRANDING & CONTROL SIDEBAR - Visible only on md screens and larger */}
-        <aside className="hidden md:flex shrink-0 flex-col bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/80 p-5 rounded-3xl shadow-xs h-[calc(100vh-110px)] overflow-y-auto w-[280px]">
-          {renderNavMenuContent(false)}
-        </aside>
+        <div className="hidden md:block relative shrink-0">
+          <aside className={`flex flex-col bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/80 rounded-3xl shadow-xs h-[calc(100vh-110px)] overflow-y-auto overflow-x-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
+            <div className="w-full h-full">
+              {renderNavMenuContent(false)}
+            </div>
+          </aside>
+          
+          <button 
+            onClick={() => setIsDesktopSidebarExpanded(!isDesktopSidebarExpanded)} 
+            className="absolute -right-3 top-6 z-20 w-6 h-6 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-slate-400 dark:text-slate-350 hover:text-sky-500 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all"
+            title={isDesktopSidebarExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
+          >
+            <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-300 ${isDesktopSidebarExpanded ? 'rotate-180' : 'rotate-0'}`} />
+          </button>
+        </div>
 
         {/* RIGHT CENTRAL WORKSPACE PANEL */}
         <div className="flex-1 min-w-0 w-full m-0 p-0 h-[calc(100vh-110px)] overflow-y-auto pr-1">
@@ -1696,7 +1711,7 @@ export default function Dashboard({
             <div className="p-3 mb-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-600 dark:text-amber-400 flex items-start gap-2.5 text-xs">
               <WifiOff className="w-4.5 h-4.5 text-amber-500 flex-shrink-0 mt-0.5 font-medium" />
               <div>
-                <span className="font-bold block">You're Offline (Safe Sandbox Active)</span>
+                <span className="font-bold block">You&apos;re Offline (Safe Sandbox Active)</span>
                 You can still create, edit, print, and check your accounts! All operations will update caches instantly and sync to device cloud once network triggers back.
               </div>
             </div>
@@ -1708,7 +1723,7 @@ export default function Dashboard({
         {activeTab === 'invoices' && (
           <div className="space-y-4">
             {/* Quick Metrics summary overview */}
-            <section className="grid grid-cols-3 gap-2 text-center">
+            <section className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
               <div className="bg-white dark:bg-slate-900 p-2.5 rounded-2.5xl border border-slate-100 dark:border-slate-850 shadow-sm">
                 <span className="text-[9px] uppercase tracking-wider text-slate-400 font-medium block">Paid Funds</span>
                 <span className="text-xs font-extrabold font-mono mt-1 text-emerald-500 block">{currencySymbol}{totalBilled.toLocaleString()}</span>
@@ -1738,18 +1753,18 @@ export default function Dashboard({
             </div>
 
             {/* Search Input and status selection filters */}
-            <div className="grid grid-cols-12 gap-2">
-              <div className="col-span-8 relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+              <div className="sm:col-span-8 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="ID, client search..."
-                  className="w-full pl-8 pr-2 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 dark:text-white text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none shadow-sm"
                 />
               </div>
-              <div className="col-span-4 justify-end flex">
+              <div className="sm:col-span-4 flex">
                 <select 
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as InvoiceStatus | 'all')}
@@ -1855,7 +1870,7 @@ export default function Dashboard({
                           </button>
                           <button
                             onClick={() => handleExportMSWord(inv)}
-                            className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 rounded-md text-[9px] font-medium flex items-center gap-0.5 cursor-pointer"
+                            className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:blue-400 hover:bg-blue-100 rounded-md text-[9px] font-medium flex items-center gap-0.5 cursor-pointer"
                           >
                             Word
                           </button>
@@ -1880,7 +1895,7 @@ export default function Dashboard({
               </div>
 
               {/* DESKTOP WORKSPACE GRID TABLE VIEW */}
-              <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-2.5xl overflow-hidden shadow-xs">
+              <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-2.5xl overflow-x-auto shadow-xs">
                 <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                   <thead className="bg-slate-50 dark:bg-slate-950 font-medium text-slate-400 text-[10px] uppercase tracking-wider text-left">
                     <tr>
@@ -1971,7 +1986,7 @@ export default function Dashboard({
                               </button>
                               <button
                                 onClick={() => handleExportMSWord(inv)}
-                                className="px-2 py-1 bg-blue-50 dark:bg-blue-955 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-sky-900 rounded-md text-[9px] font-medium flex items-center gap-0.5 cursor-pointer"
+                                className="px-2 py-1 bg-blue-50 dark:bg-blue-955 text-blue-600 dark:blue-400 hover:bg-blue-100 dark:hover:bg-sky-900 rounded-md text-[9px] font-medium flex items-center gap-0.5 cursor-pointer"
                                 title="Download Editable Document File"
                               >
                                 <FileDown className="w-3 h-3" />
@@ -2541,7 +2556,7 @@ export default function Dashboard({
               <span className="text-[10px] uppercase font-medium tracking-wider text-slate-400 block">Logged Expenditure Ledgers ({reportedExpenses.length})</span>
               {reportedExpenses.length === 0 ? (
                 <div className="p-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-2.5xl text-center text-xs text-slate-400">
-                  No registered business expenses in this bracket. Use 'Log Expense' above to enter tax write-offs.
+                  No registered business expenses in this bracket. Use &apos;Log Expense&apos; above to enter tax write-offs.
                 </div>
               ) : (
                 reportedExpenses.map(exp => (
@@ -2602,7 +2617,7 @@ export default function Dashboard({
             </div>
 
             {/* Quick stats grid */}
-            <section className="grid grid-cols-3 gap-2.5">
+            <section className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <div className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                 <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-medium flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
@@ -2853,29 +2868,27 @@ export default function Dashboard({
       </main>
 
       {/* -------------------- OVERLAY MODAL 0: SLIDING DRAWER MENU FOR MOBILE DEVICE -------------------- */}
-      {isMobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          {/* Backdrop screen */}
-          <div 
-            onClick={() => setIsMobileDrawerOpen(false)}
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-3xs transition-opacity duration-300"
-          />
-          {/* Menu Drawer panel */}
-          <div className="relative w-64 max-w-[80vw] bg-white dark:bg-slate-900 h-full p-4 shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-250 border-r border-slate-100 dark:border-slate-850 overflow-y-auto">
-            <div className="flex justify-between items-center mb-5 pb-2 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest">Workspace Menu</h3>
-              <button
-                onClick={() => setIsMobileDrawerOpen(false)}
-                className="w-7 h-7 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 transition-colors cursor-pointer"
-                aria-label="Close menu drawer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            {renderNavMenuContent(true)}
+      <div className={`fixed inset-0 z-[60] md:hidden transition-opacity duration-300 ${isMobileDrawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+        {/* Backdrop screen */}
+        <div 
+          onClick={() => setIsMobileDrawerOpen(false)}
+          className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+        />
+        {/* Menu Drawer panel */}
+        <div className={`absolute top-0 left-0 w-72 max-w-[85vw] bg-white dark:bg-slate-900 h-full p-5 shadow-2xl flex flex-col z-10 border-r border-slate-100 dark:border-slate-850 overflow-y-auto transform transition-transform duration-300 ease-in-out ${isMobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/60">
+            <h3 className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest">Menu</h3>
+            <button
+              onClick={() => setIsMobileDrawerOpen(false)}
+              className="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 transition-colors cursor-pointer touch-action-manipulation active:scale-95"
+              aria-label="Close menu drawer"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
+          {renderNavMenuContent(true)}
         </div>
-      )}
+      </div>
 
       {/* -------------------- OVERLAY MODAL 1: STUNNING PAPER ENVELOPE LIVE PREVIEW -------------------- */}
       {activePreviewInvoice && (
@@ -2903,33 +2916,43 @@ export default function Dashboard({
             {/* Scrollable Live Preview content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-100/50 dark:bg-slate-950/80 no-scrollbar">
               {(() => {
-                if (isPreviewLoading) {
-                  return (
-                    <div className="w-full h-auto aspect-[210/297] rounded-xl border border-slate-200 shadow-sm bg-white flex items-center justify-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-8 h-8 border-4 border-sky-600 border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-sm font-medium text-slate-500">Generating High-Fidelity Preview...</p>
+                const resolvedTemplate = (() => {
+                  const templateId = activePreviewInvoice.selectedCustomTemplateId || localStorage.getItem('makinvoice_global_default_template');
+                  const savedCustom = localStorage.getItem('makinvoice_custom_templates');
+                  if (savedCustom) {
+                    try {
+                      const parsed = JSON.parse(savedCustom);
+                      const match = parsed.find((t: any) => t.id === templateId);
+                      if (match) return match;
+                    } catch (e) {}
+                  }
+                  const systemMatch = TEMPLATE_PRESETS.find(t => t.id === templateId);
+                  if (systemMatch) return systemMatch;
+                  return TEMPLATE_PRESETS[0];
+                })();
+
+                const previewScale = 0.78;
+                return (
+                  <div className="w-full bg-slate-100/50 p-2 sm:p-6 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-x-auto flex justify-center no-scrollbar">
+                    <div style={{ width: `${794 * previewScale}px`, height: `${1123 * previewScale}px` }} className="shrink-0 relative">
+                      <div 
+                        className="shadow-xl bg-white origin-top-left absolute top-0 left-0" 
+                        style={{ 
+                          width: '794px',
+                          minHeight: '1123px',
+                          transform: `scale(${previewScale})`,
+                        }}
+                      >
+                        <LivePreview 
+                          template={resolvedTemplate}
+                          invoiceData={activePreviewInvoice}
+                          businessProfile={profile}
+                          currencySymbol={profile.currency === 'INR' ? '₹' : (profile.currency === 'USD' ? '$' : (profile.currency || '₹'))}
+                          isInteractive={false}
+                        />
                       </div>
                     </div>
-                  );
-                }
-
-                if (!previewDataUri) {
-                  return (
-                    <div className="w-full h-auto aspect-[210/297] rounded-xl border border-slate-200 shadow-sm bg-slate-50 flex items-center justify-center">
-                      <p className="text-sm text-slate-400">Failed to load preview</p>
-                    </div>
-                  );
-                }
-
-                const cleanPdfUri = previewDataUri + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH';
-                return (
-                  <iframe 
-                    src={cleanPdfUri}
-                    scrolling="no"
-                    className="w-full h-auto aspect-[210/297] rounded-xl border border-slate-200 shadow-sm bg-white overflow-hidden"
-                    title="Invoice PDF Preview"
-                  />
+                  </div>
                 );
               })()}
 
@@ -3012,7 +3035,7 @@ export default function Dashboard({
 
             <div className="space-y-3 text-xs">
               <div>
-                <label htmlFor="cl_fname" className="block text-[10px] font-medium text-slate-400 uppercase">Client Full Name *</label>
+                <label htmlFor="cl_fname" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Client Full Name *</label>
                 <input
                   id="cl_fname"
                   required
@@ -3020,55 +3043,55 @@ export default function Dashboard({
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
                   placeholder="e.g. John Doe"
-                  className="w-full px-2.5 py-1.5 mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 dark:text-white rounded-lg focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
                 />
               </div>
 
               <div>
-                <label htmlFor="cl_comp" className="block text-[10px] font-medium text-slate-400 uppercase">Company Name</label>
+                <label htmlFor="cl_comp" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Company Name</label>
                 <input
                   id="cl_comp"
                   type="text"
                   value={clientCompany}
                   onChange={(e) => setClientCompany(e.target.value)}
                   placeholder="e.g. Marvelous Widgets Ltd"
-                  className="w-full px-2.5 py-1.5 mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 dark:text-white rounded-lg focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
                 />
               </div>
 
               <div>
-                <label htmlFor="cl_em" className="block text-[10px] font-medium text-slate-400 uppercase">Client Email Address</label>
+                <label htmlFor="cl_em" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Client Email Address</label>
                 <input
                   id="cl_em"
                   type="email"
                   value={clientEmail}
                   onChange={(e) => setClientEmail(e.target.value)}
                   placeholder="e.g. billing@widgets.com"
-                  className="w-full px-2.5 py-1.5 mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 dark:text-white rounded-lg focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
                 />
               </div>
 
               <div>
-                <label htmlFor="cl_ph" className="block text-[10px] font-medium text-slate-400 uppercase">Client Phone number</label>
+                <label htmlFor="cl_ph" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Client Phone number</label>
                 <input
                   id="cl_ph"
                   type="text"
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
                   placeholder="e.g. +1 (555) 019-2834"
-                  className="w-full px-2.5 py-1.5 mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 dark:text-white rounded-lg focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
                 />
               </div>
 
               <div>
-                <label htmlFor="cl_ad" className="block text-[10px] font-medium text-slate-400 uppercase">Billing Address</label>
+                <label htmlFor="cl_ad" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Billing Address</label>
                 <textarea
                   id="cl_ad"
                   value={clientAddress}
                   onChange={(e) => setClientAddress(e.target.value)}
                   placeholder="e.g. Building 10, Redwood Ave, CA"
                   rows={2}
-                  className="w-full px-2.5 py-1.5 mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 dark:text-white rounded-lg focus:outline-none resize-none"
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none resize-none touch-action-manipulation"
                 />
               </div>
             </div>
@@ -3114,12 +3137,12 @@ export default function Dashboard({
 
             <div className="space-y-3 text-xs">
               <div>
-                <label htmlFor="exp_cat" className="block text-[10px] font-medium text-slate-400 uppercase">Expense Category</label>
+                <label htmlFor="exp_cat" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Expense Category</label>
                 <select
                   id="exp_cat"
                   value={expenseCategory}
                   onChange={(e) => setExpenseCategory(e.target.value)}
-                  className="w-full px-2.5 py-1.5 mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 dark:text-white rounded-lg focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
                 >
                   <option value="Rent & Overheads">Rent & Overheads</option>
                   <option value="Product Inventory">Product Inventory</option>
@@ -3136,14 +3159,14 @@ export default function Dashboard({
                     placeholder="Enter custom category..."
                     value={customExpenseCategory}
                     onChange={(e) => setCustomExpenseCategory(e.target.value)}
-                    className="w-full px-2.5 py-1.5 mt-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 dark:text-white rounded-lg focus:outline-none focus:border-sky-500"
+                    className="w-full px-3.5 py-2 mt-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
                     required
                   />
                 )}
               </div>
 
               <div>
-                <label htmlFor="exp_amt" className="block text-[10px] font-medium text-slate-400 uppercase">Overhead Cost Amount ({currencySymbol}) *</label>
+                <label htmlFor="exp_amt" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Overhead Cost Amount ({currencySymbol}) *</label>
                 <input
                   id="exp_amt"
                   required
@@ -3153,31 +3176,31 @@ export default function Dashboard({
                   value={expenseAmount}
                   onChange={(e) => setExpenseAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full px-2.5 py-1.5 mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 dark:text-white rounded-lg font-mono focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none font-mono touch-action-manipulation"
                 />
               </div>
 
               <div>
-                <label htmlFor="exp_dt" className="block text-[10px] font-medium text-slate-400 uppercase">Expenditure Date *</label>
+                <label htmlFor="exp_dt" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Expenditure Date *</label>
                 <input
                   id="exp_dt"
                   required
                   type="date"
                   value={expenseDate}
                   onChange={(e) => setExpenseDate(e.target.value)}
-                  className="w-full px-2.5 py-1.5 mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 dark:text-white rounded-lg focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
                 />
               </div>
 
               <div>
-                <label htmlFor="exp_desc" className="block text-[10px] font-medium text-slate-400 uppercase">Expenditure Description</label>
+                <label htmlFor="exp_desc" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Expenditure Description</label>
                 <textarea
                   id="exp_desc"
                   value={expenseDesc}
                   onChange={(e) => setExpenseDesc(e.target.value)}
                   placeholder="e.g. AWS Multi-Region Node Cloud charges"
                   rows={2}
-                  className="w-full px-2.5 py-1.5 mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 dark:text-white rounded-lg focus:outline-none resize-none"
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none resize-none touch-action-manipulation"
                 />
               </div>
             </div>

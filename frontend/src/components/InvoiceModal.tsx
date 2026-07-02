@@ -50,6 +50,7 @@ export default function InvoiceModal({
   const [invoiceTerms, setInvoiceTerms] = useState('');
   const [status, setStatus] = useState<InvoiceStatus>('pending');
   const [clientGstin, setClientGstin] = useState('');
+  const [clientPan, setClientPan] = useState('');
   const [placeOfSupply, setPlaceOfSupply] = useState('');
   const [grRrNo, setGrRrNo] = useState('');
   const [transport, setTransport] = useState('');
@@ -98,7 +99,12 @@ export default function InvoiceModal({
   const [newItemName, setNewItemName] = useState('');
   const [newItemRate, setNewItemRate] = useState<number>(0);
   const [newItemQty, setNewItemQty] = useState<number>(1);
-  const [newItemTax, setNewItemTax] = useState<number>(defaultTaxRate);
+  const [newItemTax, setNewItemTax] = useState<number>(() => {
+    if (profile.customTaxPercentage !== undefined) {
+      return profile.customTaxPercentage;
+    }
+    return defaultTaxRate;
+  });
   const [newItemDesc, setNewItemDesc] = useState('');
   const [newItemHsnCode, setNewItemHsnCode] = useState('');
   const [newItemQtyType, setNewItemQtyType] = useState('');
@@ -111,22 +117,37 @@ export default function InvoiceModal({
 
   // Geographic location states for taxes
   const [companyState, setCompanyState] = useState(() => {
-    return localStorage.getItem('makinvoice_tax_company_state') || 'Maharashtra';
+    return profile.state || localStorage.getItem('makinvoice_tax_company_state') || 'Maharashtra';
   });
   const [companyCountry, setCompanyCountry] = useState(() => {
-    return localStorage.getItem('makinvoice_tax_company_country') || 'India';
+    return profile.country || localStorage.getItem('makinvoice_tax_company_country') || 'India';
   });
   const [clientState, setClientState] = useState('');
   const [clientCountry, setClientCountry] = useState('India');
   const [hasTransport, setHasTransport] = useState(false);
 
   // Override / Custom tax options
-  const [taxMode, setTaxMode] = useState<'dynamic' | 'custom'>(invoice?.taxMode || 'dynamic');
-  const [customTaxName, setCustomTaxName] = useState(invoice?.customTaxName || 'Tax');
-  const [customTaxPercentage, setCustomTaxPercentage] = useState(invoice?.customTaxPercentage || 0);
+  const [taxMode, setTaxMode] = useState<'dynamic' | 'custom'>(() => {
+    if (invoice) return invoice.taxMode || 'dynamic';
+    return profile.taxMode || 'dynamic';
+  });
+  const [customTaxName, setCustomTaxName] = useState(() => {
+    if (invoice) return invoice.customTaxName || 'Tax';
+    return profile.customTaxName || 'Tax';
+  });
+  const [customTaxPercentage, setCustomTaxPercentage] = useState(() => {
+    if (invoice) return invoice.customTaxPercentage || 0;
+    return profile.customTaxPercentage !== undefined ? profile.customTaxPercentage : profile.defaultTaxRate || 0;
+  });
   const [customTaxType, setCustomTaxType] = useState<TaxClassification>(invoice?.customTaxType || 'local');
-  const [additionalTaxes, setAdditionalTaxes] = useState<{id: string, name: string, rate: number}[]>(invoice?.additionalTaxes || []);
-  const [customTaxCols, setCustomTaxCols] = useState<string[]>(invoice?.customTaxCols && invoice.customTaxCols.length > 0 ? invoice.customTaxCols : ['Tax']);
+  const [additionalTaxes, setAdditionalTaxes] = useState<{id: string, name: string, rate: number}[]>(() => {
+    if (invoice) return invoice.additionalTaxes || [];
+    return profile.additionalTaxes || [];
+  });
+  const [customTaxCols, setCustomTaxCols] = useState<string[]>(() => {
+    if (invoice?.customTaxCols && invoice.customTaxCols.length > 0) return invoice.customTaxCols;
+    return profile.customTaxCols && profile.customTaxCols.length > 0 ? profile.customTaxCols : ['Tax'];
+  });
 
   // Helper: load the correct default template from storage
   const loadDefaultTemplate = useCallback(() => {
@@ -232,6 +253,7 @@ export default function InvoiceModal({
       setQrCodeTriggerUrl(invoice.qrCodeTriggerUrl || '');
       setAiPromptText('');
       setClientGstin(invoice.clientGstin || '');
+      setClientPan((invoice as any).clientPan || '');
       setHasTransport(!!(invoice.placeOfSupply || invoice.transport || invoice.grRrNo || invoice.vehicleNo || invoice.driverMobile || invoice.station || invoice.ewayBillNo));
       setPlaceOfSupply(invoice.placeOfSupply || '');
       setGrRrNo(invoice.grRrNo || '');
@@ -309,6 +331,7 @@ export default function InvoiceModal({
       setQrCodeTriggerUrl('');
       setAiPromptText('');
       setClientGstin('');
+      setClientPan('');
       setPlaceOfSupply('');
       setGrRrNo('');
       setTransport('');
@@ -703,6 +726,7 @@ export default function InvoiceModal({
       additionalTaxes,
       invoiceTerms,
       clientGstin: clientGstin.trim() || undefined,
+      clientPan: clientPan.trim() || undefined,
       placeOfSupply: placeOfSupply.trim() || undefined,
       grRrNo: grRrNo.trim() || undefined,
       transport: transport.trim() || undefined,
@@ -721,12 +745,12 @@ export default function InvoiceModal({
       customTaxCols
     } as Invoice;
   };
-
+  
   // Memoized invoice data — placed AFTER buildTempInvoice to avoid temporal dead zone
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const liveInvoiceData = useMemo(() => buildTempInvoice(true), [
     invoiceNumber, date, dueDate, clientName, clientEmail, clientPhone,
-    clientAddress, clientGstin, clientState, clientCountry, notes, invoiceTerms,
+    clientAddress, clientGstin, clientPan, clientState, clientCountry, notes, invoiceTerms,
     items, discountType, discountValue, shippedToName, shippedToPhone,
     shippedToEmail, shippedToPan, shippedToState, shippedToCountry,
     shippedToGstin, shippedToAddress,
@@ -820,6 +844,7 @@ export default function InvoiceModal({
       referenceNumber: referenceNumber.trim() || undefined,
       poNumber: poNumber.trim() || undefined,
       selectedTemplateStyle,
+      selectedCustomTemplateId: activeTemplate.id,
       qrCodeTriggerUrl: qrCodeTriggerUrl.trim() || undefined,
       date,
       dueDate,
@@ -858,6 +883,7 @@ export default function InvoiceModal({
       customTaxType,
       invoiceTerms,
       clientGstin: clientGstin.trim() || undefined,
+      clientPan: clientPan.trim() || undefined,
       placeOfSupply: placeOfSupply.trim() || undefined,
       grRrNo: grRrNo.trim() || undefined,
       transport: transport.trim() || undefined,
@@ -950,7 +976,7 @@ export default function InvoiceModal({
 
           {/* General Metadata */}
           <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-900 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="inv-type" className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Document Type</label>
                 <select
@@ -976,7 +1002,7 @@ export default function InvoiceModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
               <div>
                 <label htmlFor="inv-ref" className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Ref Number (Optional)</label>
                 <input 
@@ -1001,7 +1027,7 @@ export default function InvoiceModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
               <div>
                 <label htmlFor="inv-date" className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Issue Date</label>
                 <input 
@@ -1075,6 +1101,7 @@ export default function InvoiceModal({
                       setClientEmail(found.email || '');
                       setClientPhone(found.phone || '');
                       setClientAddress(found.address || '');
+                      setClientPan((found as any).pan || (found as any).taxId || '');
                     }
                   }}
                   className="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500"
@@ -1103,7 +1130,7 @@ export default function InvoiceModal({
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="col-client-email" className="sr-only">Client Email</label>
                 <input 
@@ -1140,16 +1167,29 @@ export default function InvoiceModal({
               />
             </div>
             
-            <div>
-              <label htmlFor="col-client-gstin" className="sr-only">Client GSTIN / UIN</label>
-              <input 
-                id="col-client-gstin"
-                type="text" 
-                value={clientGstin}
-                onChange={(e) => setClientGstin(e.target.value)}
-                placeholder="Client GSTIN / UIN"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="col-client-gstin" className="sr-only">Client GSTIN / UIN</label>
+                <input 
+                  id="col-client-gstin"
+                  type="text" 
+                  value={clientGstin}
+                  onChange={(e) => setClientGstin(e.target.value)}
+                  placeholder="Client GSTIN / UIN"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none"
+                />
+              </div>
+              <div>
+                <label htmlFor="col-client-pan" className="sr-only">Client PAN</label>
+                <input 
+                  id="col-client-pan"
+                  type="text" 
+                  value={clientPan}
+                  onChange={(e) => setClientPan(e.target.value)}
+                  placeholder="Client PAN"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none"
+                />
+              </div>
             </div>
 
             <div className="flex items-center justify-between pt-2">
@@ -1161,7 +1201,7 @@ export default function InvoiceModal({
                   Shipped To Details
                 </h3>
                 <input type="text" value={shippedToName} onChange={e => setShippedToName(e.target.value)} placeholder="Name" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <select
                     value={Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode || ''}
                     onChange={(e) => {
@@ -1206,7 +1246,7 @@ export default function InvoiceModal({
                     })()}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input type="text" value={shippedToPhone} onChange={e => setShippedToPhone(e.target.value)} placeholder="Phone" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
                   <input type="email" value={shippedToEmail} onChange={e => setShippedToEmail(e.target.value)} placeholder="Email" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
                   <input type="text" value={shippedToPan} onChange={e => setShippedToPan(e.target.value)} placeholder="PAN" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
@@ -1228,7 +1268,7 @@ export default function InvoiceModal({
             </div>
             
             {hasTransport && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input type="text" value={placeOfSupply} onChange={e => setPlaceOfSupply(e.target.value)} placeholder="Place of Supply" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
                 <input type="text" value={transport} onChange={e => setTransport(e.target.value)} placeholder="Transport" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
                 <input type="text" value={grRrNo} onChange={e => setGrRrNo(e.target.value)} placeholder="GR/RR No." className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
@@ -1258,7 +1298,7 @@ export default function InvoiceModal({
               {taxClassification.desc}
             </p>
 
-            <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
 
               <div>
                 <label htmlFor="tax-cl-country" className="block text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-1">Client Country</label>
@@ -1340,7 +1380,7 @@ export default function InvoiceModal({
 
               {taxMode === 'custom' && (
                 <div className="space-y-3 pt-1.5">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label htmlFor="custom-tax-name" className="block text-[9px] font-medium text-slate-400 dark:text-slate-550 uppercase">Tax Label/Name</label>
                       <input
@@ -1381,7 +1421,7 @@ export default function InvoiceModal({
                     {additionalTaxes.length > 0 && (
                       <div className="space-y-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/50">
                         {additionalTaxes.map((tax, index) => (
-                          <div key={tax.id} className="grid grid-cols-2 gap-3 items-end relative group">
+                          <div key={tax.id} className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end relative group">
                             <div>
                               <label className="block text-[9px] font-medium text-slate-400 dark:text-slate-550 uppercase mb-1">Additional Tax Name</label>
                               <input
@@ -1534,7 +1574,7 @@ export default function InvoiceModal({
               Add Custom Line Item
             </span>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Product/Line Item Name */}
               <div className="col-span-2">
                 <label htmlFor="custom-item-name" className="block text-[10px] text-slate-500 font-medium uppercase mb-1">Product Name *</label>
@@ -1667,7 +1707,7 @@ export default function InvoiceModal({
           <div className="space-y-3 pt-2">
             <h3 className="text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-1">Tax Adjustments & Discounts</h3>
             
-            <div className="grid grid-cols-2 gap-3.5 bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-50 dark:border-slate-905">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-50 dark:border-slate-905">
               <div>
                 <label htmlFor="discount-type" className="block text-[10px] font-medium text-slate-500 uppercase">Discount Code / Type</label>
                 <select 
@@ -1725,7 +1765,7 @@ export default function InvoiceModal({
             </div>
 
             {isRecurring && (
-              <div className="space-y-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/65 grid grid-cols-2 gap-3 transition-all duration-300">
+              <div className="space-y-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/65 grid grid-cols-1 sm:grid-cols-2 gap-3 transition-all duration-300">
                 <div className="col-span-1">
                   <label htmlFor="recurring-interval" className="block text-[10px] font-medium text-slate-500 uppercase">Billing Frequency</label>
                   <select
@@ -1854,8 +1894,8 @@ export default function InvoiceModal({
             </div>
           </div>
           ) : activeMode === 'editable' ? (
-
-            <div className="w-full mx-auto bg-slate-50 p-4 sm:p-8 relative min-h-[1130px] border border-slate-200" id="pdf-export-content-editable">
+            <div className="w-full overflow-x-auto bg-slate-100/50 dark:bg-slate-950/30 p-2 sm:p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <div className="w-[794px] mx-auto bg-white p-4 sm:p-8 relative min-h-[1123px] shadow-sm border border-slate-200 dark:border-slate-300" id="pdf-export-content-editable">
                
                <LivePreview 
  
@@ -1913,6 +1953,7 @@ export default function InvoiceModal({
                  hasTransport={hasTransport}
                  onUpdateHasTransport={setHasTransport}
                />
+              </div>
             </div>
           ) : null}
 

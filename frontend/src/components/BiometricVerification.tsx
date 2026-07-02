@@ -14,13 +14,6 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
   const [settings, setSettings] = useState(() => getSecuritySettings());
   const [simulationPrompt, setSimulationPrompt] = useState<boolean>(false);
 
-  useEffect(() => {
-    // Attempt biometric scan automatically on mount if enabled
-    if (settings.isBiometricsEnabled) {
-      handleBiometricScan();
-    }
-  }, [settings.isBiometricsEnabled]);
-
   const handleBiometricScan = async () => {
     setError('');
     setScanning(true);
@@ -40,6 +33,13 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
       setSimulationPrompt(true);
     }, 1500);
   };
+
+  useEffect(() => {
+    // Attempt biometric scan automatically on mount if enabled
+    if (settings.isBiometricsEnabled) {
+      handleBiometricScan();
+    }
+  }, [settings.isBiometricsEnabled]);
 
   const handleSimulatedSuccess = () => {
     setSimulationPrompt(false);

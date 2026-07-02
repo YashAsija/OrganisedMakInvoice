@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Check, Trash2, Upload, CreditCard, ShieldCheck, Sparkles, Building2, Landmark, Sliders, Award, FileSpreadsheet, KeyRound, ArrowLeft } from 'lucide-react';
+import { X, Check, Trash2, Upload, CreditCard, ShieldCheck, Sparkles, Building2, Landmark, Sliders, Award, FileSpreadsheet, KeyRound, ArrowLeft, ArrowRight, Plus, AlertCircle } from 'lucide-react';
 import { BusinessProfile } from '../types';
 import { Country, State } from 'country-state-city';
 
@@ -12,48 +12,107 @@ interface BusinessProfileModalProps {
 }
 
 export default function BusinessProfileModal({ profile, isOpen, isOnboarding = false, onClose, onSave }: BusinessProfileModalProps) {
-  // Tabs State: 'company' | 'banking' | 'billing' | 'subscription'
-  const [activeTab, setActiveTab] = useState<'company' | 'banking' | 'billing' | 'subscription'>('company');
+  // Tabs State: 'company' | 'banking' | 'billing' | 'subscription' | 'tax'
+  const [activeTab, setActiveTab] = useState<'company' | 'banking' | 'billing' | 'subscription' | 'tax'>('company');
+  const [showErrors, setShowErrors] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Fields state holding actual values
-  const [name, setName] = useState(profile.name || '');
-  const [displayName, setDisplayName] = useState(profile.displayName || '');
-  const [email, setEmail] = useState(profile.email || '');
-  const [phone, setPhone] = useState(profile.phone || '');
-  const [address, setAddress] = useState(profile.address || '');
-  const [taxId, setTaxId] = useState(profile.taxId || '');
-  const [currency, setCurrency] = useState(profile.currency || 'USD');
-  const [defaultTaxRate, setDefaultTaxRate] = useState(profile.defaultTaxRate || 0);
-  const [logoUrl, setLogoUrl] = useState(profile.logoUrl || '');
-  const [signature, setSignature] = useState(profile.signature || '');
+  const [name, setName] = useState(() => isOnboarding ? '' : (profile.name || ''));
+  const [displayName, setDisplayName] = useState(() => isOnboarding ? '' : (profile.displayName || ''));
+  const [email, setEmail] = useState(() => isOnboarding ? '' : (profile.email || ''));
+  const [phone, setPhone] = useState(() => isOnboarding ? '' : (profile.phone || ''));
+  const [address, setAddress] = useState(() => isOnboarding ? '' : (profile.address || ''));
+  const [taxId, setTaxId] = useState(() => isOnboarding ? '' : (profile.taxId || ''));
+  const [currency, setCurrency] = useState(() => isOnboarding ? '' : (profile.currency || 'USD'));
+  const [defaultTaxRate, setDefaultTaxRate] = useState(() => isOnboarding ? 0 : (profile.defaultTaxRate || 0));
+  const [logoUrl, setLogoUrl] = useState(() => isOnboarding ? '' : (profile.logoUrl || ''));
+  const [signature, setSignature] = useState(() => isOnboarding ? '' : (profile.signature || ''));
   const [signatureMode, setSignatureMode] = useState<'draw' | 'type' | 'upload'>('draw');
   const [signatureText, setSignatureText] = useState('');
-  const [themeAccent, setThemeAccent] = useState<'sky' | 'emerald' | 'indigo' | 'violet' | 'rose' | 'orange'>(profile.themeAccent || 'sky');
-  const [invoiceFont, setInvoiceFont] = useState<'inter' | 'space' | 'playfair' | 'mono'>(profile.invoiceFont || 'inter');
-  const [invoiceLayout, setInvoiceLayout] = useState<'modern' | 'minimal' | 'agency' | 'professional' | 'startup' | 'enterprise'>(profile.invoiceLayout || 'professional');
+  const [themeAccent, setThemeAccent] = useState<'sky' | 'emerald' | 'indigo' | 'violet' | 'rose' | 'orange'>(() => isOnboarding ? 'sky' : (profile.themeAccent || 'sky'));
+  const [invoiceFont, setInvoiceFont] = useState<'inter' | 'space' | 'playfair' | 'mono'>(() => isOnboarding ? 'inter' : (profile.invoiceFont || 'inter'));
+  const [invoiceLayout, setInvoiceLayout] = useState<'modern' | 'minimal' | 'agency' | 'professional' | 'startup' | 'enterprise'>(() => isOnboarding ? 'professional' : (profile.invoiceLayout || 'professional'));
 
   // Custom Fields mapped from reference UI
-  const [companyCode, setCompanyCode] = useState(profile.companyCode || '');
-  const [state, setState] = useState(profile.state || '');
-  const [stateCode, setStateCode] = useState(profile.stateCode || '');
-  const [country, setCountry] = useState(profile.country || '');
-  const [currencySymbol, setCurrencySymbol] = useState(profile.currencySymbol || '');
-  const [mobile, setMobile] = useState(profile.mobile || '');
+  const [companyCode, setCompanyCode] = useState(() => isOnboarding ? '' : (profile.companyCode || ''));
+  const [state, setState] = useState(() => isOnboarding ? '' : (profile.state || ''));
+  const [stateCode, setStateCode] = useState(() => isOnboarding ? '' : (profile.stateCode || ''));
+  const [country, setCountry] = useState(() => isOnboarding ? '' : (profile.country || ''));
+  const [currencySymbol, setCurrencySymbol] = useState(() => isOnboarding ? '' : (profile.currencySymbol || ''));
+  const [mobile, setMobile] = useState(() => isOnboarding ? '' : (profile.mobile || ''));
 
   // Banking
-  const [bankName, setBankName] = useState(profile.bankName || '');
-  const [accountNumber, setAccountNumber] = useState(profile.accountNumber || '');
-  const [ifsc, setIfsc] = useState(profile.ifsc || '');
-  const [upiId, setUpiId] = useState(profile.upiId || '');
+  const [bankName, setBankName] = useState(() => isOnboarding ? '' : (profile.bankName || ''));
+  const [accountNumber, setAccountNumber] = useState(() => isOnboarding ? '' : (profile.accountNumber || ''));
+  const [ifsc, setIfsc] = useState(() => isOnboarding ? '' : (profile.ifsc || ''));
+  const [upiId, setUpiId] = useState(() => isOnboarding ? '' : (profile.upiId || ''));
 
   // Billing
-  const [invoicePrefix, setInvoicePrefix] = useState(profile.invoicePrefix || 'INV');
-  const [startingInvoiceNumber, setStartingInvoiceNumber] = useState(profile.startingInvoiceNumber || '1');
-  const [postedInvoiceEdit, setPostedInvoiceEdit] = useState<'Enabled' | 'Disabled'>(profile.postedInvoiceEdit || 'Disabled');
-  const [materialRateEdit, setMaterialRateEdit] = useState<'Enabled' | 'Disabled'>(profile.materialRateEdit || 'Disabled');
-  const [materialCategorization, setMaterialCategorization] = useState<'Optional' | 'Required'>(profile.materialCategorization || 'Optional');
-  const [defaultNotes, setDefaultNotes] = useState(profile.defaultNotes || 'Thank you for your business.');
-  const [defaultTerms, setDefaultTerms] = useState(profile.defaultTerms || 'Goods once sold will not be taken back or exchanged.');
+  const [invoicePrefix, setInvoicePrefix] = useState(() => isOnboarding ? '' : (profile.invoicePrefix || 'INV'));
+  const [startingInvoiceNumber, setStartingInvoiceNumber] = useState(() => isOnboarding ? '' : (profile.startingInvoiceNumber || '1'));
+  const [postedInvoiceEdit, setPostedInvoiceEdit] = useState<'Enabled' | 'Disabled'>(() => isOnboarding ? 'Disabled' : (profile.postedInvoiceEdit || 'Disabled'));
+  const [materialRateEdit, setMaterialRateEdit] = useState<'Enabled' | 'Disabled'>(() => isOnboarding ? 'Disabled' : (profile.materialRateEdit || 'Disabled'));
+  const [materialCategorization, setMaterialCategorization] = useState<'Optional' | 'Required'>(() => isOnboarding ? 'Optional' : (profile.materialCategorization || 'Optional'));
+  const [defaultNotes, setDefaultNotes] = useState(() => isOnboarding ? '' : (profile.defaultNotes || 'Thank you for your business.'));
+  const [defaultTerms, setDefaultTerms] = useState(() => isOnboarding ? '' : (profile.defaultTerms || 'Goods once sold will not be taken back or exchanged.'));
+
+  // Tax Config
+  const [taxMode, setTaxMode] = useState<'dynamic' | 'custom'>(() => isOnboarding ? 'dynamic' : (profile.taxMode || 'dynamic'));
+  const [customTaxName, setCustomTaxName] = useState(() => isOnboarding ? '' : (profile.customTaxName || 'Tax'));
+  const [customTaxPercentage, setCustomTaxPercentage] = useState<number>(() => isOnboarding ? 0 : (profile.customTaxPercentage !== undefined ? profile.customTaxPercentage : 18));
+  const [customTaxCols, setCustomTaxCols] = useState<string[]>(() => isOnboarding ? [] : (profile.customTaxCols || ['Tax']));
+  const [additionalTaxes, setAdditionalTaxes] = useState<{ id: string; name: string; rate: number }[]>(() => isOnboarding ? [] : (profile.additionalTaxes || []));
+
+  // Logo Crop/Adjust States
+  const [logoToCrop, setLogoToCrop] = useState<string | null>(null);
+  const [cropZoom, setCropZoom] = useState<number>(1);
+  const [cropPanX, setCropPanX] = useState<number>(0);
+  const [cropPanY, setCropPanY] = useState<number>(0);
+  const [cropRatio, setCropRatio] = useState<'1:1' | '3:1' | 'free'>('1:1');
+  const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isPanningLogo, setIsPanningLogo] = useState(false);
+  const panStart = useRef({ x: 0, y: 0 });
+
+  const validateCompanyProfile = (): boolean => {
+    if (!name.trim()) {
+      setValidationError('Business Name is required.');
+      setShowErrors(true);
+      return false;
+    }
+    if (!displayName.trim()) {
+      setValidationError('Owner Name is required.');
+      setShowErrors(true);
+      return false;
+    }
+    if (!country.trim()) {
+      setValidationError('Country is required.');
+      setShowErrors(true);
+      return false;
+    }
+    if (!state.trim()) {
+      setValidationError('State is required.');
+      setShowErrors(true);
+      return false;
+    }
+    if (!mobile.trim()) {
+      setValidationError('Mobile Number is required.');
+      setShowErrors(true);
+      return false;
+    }
+    setValidationError(null);
+    setShowErrors(false);
+    return true;
+  };
+
+  const handleTabChange = (targetTab: typeof activeTab) => {
+    if (isOnboarding && targetTab !== 'company') {
+      if (!validateCompanyProfile()) {
+        return;
+      }
+    }
+    setActiveTab(targetTab);
+  };
 
   // Digital Signature Pad Canvas References
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -63,40 +122,88 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
   // Auto initialize values when editing or creating
   useEffect(() => {
-    setName(profile.name || '');
-    setDisplayName(profile.displayName || '');
-    setEmail(profile.email || '');
-    setPhone(profile.phone || '');
-    setAddress(profile.address || '');
-    setTaxId(profile.taxId || '');
-    setCurrency(profile.currency || 'USD');
-    setDefaultTaxRate(profile.defaultTaxRate || 0);
-    setLogoUrl(profile.logoUrl || '');
-    setSignature(profile.signature || '');
-    setThemeAccent(profile.themeAccent || 'sky');
-    setInvoiceFont(profile.invoiceFont || 'inter');
-    setInvoiceLayout(profile.invoiceLayout || 'professional');
+    if (isOnboarding) {
+      setName('');
+      setDisplayName('');
+      setEmail('');
+      setPhone('');
+      setAddress('');
+      setTaxId('');
+      setCurrency('');
+      setDefaultTaxRate(0);
+      setLogoUrl('');
+      setSignature('');
+      setThemeAccent('sky');
+      setInvoiceFont('inter');
+      setInvoiceLayout('professional');
 
-    setCompanyCode(profile.companyCode || '');
-    setState(profile.state || '');
-    setStateCode(profile.stateCode || '');
-    setCountry(profile.country || '');
-    setCurrencySymbol(profile.currencySymbol || '');
-    setMobile(profile.mobile || '');
+      setCompanyCode('');
+      setState('');
+      setStateCode('');
+      setCountry('');
+      setCurrencySymbol('');
+      setMobile('');
 
-    setBankName(profile.bankName || '');
-    setAccountNumber(profile.accountNumber || '');
-    setIfsc(profile.ifsc || '');
-    setUpiId(profile.upiId || '');
+      setBankName('');
+      setAccountNumber('');
+      setIfsc('');
+      setUpiId('');
 
-    setInvoicePrefix(profile.invoicePrefix || 'INV');
-    setStartingInvoiceNumber(profile.startingInvoiceNumber || '1');
-    setPostedInvoiceEdit(profile.postedInvoiceEdit || 'Disabled');
-    setMaterialRateEdit(profile.materialRateEdit || 'Disabled');
-    setMaterialCategorization(profile.materialCategorization || 'Optional');
-    setDefaultNotes(profile.defaultNotes || 'Thank you for your business.');
-    setDefaultTerms(profile.defaultTerms || 'Goods once sold will not be taken back or exchanged.');
-  }, [profile, isOpen]);
+      setInvoicePrefix('');
+      setStartingInvoiceNumber('');
+      setPostedInvoiceEdit('Disabled');
+      setMaterialRateEdit('Disabled');
+      setMaterialCategorization('Optional');
+      setDefaultNotes('');
+      setDefaultTerms('');
+
+      setTaxMode('dynamic');
+      setCustomTaxName('');
+      setCustomTaxPercentage(0);
+      setCustomTaxCols([]);
+      setAdditionalTaxes([]);
+    } else {
+      setName(profile.name || '');
+      setDisplayName(profile.displayName || '');
+      setEmail(profile.email || '');
+      setPhone(profile.phone || '');
+      setAddress(profile.address || '');
+      setTaxId(profile.taxId || '');
+      setCurrency(profile.currency || 'USD');
+      setDefaultTaxRate(profile.defaultTaxRate || 0);
+      setLogoUrl(profile.logoUrl || '');
+      setSignature(profile.signature || '');
+      setThemeAccent(profile.themeAccent || 'sky');
+      setInvoiceFont(profile.invoiceFont || 'inter');
+      setInvoiceLayout(profile.invoiceLayout || 'professional');
+
+      setCompanyCode(profile.companyCode || '');
+      setState(profile.state || '');
+      setStateCode(profile.stateCode || '');
+      setCountry(profile.country || '');
+      setCurrencySymbol(profile.currencySymbol || '');
+      setMobile(profile.mobile || '');
+
+      setBankName(profile.bankName || '');
+      setAccountNumber(profile.accountNumber || '');
+      setIfsc(profile.ifsc || '');
+      setUpiId(profile.upiId || '');
+
+      setInvoicePrefix(profile.invoicePrefix || 'INV');
+      setStartingInvoiceNumber(profile.startingInvoiceNumber || '1');
+      setPostedInvoiceEdit(profile.postedInvoiceEdit || 'Disabled');
+      setMaterialRateEdit(profile.materialRateEdit || 'Disabled');
+      setMaterialCategorization(profile.materialCategorization || 'Optional');
+      setDefaultNotes(profile.defaultNotes || 'Thank you for your business.');
+      setDefaultTerms(profile.defaultTerms || 'Goods once sold will not be taken back or exchanged.');
+
+      setTaxMode(profile.taxMode || 'dynamic');
+      setCustomTaxName(profile.customTaxName || 'Tax');
+      setCustomTaxPercentage(profile.customTaxPercentage !== undefined ? profile.customTaxPercentage : 18);
+      setCustomTaxCols(profile.customTaxCols || ['Tax']);
+      setAdditionalTaxes(profile.additionalTaxes || []);
+    }
+  }, [profile, isOpen, isOnboarding]);
 
   // Handle opening of Canvas & Initializing signature preview
   useEffect(() => {
@@ -141,11 +248,146 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
-          setLogoUrl(event.target.result as string);
+          setLogoToCrop(event.target.result as string);
+          setCropZoom(1);
+          setCropPanX(0);
+          setCropPanY(0);
+          setCropRatio('1:1');
         }
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // Render crop preview
+  useEffect(() => {
+    if (!logoToCrop || !cropCanvasRef.current) return;
+    const canvas = cropCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      let cropW = 160;
+      let cropH = 160;
+      if (cropRatio === '3:1') {
+        cropW = 180;
+        cropH = 60;
+      } else if (cropRatio === 'free') {
+        const imgAspect = img.width / img.height;
+        if (imgAspect >= 1) {
+          cropW = 180;
+          cropH = Math.max(40, Math.min(180, 180 / imgAspect));
+        } else {
+          cropH = 120;
+          cropW = Math.max(40, Math.min(120, 120 * imgAspect));
+        }
+      }
+
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      ctx.beginPath();
+      ctx.rect(cx - cropW/2, cy - cropH/2, cropW, cropH);
+      ctx.clip();
+
+      const drawW = img.width * cropZoom;
+      const drawH = img.height * cropZoom;
+      ctx.drawImage(
+        img,
+        cx - drawW / 2 + cropPanX,
+        cy - drawH / 2 + cropPanY,
+        drawW,
+        drawH
+      );
+
+      ctx.restore();
+
+      ctx.strokeStyle = '#0ea5e9';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx - cropW/2, cy - cropH/2, cropW, cropH);
+
+      ctx.fillStyle = 'rgba(9, 13, 22, 0.7)';
+      ctx.fillRect(0, 0, canvas.width, cy - cropH/2);
+      ctx.fillRect(0, cy + cropH/2, canvas.width, cy - cropH/2);
+      ctx.fillRect(0, cy - cropH/2, cx - cropW/2, cropH);
+      ctx.fillRect(cx + cropW/2, cy - cropH/2, cx - cropW/2, cropH);
+    };
+    img.src = logoToCrop;
+  }, [logoToCrop, cropZoom, cropPanX, cropPanY, cropRatio]);
+
+  const handleApplyLogoCrop = () => {
+    if (!logoToCrop) return;
+    const img = new Image();
+    img.onload = () => {
+      const croppedCanvas = document.createElement('canvas');
+      
+      let cropW = 160;
+      let cropH = 160;
+      if (cropRatio === '3:1') {
+        cropW = 180;
+        cropH = 60;
+      } else if (cropRatio === 'free') {
+        const imgAspect = img.width / img.height;
+        if (imgAspect >= 1) {
+          cropW = 180;
+          cropH = Math.max(40, Math.min(180, 180 / imgAspect));
+        } else {
+          cropH = 120;
+          cropW = Math.max(40, Math.min(120, 120 * imgAspect));
+        }
+      }
+
+      croppedCanvas.width = cropW;
+      croppedCanvas.height = cropH;
+      const ctx = croppedCanvas.getContext('2d');
+      if (!ctx) return;
+
+      const drawW = img.width * cropZoom;
+      const drawH = img.height * cropZoom;
+      
+      ctx.drawImage(
+        img,
+        - (drawW / 2 - cropW / 2) + cropPanX,
+        - (drawH / 2 - cropH / 2) + cropPanY,
+        drawW,
+        drawH
+      );
+
+      setLogoUrl(croppedCanvas.toDataURL('image/png'));
+      setLogoToCrop(null);
+    };
+    img.src = logoToCrop;
+  };
+
+  const handleLogoPanStart = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    setIsPanningLogo(true);
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    panStart.current = {
+      x: clientX - cropPanX,
+      y: clientY - cropPanY
+    };
+  };
+
+  const handleLogoPanMove = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isPanningLogo) return;
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setCropPanX(clientX - panStart.current.x);
+    setCropPanY(clientY - panStart.current.y);
+  };
+
+  const handleLogoPanEnd = () => {
+    setIsPanningLogo(false);
   };
 
     // Country change automatically updates states and currency
@@ -206,6 +448,59 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
     }
   };
 
+  // Helper to crop canvas signature to content boundaries
+  const getCroppedCanvas = (canvas: HTMLCanvasElement) => {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return canvas;
+    const w = canvas.width;
+    const h = canvas.height;
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+    
+    let minX = w, minY = h, maxX = 0, maxY = 0;
+    let hasContent = false;
+    
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const index = (y * w + x) * 4;
+        const r = data[index];
+        const g = data[index + 1];
+        const b = data[index + 2];
+        const a = data[index + 3];
+        
+        // Check if pixel is not fully white and has some alpha transparency
+        if (a > 10 && (r < 250 || g < 250 || b < 250)) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+          hasContent = true;
+        }
+      }
+    }
+    
+    if (!hasContent) return canvas;
+    
+    // Add small padding around cropped signature
+    const padding = 10;
+    minX = Math.max(0, minX - padding);
+    minY = Math.max(0, minY - padding);
+    maxX = Math.min(w, maxX + padding);
+    maxY = Math.min(h, maxY + padding);
+    
+    const cropW = maxX - minX;
+    const cropH = maxY - minY;
+    
+    const cropCanvas = document.createElement('canvas');
+    cropCanvas.width = cropW;
+    cropCanvas.height = cropH;
+    const cropCtx = cropCanvas.getContext('2d');
+    if (!cropCtx) return canvas;
+    
+    cropCtx.drawImage(canvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+    return cropCanvas;
+  };
+
   // --- HTML5 CANVAS COORDINATE TRANSLATORS ---
   const initCanvas = () => {
     const canvas = canvasRef.current;
@@ -236,12 +531,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       if (signatureText.trim()) {
-        ctx.font = 'italic 48px "Caveat", "Brush Script MT", cursive';
+        ctx.font = 'italic 96px "Caveat", "Brush Script MT", cursive';
         ctx.fillStyle = '#000000';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(signatureText, canvas.width / 2, canvas.height / 2);
-        setSignature(canvas.toDataURL('image/png'));
+        
+        const croppedCanvas = getCroppedCanvas(canvas);
+        setSignature(croppedCanvas.toDataURL('image/png'));
       } else {
         setSignature('');
       }
@@ -302,7 +599,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       setIsDrawing(false);
       const canvas = canvasRef.current;
       if (canvas) {
-        const signData = canvas.toDataURL('image/png');
+        const croppedCanvas = getCroppedCanvas(canvas);
+        const signData = croppedCanvas.toDataURL('image/png');
         setSignature(signData);
       }
     }
@@ -399,8 +697,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim()) {
-      alert('Business Name is required.');
+    if (!validateCompanyProfile()) {
+      setActiveTab('company');
       return;
     }
 
@@ -413,7 +711,6 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       address,
       taxId,
       currency,
-      defaultTaxRate: Number(defaultTaxRate),
       logoUrl,
       signature,
       themeAccent,
@@ -436,6 +733,12 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       materialCategorization,
       defaultNotes,
       defaultTerms,
+      taxMode,
+      customTaxName,
+      customTaxPercentage: Number(customTaxPercentage),
+      defaultTaxRate: Number(customTaxPercentage),
+      customTaxCols,
+      additionalTaxes,
       updatedAt: new Date().toISOString()
     });
     onClose();
@@ -504,63 +807,74 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         <form onSubmit={handleFormSubmit} className="flex-1 overflow-hidden flex flex-col md:flex-row">
           
           {/* LEFT SIDEBAR (Tabs) */}
-          {!isOnboarding && (
-            <div className="md:w-64 lg:w-72 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 flex flex-row md:flex-col p-4 md:p-6 gap-2 overflow-x-auto md:overflow-y-auto shrink-0 hide-scrollbar">
-              <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2 hidden md:block px-2">Settings Menu</div>
-              <button
-                type="button"
-                onClick={() => setActiveTab('company')}
-                className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
-                  activeTab === 'company'
-                    ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
-                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
-                }`}
-              >
-                <Building2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Company Profile</span>
-                <span className="sm:hidden">Company</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('banking')}
-                className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
-                  activeTab === 'banking'
-                    ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
-                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
-                }`}
-              >
-                <Landmark className="w-4 h-4" />
-                <span className="hidden sm:inline">Banking Details</span>
-                <span className="sm:hidden">Banking</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('billing')}
-                className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
-                  activeTab === 'billing'
-                    ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
-                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
-                }`}
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-                <span className="hidden sm:inline">Billing Config</span>
-                <span className="sm:hidden">Billing</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('subscription')}
-                className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
-                  activeTab === 'subscription'
-                    ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
-                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
-                }`}
-              >
-                <Award className="w-4 h-4" />
-                <span className="hidden sm:inline">Subscription</span>
-                <span className="sm:hidden">Sub</span>
-              </button>
-            </div>
-          )}
+          <div className="md:w-64 lg:w-72 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 flex flex-row md:flex-col p-4 md:p-6 gap-2 overflow-x-auto md:overflow-y-auto shrink-0 hide-scrollbar">
+            <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2 hidden md:block px-2">Settings Menu</div>
+            <button
+              type="button"
+              onClick={() => handleTabChange('company')}
+              className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
+                activeTab === 'company'
+                  ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
+                  : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Company Profile</span>
+              <span className="sm:hidden">Company</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('banking')}
+              className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
+                activeTab === 'banking'
+                  ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
+                  : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
+              }`}
+            >
+              <Landmark className="w-4 h-4" />
+              <span className="hidden sm:inline">Banking Details</span>
+              <span className="sm:hidden">Banking</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('billing')}
+              className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
+                activeTab === 'billing'
+                  ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
+                  : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
+              }`}
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span className="hidden sm:inline">Billing Config</span>
+              <span className="sm:hidden">Billing</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('tax')}
+              className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
+                activeTab === 'tax'
+                  ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
+                  : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
+              }`}
+            >
+              <Sliders className="w-4 h-4" />
+              <span className="hidden sm:inline">Tax Config</span>
+              <span className="sm:hidden">Tax</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('subscription')}
+              className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
+                activeTab === 'subscription'
+                  ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
+                  : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
+              }`}
+            >
+              <Award className="w-4 h-4" />
+              <span className="hidden sm:inline">Subscription</span>
+              <span className="sm:hidden">Sub</span>
+            </button>
+          </div>
 
           {/* MAIN SCROLLABLE CONTENT */}
           <div className="flex-1 flex flex-col overflow-y-auto">
@@ -569,6 +883,12 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           {/* TAB 1: COMPANY */}
           {activeTab === 'company' && (
             <div className="space-y-6 animate-fade-in text-slate-805 dark:text-white">
+              {validationError && (
+                <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-2xl text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-2.5 shadow-sm">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <span>{validationError}</span>
+                </div>
+              )}
           {/* TOP SECTION: Logo picker and Brand Identity Indicator Card */}
           <div className="grid md:grid-cols-12 gap-5 items-stretch">
             
@@ -655,7 +975,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label htmlFor="company-name" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Business Name</label>
+                  <label htmlFor="company-name" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Business Name *</label>
                   <input 
                     id="company-name"
                     type="text"
@@ -663,39 +983,44 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. INTEZ Systems"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                    className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none shadow-sm transition-all duration-300 font-medium ${showErrors && !name.trim() ? 'border-red-500 ring-4 ring-red-500/10 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 dark:border-slate-850 focus:border-sky-500 hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10'}`}
                   />
+                  {showErrors && !name.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Business Name is required</p>}
                 </div>
                 <div>
-                  <label htmlFor="company-display-name" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Owner Name</label>
+                  <label htmlFor="company-display-name" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Owner Name *</label>
                   <input 
                     id="company-display-name"
                     type="text"
+                    required
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="e.g. INTEZ"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                    className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none shadow-sm transition-all duration-300 font-medium ${showErrors && !displayName.trim() ? 'border-red-500 ring-4 ring-red-500/10 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 dark:border-slate-850 focus:border-sky-500 hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10'}`}
                   />
+                  {showErrors && !displayName.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Owner Name is required</p>}
                 </div>
               </div>
 
               <div className="grid md:grid-cols-3 gap-6">
                 <div>
-                  <label htmlFor="company-country" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Country</label>
+                  <label htmlFor="company-country" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Country *</label>
                   <select 
                     id="company-country"
+                    required
                     value={Country.getAllCountries().find(c => c.name === country)?.isoCode || ''}
                     onChange={(e) => handleCountryChange(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium cursor-pointer"
+                    className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none shadow-sm transition-all duration-300 font-medium cursor-pointer ${showErrors && !country.trim() ? 'border-red-500 ring-4 ring-red-500/10 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 dark:border-slate-850 focus:border-sky-500 hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10'}`}
                   >
                     <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-500">Select Country</option>
                     {Country.getAllCountries().map((c) => (
-                      <option key={c.isoCode} value={c.isoCode} className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">{c.name}</option>
+                      <option key={c.isoCode} value={c.isoCode} className="bg-white dark:bg-slate-900 text-slate-850 dark:text-white">{c.name}</option>
                     ))}
                   </select>
+                  {showErrors && !country.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Country is required</p>}
                 </div>
                 <div>
-                  <label htmlFor="company-state" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">State</label>
+                  <label htmlFor="company-state" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">State *</label>
                   <select 
                     id="company-state"
                     value={(() => {
@@ -704,17 +1029,19 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                       return State.getStatesOfCountry(cCode).find(s => s.name === state)?.isoCode || '';
                     })()}
                     onChange={(e) => handleStateChange(e.target.value, country)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium cursor-pointer"
+                    className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none shadow-sm transition-all duration-300 font-medium cursor-pointer ${showErrors && !state.trim() ? 'border-red-500 ring-4 ring-red-500/10 focus:border-red-500 focus:ring-red-505 focus:ring-red-500/10' : 'border-slate-200 dark:border-slate-850 focus:border-sky-500 hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10'}`}
+                    required
                   >
                     <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-500">Select State</option>
                     {(() => {
                       const cCode = Country.getAllCountries().find(c => c.name === country)?.isoCode;
                       if (!cCode) return null;
                       return State.getStatesOfCountry(cCode).map((st) => (
-                        <option key={st.isoCode} value={st.isoCode} className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">{st.name}</option>
+                        <option key={st.isoCode} value={st.isoCode} className="bg-white dark:bg-slate-900 text-slate-850 dark:text-white">{st.name}</option>
                       ));
                     })()}
                   </select>
+                  {showErrors && !state.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">State is required</p>}
                 </div>
                 <div>
                   <label htmlFor="company-state-code" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">State Code</label>
@@ -754,16 +1081,18 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   />
                 </div>
                 <div>
-                  <label htmlFor="company-mobile" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Mobile</label>
+                  <label htmlFor="company-mobile" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Mobile *</label>
                   <input 
                     id="company-mobile"
                     type="text"
+                    required
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value.replace(/[^\d\s+]/g, ''))}
                     placeholder="e.g. 9899728185"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
                   />
                   <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1">Mobile number is linked with login, orders and billing records.</p>
+                  {showErrors && !mobile.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Mobile Number is required</p>}
                 </div>
               </div>
 
@@ -1037,18 +1366,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     <option value="Required" className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">Required</option>
                   </select>
                 </div>
-                <div>
-                  <label htmlFor="billing-tax-rate" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Default Sales Tax Rate (%)</label>
-                  <input 
-                    id="billing-tax-rate"
-                    type="number"
-                    step="0.01"
-                    value={defaultTaxRate}
-                    onChange={(e) => setDefaultTaxRate(parseFloat(e.target.value) || 0)}
-                    placeholder="0"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
-                  />
-                </div>
+
               </div>
             </div>
 
@@ -1083,78 +1401,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 </div>
               </div>
               
-              {/* INTEGRATING OLD DESIGNER / THEME PROPS TO PRESERVE CAPABILITIES */}
-              <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 space-y-4">
-                <div>
-                  <span className="block text-[10px] font-medium uppercase tracking-wider text-sky-600 dark:text-sky-400">PDF Print Customizer</span>
-                  <p className="text-[10px] text-slate-550 dark:text-slate-400">Preserve dynamic layout rendering setups for clients.</p>
-                </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="custom-font" className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Invoice Typography</label>
-                    <select
-                      id="custom-font"
-                      value={invoiceFont}
-                      onChange={(e) => setInvoiceFont(e.target.value as any)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium focus:outline-none focus:border-sky-500 transition-all cursor-pointer text-slate-805 dark:text-white"
-                    >
-                      <option value="inter" className="bg-white dark:bg-slate-900">Inter (Modern Clean)</option>
-                      <option value="space" className="bg-white dark:bg-slate-900">Space Grotesk (Tech Metric)</option>
-                      <option value="playfair" className="bg-white dark:bg-slate-900">Playfair Display (Serif)</option>
-                      <option value="mono" className="bg-white dark:bg-slate-900">JetBrains Mono (Industrial)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="custom-layout" className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Print Layout Style</label>
-                    <select
-                      id="custom-layout"
-                      value={invoiceLayout}
-                      onChange={(e) => setInvoiceLayout(e.target.value as any)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium focus:outline-none focus:border-sky-500 transition-all cursor-pointer text-slate-805 dark:text-white"
-                    >
-                      <option value="professional" className="bg-white dark:bg-slate-900">Corporate Business</option>
-                      <option value="minimal" className="bg-white dark:bg-slate-900">Minimalist Sheet</option>
-                      <option value="modern" className="bg-white dark:bg-slate-900">Modern Dual-Column</option>
-                      <option value="startup" className="bg-white dark:bg-slate-900">Creative Startup</option>
-                      <option value="agency" className="bg-white dark:bg-slate-900">Elegant Studio</option>
-                      <option value="enterprise" className="bg-white dark:bg-slate-900">Structured Left-Align</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">Accent Color Theme</label>
-                  <div className="flex flex-wrap gap-2.5">
-                    {(['sky', 'emerald', 'indigo', 'violet', 'rose', 'orange'] as const).map((accent) => {
-                      const colorsMap = {
-                        sky: 'bg-sky-500 ring-sky-300',
-                        emerald: 'bg-emerald-500 ring-emerald-300',
-                        indigo: 'bg-indigo-500 ring-indigo-300',
-                        violet: 'bg-violet-500 ring-violet-300',
-                        rose: 'bg-rose-500 ring-rose-300',
-                        orange: 'bg-orange-500 ring-orange-300'
-                      };
-                      return (
-                        <button
-                          key={accent}
-                          type="button"
-                          onClick={() => setThemeAccent(accent)}
-                          className={`w-6 h-6 rounded-full cursor-pointer relative transition-all ${colorsMap[accent]} ${
-                            themeAccent === accent 
-                              ? 'ring-4 scale-110 shadow-sm' 
-                              : 'opacity-85 hover:opacity-100 hover:scale-105'
-                          }`}
-                        >
-                          {themeAccent === accent && (
-                            <span className="absolute inset-0 flex items-center justify-center text-white font-medium text-[10px]">✓</span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 
@@ -1178,7 +1425,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     <p className="text-xs text-slate-550 dark:text-slate-400">The corporate grade cloud syncing environment. Bound strictly in military local encryptions.</p>
                   </div>
 
-                  <div className="border-t border-slate-200 dark:border-slate-850 pt-4 grid grid-cols-2 gap-4">
+                  <div className="border-t border-slate-200 dark:border-slate-850 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <span className="block text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Active Plan Type</span>
                       <span className="text-sm font-bold text-slate-805 dark:text-white">Enterprise Unlimited</span>
@@ -1221,52 +1468,369 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
             </div>
           )}
 
+          {/* TAB 5: TAX CONFIG */}
+          {activeTab === 'tax' && (
+            <div className="space-y-6 animate-fade-in text-slate-805 dark:text-white">
+              <div className="p-5 md:p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/60 space-y-5">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-extrabold text-slate-805 dark:text-white uppercase tracking-wider">Tax Configuration</h3>
+                  <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400">Configure default tax profiles for your invoices based on your operating country.</p>
+                </div>
+
+                {/* Country Detection */}
+                <div className="p-4 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <div>
+                    <span className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">Company Operating Country</span>
+                    <span className="text-sm font-bold text-slate-805 dark:text-white">{country || 'Not Selected (Please select in Profile tab)'}</span>
+                  </div>
+                  <span className="text-xl">
+                    {country && country.toLowerCase() === 'india' ? '🇮🇳' : '🌐'}
+                  </span>
+                </div>
+
+                {country && country.toLowerCase() === 'india' ? (
+                  // INDIA GST TAX ENGINE CONFIG
+                  <div className="space-y-5">
+                    <div className="p-4 bg-blue-500/5 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-800/40 rounded-2xl space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-blue-500 font-bold">ℹ️</span>
+                        <span className="text-xs font-bold text-blue-750 dark:text-blue-405 uppercase tracking-wider">GST Tax Split Mechanism Active</span>
+                      </div>
+                      <p className="text-[10px] text-blue-650 dark:text-blue-300 leading-relaxed font-medium">
+                        For invoices generated within India, taxes are dynamically split based on the state comparison:
+                        <br />• <strong>Intrastate (Same State)</strong>: The configured tax will split 50/50 into <strong>CGST</strong> and <strong>SGST</strong>.
+                        <br />• <strong>Interstate (Different State)</strong>: The full tax rate is applied as <strong>IGST</strong>.
+                      </p>
+                    </div>
+                    <div className="max-w-md">
+                      <label htmlFor="tax-rate-india" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                        Default GST Rate (%)
+                      </label>
+                      <select
+                        id="tax-rate-india"
+                        value={customTaxPercentage}
+                        onChange={(e) => {
+                          const rateVal = parseFloat(e.target.value);
+                          setCustomTaxPercentage(rateVal);
+                          setDefaultTaxRate(rateVal);
+                        }}
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm font-medium"
+                      >
+                        <option value={0}>0% (Nil/Exempt): Unprocessed food, healthcare or education services</option>
+                        <option value={5}>5% (Merit Rate): Packaged food, daily essentials</option>
+                        <option value={18}>18% (Standard Rate): Services, logistics, and hospitality</option>
+                        <option value={40}>40% (Luxury/Sin Goods): Luxury items</option>
+                        {![0, 5, 18, 40].includes(customTaxPercentage) && (
+                          <option value={customTaxPercentage}>{customTaxPercentage}% (Custom)</option>
+                        )}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 max-w-md pt-2 border-t border-slate-100 dark:border-slate-850">
+                      <div className="p-3 bg-slate-150/40 dark:bg-slate-900 rounded-xl">
+                        <span className="block text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500">CGST + SGST Split</span>
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{(customTaxPercentage / 2).toFixed(1)}% + {(customTaxPercentage / 2).toFixed(1)}%</span>
+                      </div>
+                      <div className="p-3 bg-slate-150/40 dark:bg-slate-900 rounded-xl">
+                        <span className="block text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500">IGST Rate</span>
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{customTaxPercentage}%</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // GENERIC COUNTRIES CUSTOM TAX ENGINE CONFIG
+                  <div className="space-y-5 animate-fade-in">
+                    <div className="space-y-4">
+                      <div className="grid sm:grid-cols-12 gap-4 items-end">
+                        <div className="sm:col-span-6">
+                          <label htmlFor="custom-tax-name" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                            Custom Tax Label / Name
+                          </label>
+                          <input
+                            id="custom-tax-name"
+                            type="text"
+                            value={customTaxName}
+                            onChange={(e) => {
+                              setCustomTaxName(e.target.value);
+                              setCustomTaxCols([e.target.value]);
+                            }}
+                            placeholder="e.g. VAT, Sales Tax, GST"
+                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-855 bg-white dark:bg-slate-950 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm font-medium"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-5">
+                          <label htmlFor="custom-tax-rate" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                            Tax Percentage Rate (%)
+                          </label>
+                          <input
+                            id="custom-tax-rate"
+                            type="number"
+                            min={0}
+                            max={100}
+                            step="0.01"
+                            value={customTaxPercentage}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              setCustomTaxPercentage(val);
+                              setDefaultTaxRate(val);
+                            }}
+                            placeholder="0"
+                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-855 bg-white dark:bg-slate-955 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm font-mono font-medium"
+                          />
+                        </div>
+                        
+                        <div className="sm:col-span-1 h-10 flex items-center justify-center">
+                          {/* Spacing alignment */}
+                        </div>
+                      </div>
+
+                      {/* List of Additional Taxes */}
+                      {additionalTaxes.map((tax, index) => (
+                        <div key={tax.id} className="grid sm:grid-cols-12 gap-4 items-end animate-fade-in">
+                          <div className="sm:col-span-6">
+                            <label className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                              Additional Tax {index + 1} Name
+                            </label>
+                            <input
+                              type="text"
+                              value={tax.name}
+                              onChange={(e) => {
+                                setAdditionalTaxes(additionalTaxes.map((t) => t.id === tax.id ? { ...t, name: e.target.value } : t));
+                              }}
+                              placeholder="e.g. Local Cess, Service Levy"
+                              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-855 bg-white dark:bg-slate-950 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm font-medium"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-5">
+                            <label className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                              Tax Percentage Rate (%)
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              step="0.01"
+                              value={tax.rate}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                setAdditionalTaxes(additionalTaxes.map((t) => t.id === tax.id ? { ...t, rate: val } : t));
+                              }}
+                              placeholder="0"
+                              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-855 bg-white dark:bg-slate-955 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm font-mono font-medium"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-1 h-[42px] flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={() => setAdditionalTaxes(additionalTaxes.filter((t) => t.id !== tax.id))}
+                              className="w-9 h-9 bg-rose-50 hover:bg-rose-100 dark:bg-rose-955/20 dark:hover:bg-rose-955/40 text-rose-600 dark:text-rose-400 border border-transparent dark:border-rose-900/35 rounded-xl flex items-center justify-center cursor-pointer transition-all active:scale-95"
+                              title="Remove Tax"
+                            >
+                              <Trash2 className="w-4.5 h-4.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Plus button to add more taxes */}
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAdditionalTaxes([...additionalTaxes, { id: `tax_${Date.now()}`, name: '', rate: 0 }]);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl transition-all cursor-pointer shadow-3xs"
+                        >
+                          <Plus className="w-4 h-4 text-sky-655" />
+                          <span>Add Another Tax</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-200/50 dark:border-emerald-800/40 rounded-2xl">
+                      <p className="text-[10px] text-emerald-650 dark:text-emerald-305 leading-relaxed font-medium">
+                        Custom tax profile is active. On newly created bills, item pricing will automatically pre-fill with <strong>{customTaxName || 'Tax'}</strong> at <strong>{customTaxPercentage}%</strong>.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
             </div> {/* End of scrollable padding area */}
 
             {/* Bottom Dialog controls */}
             <div className="border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3 bg-white dark:bg-slate-900 p-5 md:px-8 mt-auto shrink-0 z-10 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
-            {!isOnboarding && (
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 rounded-xl text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900"
-              >
-                Cancel
-              </button>
-            )}
-            
-            {isOnboarding && activeTab === 'company' && (
-              <button
-                type="button"
-                onClick={() => setActiveTab('banking')}
-                className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
-              >
-                Next: Banking Details
-              </button>
-            )}
-            
-            {isOnboarding && activeTab === 'banking' && (
-              <button
-                type="button"
-                onClick={() => setActiveTab('billing')}
-                className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
-              >
-                Next: Billing Details
-              </button>
-            )}
-
-            {(!isOnboarding || activeTab === 'billing') && (
-              <button
-                type="submit"
-                className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
-              >
-                <Check className="w-4.5 h-4.5" />
-                {isOnboarding ? 'Save Details' : 'Save Settings'}
-              </button>
+            {!isOnboarding ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-5 py-2.5 rounded-xl text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                >
+                  <Check className="w-4.5 h-4.5" />
+                  Save Settings
+                </button>
+              </>
+            ) : (
+              <>
+                {activeTab === 'company' && (
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('banking')}
+                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                  >
+                    <span>Next: Banking Details</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+                {activeTab === 'banking' && (
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('billing')}
+                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                  >
+                    <span>Next: Billing Config</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+                {activeTab === 'billing' && (
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('tax')}
+                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                  >
+                    <span>Next: Tax Config</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+                {activeTab === 'tax' && (
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                  >
+                    <Check className="w-4.5 h-4.5" />
+                    <span>Save Details</span>
+                  </button>
+                )}
+                {/* Subscription tab fallback just in case */}
+                {activeTab === 'subscription' && (
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('tax')}
+                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                  >
+                    <span>Next: Tax Config</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+              </>
             )}
             </div>
           </div>
         </form>
+      {/* Logo Cropping and Adjustment Modal */}
+      {logoToCrop && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center z-[999] p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-100 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-scale-up">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-850 dark:text-white">Adjust & Crop Logo</h3>
+              <button
+                type="button"
+                onClick={() => setLogoToCrop(null)}
+                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-605 dark:hover:text-white cursor-pointer transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Canvas Body */}
+            <div className="p-6 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-955/50">
+              <canvas
+                ref={cropCanvasRef}
+                width={300}
+                height={220}
+                onMouseDown={handleLogoPanStart}
+                onMouseMove={handleLogoPanMove}
+                onMouseUp={handleLogoPanEnd}
+                onMouseLeave={handleLogoPanEnd}
+                onTouchStart={handleLogoPanStart}
+                onTouchMove={handleLogoPanMove}
+                onTouchEnd={handleLogoPanEnd}
+                className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-[#090d16] cursor-move shadow-inner"
+              />
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-medium">Drag on the box above to pan/reposition the logo.</p>
+            </div>
+
+            {/* Controls */}
+             <div className="p-5 space-y-4">
+               {/* Zoom Slider */}
+               <div className="space-y-1.5">
+                 <div className="flex justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                   <span>Zoom / Scale</span>
+                   <span className="font-mono text-slate-700 dark:text-slate-350">{Math.round(cropZoom * 100)}%</span>
+                 </div>
+                 <input
+                   type="range"
+                   min="0.1"
+                   max="3.0"
+                   step="0.05"
+                   value={cropZoom}
+                   onChange={(e) => setCropZoom(parseFloat(e.target.value))}
+                   className="w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-600"
+                 />
+               </div>
+ 
+               {/* Ratio Selection */}
+               <div className="space-y-1.5">
+                 <span className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Display Ratio Aspect</span>
+                 <div className="grid grid-cols-3 gap-2">
+                   {(['1:1', '3:1', 'free'] as const).map((r) => (
+                     <button
+                       key={r}
+                       type="button"
+                       onClick={() => setCropRatio(r)}
+                       className={`py-2 text-[10px] font-bold uppercase rounded-lg border transition-all cursor-pointer ${cropRatio === r ? 'bg-sky-600 border-sky-600 text-white shadow-sm' : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850 bg-white dark:bg-slate-900'}`}
+                     >
+                       {r === '1:1' ? 'Square' : r === '3:1' ? 'Landscape' : 'Original'}
+                     </button>
+                   ))}
+                 </div>
+               </div>
+             </div>
+
+            {/* Footer Buttons */}
+            <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2 bg-slate-50/50 dark:bg-slate-955/20">
+              <button
+                type="button"
+                onClick={() => setLogoToCrop(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyLogoCrop}
+                className="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                Apply Crop
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

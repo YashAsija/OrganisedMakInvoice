@@ -38,11 +38,15 @@ img {
   height: auto;
 }
 
-/* Prevent inputs from expanding beyond viewport on iOS */
+/* Prevent inputs from expanding beyond viewport on iOS and improve touch tap response */
 input,
 textarea,
-select {
+select,
+button,
+a,
+[role="button"] {
   max-width: 100%;
+  touch-action: manipulation;
 }
 
 @theme {
@@ -91,29 +95,41 @@ select {
 
 /* ROOT/LIGHT CONTEXT (Aesthetic Warm Beige, French Beige & Creamy White theme) */
 :root {
-  --color-slate-50: #FCFAF7; /* Gorgeous warm off-white cream background */
-  --color-slate-100: #F4EFE6; /* Luxurious classic soft beige */
-  --color-slate-150: #EADFC9; /* Medium-light French beige detail line */
-  --color-slate-200: #E5D9C4; /* Soft beige borders */
-  --color-slate-205: #D1C7BD; /* Balanced light detail contrast variable */
-  --color-slate-350: #998369; /* Descriptions in French beige */
-  --color-slate-405: #8C7558; /* French beige labels */
+  --color-slate-50: #FCFAF7;
+  /* Gorgeous warm off-white cream background */
+  --color-slate-100: #F4EFE6;
+  /* Luxurious classic soft beige */
+  --color-slate-150: #EADFC9;
+  /* Medium-light French beige detail line */
+  --color-slate-200: #E5D9C4;
+  /* Soft beige borders */
+  --color-slate-205: #D1C7BD;
+  /* Balanced light detail contrast variable */
+  --color-slate-350: #998369;
+  /* Descriptions in French beige */
+  --color-slate-405: #8C7558;
+  /* French beige labels */
   --color-slate-450: #7C664C;
   --color-slate-550: #6B553D;
   --color-slate-650: #5C4A36;
-  --color-slate-705: #493B2B; /* Deep organic dark wood text */
+  --color-slate-705: #493B2B;
+  /* Deep organic dark wood text */
   --color-slate-750: #352B20;
   --color-slate-805: #2C231A;
-  --color-slate-850: #E5D9C4; /* Fallback light outline */
-  --color-slate-900: #FFFFFF; /* Card backgrounds are pure clean white */
-  --color-slate-950: #F2EBE1; /* Aux light beige */
+  --color-slate-850: #E5D9C4;
+  /* Fallback light outline */
+  --color-slate-900: #FFFFFF;
+  /* Card backgrounds are pure clean white */
+  --color-slate-950: #F2EBE1;
+  /* Aux light beige */
 
   /* Map standard Sky buttons & brand elements to highly readable French Beige */
   --color-sky-50: #FCFAF7;
   --color-sky-102: #F4EFE6;
   --color-sky-100: #F4EFE6;
   --color-sky-305: #D1C7BD;
-  --color-sky-600: #8C7558; /* HIGH contrast legible French beige button background */
+  --color-sky-600: #8C7558;
+  /* HIGH contrast legible French beige button background */
   --color-sky-650: #735F48;
   --color-sky-700: #5C4A36;
   --color-sky-750: #493B2B;
@@ -126,30 +142,42 @@ select {
 }
 
 /* DARK CONTEXT (Aesthetic Premium Carbon Black, Deep Greys & Luminous White Text theme) */
-.dark, html.dark, .dark :root {
-  --color-slate-50: #080808; /* Premium pitch-black base canvas */
-  --color-slate-100: #121212; /* Auxiliary dark elements */
-  --color-slate-150: #1F1F1F; /* High-end dark gray guides */
+.dark,
+html.dark,
+.dark :root {
+  --color-slate-50: #080808;
+  /* Premium pitch-black base canvas */
+  --color-slate-100: #121212;
+  /* Auxiliary dark elements */
+  --color-slate-150: #1F1F1F;
+  /* High-end dark gray guides */
   --color-slate-205: #2E2E2E;
-  --color-slate-200: #262626; /* Clean charcoal borders */
+  --color-slate-200: #262626;
+  /* Clean charcoal borders */
   --color-slate-350: #6B6B6B;
-  --color-slate-405: #9E9E9E; /* Clear supporting details */
+  --color-slate-405: #9E9E9E;
+  /* Clear supporting details */
   --color-slate-450: #AEAEAE;
   --color-slate-550: #CCCCCC;
   --color-slate-650: #E0E0E0;
   --color-slate-705: #F0F0F0;
   --color-slate-750: #F9F9F9;
-  --color-slate-805: #FFFFFF; /* High legibility black / white text swaps */
-  --color-slate-850: #262626; /* Dark gray borders */
-  --color-slate-900: #161616; /* Clean elevated dark panel cards */
-  --color-slate-950: #0B0B0B; /* Deep pitch dark cards inner */
+  --color-slate-805: #FFFFFF;
+  /* High legibility black / white text swaps */
+  --color-slate-850: #262626;
+  /* Dark gray borders */
+  --color-slate-900: #161616;
+  /* Clean elevated dark panel cards */
+  --color-slate-950: #0B0B0B;
+  /* Deep pitch dark cards inner */
 
   /* Enable bright clear slate-blue colors for dark mode primary elements */
   --color-sky-50: #161616;
   --color-sky-102: #212121;
   --color-sky-100: #212121;
   --color-sky-305: #60A5FA;
-  --color-sky-600: #2563EB; /* Premium radiant cobalt dark mode links/buttons */
+  --color-sky-600: #2563EB;
+  /* Premium radiant cobalt dark mode links/buttons */
   --color-sky-650: #1D4ED8;
   --color-sky-700: #1D4ED8;
   --color-sky-750: #1E40AF;
@@ -183,11 +211,51 @@ body {
 }
 
 /* Smooth active feedback */
-button, [role="button"] {
-  transition: transform 0.1s ease, background-color 0.2s ease, opacity 0.2s ease;
+button,
+[role="button"] {
+  transition: transform 0.1s ease, background-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
 }
-button:active, [role="button"]:active {
+
+button:active,
+[role="button"]:active {
   transform: scale(0.98);
+}
+
+/* Safe area padding utilities */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+.px-safe {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Sidebar Animation */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Global keyboard accessibility */
+*:focus-visible {
+  outline: 2px solid var(--color-sky-500, #0ea5e9);
+  outline-offset: 2px;
 }
 
 @variant dark (.dark &);
@@ -196,8 +264,10 @@ button:active, [role="button"]:active {
    HIGH-QUALITY PRINT MEDIA QUERIES
    ========================================== */
 @media print {
+
   /* Hide standard headers, sidebars, backgrounds, modals, tabs and buttons */
-  body, html {
+  body,
+  html {
     background: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
@@ -207,8 +277,8 @@ button:active, [role="button"]:active {
   }
 
   /* Hide entire workspace wrapper content */
-  body > div, 
-  #root, 
+  body>div,
+  #root,
   #invoice-editor,
   form,
   .fixed,
@@ -246,21 +316,38 @@ button:active, [role="button"]:active {
 
   /* Keep line-height and text spacing crisp on physical paper */
   /* Keep line-height and text spacing crisp on physical paper */
-  tr, td, th {
+  tr,
+  td,
+  th {
     page-break-inside: avoid !important;
   }
 }
 
 /* ==========================================
-   HIDE SCROLLBARS GLOBALLY
+   SCROLLBAR REMOVAL (Hides scrollbar globally)
    ========================================== */
-/* Hide scrollbar for Chrome, Safari and Opera */
-::-webkit-scrollbar {
-  display: none;
+*::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+div::-webkit-scrollbar,
+section::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
-/* Hide scrollbar for IE, Edge and Firefox */
 * {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none !important;
+  /* IE and Edge */
+  scrollbar-width: none !important;
+  /* Firefox */
+}
+
+.editable-placeholder:empty::before,
+.editable-placeholder.is-empty::before {
+  content: attr(data-placeholder) !important;
+  color: #94a3b8 !important;
+  /* slate-400 */
+  opacity: 0.7 !important;
+  display: inline-block !important;
 }
