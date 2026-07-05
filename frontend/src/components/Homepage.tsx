@@ -142,12 +142,12 @@ export default function Homepage({
 
   const faqItems = [
     {
-      question: "How does MakInvoice handle GST, IGST, and state-specific tax rates?",
-      answer: "MakInvoice features a dynamic tax compliance engine. You can select standard State/Union Territory codes (such as Delhi-07, Maharashtra-27) to automatically calculate and bifurcate CGST & SGST for intra-state billing, or apply clean unified IGST rules for inter-state and export client contracts."
+      question: "How does MakInvoices handle GST, IGST, and state-specific tax rates?",
+      answer: "MakInvoices features a dynamic tax compliance engine. You can select standard State/Union Territory codes (such as Delhi-07, Maharashtra-27) to automatically calculate and bifurcate CGST & SGST for intra-state billing, or apply clean unified IGST rules for inter-state and export client contracts."
     },
     {
       question: "Can I draw custom hand-drawn brand signatures on my invoices?",
-      answer: "Yes! MakInvoice integrates a smooth interactive Signature Sketchpad. You can use your mouse, touch screen, or stylus to draw your brand signature directly on the screen. It is instantly saved in your creator profile and embedded elegantly in the footer of every generated document."
+      answer: "Yes! MakInvoices integrates a smooth interactive Signature Sketchpad. You can use your mouse, touch screen, or stylus to draw your brand signature directly on the screen. It is instantly saved in your creator profile and embedded elegantly in the footer of every generated document."
     },
     {
       question: "How does the high-fidelity PDF export or print layout remain so clean?",
@@ -321,7 +321,7 @@ export default function Homepage({
             </div>
             <div>
               <span className="text-lg font-black tracking-tight text-slate-805">
-                Mak<span className="text-sky-500">Invoice</span>
+                Mak<span className="text-sky-500">Invoices</span>
               </span>
               <span className="text-[10px] font-bold text-slate-400 block -mt-1 tracking-wider uppercase">Advanced Ledger Hub</span>
             </div>
@@ -452,7 +452,7 @@ export default function Homepage({
               </div>
               <div className="text-left">
                 <span className="text-sm font-black tracking-tight text-slate-805 block">
-                  Mak<span className="text-sky-500">Invoice</span>
+                  Mak<span className="text-sky-500">Invoices</span>
                 </span>
                 <span className="text-[8px] font-bold text-slate-400 block -mt-1 tracking-wider uppercase">Ledger Hub</span>
               </div>
@@ -582,7 +582,7 @@ export default function Homepage({
             </h1>
 
             <p className="text-base sm:text-lg text-slate-600 dark:text-slate-350 font-normal leading-relaxed max-w-2xl">
-              Focus on doing what you love while MakInvoice automates your billing lifecycle.
+              Focus on doing what you love while MakInvoices automates your billing lifecycle.
               Generate high-performance estimates, automate repeating client invoice cycles, 
               drawn signatures, visual financial analytics, and download professional PDFs instantly.
             </p>
@@ -1004,7 +1004,7 @@ export default function Homepage({
               <span>Simple Workflow Walkthrough</span>
             </div>
             <h2 className="text-2xl sm:text-3.5xl font-black tracking-tight text-slate-805 leading-none">
-              How to Use MakInvoice
+              How to Use MakInvoices
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-405 max-w-xl mx-auto">
               Follow our lightweight 3-step dynamic billing lifecycle to build, customize, and secure your financial billing ledger.
@@ -1202,7 +1202,7 @@ export default function Homepage({
                 <div className="mt-8 pt-4 border-t border-slate-200 dark:border-neutral-800 text-center hidden md:block">
                   <button
                     type="button"
-                    onClick={() => onCustomSignup('Guest User', 'Acme Design Studio', 'guest@makinvoice.local', '+1 (555) 019-2834')}
+                    onClick={() => onCustomSignup('Guest User', 'Acme Design Studio', 'guest@makinvoices.local', '+1 (555) 019-2834')}
                     className="text-slate-400 hover:text-sky-500 text-xs font-extrabold hover:underline transition-all cursor-pointer"
                   >
                     Try instantly as Guest (Local Offline Mode)
@@ -1216,7 +1216,7 @@ export default function Homepage({
                 {/* Title & Description */}
                 <div className="mb-5">
                   <h2 className="text-lg font-bold text-slate-805">
-                    {authMode === 'signup' ? 'Get started for free' : 'Welcome back to MakInvoice'}
+                    {authMode === 'signup' ? 'Get started for free' : 'Welcome back to MakInvoices'}
                   </h2>
                   <p className="text-xs text-slate-450 dark:text-slate-400 mt-1">
                     {loginMethod === 'google'
@@ -1453,7 +1453,7 @@ export default function Homepage({
                 <div className="mt-6 pt-4 border-t border-slate-200 dark:border-neutral-800 text-center md:hidden">
                   <button
                     type="button"
-                    onClick={() => onCustomSignup('Guest User', 'Acme Design Studio', 'guest@makinvoice.local', '+1 (555) 019-2834')}
+                    onClick={() => onCustomSignup('Guest User', 'Acme Design Studio', 'guest@makinvoices.local', '+1 (555) 019-2834')}
                     className="text-slate-400 hover:text-sky-500 text-xs font-extrabold hover:underline transition-all cursor-pointer"
                   >
                     Try instantly as Guest (Local Offline Mode)
@@ -1554,7 +1554,7 @@ export default function Homepage({
                       </div>
                       <div>
                         <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Email Address</span>
-                        <a href="mailto:support@makinvoice.com" className="text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-sky-505 transition-colors">support@makinvoice.com</a>
+                        <a href="mailto:support@makinvoices.com" className="text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-sky-505 transition-colors">support@makinvoices.com</a>
                       </div>
                     </div>
 
@@ -1672,7 +1672,7 @@ export default function Homepage({
 
         {/* Footer info branding */}
         <footer className="mt-8 text-center text-xs text-slate-400 border-t border-slate-100 dark:border-neutral-800 pt-6">
-          <p>© {new Date().getFullYear()} MakInvoice Corp. Local state automatically cached for safety. Encryption standards enabled.</p>
+          <p>© {new Date().getFullYear()} MakInvoices Corp. Local state automatically cached for safety. Encryption standards enabled.</p>
         </footer>
 
         {/* Floating multilingual info badge */}
