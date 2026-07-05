@@ -179,7 +179,7 @@ export function exportCollectiveReportPDF(
     doc.setPage(p);
     doc.setFillColor(15,23,42); doc.rect(0,H-3.5,W,3.5,'F');
     doc.setFontSize(6.8); doc.setFont('Helvetica','normal'); doc.setTextColor(148,163,184);
-    doc.text(`Ledger Statement  |  Page ${p} of ${totalPgs}  |  MakInvoice`, W/2, H-6, {align:'center'});
+    doc.text(`Ledger Statement  |  Page ${p} of ${totalPgs}  |  MakBills`, W/2, H-6, {align:'center'});
   }
 
   doc.save(`ledger_${periodName.toLowerCase().replace(/\s+/g,'_')}.pdf`);
@@ -208,10 +208,10 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
   let activeTemplate: InvoiceTemplate = templateOverride || TEMPLATE_PRESETS[0];
 
   if (!templateOverride) {
-    const globalDefaultId = localStorage.getItem('makinvoice_global_default_template');
+    const globalDefaultId = localStorage.getItem('makbills_global_default_template');
     if (globalDefaultId) {
       let foundCustom = false;
-      const saved = localStorage.getItem('makinvoice_custom_templates');
+      const saved = localStorage.getItem('makbills_custom_templates');
       if (saved) {
         try {
           const templates = JSON.parse(saved);
@@ -236,7 +236,7 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
   container.style.left = '0';
   container.style.zIndex = '-9999'; // Hide behind app
   container.style.width = activeTemplate.layout.pageSize === 'A4' ? '794px' : '816px';
-  container.style.minHeight = activeTemplate.layout.pageSize === 'A4' ? '1123px' : '1056px';
+  container.style.minHeight = 'auto';
   container.style.backgroundColor = 'white';
   document.body.appendChild(container);
 
@@ -275,11 +275,115 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
     })
   );
 
-  // Wait for React to render and images to load fully
-  await new Promise(r => setTimeout(r, 1500));
+  // Wait for React first-render to complete so we can measure DOM elements
+  await new Promise(r => setTimeout(r, 1200));
 
   try {
-    // Patch CSSStyleSheet to ignore SecurityError from cross-origin stylesheets (like extensions or missing CORS)
+    const pageHeight = activeTemplate.layout.pageSize === 'A4' ? 1123 : 1056;
+    
+    const footerEl = container.querySelector('#pinned-footer-container') as HTMLElement;
+    const footerHeight = footerEl ? footerEl.offsetHeight : 200;
+    
+    const tableEl = container.querySelector('table') as HTMLElement;
+    const tableTop = tableEl ? tableEl.getBoundingClientRect().top - container.getBoundingClientRect().top : 400;
+    
+    const theadEl = container.querySelector('thead') as HTMLElement;
+    const tableHeaderHeight = theadEl ? theadEl.offsetHeight : 40;
+    
+    const rows = Array.from(container.querySelectorAll('tbody tr')) as HTMLElement[];
+    const rowHeights = rows.map(r => r.offsetHeight || 40);
+    
+    // Calculate totalsHeight by measuring bottom totals grid
+    let totalsHeight = 220;
+    const totalsEls = Array.from(container.querySelectorAll('[key="taxEngine"], [key="payment"], [key="amountInWords"]')) as HTMLElement[];
+    if (totalsEls.length > 0) {
+      let minTop = Infinity;
+      let maxBottom = 0;
+      totalsEls.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const top = rect.top - containerRect.top;
+        const bottom = rect.bottom - containerRect.top;
+        if (top < minTop) minTop = top;
+        if (bottom > maxBottom) maxBottom = bottom;
+      });
+      if (maxBottom > minTop) {
+        totalsHeight = maxBottom - minTop;
+      }
+    }
+
+    const items = tempInvoice.items || [];
+    const N = items.length;
+    const chunks: any[][] = [];
+    const availablePageHeight = pageHeight - footerHeight;
+    const page1Budget = availablePageHeight - tableTop - tableHeaderHeight;
+    const subsequentPageBudget = availablePageHeight - 50 - tableHeaderHeight;
+
+    const totalRowsHeight = rowHeights.reduce((a, b) => a + b, 0);
+    const singlePageBudget = page1Budget - totalsHeight;
+
+    // Check if everything fits on a single page
+    if (totalRowsHeight <= singlePageBudget || N === 0) {
+      chunks.push(items);
+    } else {
+      // Split items dynamically based on measured row heights
+      let currentHeight = 0;
+      let idx = 0;
+      const p1Items: any[] = [];
+      while (idx < N && currentHeight + rowHeights[idx] <= page1Budget) {
+        currentHeight += rowHeights[idx];
+        p1Items.push(items[idx]);
+        idx++;
+      }
+      if (p1Items.length === 0 && N > 0) {
+        p1Items.push(items[0]);
+        idx++;
+      }
+      chunks.push(p1Items);
+
+      while (idx < N) {
+        const pageItems: any[] = [];
+        let curHeight = 0;
+        
+        let remainingRowsHeight = 0;
+        for (let r = idx; r < N; r++) {
+          remainingRowsHeight += rowHeights[r];
+        }
+        if (remainingRowsHeight + totalsHeight <= subsequentPageBudget) {
+          chunks.push(items.slice(idx));
+          break;
+        }
+
+        while (idx < N && curHeight + rowHeights[idx] <= subsequentPageBudget) {
+          curHeight += rowHeights[idx];
+          pageItems.push(items[idx]);
+          idx++;
+        }
+        if (pageItems.length === 0 && N > 0) {
+          pageItems.push(items[idx]);
+          idx++;
+        }
+        chunks.push(pageItems);
+      }
+    }
+
+    // Re-render with calculated chunks
+    root.render(
+      React.createElement(LivePreview, {
+        template: activeTemplate,
+        invoiceData: tempInvoice,
+        businessProfile: profile,
+        currencySymbol: currencySymbol,
+        isInteractive: false,
+        isPrintMode: true,
+        printPageChunks: chunks
+      })
+    );
+
+    // Wait for the re-render to apply in DOM
+    await new Promise(r => setTimeout(r, 1200));
+
+    // Patch CSSStyleSheet to ignore SecurityError from cross-origin stylesheets
     const originalCssRules = Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'cssRules');
     if (originalCssRules) {
       Object.defineProperty(CSSStyleSheet.prototype, 'cssRules', {
@@ -287,35 +391,47 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
           try {
             return originalCssRules.get?.call(this) || [];
           } catch (e) {
-            return []; // Ignore SecurityError
+            return [];
           }
         },
         configurable: true
       });
     }
 
-    const dataUrl = await Promise.race([
-      toPng(container, { quality: 1, pixelRatio: 2 }),
-      new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 10000))
-    ]);
+    const pages = Array.from(container.querySelectorAll('.invoice-pdf-page')) as HTMLElement[];
     
-    // Restore original
+    // Restore original stylesheets
     if (originalCssRules) {
       Object.defineProperty(CSSStyleSheet.prototype, 'cssRules', originalCssRules);
-    }
-
-    const containerWidth = container.offsetWidth || 794;
-    const containerHeight = container.offsetHeight || 1123;
-    
-    root.unmount();
-    if (container.parentNode) {
-      document.body.removeChild(container);
     }
     
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (containerHeight * pdfWidth) / containerWidth;
-    pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+
+    if (pages.length > 0) {
+      for (let i = 0; i < pages.length; i++) {
+        if (i > 0) {
+          pdf.addPage();
+        }
+        const pageDataUrl = await Promise.race([
+          toPng(pages[i], { quality: 1, pixelRatio: 2, skipFonts: true, cacheBust: true }),
+          new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 20000))
+        ]);
+        pdf.addImage(pageDataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      }
+    } else {
+      const dataUrl = await Promise.race([
+        toPng(container, { quality: 1, pixelRatio: 2, skipFonts: true, cacheBust: true }),
+        new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 20000))
+      ]);
+      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    }
+
+    root.unmount();
+    if (container.parentNode) {
+      document.body.removeChild(container);
+    }
     
     if (action === 'save') {
       pdf.save(`${invoice.invoiceNumber}.pdf`);

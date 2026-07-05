@@ -330,32 +330,33 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
       </div>
 
       {/* Right Side - Live Preview */}
-      <div ref={previewContainerRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUpOrLeave} onMouseLeave={handleMouseUpOrLeave} style={{ cursor: isDragging ? "grabbing" : "grab" }} className="flex-1 bg-slate-100/40 p-2 md:p-8 shadow-inner overflow-auto custom-scrollbar relative">
-          <div className="absolute bottom-6 right-6 flex items-center bg-white shadow-lg rounded-lg border border-slate-200 overflow-hidden z-[60]">
-            <button onClick={() => setPreviewScale(s => Math.max(0.3, s - 0.1))} className="p-2 hover:bg-slate-100 text-slate-600 transition-colors">
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <div className="px-3 py-2 text-xs font-bold text-slate-700 border-x border-slate-200 min-w-[60px] text-center">
-              {Math.round(previewScale * 100)}%
-            </div>
-            <button onClick={() => setPreviewScale(s => Math.min(2, s + 0.1))} className="p-2 hover:bg-slate-100 text-slate-600 transition-colors">
-              <ZoomIn className="w-4 h-4" />
-            </button>
-          </div>
-
-         <div style={{ width: 794 * previewScale, height: 1123 * previewScale, transition: 'all 0.2s ease' }} className="shrink-0 mx-auto relative">
-           <div 
-             className="shadow-2xl bg-white origin-top-left ring-1 ring-slate-900/5 absolute top-0 left-0" 
-             style={{ 
-               width: '794px',
-               minHeight: '1123px',
-               transform: `scale(${previewScale})`, 
-               transition: 'transform 0.2s ease',
-             }}
-           >
+      <div className="flex-1 relative flex flex-col h-full overflow-hidden">
+        <div ref={previewContainerRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUpOrLeave} onMouseLeave={handleMouseUpOrLeave} style={{ cursor: isDragging ? "grabbing" : "grab" }} className="w-full h-full bg-slate-100/40 p-2 md:p-8 shadow-inner overflow-auto custom-scrollbar relative">
+          <div style={{ width: 794 * previewScale, height: 1123 * previewScale, transition: 'all 0.2s ease' }} className="shrink-0 mx-auto relative">
+            <div 
+              className="shadow-2xl bg-white origin-top-left ring-1 ring-slate-900/5 absolute top-0 left-0" 
+              style={{ 
+                width: '794px',
+                minHeight: '1123px',
+                transform: `scale(${previewScale})`, 
+                transition: 'transform 0.2s ease',
+              }}
+            >
               <LivePreview template={template} />
-           </div>
-         </div>
+            </div>
+          </div>
+        </div>
+        <div className="absolute bottom-6 right-6 flex items-center bg-white shadow-lg rounded-lg border border-slate-200 overflow-hidden z-[60]">
+          <button onClick={() => setPreviewScale(s => Math.max(0.3, s - 0.1))} className="p-2 hover:bg-slate-100 text-slate-600 transition-colors">
+            <ZoomOut className="w-4 h-4" />
+          </button>
+          <div className="px-3 py-2 text-xs font-bold text-slate-700 border-x border-slate-200 min-w-[60px] text-center">
+            {Math.round(previewScale * 100)}%
+          </div>
+          <button onClick={() => setPreviewScale(s => Math.min(2, s + 0.1))} className="p-2 hover:bg-slate-100 text-slate-600 transition-colors">
+            <ZoomIn className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

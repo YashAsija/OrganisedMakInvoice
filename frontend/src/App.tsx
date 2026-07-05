@@ -41,7 +41,7 @@ export default function App() {
   // User details
   const [user, setUser] = useState<User | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(() => {
-    return localStorage.getItem('makinvoice_custom_email') || null;
+    return localStorage.getItem('makbills_custom_email') || null;
   });
 
   // Main Business state
@@ -415,12 +415,12 @@ export default function App() {
   };
 
   const handleCustomSignup = (name: string, companyName: string, email: string, phone: string) => {
-    const resolvedEmail = email || `${phone.replace(/\s+/g, '') || 'user'}@makinvoice.local`;
+    const resolvedEmail = email || `${phone.replace(/\s+/g, '') || 'user'}@makbills.local`;
     setUserEmail(resolvedEmail);
-    localStorage.setItem('makinvoice_custom_email', resolvedEmail);
-    localStorage.setItem('makinvoice_custom_brand', companyName);
-    localStorage.setItem('makinvoice_custom_owner', name);
-    localStorage.setItem('makinvoice_custom_phone', phone);
+    localStorage.setItem('makbills_custom_email', resolvedEmail);
+    localStorage.setItem('makbills_custom_brand', companyName);
+    localStorage.setItem('makbills_custom_owner', name);
+    localStorage.setItem('makbills_custom_phone', phone);
     
     // Update company brand profile instantly so it starts with the custom business name they registered
     const updatedProf: BusinessProfile = {
@@ -439,17 +439,17 @@ export default function App() {
   };
 
   const handleCustomLogin = (email: string, phone?: string) => {
-    const resolvedEmail = email || `${(phone || '').replace(/\s+/g, '') || 'user'}@makinvoice.local`;
+    const resolvedEmail = email || `${(phone || '').replace(/\s+/g, '') || 'user'}@makbills.local`;
     setUserEmail(resolvedEmail);
-    localStorage.setItem('makinvoice_custom_email', resolvedEmail);
+    localStorage.setItem('makbills_custom_email', resolvedEmail);
     
     if (phone) {
-      localStorage.setItem('makinvoice_custom_phone', phone);
+      localStorage.setItem('makbills_custom_phone', phone);
     }
     
-    const cachedBrand = localStorage.getItem('makinvoice_custom_brand') || '';
-    const cachedPhone = localStorage.getItem('makinvoice_custom_phone') || phone || '';
-    const cachedOwner = localStorage.getItem('makinvoice_custom_owner') || '';
+    const cachedBrand = localStorage.getItem('makbills_custom_brand') || '';
+    const cachedPhone = localStorage.getItem('makbills_custom_phone') || phone || '';
+    const cachedOwner = localStorage.getItem('makbills_custom_owner') || '';
     
     const updatedProf: BusinessProfile = {
       ...profile,
@@ -466,8 +466,8 @@ export default function App() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      localStorage.removeItem('makinvoice_custom_email');
-      localStorage.removeItem('makinvoice_custom_brand');
+      localStorage.removeItem('makbills_custom_email');
+      localStorage.removeItem('makbills_custom_brand');
       setUser(null);
       setUserEmail(null);
       // Data falls back to local storage

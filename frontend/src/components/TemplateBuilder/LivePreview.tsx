@@ -81,7 +81,7 @@ const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, option
       onKeyDown={handleKeyDown}
       data-placeholder={placeholder}
       className={`editable-placeholder bg-slate-50 outline-dashed outline-1 outline-sky-300/80 hover:bg-slate-200/50 hover:outline-sky-400 focus:bg-white focus:outline-solid focus:outline-2 focus:outline-sky-500 cursor-text transition-all print:outline-none print:bg-transparent print:border-none min-w-[30px] max-w-full inline-block px-0.5 -ml-0.5 py-0 rounded ${type === 'textarea' ? '' : 'truncate'}`}
-      style={{ whiteSpace: type === 'textarea' ? 'pre-wrap' : 'normal', wordBreak: 'break-word', outlineOffset: '0px' }}
+      style={{ whiteSpace: type === 'textarea' ? 'pre-wrap' : 'nowrap', wordBreak: type === 'textarea' ? 'break-word' : 'normal', outlineOffset: '0px', verticalAlign: 'middle' }}
     />
   );
 };
@@ -102,6 +102,7 @@ export interface LivePreviewProps {
   onCopyBillingToShipping?: () => void;
   hasTransport?: boolean;
   onUpdateHasTransport?: (val: boolean) => void;
+  printPageChunks?: any[][];
 }
 
 export const LivePreview: React.FC<LivePreviewProps> = ({
@@ -119,7 +120,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   onInteractiveRemoveItem,
   onCopyBillingToShipping,
   hasTransport,
-  onUpdateHasTransport
+  onUpdateHasTransport,
+  printPageChunks
 }) => {
   const { layout, config, styleConfig, sections } = template;
 
@@ -244,8 +246,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
   const baseStyle: React.CSSProperties = {
     width: isPrintMode ? '100%' : width,
-    minHeight: isPrintMode ? 'auto' : minHeight,
-    padding: getPadding(),
+    minHeight: minHeight,
+    paddingTop: getPadding(),
+    paddingLeft: getPadding(),
+    paddingRight: getPadding(),
+    paddingBottom: '15px',
     backgroundColor: '#ffffff',
     fontFamily: styleConfig.fontFamily,
     color: '#333',
@@ -255,15 +260,19 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     transform: isPrintMode ? 'none' : 'scale(var(--preview-scale, 1))',
     transformOrigin: 'top center',
     margin: isPrintMode ? '0' : '0 auto',
+    display: 'flex',
+    flexDirection: 'column',
   };
 
   const orderedSections = Object.values(sections)
     .filter(s => s.visible)
     .sort((a, b) => a.order - b.order);
 
-  // Pre-calculate dynamic spans to ensure perfect grid wrapping
+  // Pre-calculate rows and columns for each visible section to handle side-by-side alignment in CSS Grid
+  const sectionLayouts: Record<string, { row: number; colStart: number; span: number }> = {};
   const dynamicSpans: Record<string, number> = {};
-  let accumulatedSpan = 0;
+  let currentRow = 0;
+  let currentCol = 0;
 
   for (let i = 0; i < orderedSections.length; i++) {
     const secId = orderedSections[i].id;
@@ -274,52 +283,69 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
       const visibleAmigos = orderedSections.filter(s => ['billTo', 'shipTo', 'transport'].includes(s.id));
       const index = visibleAmigos.findIndex(a => a.id === secId);
       currentSpan = (index === 2) ? 12 : 6;
+    } else if (layout.type === 'Modal Classic' && ['terms', 'signature'].includes(secId)) {
+      currentSpan = 6;
     } else if (layout.type === 'Modal Classic' && secId === 'amountInWords') {
-      const taxIndex = orderedSections.findIndex(s => s.id === 'taxEngine');
-      const amountIndex = orderedSections.findIndex(s => s.id === 'amountInWords');
-      if (taxIndex !== -1 && amountIndex === taxIndex + 1) {
-        currentSpan = 0;
-      }
-    } else if (layout.type === 'Modal Classic' && secId === 'terms') {
-      const pIdx = orderedSections.findIndex(s => s.id === 'payment');
-      const tIdx = orderedSections.findIndex(s => s.id === 'terms');
-      let groupWithPayment = false;
-      if (pIdx !== -1 && tIdx !== -1 && tIdx > pIdx) {
-        groupWithPayment = true;
-        for (let j = pIdx + 1; j < tIdx; j++) {
-          if (orderedSections[j].id !== 'taxEngine' && orderedSections[j].id !== 'amountInWords') {
-            groupWithPayment = false;
-            break;
-          }
-        }
-      }
-      if (groupWithPayment) {
-        currentSpan = 0;
-      }
-    } else if (layout.type === 'Modal Classic' && secId === 'signature') {
       currentSpan = 12;
     } else {
       // Auto-adjust transport span to 6 if it can perfectly fill the remaining half of a row
       if (secId === 'transport' && currentSpan === 12 && layout.type !== 'Modal Classic') {
-        if (accumulatedSpan === 6) {
+        if (currentCol === 6) {
           currentSpan = 6;
         }
       }
     }
 
-    dynamicSpans[secId] = currentSpan;
-    accumulatedSpan += currentSpan;
-    if (accumulatedSpan >= 12) {
-      accumulatedSpan = accumulatedSpan % 12;
+    if (currentCol + currentSpan > 12) {
+      currentRow++;
+      currentCol = 0;
     }
+
+    sectionLayouts[secId] = {
+      row: currentRow,
+      colStart: currentCol,
+      span: currentSpan
+    };
+    dynamicSpans[secId] = currentSpan;
+
+    currentCol += currentSpan;
   }
+
+  const getFooterAlignment = (sectionId: 'terms' | 'signature' | 'payment') => {
+    const layoutInfo = sectionLayouts[sectionId];
+    if (!layoutInfo) return 'left';
+
+    const sameRowFooters = orderedSections
+      .filter(s => ['terms', 'signature', 'payment'].includes(s.id) && sectionLayouts[s.id]?.row === layoutInfo.row)
+      .sort((a, b) => (sectionLayouts[a.id]?.colStart ?? 0) - (sectionLayouts[b.id]?.colStart ?? 0));
+
+    if (sameRowFooters.length < 2) {
+      if (sectionId === 'signature') return 'right';
+      return 'left';
+    }
+
+    const idx = sameRowFooters.findIndex(s => s.id === sectionId);
+    if (sameRowFooters.length === 2) {
+      return idx === 0 ? 'left' : 'right';
+    }
+    if (idx === 0) return 'left';
+    if (idx === 1) return 'center';
+    return 'right';
+  };
 
   const getSectionStyle = (sectionId: string): React.CSSProperties => {
     const bg = styleConfig.sectionBackgroundColors[sectionId as keyof typeof styleConfig.sectionBackgroundColors];
     const span = dynamicSpans[sectionId] || sections[sectionId as keyof typeof sections].gridColumnSpan;
 
     // Let grid naturally flow left if previous sibling is hidden.
-    const colStart = 'auto';
+    let colStart = 'auto';
+    if (layout.type === 'Modal Classic') {
+      if (sectionId === 'payment' || sectionId === 'signature') {
+        colStart = '7';
+      } else if (sectionId === 'taxEngine' || sectionId === 'amountInWords' || sectionId === 'terms') {
+        colStart = '1';
+      }
+    }
 
     const padVal = bg ? '15px' : '0px';
     return {
@@ -387,8 +413,17 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const taxAmount = (subTotal * taxRate) / 100;
   const grandTotal = subTotal + taxAmount;
 
-  return (
-    <div style={baseStyle} className="invoice-live-preview">
+  const renderInvoiceContent = (
+    currentItems?: any[],
+    startSrNo: number = 0,
+    isFirstPage: boolean = true,
+    isLastPage: boolean = true,
+    pageIdx: number = 0,
+    totalPages: number = 1
+  ) => {
+    const activeItems = currentItems || items;
+    return (
+      <div className="invoice-live-preview relative flex flex-col h-full w-full" style={{ flex: 1 }}>
       {layout.watermark.enabled && (
         <div style={{
           position: 'absolute',
@@ -408,9 +443,15 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '20px', position: 'relative', zIndex: 1 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gridAutoFlow: 'row', gap: '20px', position: 'relative', zIndex: 1, flex: isPrintMode ? 'none' : 1 }}>
 
-        {orderedSections.map(section => {
+        {orderedSections.filter(s => !((layout.type === 'Modal Classic' || isPrintMode) && ['terms', 'signature', 'footer'].includes(s.id))).map(section => {
+          if (['header', 'companyInfo', 'invoiceInfo', 'billTo', 'shipTo', 'transport'].includes(section.id)) {
+            if (!isFirstPage) return null;
+          }
+          if (['taxEngine', 'payment', 'amountInWords'].includes(section.id)) {
+            if (!isLastPage) return null;
+          }
           if (section.id === 'header') {
             if (layout.type === 'Modal Classic') {
               const renderLogoPlaceholder = (position: 'Left' | 'Right' | 'Center') => (
@@ -652,8 +693,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '5px' }}>Bill To</h4>
                 <h3 style={{ fontWeight: 'bold', fontSize: '14px', color: '#1e293b' }}>{renderInteractive(clientName, 'clientName', 'text', 'Client Name')}</h3>
                 {config.client.fields.includes('address') && <>
-                  <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Country:</strong> {renderSelectInteractive(clientCountryNM, 'clientCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</p>
-                  <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>State:</strong> {renderSelectInteractive(clientStateNM, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountryNM)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</p>
+                  <div style={{ fontSize: '12px', margin: '2px 0' }}><strong>Country:</strong> {renderSelectInteractive(clientCountryNM, 'clientCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</div>
+                  <div style={{ fontSize: '12px', margin: '2px 0' }}><strong>State:</strong> {renderSelectInteractive(clientStateNM, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountryNM)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</div>
                   <p style={{ fontSize: '12px', margin: '2px 0', whiteSpace: 'pre-wrap' }}>{renderInteractive(clientAddr, 'clientAddress', 'textarea', 'Address')}</p>
                 </>}
                 {config.client.fields.includes('gstin') && (clientGst || isInteractive) && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>GSTIN:</strong> {renderInteractive(clientGst, 'clientGstin', 'text', 'GSTIN')}</p>}
@@ -708,14 +749,6 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">PAN</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipPan, 'shippedToPan', 'text', 'PAN')}</span></div> :
                           <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">PAN:</span><span className="text-gray-900 font-bold">{renderInteractive(shipPan, 'shippedToPan', 'text', 'PAN')}</span></div>
                       )}
-                      {config.shipping.fields.includes('email') && (
-                        isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Email ID</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipEmail, 'shippedToEmail', 'text', 'Email')}</span></div> :
-                          <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Email:</span><span className="text-gray-900 font-bold">{renderInteractive(shipEmail, 'shippedToEmail', 'text', 'Email')}</span></div>
-                      )}
-                      {config.shipping.fields.includes('pan') && (
-                        isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">PAN</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipPan, 'shippedToPan', 'text', 'PAN')}</span></div> :
-                          <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">PAN:</span><span className="text-gray-900 font-bold">{renderInteractive(shipPan, 'shippedToPan', 'text', 'PAN')}</span></div>
-                      )}
                       {config.shipping.fields.includes('address') && (
                         isAdjacent ? <>
                           <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Country</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(shipCountry, 'shippedToCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</span></div>
@@ -754,8 +787,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 <>
                   <h3 style={{ fontWeight: 'bold', fontSize: '14px', color: '#1e293b' }}>{renderInteractive(shipName, "shippedToName", 'text', 'Client Name')}</h3>
                   {config.shipping.fields.includes('address') && <>
-                    <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Country:</strong> {renderSelectInteractive(shipCountry, 'shippedToCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</p>
-                    <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>State:</strong> {renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</p>
+                    <div style={{ fontSize: '12px', margin: '2px 0' }}><strong>Country:</strong> {renderSelectInteractive(shipCountry, 'shippedToCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</div>
+                    <div style={{ fontSize: '12px', margin: '2px 0' }}><strong>State:</strong> {renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</div>
                     <p style={{ fontSize: '12px', margin: '2px 0', whiteSpace: 'pre-wrap' }}>{renderInteractive(shipAddr, 'shippedToAddress', 'textarea', 'Address')}</p>
                   </>}
                   {config.shipping.fields.includes('gstin') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>GSTIN:</strong> {renderInteractive(shipGst, 'shippedToGstin', 'text', 'GSTIN')}</p>}
@@ -794,7 +827,15 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               })();
 
               return (
-                <div key="productTable" style={{ ...getSectionStyle('productTable'), marginTop: '20px' }}>
+                <div key="productTable" style={{ ...getSectionStyle('productTable'), marginTop: isFirstPage ? '20px' : '0px', gridColumn: 'span 12' }}>
+                  {!isFirstPage && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #cbd5e1', paddingBottom: '8px', marginBottom: '20px' }}>
+                      <span style={{ fontSize: '10px', color: styleConfig.primaryColor || '#64748b', fontWeight: 'bold' }}>TAX INVOICE</span>
+                      <span style={{ fontSize: '10px', color: '#64748b' }}>
+                        Invoice No: {invoiceData?.invoiceNumber || ''} | Date: {invoiceData?.date || ''} | Page {pageIdx + 1} of {totalPages}
+                      </span>
+                    </div>
+                  )}
                   <table className="w-full text-left border-collapse border border-gray-300">
                     <thead>
                       <tr className="text-white text-[10px] uppercase tracking-wide" style={{ backgroundColor: styleConfig.tableHeaderBackground, color: styleConfig.tableHeaderTextColor }}>
@@ -806,7 +847,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-300">
-                      {items.map((item, idx) => {
+                      {activeItems.map((item, idx) => {
                         return (
                           <tr key={idx} className="align-top text-[11px] relative group">
                             {renderCols.map((col, colIdx) => (
@@ -820,7 +861,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                                   </button>
                                 )}
-                                {col.id === 'sr' ? idx + 1 : col.id === 'name' ? (
+                                {col.id === 'sr' ? startSrNo + idx + 1 : col.id === 'name' ? (
                                   <div>
                                     <div className="font-medium text-gray-900">{renderItemInteractive(item.id, item.name, 'name')}</div>
                                     {(item as any).description && <div className="text-[10px] text-gray-500 mt-0.5">{(item as any).description}</div>}
@@ -909,7 +950,15 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             })();
 
             return (
-              <div key="productTable" style={getSectionStyle('productTable')}>
+              <div key="productTable" style={{ ...getSectionStyle('productTable'), marginTop: isFirstPage ? '0px' : '0px', gridColumn: 'span 12' }}>
+                {!isFirstPage && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #cbd5e1', paddingBottom: '8px', marginBottom: '20px' }}>
+                    <span style={{ fontSize: '10px', color: styleConfig.primaryColor || '#64748b', fontWeight: 'bold' }}>TAX INVOICE</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>
+                      Invoice No: {invoiceData?.invoiceNumber || ''} | Date: {invoiceData?.date || ''} | Page {pageIdx + 1} of {totalPages}
+                    </span>
+                  </div>
+                )}
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                   <thead>
                     <tr style={{ backgroundColor: styleConfig.tableHeaderBackground, color: styleConfig.tableHeaderTextColor }}>
@@ -919,7 +968,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item, index) => (
+                    {activeItems.map((item, index) => (
                       <tr key={index} className="relative group" style={{ borderBottom: styleConfig.borderStyle !== 'None' ? '1px solid #e2e8f0' : 'none', backgroundColor: styleConfig.alternatingRowColors && index % 2 !== 0 ? '#f8fafc' : 'transparent' }}>
                         {renderCols.map((col, colIdx) => (
                           <td key={col.id} style={{ padding: '10px', paddingLeft: colIdx === 0 && isInteractive ? '28px' : '10px', textAlign: 'left', position: colIdx === 0 ? 'relative' : undefined, verticalAlign: 'top' }}>
@@ -932,7 +981,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                               </button>
                             )}
-                            {col.id === 'sr' ? index + 1 :
+                            {col.id === 'sr' ? startSrNo + index + 1 :
                               col.id === 'name' ? renderItemInteractive(item.id, item.name, 'name') :
                                 col.id === 'hsn' ? renderItemInteractive(item.id, (item as any).hsnCode || (item as any).sacCode || '-', 'hsnCode') :
                                   col.id === 'qty' ? (
@@ -1052,24 +1101,19 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             return (
               <div key="transport" style={getSectionStyle('transport')}>
                 <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '5px' }}>Transport Details</h4>
-                <div style={bothAdded ? { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '24px', alignItems: 'center' } : {}}>
-                  {config.transport.fields.includes('vehicleNo') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Vehicle No:</strong> {renderInteractive((invoiceData as any)?.vehicleNo || (isInteractive ? '' : 'MH 12 AB 1234'), 'vehicleNo', 'text', 'Vehicle No')}</p>}
-                  {config.transport.fields.includes('poNumber') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>PO Number:</strong> {renderInteractive((invoiceData as any)?.poNumber || (isInteractive ? '' : 'N/A'), 'poNumber', 'text', 'PO Number')}</p>}
-                  {config.transport.fields.includes('transportName') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Transporter:</strong> {renderInteractive((invoiceData as any)?.transportName || (isInteractive ? '' : 'Fast Logistics'), 'transport', 'text', 'Transporter Name')}</p>}
-                  {config.transport.fields.includes('eWayBillNo') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>E-Way Bill No:</strong> {renderInteractive((invoiceData as any)?.eWayBillNo || (isInteractive ? '' : '123456789012'), 'ewayBillNo', 'text', 'E-Way Bill No')}</p>}
-                  {config.transport.fields.includes('station') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Station:</strong> {renderInteractive((invoiceData as any)?.station || (isInteractive ? '' : 'Mumbai HQ'), 'station', 'text', 'Station')}</p>}
-                  {config.transport.fields.includes('driverMobileNo') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Driver Mobile No:</strong> {renderInteractive((invoiceData as any)?.driverMobileNo || (isInteractive ? '' : '+91 9876543210'), 'driverMobile', 'text', 'Driver Mobile')}</p>}
+                <div style={bothAdded ? { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', columnGap: '24px', rowGap: '6px', alignItems: 'center' } : { display: 'flex', flexDirection: 'column', rowGap: '4px' }}>
+                  {config.transport.fields.includes('vehicleNo') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Vehicle No:</strong> {renderInteractive((invoiceData as any)?.vehicleNo || (isInteractive ? '' : 'MH 12 AB 1234'), 'vehicleNo', 'text', 'Vehicle No')}</div>}
+                  {config.transport.fields.includes('poNumber') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>PO Number:</strong> {renderInteractive((invoiceData as any)?.poNumber || (isInteractive ? '' : 'N/A'), 'poNumber', 'text', 'PO Number')}</div>}
+                  {config.transport.fields.includes('transportName') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Transporter:</strong> {renderInteractive((invoiceData as any)?.transportName || (isInteractive ? '' : 'Fast Logistics'), 'transport', 'text', 'Transporter Name')}</div>}
+                  {config.transport.fields.includes('eWayBillNo') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>E-Way Bill No:</strong> {renderInteractive((invoiceData as any)?.eWayBillNo || (isInteractive ? '' : '123456789012'), 'ewayBillNo', 'text', 'E-Way Bill No')}</div>}
+                  {config.transport.fields.includes('station') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Station:</strong> {renderInteractive((invoiceData as any)?.station || (isInteractive ? '' : 'Mumbai HQ'), 'station', 'text', 'Station')}</div>}
+                  {config.transport.fields.includes('driverMobileNo') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Driver Mobile No:</strong> {renderInteractive((invoiceData as any)?.driverMobileNo || (isInteractive ? '' : '+91 9876543210'), 'driverMobile', 'text', 'Driver Mobile')}</div>}
                 </div>
               </div>
             );
           }
           if (section.id === 'taxEngine') {
             if (layout.type === 'Modal Classic') {
-              const taxIndex = orderedSections.findIndex(s => s.id === 'taxEngine');
-              const amountIndex = orderedSections.findIndex(s => s.id === 'amountInWords');
-              const renderAmountInWords = taxIndex !== -1 && amountIndex === taxIndex + 1 && config.amountInWords.enabled;
-              const words = numberToWords(invoiceData?.grandTotal || 0, config.amountInWords.format);
-
               return (
                 <div key="taxEngine" style={{ ...getSectionStyle('taxEngine'), paddingLeft: '20px' }}>
                   <div className="space-y-2 text-[11px]">
@@ -1111,15 +1155,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                       <span>{currencySymbol} {grandTotal.toFixed(2)}</span>
                     </div>
                   </div>
-                  {renderAmountInWords && (
-                    <div className="text-left pt-6">
-                      <div className="font-bold text-[10px] text-gray-800">Amount in Words:</div>
-                      <div className="text-[10px] text-gray-500 italic mt-0.5">{words}</div>
-                    </div>
-                  )}
                 </div>
               );
-
             }
             return (
               <div key="taxEngine" style={getSectionStyle('taxEngine')}>
@@ -1150,19 +1187,13 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
           if (section.id === 'amountInWords') {
             if (layout.type === 'Modal Classic') {
-              const taxIndex = orderedSections.findIndex(s => s.id === 'taxEngine');
-              const amountIndex = orderedSections.findIndex(s => s.id === 'amountInWords');
-              if (taxIndex !== -1 && amountIndex === taxIndex + 1) {
-                return null;
-              }
-
               if (!config.amountInWords.enabled) return null;
               const words = numberToWords(invoiceData?.grandTotal || 0, config.amountInWords.format);
               return (
                 <div key="amountInWords" style={getSectionStyle('amountInWords')}>
-                  <div className="text-right pt-4">
+                  <div className="text-left pt-4">
                     <div className="font-bold text-[10px] text-gray-800">Amount in Words:</div>
-                    <div className="text-[10px] text-gray-500 italic">{words}</div>
+                    <div className="text-[10px] text-gray-500 italic mt-0.5">{words}</div>
                   </div>
                 </div>
               );
@@ -1180,22 +1211,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
           if (section.id === 'terms') {
             if (layout.type === 'Modal Classic') {
-              const pIdx = orderedSections.findIndex(s => s.id === 'payment');
-              const tIdx = orderedSections.findIndex(s => s.id === 'terms');
-              let skipTerms = false;
-              if (pIdx !== -1 && tIdx !== -1 && tIdx > pIdx) {
-                skipTerms = true;
-                for (let j = pIdx + 1; j < tIdx; j++) {
-                  if (orderedSections[j].id !== 'taxEngine' && orderedSections[j].id !== 'amountInWords') {
-                    skipTerms = false;
-                    break;
-                  }
-                }
-              }
-              if (skipTerms) return null;
-
               return (
-                <div key="terms" style={getSectionStyle('terms')}>
+                <div key="terms" style={{ ...getSectionStyle('terms'), marginTop: 'auto' }}>
                   <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">Notes</div>
                   <div className="text-gray-600 text-[10px] leading-relaxed mb-4">{renderInteractive(invoiceData?.notes || 'Thank you for your business!', 'notes', 'textarea')}</div>
                   <div className="font-bold text-gray-800 text-[10px] mb-1">Terms & Conditions</div>
@@ -1204,8 +1221,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               );
 
             }
+            const termsAlign = getFooterAlignment('terms');
             return (
-              <div key="terms" style={getSectionStyle('terms')}>
+              <div key="terms" style={{ ...getSectionStyle('terms'), textAlign: termsAlign }}>
                 <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0, color: '#64748b' }}>Notes</p>
                 <div style={{ fontSize: '10px', margin: '4px 0', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{renderInteractive(invoiceData?.notes || 'Thank you for your business!', 'notes', 'textarea')}</div>
                 <p style={{ fontSize: '12px', fontWeight: 'bold', margin: '8px 0 0 0', color: '#64748b' }}>Terms & Conditions</p>
@@ -1214,20 +1232,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             );
           }
 
-          if (section.id === 'payment') {
+           if (section.id === 'payment') {
             if (layout.type === 'Modal Classic') {
-              const pIdx = orderedSections.findIndex(s => s.id === 'payment');
-              const tIdx = orderedSections.findIndex(s => s.id === 'terms');
-              let renderTerms = false;
-              if (pIdx !== -1 && tIdx !== -1 && tIdx > pIdx) {
-                renderTerms = true;
-                for (let j = pIdx + 1; j < tIdx; j++) {
-                  if (orderedSections[j].id !== 'taxEngine' && orderedSections[j].id !== 'amountInWords') {
-                    renderTerms = false;
-                    break;
-                  }
-                }
-              }
 
               return (
                 <div key="payment" style={getSectionStyle('payment')}>
@@ -1236,26 +1242,20 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                     {config.payment.generateQrCode && <div style={{ width: 60, height: 60, backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '5px' }}>QR</div>}
                     {config.payment.customNote || `Bank Name: Axis\nAccount No.: 098654345678\nIFSC Code: UTIB00056`}
                   </div>
-                  {renderTerms && (
-                    <div className="pt-6 mt-6 border-t border-gray-200">
-                      <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">Notes</div>
-                      <div className="text-gray-600 text-[10px] leading-relaxed mb-4">{renderInteractive(invoiceData?.notes || 'Thank you for your business!', 'notes', 'textarea')}</div>
-                      <div className="font-bold text-gray-800 text-[10px] mb-1">Terms & Conditions</div>
-                      <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap">{renderInteractive(invoiceData?.invoiceTerms || config.terms.customText, 'invoiceTerms', 'textarea')}</div>
-                    </div>
-                  )}
                 </div>
               );
 
             }
+            const payAlign = getFooterAlignment('payment');
+            const payJustify = payAlign === 'left' ? 'flex-start' : payAlign === 'center' ? 'center' : 'flex-end';
             return (
-              <div key="payment" style={getSectionStyle('payment')}>
+              <div key="payment" style={{ ...getSectionStyle('payment'), textAlign: payAlign }}>
                 <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0, color: '#64748b' }}>Payment Details</p>
-                <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
+                <div style={{ display: 'flex', gap: '20px', marginTop: '10px', justifyContent: payJustify }}>
                   {config.payment.generateQrCode && (
                     <div style={{ width: '80px', height: '80px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>QR CODE</div>
                   )}
-                  <div style={{ fontSize: '11px' }}>
+                  <div style={{ fontSize: '11px', textAlign: 'left' }}>
                     <p style={{ margin: '2px 0', whiteSpace: 'pre-wrap' }}>{(businessProfile as any)?.bankDetails || 'Bank: HDFC Bank\nA/C No: 1234567890\nIFSC: HDFC0001234'}</p>
                     {config.payment.customNote && <p style={{ margin: '4px 0', color: '#64748b', fontStyle: 'italic' }}>{config.payment.customNote}</p>}
                   </div>
@@ -1268,7 +1268,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             if (layout.type === 'Modal Classic') {
 
               return (
-                <div key="signature" style={{ ...getSectionStyle('signature'), textAlign: 'right', marginTop: '48px' }}>
+                <div key="signature" style={{ ...getSectionStyle('signature'), textAlign: 'right', marginTop: 'auto' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
                     {config.signature.showStamp && <div style={{ width: 60, height: 60, borderRadius: '50%', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#94a3b8' }}>STAMP</div>}
                     {config.signature.showSignature && <div style={{ width: 100, borderBottom: '1px solid #000', marginBottom: '5px' }}></div>}
@@ -1279,25 +1279,28 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               );
 
             }
+            const sigAlign = getFooterAlignment('signature');
+            const sigAlignItems = sigAlign === 'left' ? 'flex-start' : 'flex-end';
+            const sigJustify = sigAlign === 'left' ? 'flex-start' : 'flex-end';
             return (
-              <div key="signature" style={{ ...getSectionStyle('signature'), display: 'flex', flexDirection: 'column', alignItems: (!sections.terms?.visible) ? 'flex-start' : config.signature.position === 'Right' ? 'flex-end' : config.signature.position === 'Left' ? 'flex-start' : 'center', justifyContent: 'flex-end' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
+              <div key="signature" style={{ ...getSectionStyle('signature'), display: 'flex', flexDirection: 'column', alignItems: sigAlignItems, justifyContent: 'flex-end', textAlign: sigAlign }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '20px', justifyContent: sigJustify }}>
                   {config.signature.showStamp && (
                     <div style={{ width: 80, height: 80, borderRadius: '50%', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#94a3b8', marginBottom: '10px' }}>STAMP</div>
                   )}
                   {config.signature.showSignature && (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: sigAlignItems }}>
                       {croppedSignature ? (
-                        <img src={croppedSignature} alt="Signature" style={{ width: '220px', height: 'auto', maxHeight: '80px', objectFit: 'contain', marginBottom: '-12px' }} />
+                        <img src={croppedSignature} alt="Signature" style={{ width: `${businessProfile?.signatureSize || 220}px`, height: 'auto', maxHeight: `${Math.round((businessProfile?.signatureSize || 220) * 0.4)}px`, objectFit: 'contain', marginBottom: '4px' }} />
                       ) : (
-                        <div style={{ width: config.signature.width, height: config.signature.height, borderBottom: '1px solid #cbd5e1', marginBottom: '10px' }}></div>
+                        <div style={{ width: `${businessProfile?.signatureSize || 220}px`, height: config.signature.height, borderBottom: '1px solid #cbd5e1', marginBottom: '10px' }}></div>
                       )}
                       <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>{config.signature.signatoryName || compName}</p>
                       <p style={{ fontSize: '10px', color: '#64748b', margin: 0 }}>{config.signature.designation || 'Authorized Signatory'}</p>
                     </div>
                   )}
                   {!config.signature.showSignature && (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: sigAlignItems }}>
                       <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>{config.signature.signatoryName || compName}</p>
                       <p style={{ fontSize: '10px', color: '#64748b', margin: 0 }}>{config.signature.designation || 'Authorized Signatory'}</p>
                     </div>
@@ -1309,7 +1312,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
           if (section.id === 'footer') {
             return (
-              <div key="footer" style={{ ...getSectionStyle('footer'), borderTop: '1px solid #e2e8f0', paddingTop: '20px', marginTop: '20px', textAlign: 'center' }}>
+              <div key="footer" style={{ ...getSectionStyle('footer'), borderTop: '1px solid #e2e8f0', paddingTop: '20px', marginTop: 'auto', textAlign: 'center' }}>
                 {config.footer.message && <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0' }}>{config.footer.message}</p>}
                 {(config.footer.website || config.footer.supportContact || compEmail || compPhone) && (
                   <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0' }}>{[config.footer.website || compEmail, config.footer.supportContact || compPhone].filter(Boolean).join(' | ')}</p>
@@ -1322,6 +1325,110 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           return null;
         })}
       </div>
+
+      {(layout.type === 'Modal Classic' || isPrintMode) && (
+        <div id="pinned-footer-container" style={{ marginTop: 'auto', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '15px', zIndex: 1 }}>
+          {/* Row for Terms and Signature */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '40px' }}>
+            {/* Left Column: Terms */}
+            <div style={{ flex: 1 }}>
+              {sections.terms?.visible !== false && (
+                <div>
+                  <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">NOTES</div>
+                  <div className="text-gray-600 text-[10px] leading-relaxed mb-4">{renderInteractive(invoiceData?.notes || 'Thank you for your business!', 'notes', 'textarea')}</div>
+                  <div className="font-bold text-gray-800 text-[10px] mb-1">Terms & Conditions</div>
+                  <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap">{renderInteractive(invoiceData?.invoiceTerms || config.terms.customText, 'invoiceTerms', 'textarea')}</div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Signature */}
+            <div style={{ width: '220px', textAlign: 'right' }}>
+              {sections.signature?.visible !== false && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+                  {config.signature.showStamp && <div style={{ width: 60, height: 60, borderRadius: '50%', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#94a3b8' }}>STAMP</div>}
+                  {config.signature.showSignature && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      {croppedSignature ? (
+                        <img src={croppedSignature} alt="Signature" style={{ width: `${businessProfile?.signatureSize || 220}px`, height: 'auto', maxHeight: `${Math.round((businessProfile?.signatureSize || 220) * 0.4)}px`, objectFit: 'contain', marginBottom: '4px' }} />
+                      ) : (
+                        <div style={{ width: `${businessProfile?.signatureSize || 220}px`, height: config.signature.height, borderBottom: '1px solid #cbd5e1', marginBottom: '10px' }}></div>
+                      )}
+                      <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>{config.signature.signatoryName || compName}</p>
+                      <p style={{ fontSize: '10px', color: '#64748b', margin: 0 }}>{config.signature.designation || 'Authorized Signatory'}</p>
+                    </div>
+                  )}
+                  {!config.signature.showSignature && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>{config.signature.signatoryName || compName}</p>
+                      <p style={{ fontSize: '10px', color: '#64748b', margin: 0 }}>{config.signature.designation || 'Authorized Signatory'}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer Row */}
+          {sections.footer?.visible !== false && (
+            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '15px', textAlign: 'center' }}>
+              {config.footer.message && <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0' }}>{config.footer.message}</p>}
+              {(config.footer.website || config.footer.supportContact || compEmail || compPhone) && (
+                <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0' }}>{[config.footer.website || compEmail, config.footer.supportContact || compPhone].filter(Boolean).join(' | ')}</p>
+              )}
+              {config.footer.showPageNumbers && <p style={{ fontSize: '10px', color: '#94a3b8', margin: '8px 0 0 0' }}>Page {pageIdx + 1} of {totalPages}</p>}
+            </div>
+          )}
+        </div>
+      )}
+      </div>
+    );
+  };
+
+  if (isPrintMode && printPageChunks) {
+    const pages = printPageChunks;
+    const totalPages = pages.length;
+
+    return (
+      <div className="invoice-print-container" style={{ display: 'flex', flexDirection: 'column', gap: '40px', backgroundColor: '#f1f5f9' }}>
+        {pages.map((pageItems, pageIdx) => {
+          const isFirstPage = pageIdx === 0;
+          const isLastPage = pageIdx === totalPages - 1;
+          
+          let startSrNo = 0;
+          for (let p = 0; p < pageIdx; p++) {
+            startSrNo += pages[p].length;
+          }
+
+          return (
+            <div
+              key={pageIdx}
+              className="invoice-pdf-page bg-white relative flex flex-col"
+              style={{
+                width: layout.pageSize === 'A4' ? '794px' : '816px',
+                height: layout.pageSize === 'A4' ? '1123px' : '1056px',
+                paddingTop: '40px',
+                paddingLeft: '40px',
+                paddingRight: '40px',
+                paddingBottom: '20px',
+                boxSizing: 'border-box',
+                fontFamily: styleConfig.fontFamily || 'Inter',
+                color: '#333',
+                backgroundColor: '#ffffff',
+                position: 'relative'
+              }}
+            >
+              {renderInvoiceContent(pageItems, startSrNo, isFirstPage, isLastPage, pageIdx, totalPages)}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div style={baseStyle} className="invoice-live-preview">
+      {renderInvoiceContent(items, 0, true, true, 0, 1)}
     </div>
   );
 };

@@ -70,7 +70,7 @@ const generateBaseTemplate = (id: string, name: string, category: InvoiceTemplat
 
 export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
   {
-    ...generateBaseTemplate('preset_modal_classic', 'MakInvoice Original', 'Default'),
+    ...generateBaseTemplate('preset_modal_classic', 'MakBills Original', 'Default'),
     description: 'The exact original structured layout from the Add New Invoice screen.',
     isDefault: true,
     layout: {
@@ -81,7 +81,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       watermark: { enabled: false, text: 'DRAFT', opacity: 0.1, position: 'Center', rotation: -45 }
     },
     sections: {
-      ...generateBaseTemplate('preset_modal_classic', 'MakInvoice Original', 'Default').sections,
+      ...generateBaseTemplate('preset_modal_classic', 'MakBills Original', 'Default').sections,
       transport: { id: 'transport', visible: true, order: 3.5, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
       payment: { id: 'payment', visible: true, order: 8, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
       taxEngine: { id: 'taxEngine', visible: true, order: 9, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
@@ -89,10 +89,10 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       terms: { id: 'terms', visible: true, order: 11, gridColumnSpan: 6, customLabels: {}, customStyles: {} }
     },
     config: {
-      ...generateBaseTemplate('preset_modal_classic', 'MakInvoice Original', 'Default').config
+      ...generateBaseTemplate('preset_modal_classic', 'MakBills Original', 'Default').config
     },
     styleConfig: {
-      ...generateBaseTemplate('preset_modal_classic', 'MakInvoice Original', 'Default').styleConfig,
+      ...generateBaseTemplate('preset_modal_classic', 'MakBills Original', 'Default').styleConfig,
       primaryColor: '#1f2937',
       fontFamily: 'Inter',
       borderStyle: 'Light',

@@ -28,8 +28,10 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const [defaultTaxRate, setDefaultTaxRate] = useState(() => isOnboarding ? 0 : (profile.defaultTaxRate || 0));
   const [logoUrl, setLogoUrl] = useState(() => isOnboarding ? '' : (profile.logoUrl || ''));
   const [signature, setSignature] = useState(() => isOnboarding ? '' : (profile.signature || ''));
+  const [signatureSize, setSignatureSize] = useState<number>(() => isOnboarding ? 150 : (profile.signatureSize || 150));
   const [signatureMode, setSignatureMode] = useState<'draw' | 'type' | 'upload'>('draw');
   const [signatureText, setSignatureText] = useState('');
+  const [signatureFont, setSignatureFont] = useState<string>('Caveat');
   const [themeAccent, setThemeAccent] = useState<'sky' | 'emerald' | 'indigo' | 'violet' | 'rose' | 'orange'>(() => isOnboarding ? 'sky' : (profile.themeAccent || 'sky'));
   const [invoiceFont, setInvoiceFont] = useState<'inter' | 'space' | 'playfair' | 'mono'>(() => isOnboarding ? 'inter' : (profile.invoiceFont || 'inter'));
   const [invoiceLayout, setInvoiceLayout] = useState<'modern' | 'minimal' | 'agency' | 'professional' | 'startup' | 'enterprise'>(() => isOnboarding ? 'professional' : (profile.invoiceLayout || 'professional'));
@@ -133,6 +135,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       setDefaultTaxRate(0);
       setLogoUrl('');
       setSignature('');
+      setSignatureSize(150);
       setThemeAccent('sky');
       setInvoiceFont('inter');
       setInvoiceLayout('professional');
@@ -173,6 +176,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       setDefaultTaxRate(profile.defaultTaxRate || 0);
       setLogoUrl(profile.logoUrl || '');
       setSignature(profile.signature || '');
+      setSignatureSize(profile.signatureSize || 150);
       setThemeAccent(profile.themeAccent || 'sky');
       setInvoiceFont(profile.invoiceFont || 'inter');
       setInvoiceLayout(profile.invoiceLayout || 'professional');
@@ -454,6 +458,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
     if (!ctx) return canvas;
     const w = canvas.width;
     const h = canvas.height;
+    if (w === 0 || h === 0) return canvas;
     const imgData = ctx.getImageData(0, 0, w, h);
     const data = imgData.data;
     
@@ -531,7 +536,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       if (signatureText.trim()) {
-        ctx.font = 'italic 96px "Caveat", "Brush Script MT", cursive';
+        ctx.font = `italic 96px "${signatureFont}", "Brush Script MT", cursive`;
         ctx.fillStyle = '#000000';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -543,7 +548,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         setSignature('');
       }
     }
-  }, [signatureText, signatureMode]);
+  }, [signatureText, signatureMode, signatureFont]);
   const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
@@ -713,6 +718,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       currency,
       logoUrl,
       signature,
+      signatureSize,
       themeAccent,
       invoiceFont,
       invoiceLayout,
@@ -1166,14 +1172,40 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 </div>
 
                 {signatureMode === 'type' && (
-                  <div className="mb-3">
-                    <input
-                      type="text"
-                      value={signatureText}
-                      onChange={(e) => setSignatureText(e.target.value)}
-                      placeholder="Type your signature here..."
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium"
-                    />
+                  <div className="mb-3 flex gap-3">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={signatureText}
+                        onChange={(e) => setSignatureText(e.target.value)}
+                        placeholder="Type your signature here..."
+                        className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium"
+                      />
+                    </div>
+                    <div className="w-48">
+                      <select
+                        value={signatureFont}
+                        onChange={(e) => setSignatureFont(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium font-mono"
+                        style={{ fontFamily: signatureFont }}
+                      >
+                        <option value="Caveat" style={{ fontFamily: 'Caveat' }}>Caveat</option>
+                        <option value="Sacramento" style={{ fontFamily: 'Sacramento' }}>Sacramento</option>
+                        <option value="Dancing Script" style={{ fontFamily: 'Dancing Script' }}>Dancing Script</option>
+                        <option value="Great Vibes" style={{ fontFamily: 'Great Vibes' }}>Great Vibes</option>
+                        <option value="Alex Brush" style={{ fontFamily: 'Alex Brush' }}>Alex Brush</option>
+                        <option value="Parisienne" style={{ fontFamily: 'Parisienne' }}>Parisienne</option>
+                        <option value="Yellowtail" style={{ fontFamily: 'Yellowtail' }}>Yellowtail</option>
+                        <option value="Mrs Saint Delafield" style={{ fontFamily: 'Mrs Saint Delafield' }}>Mrs Saint Delafield</option>
+                        <option value="Reenie Beanie" style={{ fontFamily: 'Reenie Beanie' }}>Reenie Beanie</option>
+                        <option value="Herr Von Muellerhoff" style={{ fontFamily: 'Herr Von Muellerhoff' }}>Herr Von Muellerhoff</option>
+                        <option value="Monsieur La Doulaise" style={{ fontFamily: 'Monsieur La Doulaise' }}>Monsieur La Doulaise</option>
+                        <option value="Pinyon Script" style={{ fontFamily: 'Pinyon Script' }}>Pinyon Script</option>
+                        <option value="Zeyada" style={{ fontFamily: 'Zeyada' }}>Zeyada</option>
+                        <option value="Mr De Haviland" style={{ fontFamily: 'Mr De Haviland' }}>Mr De Haviland</option>
+                        <option value="La Belle Aurore" style={{ fontFamily: 'La Belle Aurore' }}>La Belle Aurore</option>
+                      </select>
+                    </div>
                   </div>
                 )}
 
@@ -1185,19 +1217,40 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 )}
 
                 <div className="relative rounded-2xl overflow-hidden border border-slate-205 dark:border-slate-800 bg-white flex flex-col">
-                  <canvas 
-                    ref={canvasRef}
-                    width={800}
-                    height={256}
-                    onMouseDown={startDrawing}
-                    onMouseMove={draw}
-                    onMouseUp={stopDrawing}
-                    onMouseLeave={stopDrawing}
-                    onTouchStart={startDrawing}
-                    onTouchMove={draw}
-                    onTouchEnd={stopDrawing}
-                    className={`w-full h-32 bg-white ${signatureMode === 'draw' ? 'cursor-crosshair touch-none' : 'pointer-events-none'}`}
-                  />
+                  {signatureMode === 'draw' ? (
+                    <canvas 
+                      ref={canvasRef}
+                      width={800}
+                      height={256}
+                      onMouseDown={startDrawing}
+                      onMouseMove={draw}
+                      onMouseUp={stopDrawing}
+                      onMouseLeave={stopDrawing}
+                      onTouchStart={startDrawing}
+                      onTouchMove={draw}
+                      onTouchEnd={stopDrawing}
+                      className="w-full h-auto bg-white cursor-crosshair touch-none"
+                    />
+                  ) : (
+                    <div className="w-full h-32 bg-white flex items-center justify-center p-4">
+                      {signature ? (
+                        <img 
+                          src={signature} 
+                          alt="Signature Preview" 
+                          className="max-w-full max-h-full object-contain" 
+                        />
+                      ) : (
+                        <span className="text-slate-400 text-xs">No signature entered yet</span>
+                      )}
+                      {/* Mount canvas hidden so text/upload crop drawing works in background */}
+                       <canvas 
+                         ref={canvasRef}
+                         width={800}
+                         height={256}
+                         style={{ position: 'absolute', left: '-9999px', top: '-9999px', visibility: 'hidden' }}
+                       />
+                    </div>
+                  )}
                   
                   {signature && (
                     <button 
@@ -1211,6 +1264,55 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   
                   <div className="absolute bottom-2 left-3 flex items-center gap-1.5 pointer-events-none text-slate-400 dark:text-slate-500 text-[10px]">
                     <span>{signatureMode === 'draw' ? 'Draw your signature above.' : signatureMode === 'type' ? 'Your typed signature preview.' : 'Extracted signature preview.'}</span>
+                  </div>
+                </div>
+
+                {/* Signature Size Adjuster */}
+                <div className="mt-5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800/80">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Signature Display Size</span>
+                    <span className="text-xs font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-500/10 px-2.5 py-1 rounded-md">
+                      Size: {Math.max(1, Math.min(10, Math.round((signatureSize - 60) / 10) + 1))}
+                    </span>
+                  </div>
+                  
+                  {/* Range input */}
+                  <div className="space-y-2">
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      step="1"
+                      value={Math.max(1, Math.min(10, Math.round((signatureSize - 60) / 10) + 1))}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        setSignatureSize(60 + (val - 1) * 10);
+                      }}
+                      className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-500 focus:outline-none"
+                    />
+                    <div className="flex justify-between text-[9px] font-semibold text-slate-400 uppercase tracking-wider">
+                      <span>1 (Small)</span>
+                      <span>5 (Medium)</span>
+                      <span>10 (Large)</span>
+                    </div>
+                  </div>
+
+                  {/* Preset Buttons */}
+                  <div className="flex gap-2 mt-4">
+                    {[
+                      { label: 'Small', value: 60 },
+                      { label: 'Medium', value: 100 },
+                      { label: 'Large', value: 150 },
+                    ].map((preset) => (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        onClick={() => setSignatureSize(preset.value)}
+                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${signatureSize === preset.value ? 'bg-sky-500 text-white border-sky-500 shadow-sm' : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/60'}`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

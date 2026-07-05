@@ -68,6 +68,12 @@ export default function Homepage({
   // Mobile nav state
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
+  // Contact Modal States
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+  const [contactLoading, setContactLoading] = useState(false);
+
   // Inline form errors
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -303,10 +309,10 @@ export default function Homepage({
       <div className="absolute top-10 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none overflow-hidden" />
 
       {/* Main Container */}
-      <div className="max-w-[1400px] mx-auto px-2 sm:px-2 lg:px-0 py-8 md:pb-16 lg:pt-6 relative">
+      <div className="max-w-[1400px] mx-auto px-2 sm:px-3 lg:px-4 py-4 md:pb-4 lg:pt-6 relative">
         
         {/* Desktop Navigation Area */}
-        <nav className="hidden sm:flex items-center justify-between gap-4 mb-12 border-b pb-5 border-slate-200/50 dark:border-neutral-800 bg-transparent relative z-50">
+        <nav className="hidden sm:flex items-center justify-between gap-4 mb-6 border-b pb-4 border-slate-200/50 dark:border-neutral-800 bg-transparent relative z-50">
           
           {/* Logo Brand */}
           <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
@@ -353,6 +359,17 @@ export default function Homepage({
               <span className="flex items-center gap-1">
                 <BookOpen className="w-3.5 h-3.5" />
                 How to Use
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleNavScroll('contact-section')}
+              className="text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-2.5 sm:px-3.5 py-2 rounded-xl hover:bg-slate-100/60 dark:hover:bg-neutral-900"
+            >
+              <span className="flex items-center gap-1">
+                <Mail className="w-3.5 h-3.5" />
+                Contact
               </span>
             </button>
           </div>
@@ -423,7 +440,7 @@ export default function Homepage({
         </nav>
 
         {/* Mobile Navigation Area */}
-        <nav className="flex sm:hidden flex-col mb-12 bg-transparent relative z-50">
+        <nav className="flex sm:hidden flex-col mb-6 bg-transparent relative z-50">
           
           {/* Mobile Top Row: Logo & Authentication Buttons */}
           <div className={`flex items-center justify-between w-full pb-4 ${isMobileNavOpen ? 'border-none' : 'border-b border-slate-200/50 dark:border-neutral-800'}`}>
@@ -508,6 +525,16 @@ export default function Homepage({
                   </div>
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300">User Guide</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => { handleNavScroll('contact-section'); setIsMobileNavOpen(false); }}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-neutral-900/50 border border-slate-100 dark:border-neutral-800/60 hover:border-rose-500/30 transition-all text-left"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Contact Support</span>
+                </button>
               </div>
 
               <div className="mt-auto space-y-3">
@@ -532,14 +559,14 @@ export default function Homepage({
         </nav>
 
         {/* Hero Grid Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center overflow-hidden">
           
           {/* Left: Headline & Key Details */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:col-span-7 space-y-6 order-2 lg:order-1"
+            className="lg:col-span-7 space-y-6 order-1"
           >
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-sky-500/10 dark:bg-sky-505/15 text-sky-600 dark:text-sky-400 rounded-full text-xs font-bold leading-none animate-fade-in">
               <Sparkles className="w-3.5 h-3.5" />
@@ -625,7 +652,7 @@ export default function Homepage({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:col-span-5 flex flex-col items-center justify-start lg:mt-0 mt-8 relative order-1 lg:order-2"
+            className="lg:col-span-5 flex flex-col items-center justify-start lg:mt-0 mt-8 relative order-2"
           >
             {/* Live Interactive Control Panel */}
             <div className="w-full max-w-[390px] xl:max-w-[430px] mb-4 bg-white/75 dark:bg-neutral-900/80 backdrop-blur-md rounded-2xl p-3 border border-slate-200/60 dark:border-neutral-800/85 shadow-md relative z-30 transition-all text-xs">
@@ -722,7 +749,7 @@ export default function Homepage({
 
             {/* Mockup Canvas Screen */}
             <div className="w-full max-w-[100vw] sm:max-w-[420px] overflow-x-auto no-scrollbar pb-6 -mx-2 px-2 sm:mx-0 sm:px-0">
-              <div className="w-[380px] sm:w-full h-[400px] sm:h-[480px] lg:h-[500px] relative shrink-0 overflow-hidden rounded-3xl">
+              <div className="w-full max-w-[380px] sm:max-w-full h-[400px] sm:h-[480px] lg:h-[500px] relative overflow-hidden rounded-3xl">
               
               {/* Background glowing visual accents */}
               <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full blur-3xl pointer-events-none transition-colors duration-500 ${
@@ -970,7 +997,7 @@ export default function Homepage({
         </div>
 
         {/* 1. How to Use Section */}
-        <div id="how-to-use-section" className="mt-28 sm:mt-36 max-w-6xl mx-auto space-y-12 animate-fade-in relative z-10">
+        <div id="how-to-use-section" className="mt-10 sm:mt-12 max-w-6xl mx-auto space-y-12 animate-fade-in relative z-10">
           <div className="text-center space-y-3">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 rounded-full text-xs font-bold leading-none uppercase tracking-widest">
               <BookOpen className="w-3.5 h-3.5 animate-bounce" />
@@ -1050,7 +1077,7 @@ export default function Homepage({
         </div>
 
         {/* 2. Interactive Secure Portal Activation Section */}
-        <div id="auth-section" className="mt-28 sm:mt-36 max-w-lg mx-auto relative z-10 animate-fade-in scroll-mt-24">
+        <div id="auth-section" className="mt-10 sm:mt-12 max-w-lg md:max-w-5xl lg:max-w-6xl mx-auto relative z-10 animate-fade-in scroll-mt-24">
           
           <div className="text-center space-y-2 mb-8">
             <h2 className="text-2xl sm:text-3xl font-black text-slate-805 tracking-tight uppercase">
@@ -1061,384 +1088,386 @@ export default function Homepage({
             </p>
           </div>
 
-          <div className={`w-full p-5 sm:p-8 rounded-3xl border transition-all relative ${
+          <div className={`w-full rounded-3xl border transition-all relative overflow-hidden ${
             theme === 'dark' 
               ? 'bg-neutral-900/90 border-neutral-800 shadow-2xl shadow-sky-500/5' 
               : 'bg-white border-slate-150 shadow-xl'
           }`}>
-            
-            {/* Form Tab headers: Create Account / Sign In */}
-            <div className="flex border-b border-slate-100 dark:border-neutral-800 pb-3 mb-6">
-              <button
-                type="button"
-                onClick={() => { setAuthMode('signup'); setOtpSent(false); setSuccessMsg(''); }}
-                className={`flex-1 pb-2.5 text-center text-sm font-bold border-b-2 transition-all cursor-pointer ${
-                  authMode === 'signup'
-                    ? 'border-sky-500 text-sky-500'
-                    : 'border-transparent text-slate-400 hover:text-slate-650 dark:hover:text-slate-250'
-                }`}
-              >
-                <div className="flex items-center justify-center gap-1.5">
-                  <UserPlus className="w-4 h-4" />
-                  <span>Create Account</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => { setAuthMode('login'); setOtpSent(false); setSuccessMsg(''); }}
-                className={`flex-1 pb-2.5 text-center text-sm font-bold border-b-2 transition-all cursor-pointer ${
-                  authMode === 'login'
-                    ? 'border-sky-500 text-sky-500'
-                    : 'border-transparent text-slate-400 hover:text-slate-650 dark:hover:text-slate-250'
-                }`}
-              >
-                <div className="flex items-center justify-center gap-1.5">
-                  <LogIn className="w-4 h-4" />
-                  <span>Sign In</span>
-                </div>
-              </button>
-            </div>
-
-            {/* 3-Method Sign-In Selector (shown for both signup & login) */}
-            <div className="mb-6">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">
-                Choose sign-in method
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                {/* Method 1: Email */}
-                <button
-                  type="button"
-                  onClick={() => { setLoginMethod('email'); setOtpSent(false); setSuccessMsg(''); }}
-                  className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border-2 transition-all cursor-pointer ${
-                    loginMethod === 'email'
-                      ? 'border-sky-500 bg-sky-500/8 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400'
-                      : 'border-slate-200 dark:border-neutral-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-neutral-700 hover:bg-slate-50 dark:hover:bg-neutral-900'
-                  }`}
-                >
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                    loginMethod === 'email' ? 'bg-sky-500/15' : 'bg-slate-100 dark:bg-neutral-800'
-                  }`}>
-                    <Mail className="w-4 h-4" />
-                  </div>
-                  <span className="text-[10px] font-bold leading-tight text-center">Email</span>
-                </button>
-
-                {/* Method 2: Phone OTP */}
-                <button
-                  type="button"
-                  onClick={() => { setLoginMethod('phone_otp'); setOtpSent(false); setSuccessMsg(''); }}
-                  className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border-2 transition-all cursor-pointer ${
-                    loginMethod === 'phone_otp'
-                      ? 'border-emerald-500 bg-emerald-500/8 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                      : 'border-slate-200 dark:border-neutral-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-neutral-700 hover:bg-slate-50 dark:hover:bg-neutral-900'
-                  }`}
-                >
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                    loginMethod === 'phone_otp' ? 'bg-emerald-500/15' : 'bg-slate-100 dark:bg-neutral-800'
-                  }`}>
-                    <Phone className="w-4 h-4" />
-                  </div>
-                  <span className="text-[10px] font-bold leading-tight text-center">Phone OTP</span>
-                </button>
-
-                {/* Method 3: Google */}
-                <button
-                  type="button"
-                  onClick={() => { setLoginMethod('google'); setOtpSent(false); setSuccessMsg(''); }}
-                  className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border-2 transition-all cursor-pointer ${
-                    loginMethod === 'google'
-                      ? 'border-rose-400 bg-rose-500/8 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                      : 'border-slate-200 dark:border-neutral-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-neutral-700 hover:bg-slate-50 dark:hover:bg-neutral-900'
-                  }`}
-                >
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                    loginMethod === 'google' ? 'bg-rose-500/10' : 'bg-slate-100 dark:bg-neutral-800'
-                  }`}>
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                      <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.09H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.91l2.85-2.22c-.1-.29-.19-.61-.25-.94z" fill="#FBBC05" />
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.09l3.66 2.84c.87-2.6 3.3-4.55 6.16-4.55z" fill="#EA4335" />
-                    </svg>
-                  </div>
-                  <span className="text-[10px] font-bold leading-tight text-center">Google</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Title & Description */}
-            <div className="mb-5">
-              <h2 className="text-lg font-bold text-slate-805">
-                {authMode === 'signup' ? 'Get started for free' : 'Welcome back to MakInvoice'}
-              </h2>
-              <p className="text-xs text-slate-450 dark:text-slate-400 mt-1">
-                {loginMethod === 'google'
-                  ? 'Authenticate securely with your Google account in one tap.'
-                  : loginMethod === 'phone_otp'
-                  ? 'Enter your phone number and we\'ll send a one-time passcode.'
-                  : authMode === 'signup'
-                  ? 'Fill out the form below to initialize your smart invoice dashboard.'
-                  : 'Sign in to sync your custom documents and access cloud features.'}
-              </p>
-            </div>
-
-            {/* Status Message */}
-            {successMsg && (
-              <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-505 shrink-0" />
-                <span>{successMsg}</span>
-              </div>
-            )}
-
-            {/* GOOGLE METHOD - Direct button */}
-            {loginMethod === 'google' && (
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={onGoogleLogin}
-                  className="w-full py-3 px-4 rounded-xl border-2 border-slate-200 dark:border-neutral-800 hover:bg-slate-50 dark:hover:bg-neutral-850 text-slate-700 dark:text-neutral-200 text-sm font-bold transition-all flex items-center justify-center gap-3 bg-transparent cursor-pointer hover:border-rose-300 dark:hover:border-rose-500/30"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                    <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.09H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.91l2.85-2.22c-.1-.29-.19-.61-.25-.94z" fill="#FBBC05" />
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.09l3.66 2.84c.87-2.6 3.3-4.55 6.16-4.55z" fill="#EA4335" />
-                  </svg>
-                  <span>Continue with Google</span>
-                </button>
-                <p className="text-center text-[10px] text-slate-400 dark:text-slate-500">
-                  Your Google account will be used to sync invoices securely to the cloud.
-                </p>
-              </div>
-            )}
-
-            {/* EMAIL METHOD */}
-            {loginMethod === 'email' && (
-              <form onSubmit={handleFormSubmit} className="space-y-4">
-                {authMode === 'signup' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 mb-1">Your Name *</label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.name}
-                          onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setFormErrors(prev => ({...prev, name: ''})); }}
-                          placeholder="e.g. John Doe"
-                          className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.name ? 'border-rose-500 focus:ring-rose-500' : formData.name ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-800 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
-                        />
-                        {formErrors.name && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.name}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 mb-1">Company Name *</label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.companyName}
-                          onChange={(e) => { setFormData({ ...formData, companyName: e.target.value }); setFormErrors(prev => ({...prev, companyName: ''})); }}
-                          placeholder="e.g. Acme Tech Solutions"
-                          className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.companyName ? 'border-rose-500 focus:ring-rose-500' : formData.companyName ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-800 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
-                        />
-                        {formErrors.companyName && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.companyName}</p>}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 mb-1">Phone Number *</label>
-                      <input
-                        type="tel"
-                        required
-                        value={formData.phone}
-                        onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); setFormErrors(prev => ({...prev, phone: ''})); }}
-                        placeholder="e.g. +91 98765 43210"
-                        className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.phone ? 'border-rose-500 focus:ring-rose-500' : formData.phone ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-800 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
-                      />
-                      {formErrors.phone && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.phone}</p>}
-                    </div>
-                  </div>
-                )}
+            <div className="grid grid-cols-1 md:grid-cols-12">
+              
+              {/* Left Column: Sign-in Tabs & Methods */}
+              <div className="p-5 sm:p-8 md:col-span-5 bg-slate-50/50 dark:bg-neutral-950/20 border-b md:border-b-0 md:border-r border-slate-150 dark:border-neutral-800 flex flex-col justify-between">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 mb-1">Email Address *</label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => { setFormData({ ...formData, email: e.target.value }); setFormErrors(prev => ({...prev, email: ''})); }}
-                    placeholder="sales@yourcompany.com"
-                    className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.email ? 'border-rose-500 focus:ring-rose-500' : formData.email ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-800 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
-                  />
-                  {formErrors.email && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.email}</p>}
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 mb-1">Password *</label>
-                  <input
-                    type="password"
-                    required
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="••••••••"
-                    className="w-full px-3 py-3 sm:py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all"
-                  />
-                  {formData.password && (
-                    <div className="mt-2 space-y-1.5 animate-fade-in">
-                      <div className="flex items-center justify-between text-[10px]">
-                        <span className="font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Password Strength:</span>
-                        <span className={`font-black uppercase tracking-wider ${
-                          strength.score <= 1 ? 'text-rose-500' :
-                          strength.score === 2 ? 'text-amber-500' :
-                          strength.score === 3 ? 'text-sky-500' : 'text-emerald-500'
-                        }`}>{strength.label}</span>
+                  {/* Form Tab headers: Create Account / Sign In */}
+                  <div className="flex border-b border-slate-200 dark:border-neutral-800 pb-3 mb-6">
+                    <button
+                      type="button"
+                      onClick={() => { setAuthMode('signup'); setOtpSent(false); setSuccessMsg(''); }}
+                      className={`flex-1 pb-2.5 text-center text-sm font-bold border-b-2 transition-all cursor-pointer ${
+                        authMode === 'signup'
+                          ? 'border-sky-500 text-sky-500'
+                          : 'border-transparent text-slate-400 hover:text-slate-650 dark:hover:text-slate-250'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-1.5">
+                        <UserPlus className="w-4 h-4" />
+                        <span>Create Account</span>
                       </div>
-                      <div className="grid grid-cols-4 gap-1.5 h-1">
-                        <div className={`rounded-full h-full transition-all duration-300 ${strength.score >= 1 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
-                        <div className={`rounded-full h-full transition-all duration-300 ${strength.score >= 2 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
-                        <div className={`rounded-full h-full transition-all duration-300 ${strength.score >= 3 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
-                        <div className={`rounded-full h-full transition-all duration-300 ${strength.score >= 4 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAuthMode('login'); setOtpSent(false); setSuccessMsg(''); }}
+                      className={`flex-1 pb-2.5 text-center text-sm font-bold border-b-2 transition-all cursor-pointer ${
+                        authMode === 'login'
+                          ? 'border-sky-500 text-sky-500'
+                          : 'border-transparent text-slate-400 hover:text-slate-650 dark:hover:text-slate-250'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-1.5">
+                        <LogIn className="w-4 h-4" />
+                        <span>Sign In</span>
                       </div>
-                    </div>
-                  )}
-                </div>
-                <div className="sticky bottom-0 p-4 bg-white/80 backdrop-blur-md dark:bg-neutral-900/80 border-t border-slate-200 dark:border-neutral-800 -mx-5 -mb-5 mt-4 sm:relative sm:p-0 sm:bg-transparent sm:border-0 sm:m-0 sm:mt-2 z-40 pb-safe">
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full py-3.5 sm:py-2.5 px-4 bg-sky-600 hover:bg-sky-500 disabled:bg-neutral-800 text-white rounded-xl text-sm sm:text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-sky-600/15 cursor-pointer"
-                  >
-                    {isLoading ? (
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Mail className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                        <span>{authMode === 'signup' ? 'Create Account with Email' : 'Sign In with Email'}</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* PHONE OTP METHOD */}
-            {loginMethod === 'phone_otp' && (
-              <form onSubmit={handleFormSubmit} className="space-y-4">
-                {authMode === 'signup' && !otpSent && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 mb-1">Your Name *</label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.name}
-                          onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setFormErrors(prev => ({...prev, name: ''})); }}
-                          placeholder="e.g. John Doe"
-                          className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.name ? 'border-rose-500 focus:ring-rose-500' : formData.name ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-800 focus:ring-emerald-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
-                        />
-                        {formErrors.name && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.name}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 mb-1">Company Name *</label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.companyName}
-                          onChange={(e) => { setFormData({ ...formData, companyName: e.target.value }); setFormErrors(prev => ({...prev, companyName: ''})); }}
-                          placeholder="e.g. Acme Tech Solutions"
-                          className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.companyName ? 'border-rose-500 focus:ring-rose-500' : formData.companyName ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-800 focus:ring-emerald-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
-                        />
-                        {formErrors.companyName && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.companyName}</p>}
-                      </div>
-                    </div>
+                    </button>
                   </div>
-                )}
 
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 mb-1">
-                    Phone Number *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="tel"
-                      required
-                      value={formData.phone}
-                      onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); setFormErrors(prev => ({...prev, phone: ''})); }}
-                      disabled={otpSent}
-                      placeholder="e.g. +91 98765 43210"
-                      className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.phone ? 'border-rose-500 focus:ring-rose-500' : formData.phone ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-800 focus:ring-emerald-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all disabled:opacity-60`}
-                    />
-                    {formErrors.phone && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.phone}</p>}
-                    {otpSent && (
+                  {/* 3-Method Sign-In Selector */}
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-450 dark:text-slate-500 mb-3">
+                      Choose sign-in method
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {/* Method 1: Email */}
                       <button
                         type="button"
-                        onClick={() => { setOtpSent(false); setOtpValue(''); setSuccessMsg(''); }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-sky-500 font-bold flex items-center gap-1 hover:text-sky-400 cursor-pointer"
+                        onClick={() => { setLoginMethod('email'); setOtpSent(false); setSuccessMsg(''); }}
+                        className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border-2 transition-all cursor-pointer ${
+                          loginMethod === 'email'
+                            ? 'border-sky-500 bg-sky-500/8 dark:bg-sky-500/10 text-sky-600 dark:text-sky-404'
+                            : 'border-slate-200 dark:border-neutral-805 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-neutral-700 hover:bg-slate-50 dark:hover:bg-neutral-900'
+                        }`}
                       >
-                        <RefreshCw className="w-3 h-3" />
-                        Change
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                          loginMethod === 'email' ? 'bg-sky-500/15' : 'bg-slate-100 dark:bg-neutral-800'
+                        }`}>
+                          <Mail className="w-4 h-4" />
+                        </div>
+                        <span className="text-[10px] font-bold leading-tight text-center">Email</span>
                       </button>
-                    )}
+
+                      {/* Method 2: Phone OTP */}
+                      <button
+                        type="button"
+                        onClick={() => { setLoginMethod('phone_otp'); setOtpSent(false); setSuccessMsg(''); }}
+                        className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border-2 transition-all cursor-pointer ${
+                          loginMethod === 'phone_otp'
+                            ? 'border-emerald-500 bg-emerald-500/8 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-404'
+                            : 'border-slate-200 dark:border-neutral-805 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-neutral-700 hover:bg-slate-50 dark:hover:bg-neutral-900'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                          loginMethod === 'phone_otp' ? 'bg-emerald-500/15' : 'bg-slate-100 dark:bg-neutral-800'
+                        }`}>
+                          <Phone className="w-4 h-4" />
+                        </div>
+                        <span className="text-[10px] font-bold leading-tight text-center">Phone OTP</span>
+                      </button>
+
+                      {/* Method 3: Google */}
+                      <button
+                        type="button"
+                        onClick={() => { setLoginMethod('google'); setOtpSent(false); setSuccessMsg(''); }}
+                        className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border-2 transition-all cursor-pointer ${
+                          loginMethod === 'google'
+                            ? 'border-rose-400 bg-rose-500/8 dark:bg-rose-500/10 text-rose-600 dark:text-rose-404'
+                            : 'border-slate-200 dark:border-neutral-850 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-neutral-700 hover:bg-slate-50 dark:hover:bg-neutral-900'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                          loginMethod === 'google' ? 'bg-rose-500/10' : 'bg-slate-100 dark:bg-neutral-800'
+                        }`}>
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                            <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.09H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.91l2.85-2.22c-.1-.29-.19-.61-.25-.94z" fill="#FBBC05" />
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.09l3.66 2.84c.87-2.6 3.3-4.55 6.16-4.55z" fill="#EA4335" />
+                          </svg>
+                        </div>
+                        <span className="text-[10px] font-bold leading-tight text-center">Google</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {otpSent && (
-                  <div className="animate-fade-in">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 mb-1">
-                      Enter OTP *
-                    </label>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={6}
-                        value={otpValue}
-                        onChange={(e) => { setOtpValue(e.target.value.replace(/\D/g, '')); setFormErrors(prev => ({...prev, otp: ''})); }}
-                        placeholder="• • • • • •"
-                        className={`flex-1 px-4 py-4 sm:py-3 rounded-xl border-2 ${formErrors.otp ? 'border-rose-500 focus:ring-rose-500' : 'border-emerald-200 dark:border-emerald-800/40 focus:ring-emerald-500'} bg-emerald-50/50 dark:bg-emerald-950/20 text-slate-805 dark:text-white text-base font-mono font-black tracking-[0.4em] focus:ring-2 focus:outline-none transition-all text-center placeholder:tracking-[0.2em] placeholder:text-slate-300`}
-                        autoFocus
-                      />
-                    </div>
-                    {formErrors.otp && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.otp}</p>}
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 flex items-center gap-1">
-                      <KeyRound className="w-3 h-3" />
-                      <span>OTP sent via SMS. For demo, use <span className="font-black text-emerald-500">1234</span></span>
+                {/* Guest sandbox shortcut - Desktop Layout */}
+                <div className="mt-8 pt-4 border-t border-slate-200 dark:border-neutral-800 text-center hidden md:block">
+                  <button
+                    type="button"
+                    onClick={() => onCustomSignup('Guest User', 'Acme Design Studio', 'guest@makinvoice.local', '+1 (555) 019-2834')}
+                    className="text-slate-400 hover:text-sky-500 text-xs font-extrabold hover:underline transition-all cursor-pointer"
+                  >
+                    Try instantly as Guest (Local Offline Mode)
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Column: Actual Form Inputs */}
+              <div className="p-5 sm:p-8 md:col-span-7 flex flex-col justify-center">
+                
+                {/* Title & Description */}
+                <div className="mb-5">
+                  <h2 className="text-lg font-bold text-slate-805">
+                    {authMode === 'signup' ? 'Get started for free' : 'Welcome back to MakInvoice'}
+                  </h2>
+                  <p className="text-xs text-slate-450 dark:text-slate-400 mt-1">
+                    {loginMethod === 'google'
+                      ? 'Authenticate securely with your Google account in one tap.'
+                      : loginMethod === 'phone_otp'
+                      ? 'Enter your phone number and we\'ll send a one-time passcode.'
+                      : authMode === 'signup'
+                      ? 'Fill out the form below to initialize your smart invoice dashboard.'
+                      : 'Sign in to sync your custom documents and access cloud features.'}
+                  </p>
+                </div>
+
+                {/* Status Message */}
+                {successMsg && (
+                  <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-404 rounded-xl text-xs font-bold flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-505 shrink-0" />
+                    <span>{successMsg}</span>
+                  </div>
+                )}
+
+                {/* GOOGLE METHOD - Direct button */}
+                {loginMethod === 'google' && (
+                  <div className="space-y-3">
+                    <button
+                      type="button"
+                      onClick={onGoogleLogin}
+                      className="w-full py-3 px-4 rounded-xl border-2 border-slate-200 dark:border-neutral-805 hover:bg-slate-50 dark:hover:bg-neutral-850 text-slate-700 dark:text-neutral-200 text-sm font-bold transition-all flex items-center justify-center gap-3 bg-transparent cursor-pointer hover:border-rose-300 dark:hover:border-rose-500/30"
+                    >
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                        <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.09H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.91l2.85-2.22c-.1-.29-.19-.61-.25-.94z" fill="#FBBC05" />
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.09l3.66 2.84c.87-2.6 3.3-4.55 6.16-4.55z" fill="#EA4335" />
+                      </svg>
+                      <span>Continue with Google</span>
+                    </button>
+                    <p className="text-center text-[10px] text-slate-400 dark:text-slate-500">
+                      Your Google account will be used to sync invoices securely to the cloud.
                     </p>
                   </div>
                 )}
 
-                <div className="sticky bottom-0 p-4 bg-white/80 backdrop-blur-md dark:bg-neutral-900/80 border-t border-slate-200 dark:border-neutral-800 -mx-5 -mb-5 mt-4 sm:relative sm:p-0 sm:bg-transparent sm:border-0 sm:m-0 sm:mt-2 z-40 pb-safe">
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full py-3.5 sm:py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 text-white rounded-xl text-sm sm:text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/15 cursor-pointer"
-                  >
-                    {isLoading ? (
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Phone className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                        <span>{otpSent ? 'Verify OTP & Sign In' : (authMode === 'signup' ? 'Send OTP to Sign Up' : 'Send OTP to Sign In')}</span>
-                      </>
+                {/* EMAIL METHOD */}
+                {loginMethod === 'email' && (
+                  <form onSubmit={handleFormSubmit} className="space-y-4">
+                    {authMode === 'signup' && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 mb-1">Your Name *</label>
+                            <input
+                              type="text"
+                              required
+                              value={formData.name}
+                              onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setFormErrors(prev => ({...prev, name: ''})); }}
+                              placeholder="e.g. John Doe"
+                              className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.name ? 'border-rose-500 focus:ring-rose-500' : formData.name ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-805 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
+                            />
+                            {formErrors.name && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.name}</p>}
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 mb-1">Company Name *</label>
+                            <input
+                              type="text"
+                              required
+                              value={formData.companyName}
+                              onChange={(e) => { setFormData({ ...formData, companyName: e.target.value }); setFormErrors(prev => ({...prev, companyName: ''})); }}
+                              placeholder="e.g. Acme Tech Solutions"
+                              className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.companyName ? 'border-rose-500 focus:ring-rose-500' : formData.companyName ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-805 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-850 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
+                            />
+                            {formErrors.companyName && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.companyName}</p>}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-slate-400 mb-1">Phone Number *</label>
+                          <input
+                            type="tel"
+                            required
+                            value={formData.phone}
+                            onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); setFormErrors(prev => ({...prev, phone: ''})); }}
+                            placeholder="e.g. +91 98765 43210"
+                            className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.phone ? 'border-rose-500 focus:ring-rose-500' : formData.phone ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-805 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-850 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
+                          />
+                          {formErrors.phone && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.phone}</p>}
+                        </div>
+                      </div>
                     )}
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-slate-400 mb-1">Email Address *</label>
+                      <input
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => { setFormData({ ...formData, email: e.target.value }); setFormErrors(prev => ({...prev, email: ''})); }}
+                        placeholder="sales@yourcompany.com"
+                        className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.email ? 'border-rose-500 focus:ring-rose-500' : formData.email ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-805 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
+                      />
+                      {formErrors.email && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.email}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-slate-400 mb-1">Password *</label>
+                      <input
+                        type="password"
+                        required
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        placeholder="••••••••"
+                        className="w-full px-3 py-3 sm:py-2.5 rounded-xl border border-slate-200 dark:border-neutral-805 bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all"
+                      />
+                      {formData.password && (
+                        <div className="mt-2 space-y-1.5 animate-fade-in">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Password Strength:</span>
+                            <span className={`font-black uppercase tracking-wider ${
+                              strength.score <= 1 ? 'text-rose-500' :
+                              strength.score === 2 ? 'text-amber-500' :
+                              strength.score === 3 ? 'text-sky-500' : 'text-emerald-500'
+                            }`}>{strength.label}</span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-1.5 h-1">
+                            <div className={`rounded-full h-full transition-all duration-300 ${strength.score >= 1 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
+                            <div className={`rounded-full h-full transition-all duration-300 ${strength.score >= 2 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
+                            <div className={`rounded-full h-full transition-all duration-300 ${strength.score >= 3 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
+                            <div className={`rounded-full h-full transition-all duration-300 ${strength.score >= 4 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="sticky bottom-0 p-4 bg-white/80 backdrop-blur-md dark:bg-neutral-900/80 border-t border-slate-200 dark:border-neutral-808 -mx-5 -mb-5 mt-4 sm:relative sm:p-0 sm:bg-transparent sm:border-0 sm:m-0 sm:mt-2 z-40 pb-safe">
+                      <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full py-3.5 sm:py-2.5 px-4 bg-sky-600 hover:bg-sky-500 disabled:bg-neutral-800 text-white rounded-xl text-sm sm:text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-sky-600/15 cursor-pointer"
+                      >
+                        {isLoading ? (
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <Mail className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                            <span>{authMode === 'signup' ? 'Create Account with Email' : 'Sign In with Email'}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* PHONE OTP METHOD */}
+                {loginMethod === 'phone_otp' && (
+                  <form onSubmit={handleFormSubmit} className="space-y-4">
+                    {authMode === 'signup' && !otpSent && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-slate-400 mb-1">Your Name *</label>
+                            <input
+                              type="text"
+                              required
+                              value={formData.name}
+                              onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setFormErrors(prev => ({...prev, name: ''})); }}
+                              placeholder="e.g. John Doe"
+                              className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.name ? 'border-rose-500 focus:ring-rose-500' : formData.name ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-805 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
+                            />
+                            {formErrors.name && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.name}</p>}
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-slate-400 mb-1">Company Name *</label>
+                            <input
+                              type="text"
+                              required
+                              value={formData.companyName}
+                              onChange={(e) => { setFormData({ ...formData, companyName: e.target.value }); setFormErrors(prev => ({...prev, companyName: ''})); }}
+                              placeholder="e.g. Acme Tech Solutions"
+                              className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.companyName ? 'border-rose-500 focus:ring-rose-500' : formData.companyName ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-805 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-850 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
+                            />
+                            {formErrors.companyName && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.companyName}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {!otpSent ? (
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-slate-400 mb-1">Phone Number *</label>
+                        <input
+                          type="tel"
+                          required
+                          value={formData.phone}
+                          onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); setFormErrors(prev => ({...prev, phone: ''})); }}
+                          placeholder="e.g. +91 98765 43210"
+                          className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.phone ? 'border-rose-500 focus:ring-rose-500' : formData.phone ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-805 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
+                        />
+                        {formErrors.phone && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.phone}</p>}
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-slate-400 mb-1">Enter 4-digit Passcode *</label>
+                        <input
+                          type="text"
+                          required
+                          maxLength={4}
+                          value={otpValue}
+                          onChange={(e) => setOtpValue(e.target.value)}
+                          placeholder="••••"
+                          className="w-full px-3 py-3 sm:py-2.5 rounded-xl border border-slate-200 dark:border-neutral-805 bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium tracking-widest text-center focus:ring-1 focus:ring-emerald-500 focus:outline-none transition-all"
+                        />
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 flex items-center gap-1">
+                          <KeyRound className="w-3 h-3" />
+                          <span>OTP sent via SMS. For demo, use <span className="font-black text-emerald-500">1234</span></span>
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="sticky bottom-0 p-4 bg-white/80 backdrop-blur-md dark:bg-neutral-900/80 border-t border-slate-200 dark:border-neutral-808 -mx-5 -mb-5 mt-4 sm:relative sm:p-0 sm:bg-transparent sm:border-0 sm:m-0 sm:mt-2 z-40 pb-safe">
+                      <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full py-3.5 sm:py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 text-white rounded-xl text-sm sm:text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/15 cursor-pointer"
+                      >
+                        {isLoading ? (
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <Phone className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                            <span>{otpSent ? 'Verify OTP & Sign In' : (authMode === 'signup' ? 'Send OTP to Sign Up' : 'Send OTP to Sign In')}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Guest sandbox shortcut - Mobile/Tablet Layout */}
+                <div className="mt-6 pt-4 border-t border-slate-200 dark:border-neutral-800 text-center md:hidden">
+                  <button
+                    type="button"
+                    onClick={() => onCustomSignup('Guest User', 'Acme Design Studio', 'guest@makinvoice.local', '+1 (555) 019-2834')}
+                    className="text-slate-400 hover:text-sky-500 text-xs font-extrabold hover:underline transition-all cursor-pointer"
+                  >
+                    Try instantly as Guest (Local Offline Mode)
                   </button>
                 </div>
-              </form>
-            )}
 
-            {/* Guest sandbox shortcut */}
-            <div className="mt-5 pt-4 border-t border-slate-100 dark:border-neutral-800 text-center">
-              <button
-                type="button"
-                onClick={() => onCustomSignup('Guest User', 'Acme Design Studio', 'guest@makinvoice.local', '+1 (555) 019-2834')}
-                className="text-slate-400 hover:text-sky-500 text-xs font-extrabold hover:underline transition-all cursor-pointer"
-              >
-                Try instantly as Guest (Local Offline Mode)
-              </button>
+              </div>
+
             </div>
-
           </div>
         </div>
 
         {/* Premium Accordion-Style Help & FAQ Section */}
-        <div id="faq-section" className="mt-24 sm:mt-32 max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300 scroll-mt-24">
+        <div id="faq-section" className="mt-10 sm:mt-12 max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300 scroll-mt-24">
           <div className="text-center space-y-2">
             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-805 uppercase tracking-wide">
               Frequently Asked Questions
@@ -1492,8 +1521,157 @@ export default function Homepage({
           </div>
         </div>
 
+        {/* 3. Inline Contact Support Section */}
+        <div id="contact-section" className="mt-10 sm:mt-12 max-w-lg md:max-w-5xl lg:max-w-6xl mx-auto relative z-10 animate-fade-in scroll-mt-24">
+          <div className="text-center space-y-2 mb-8">
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-805 tracking-tight uppercase">
+              Get in Touch
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-405">
+              Have questions, feedback, or need help? Contact our support team directly.
+            </p>
+          </div>
+
+          <div className={`w-full rounded-3xl border transition-all relative overflow-hidden ${
+            theme === 'dark' 
+              ? 'bg-neutral-900/90 border-neutral-800 shadow-2xl shadow-sky-500/5' 
+              : 'bg-white border-slate-150 shadow-xl'
+          }`}>
+            <div className="grid grid-cols-1 md:grid-cols-12">
+              
+              {/* Left Column: Direct Support Channels */}
+              <div className="p-5 sm:p-8 md:col-span-5 bg-slate-50/50 dark:bg-neutral-950/20 border-b md:border-b-0 md:border-r border-slate-150 dark:border-neutral-800 flex flex-col justify-between">
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-805 mb-2">Direct Channels</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-405">Reach out to us directly via email or phone for urgent issues.</p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center shrink-0">
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Email Address</span>
+                        <a href="mailto:support@makinvoice.com" className="text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-sky-505 transition-colors">support@makinvoice.com</a>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                        <Phone className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider">Phone Support</span>
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200">+1 (800) 555-MAKI</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
+                        <Globe className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider">Support Hours</span>
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200">24/7 Global Response Desk</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-sky-500/5 dark:bg-sky-500/10 border border-sky-500/10 rounded-2xl mt-8">
+                  <p className="text-[10px] font-black text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-1">Response Guarantee</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-normal">Our system automatically routes ledger queries. We usually respond to support tickets within 2 hours.</p>
+                </div>
+              </div>
+
+              {/* Right Column: Contact Message Form */}
+              <div className="p-5 sm:p-8 md:col-span-7 flex flex-col justify-center">
+                {contactSubmitted ? (
+                  <div className="text-center py-8 space-y-3 animate-fade-in">
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto">
+                      <Check className="w-6 h-6" />
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-850">Message Sent Successfully!</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">Thank you for reaching out. Our support team will get in touch with you shortly.</p>
+                    <button 
+                      type="button" 
+                      onClick={() => setContactSubmitted(false)}
+                      className="mt-4 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all"
+                    >
+                      Send Another Message
+                    </button>
+                  </div>
+                ) : (
+                  <form 
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      setContactLoading(true);
+                      await new Promise(r => setTimeout(r, 1000));
+                      setContactLoading(false);
+                      setContactSubmitted(true);
+                      setContactForm({ name: '', email: '', message: '' });
+                    }} 
+                    className="space-y-4"
+                  >
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-slate-455 mb-1">Your Name *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        value={contactForm.name} 
+                        onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                        placeholder="e.g. John Doe"
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-955 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-slate-455 mb-1">Email Address *</label>
+                      <input 
+                        type="email" 
+                        required 
+                        value={contactForm.email} 
+                        onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                        placeholder="you@company.com"
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-955 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-slate-455 mb-1">Message *</label>
+                      <textarea 
+                        required 
+                        rows={4} 
+                        value={contactForm.message} 
+                        onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                        placeholder="Tell us how we can help you..."
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-955 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all resize-none"
+                      />
+                    </div>
+                    <button 
+                      type="submit" 
+                      disabled={contactLoading}
+                      className="w-full py-3 bg-sky-600 hover:bg-sky-500 disabled:bg-neutral-800 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-sky-600/15 cursor-pointer"
+                    >
+                      {contactLoading ? (
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Mail className="w-3.5 h-3.5" />
+                          <span>Send Support Message</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
         {/* Footer info branding */}
-        <footer className="mt-20 text-center text-xs text-slate-400 border-t border-slate-100 dark:border-neutral-800 pt-6">
+        <footer className="mt-8 text-center text-xs text-slate-400 border-t border-slate-100 dark:border-neutral-800 pt-6">
           <p>© {new Date().getFullYear()} MakInvoice Corp. Local state automatically cached for safety. Encryption standards enabled.</p>
         </footer>
 
@@ -1523,6 +1701,7 @@ export default function Homepage({
         )}
 
       </div>
+
     </div>
   );
 }

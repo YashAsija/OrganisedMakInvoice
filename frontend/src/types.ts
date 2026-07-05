@@ -122,6 +122,7 @@ export interface BusinessProfile {
   website?: string;
   logoUrl?: string;
   signature?: string; // Base64 data URI of drawn signature
+  signatureSize?: number; // Size/width of signature in pixels (e.g. 100 to 300)
   currency: string;
   defaultTaxRate: number;
   themeAccent?: 'sky' | 'emerald' | 'indigo' | 'violet' | 'rose' | 'orange';

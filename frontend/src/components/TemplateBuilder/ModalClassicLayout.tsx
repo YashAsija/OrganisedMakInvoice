@@ -17,8 +17,11 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
 
   const baseStyle: React.CSSProperties = {
     width: isPrintMode ? '100%' : width,
-    minHeight: isPrintMode ? 'auto' : minHeight,
-    padding: '40px',
+    minHeight: minHeight,
+    paddingTop: '40px',
+    paddingLeft: '40px',
+    paddingRight: '40px',
+    paddingBottom: '15px',
     backgroundColor: '#ffffff',
     fontFamily: styleConfig.fontFamily || 'Inter',
     color: '#333',

@@ -35,6 +35,11 @@ export default function RootLayout({
       className={`${plusJakartaSans.variable} ${jetBrainsMono.variable} h-full`}
       suppressHydrationWarning
     >
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Sacramento&family=Dancing+Script:wght@400;700&family=Great+Vibes&family=Alex+Brush&family=Parisienne&family=Yellowtail&family=Mrs+Saint+Delafield&family=Reenie+Beanie&family=Herr+Von+Muellerhoff&family=Monsieur+La+Doulaise&family=Pinyon+Script&family=Zeyada&family=Mr+De+Haviland&family=La+Belle+Aurore&display=swap" rel="stylesheet" />
+      </head>
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>{children}</body>
     </html>
   );

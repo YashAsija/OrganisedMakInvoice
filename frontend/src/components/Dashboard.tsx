@@ -131,7 +131,7 @@ export default function Dashboard({
 
   // Master databases seed
   const [vendors, setVendors] = useState<MasterVendor[]>(() => {
-    const cached = localStorage.getItem('makinvoice_masters_vendors');
+    const cached = localStorage.getItem('makbills_masters_vendors');
     if (cached) return JSON.parse(cached);
     return [
       { id: 'v_1', name: 'AWS Cloud Hosting', company: 'Amazon Web Services', email: 'billing@aws.com', phone: '1-800-AWS', address: 'Seattle, WA', category: 'SaaS Subscriptions' },
@@ -141,7 +141,7 @@ export default function Dashboard({
   });
 
   const [hsnCodes, setHsnCodes] = useState<MasterHsnCode[]>(() => {
-    const cached = localStorage.getItem('makinvoice_masters_hsn');
+    const cached = localStorage.getItem('makbills_masters_hsn');
     if (cached) return JSON.parse(cached);
     return [
       { id: 'h_1', code: '998311', description: 'Technical & Software Consulting services (SAC)', gstRate: 18 },
@@ -152,7 +152,7 @@ export default function Dashboard({
   });
 
   const [glAccounts, setGlAccounts] = useState<MasterGlAccount[]>(() => {
-    const cached = localStorage.getItem('makinvoice_masters_gl');
+    const cached = localStorage.getItem('makbills_masters_gl');
     if (cached) return JSON.parse(cached);
     return [
       { id: 'gl_1', code: 'GL-100', name: 'Professional Advisory Revenue', type: 'Revenue' },
@@ -164,7 +164,7 @@ export default function Dashboard({
 
   // Catalog Master database seed
   const [materials, setMaterials] = useState<MasterMaterial[]>(() => {
-    const cached = localStorage.getItem('makinvoice_masters_materials');
+    const cached = localStorage.getItem('makbills_masters_materials');
     if (cached) return JSON.parse(cached);
     return [
       { id: 'm_1', name: 'Premium Software Architecture Review', rate: 120000, hsn: '998311', uom: 'PCS', category: 'Technical Consultancy' },
@@ -174,7 +174,7 @@ export default function Dashboard({
   });
 
   const [categories, setCategories] = useState<MasterCategory[]>(() => {
-    const cached = localStorage.getItem('makinvoice_masters_categories');
+    const cached = localStorage.getItem('makbills_masters_categories');
     if (cached) return JSON.parse(cached);
     return [
       { id: 'cat_1', name: 'Technical Consultancy', description: 'Architectural, DevOps, review sessions' },
@@ -184,7 +184,7 @@ export default function Dashboard({
   });
 
   const [subCategories, setSubCategories] = useState<MasterSubCategory[]>(() => {
-    const cached = localStorage.getItem('makinvoice_masters_subcategories');
+    const cached = localStorage.getItem('makbills_masters_subcategories');
     if (cached) return JSON.parse(cached);
     return [
       { id: 'scat_1', category: 'Technical Consultancy', name: 'Cloud Infrastructure Auditing' },
@@ -194,7 +194,7 @@ export default function Dashboard({
   });
 
   const [mappings, setMappings] = useState<MasterMapping[]>(() => {
-    const cached = localStorage.getItem('makinvoice_masters_mappings');
+    const cached = localStorage.getItem('makbills_masters_mappings');
     if (cached) return JSON.parse(cached);
     return [
       { id: 'map_1', item: 'Premium Software Architecture Review', glAccount: 'Professional Advisory Revenue', taxRate: 18 },
@@ -203,7 +203,7 @@ export default function Dashboard({
   });
 
   const [packingUnits, setPackingUnits] = useState<MasterPackingUnit[]>(() => {
-    const cached = localStorage.getItem('makinvoice_masters_packing');
+    const cached = localStorage.getItem('makbills_masters_packing');
     if (cached) return JSON.parse(cached);
     return [
       { id: 'p_1', name: 'PCS (Single items pack)' },
@@ -213,7 +213,7 @@ export default function Dashboard({
   });
 
   const [measurementUnits, setMeasurementUnits] = useState<MasterMeasurementUnit[]>(() => {
-    const cached = localStorage.getItem('makinvoice_masters_measurement');
+    const cached = localStorage.getItem('makbills_masters_measurement');
     if (cached) return JSON.parse(cached);
     return [
       { id: 'mu_1', code: 'PCS', name: 'Pieces' },
@@ -254,7 +254,7 @@ export default function Dashboard({
 
     if (changed) {
       setMaterials(updatedMaterials);
-      localStorage.setItem('makinvoice_masters_materials', JSON.stringify(updatedMaterials));
+      localStorage.setItem('makbills_masters_materials', JSON.stringify(updatedMaterials));
     }
   }, [invoices, materials]);
 
@@ -267,47 +267,47 @@ export default function Dashboard({
     switch (activeTab) {
       case 'master_vendor':
         list = vendors;
-        key = 'makinvoice_masters_vendors';
+        key = 'makbills_masters_vendors';
         setter = setVendors;
         break;
       case 'master_hsn':
         list = hsnCodes;
-        key = 'makinvoice_masters_hsn';
+        key = 'makbills_masters_hsn';
         setter = setHsnCodes;
         break;
       case 'master_gl':
         list = glAccounts;
-        key = 'makinvoice_masters_gl';
+        key = 'makbills_masters_gl';
         setter = setGlAccounts;
         break;
       case 'catalog_material':
         list = materials;
-        key = 'makinvoice_masters_materials';
+        key = 'makbills_masters_materials';
         setter = setMaterials;
         break;
       case 'catalog_category':
         list = categories;
-        key = 'makinvoice_masters_categories';
+        key = 'makbills_masters_categories';
         setter = setCategories;
         break;
       case 'catalog_sub_category':
         list = subCategories;
-        key = 'makinvoice_masters_subcategories';
+        key = 'makbills_masters_subcategories';
         setter = setSubCategories;
         break;
       case 'catalog_mapping':
         list = mappings;
-        key = 'makinvoice_masters_mappings';
+        key = 'makbills_masters_mappings';
         setter = setMappings;
         break;
       case 'catalog_packing_unit':
         list = packingUnits;
-        key = 'makinvoice_masters_packing';
+        key = 'makbills_masters_packing';
         setter = setPackingUnits;
         break;
       case 'catalog_measurement_unit':
         list = measurementUnits;
-        key = 'makinvoice_masters_measurement';
+        key = 'makbills_masters_measurement';
         setter = setMeasurementUnits;
         break;
     }
@@ -334,47 +334,47 @@ export default function Dashboard({
     switch (activeTab) {
       case 'master_vendor':
         list = vendors;
-        key = 'makinvoice_masters_vendors';
+        key = 'makbills_masters_vendors';
         setter = setVendors;
         break;
       case 'master_hsn':
         list = hsnCodes;
-        key = 'makinvoice_masters_hsn';
+        key = 'makbills_masters_hsn';
         setter = setHsnCodes;
         break;
       case 'master_gl':
         list = glAccounts;
-        key = 'makinvoice_masters_gl';
+        key = 'makbills_masters_gl';
         setter = setGlAccounts;
         break;
       case 'catalog_material':
         list = materials;
-        key = 'makinvoice_masters_materials';
+        key = 'makbills_masters_materials';
         setter = setMaterials;
         break;
       case 'catalog_category':
         list = categories;
-        key = 'makinvoice_masters_categories';
+        key = 'makbills_masters_categories';
         setter = setCategories;
         break;
       case 'catalog_sub_category':
         list = subCategories;
-        key = 'makinvoice_masters_subcategories';
+        key = 'makbills_masters_subcategories';
         setter = setSubCategories;
         break;
       case 'catalog_mapping':
         list = mappings;
-        key = 'makinvoice_masters_mappings';
+        key = 'makbills_masters_mappings';
         setter = setMappings;
         break;
       case 'catalog_packing_unit':
         list = packingUnits;
-        key = 'makinvoice_masters_packing';
+        key = 'makbills_masters_packing';
         setter = setPackingUnits;
         break;
       case 'catalog_measurement_unit':
         list = measurementUnits;
-        key = 'makinvoice_masters_measurement';
+        key = 'makbills_masters_measurement';
         setter = setMeasurementUnits;
         break;
     }
@@ -435,7 +435,7 @@ export default function Dashboard({
             }`}
           >
             <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
-            <span>Learn MakInvoice</span>
+            <span>Learn MakBills</span>
           </button>
 
           <button
@@ -1238,7 +1238,7 @@ export default function Dashboard({
     const link = document.createElement("a");
     link.style.display = 'none';
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `MakInvoice_Ledger_Spreadsheet_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `MakBills_Ledger_Spreadsheet_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1489,7 +1489,7 @@ export default function Dashboard({
       <!-- Footer / Guidelines -->
       <div class="footer-note">
         <strong>Terms & Conditions Guidance:</strong> ${inv.invoiceTerms || 'Billing services subject to prompt bank transfer. Settle within designated period. Thank you for choosing Acme Services!'}<br/>
-        <span style="font-size: 9px; display: block; margin-top: 8px; color: #94a3b8;">This is a premium-formatted Microsoft Word billing document generated from MakInvoice.</span>
+        <span style="font-size: 9px; display: block; margin-top: 8px; color: #94a3b8;">This is a premium-formatted Microsoft Word billing document generated from MakBills.</span>
       </div>
 
       </body></html>
@@ -2599,7 +2599,7 @@ export default function Dashboard({
                 </div>
                 <div>
                   <h2 className="text-sm font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-tight">
-                    Welcome to {profile.name || 'MakInvoice Workspace'}
+                    Welcome to {profile.name || 'MakBills Workspace'}
                   </h2>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5 font-medium">Real-time financials, pre-coded GST collections, and catalog registries.</span>
                 </div>
@@ -2917,8 +2917,8 @@ export default function Dashboard({
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-100/50 dark:bg-slate-950/80 no-scrollbar">
               {(() => {
                 const resolvedTemplate = (() => {
-                  const templateId = activePreviewInvoice.selectedCustomTemplateId || localStorage.getItem('makinvoice_global_default_template');
-                  const savedCustom = localStorage.getItem('makinvoice_custom_templates');
+                  const templateId = activePreviewInvoice.selectedCustomTemplateId || localStorage.getItem('makbills_global_default_template');
+                  const savedCustom = localStorage.getItem('makbills_custom_templates');
                   if (savedCustom) {
                     try {
                       const parsed = JSON.parse(savedCustom);

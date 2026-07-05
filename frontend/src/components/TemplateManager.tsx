@@ -10,7 +10,7 @@ import { TEMPLATE_PRESETS } from '../lib/templatePresets';
 export default function TemplateManager() {
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('makinvoice_custom_templates');
+      const saved = localStorage.getItem('makbills_custom_templates');
       if (saved) {
         try {
           return JSON.parse(saved);
@@ -24,10 +24,10 @@ export default function TemplateManager() {
   
   const [globalDefaultId, setGlobalDefaultId] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      const savedGlobalDefault = localStorage.getItem('makinvoice_global_default_template');
+      const savedGlobalDefault = localStorage.getItem('makbills_global_default_template');
       if (savedGlobalDefault) return savedGlobalDefault;
       
-      const saved = localStorage.getItem('makinvoice_custom_templates');
+      const saved = localStorage.getItem('makbills_custom_templates');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -50,8 +50,23 @@ export default function TemplateManager() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Only needed if you want to sync state changes back or listen to events
-  }, []);
+    const allTemplates = [...templates, ...TEMPLATE_PRESETS];
+    if (!allTemplates.some(t => t.id === globalDefaultId)) {
+      let newDefaultId = 'preset_modal_classic';
+      if (templates.length > 0) {
+        newDefaultId = templates[templates.length - 1].id;
+        
+        const updated = templates.map(t => ({
+          ...t,
+          isDefault: t.id === newDefaultId
+        }));
+        setTemplates(updated);
+        localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
+      }
+      setGlobalDefaultId(newDefaultId);
+      localStorage.setItem('makbills_global_default_template', newDefaultId);
+    }
+  }, [templates, globalDefaultId]);
 
   const handleSaveTemplate = (template: InvoiceTemplate) => {
     const exists = templates.some(t => t.id === template.id);
@@ -60,7 +75,7 @@ export default function TemplateManager() {
     const finalTemplate = { ...template, updatedAt: Date.now() };
     if (finalTemplate.isDefault) {
       setGlobalDefaultId(finalTemplate.id);
-      localStorage.setItem('makinvoice_global_default_template', finalTemplate.id);
+      localStorage.setItem('makbills_global_default_template', finalTemplate.id);
       updated = templates.map(t => ({ ...t, isDefault: false }));
     }
 
@@ -71,7 +86,7 @@ export default function TemplateManager() {
     }
     
     setTemplates(updated);
-    localStorage.setItem('makinvoice_custom_templates', JSON.stringify(updated));
+    localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
     setIsBuilding(false);
     setEditingTemplate(null);
   };
@@ -79,21 +94,41 @@ export default function TemplateManager() {
   const handleDelete = (id: string) => {
     if (window.confirm('Are you sure you want to delete this custom template?')) {
       const updated = templates.filter(t => t.id !== id);
-      setTemplates(updated);
-      localStorage.setItem('makinvoice_custom_templates', JSON.stringify(updated));
+      
+      if (id === globalDefaultId) {
+        let newDefaultId = 'preset_modal_classic';
+        if (updated.length > 0) {
+          const newDefault = updated[updated.length - 1];
+          newDefaultId = newDefault.id;
+          const markedUpdated = updated.map(t => ({
+            ...t,
+            isDefault: t.id === newDefaultId
+          }));
+          setTemplates(markedUpdated);
+          localStorage.setItem('makbills_custom_templates', JSON.stringify(markedUpdated));
+        } else {
+          setTemplates(updated);
+          localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
+        }
+        setGlobalDefaultId(newDefaultId);
+        localStorage.setItem('makbills_global_default_template', newDefaultId);
+      } else {
+        setTemplates(updated);
+        localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
+      }
     }
   };
 
   const handleSetDefault = (id: string) => {
     setGlobalDefaultId(id);
-    localStorage.setItem('makinvoice_global_default_template', id);
+    localStorage.setItem('makbills_global_default_template', id);
 
     const updated = templates.map(t => ({
       ...t,
       isDefault: t.id === id
     }));
     setTemplates(updated);
-    localStorage.setItem('makinvoice_custom_templates', JSON.stringify(updated));
+    localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
   };
   
   const handleDuplicate = (template: InvoiceTemplate) => {
@@ -106,7 +141,7 @@ export default function TemplateManager() {
     };
     const updated = [dupe, ...templates];
     setTemplates(updated);
-    localStorage.setItem('makinvoice_custom_templates', JSON.stringify(updated));
+    localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
   };
   
   const handleExportPDF = async (template: InvoiceTemplate) => {
@@ -173,7 +208,7 @@ export default function TemplateManager() {
            json.updatedAt = Date.now();
            const updated = [json, ...templates];
            setTemplates(updated);
-           localStorage.setItem('makinvoice_custom_templates', JSON.stringify(updated));
+           localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
         } else {
           alert('Invalid template format');
         }

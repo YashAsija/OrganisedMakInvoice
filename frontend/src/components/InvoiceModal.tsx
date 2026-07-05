@@ -117,10 +117,10 @@ export default function InvoiceModal({
 
   // Geographic location states for taxes
   const [companyState, setCompanyState] = useState(() => {
-    return profile.state || localStorage.getItem('makinvoice_tax_company_state') || 'Maharashtra';
+    return profile.state || localStorage.getItem('makbills_tax_company_state') || 'Maharashtra';
   });
   const [companyCountry, setCompanyCountry] = useState(() => {
-    return profile.country || localStorage.getItem('makinvoice_tax_company_country') || 'India';
+    return profile.country || localStorage.getItem('makbills_tax_company_country') || 'India';
   });
   const [clientState, setClientState] = useState('');
   const [clientCountry, setClientCountry] = useState('India');
@@ -153,7 +153,7 @@ export default function InvoiceModal({
   const loadDefaultTemplate = useCallback(() => {
     // If editing an existing invoice, use its explicitly selected template
     if (invoice?.selectedCustomTemplateId) {
-      const savedCustom = localStorage.getItem('makinvoice_custom_templates');
+      const savedCustom = localStorage.getItem('makbills_custom_templates');
       if (savedCustom) {
         try {
           const parsed = JSON.parse(savedCustom);
@@ -171,12 +171,12 @@ export default function InvoiceModal({
       }
     }
 
-    const defaultTemplateId = localStorage.getItem('makinvoice_global_default_template');
+    const defaultTemplateId = localStorage.getItem('makbills_global_default_template');
     let loadedTemplate = TEMPLATE_PRESETS[0];
 
     if (defaultTemplateId) {
       let foundCustom = false;
-      const savedCustom = localStorage.getItem('makinvoice_custom_templates');
+      const savedCustom = localStorage.getItem('makbills_custom_templates');
       if (savedCustom) {
         try {
           const parsed = JSON.parse(savedCustom);
@@ -192,7 +192,7 @@ export default function InvoiceModal({
         if (systemMatch) loadedTemplate = systemMatch;
       }
     } else {
-      const savedCustom = localStorage.getItem('makinvoice_custom_templates');
+      const savedCustom = localStorage.getItem('makbills_custom_templates');
       if (savedCustom) {
         try {
           const parsed = JSON.parse(savedCustom);
@@ -214,7 +214,7 @@ export default function InvoiceModal({
   // Listen for template changes made in TemplateManager while modal is open
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'makinvoice_global_default_template' || e.key === 'makinvoice_custom_templates') {
+      if (e.key === 'makbills_global_default_template' || e.key === 'makbills_custom_templates') {
         loadDefaultTemplate();
       }
     };
@@ -275,8 +275,8 @@ export default function InvoiceModal({
       }
 
       // Geographic/tax options loader
-      setCompanyState(invoice.companyState || profile.state || localStorage.getItem('makinvoice_tax_company_state') || 'Maharashtra');
-      setCompanyCountry(invoice.companyCountry || profile.country || localStorage.getItem('makinvoice_tax_company_country') || 'India');
+      setCompanyState(invoice.companyState || profile.state || localStorage.getItem('makbills_tax_company_state') || 'Maharashtra');
+      setCompanyCountry(invoice.companyCountry || profile.country || localStorage.getItem('makbills_tax_company_country') || 'India');
       setClientState(invoice.clientState || '');
       setClientCountry(invoice.clientCountry || 'India');
       setTaxMode(invoice.taxMode || 'dynamic');
@@ -357,8 +357,8 @@ export default function InvoiceModal({
       // Set locations defaults
       setClientState('');
       setClientCountry('India');
-      setCompanyState(profile.state || localStorage.getItem('makinvoice_tax_company_state') || 'Maharashtra');
-      setCompanyCountry(profile.country || localStorage.getItem('makinvoice_tax_company_country') || 'India');
+      setCompanyState(profile.state || localStorage.getItem('makbills_tax_company_state') || 'Maharashtra');
+      setCompanyCountry(profile.country || localStorage.getItem('makbills_tax_company_country') || 'India');
       setTaxMode('dynamic');
       setCustomTaxName('Custom VAT');
       setCustomTaxPercentage(0);
@@ -609,8 +609,8 @@ export default function InvoiceModal({
 
   // Save company config state to localstorage
   useEffect(() => {
-    localStorage.setItem('makinvoice_tax_company_state', companyState);
-    localStorage.setItem('makinvoice_tax_company_country', companyCountry);
+    localStorage.setItem('makbills_tax_company_state', companyState);
+    localStorage.setItem('makbills_tax_company_country', companyCountry);
   }, [companyState, companyCountry]);
 
   // --- FINANCIAL CALCULATOR ENGINE ---
@@ -667,7 +667,8 @@ export default function InvoiceModal({
 
   const buildTempInvoice = (silent = false): Invoice | null => {
     if (!silent) {
-      if (invoiceType !== 'estimate' && !clientName.trim()) {
+      const isClientDetailsRequired = (activeTemplate.sections.billTo?.visible !== false) || (activeTemplate.sections.shipTo?.visible === true);
+      if (invoiceType !== 'estimate' && isClientDetailsRequired && !clientName.trim()) {
         alert('Client Name is required to export PDF.');
         return null;
       }
@@ -691,7 +692,14 @@ export default function InvoiceModal({
       qrCodeTriggerUrl: qrCodeTriggerUrl.trim() || undefined,
       date,
       dueDate,
-      clientName: invoiceType === 'estimate' ? (clientName.trim() || 'Quote / Estimate') : clientName.trim(),
+      clientName: invoiceType === 'estimate' 
+        ? (clientName.trim() || 'Quote / Estimate') 
+        : (clientName.trim() || (() => {
+            const now = new Date();
+            const formattedDate = now.toISOString().replace(/T/, ' ').replace(/\..+/, '');
+            const guestId = `Guest-${Math.floor(1000 + Math.random() * 9000)}`;
+            return `${guestId} (${formattedDate})`;
+          })()),
       clientEmail: invoiceType === 'estimate' ? '' : clientEmail.trim(),
       clientPhone: invoiceType === 'estimate' ? '' : clientPhone.trim(),
       clientAddress: invoiceType === 'estimate' ? '' : clientAddress.trim(),
@@ -826,7 +834,8 @@ export default function InvoiceModal({
   const handleSaveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (invoiceType !== 'estimate' && !clientName.trim()) {
+    const isClientDetailsRequired = (activeTemplate.sections.billTo?.visible !== false) || (activeTemplate.sections.shipTo?.visible === true);
+    if (invoiceType !== 'estimate' && isClientDetailsRequired && !clientName.trim()) {
       alert('Client Name is required.');
       return;
     }
@@ -848,7 +857,14 @@ export default function InvoiceModal({
       qrCodeTriggerUrl: qrCodeTriggerUrl.trim() || undefined,
       date,
       dueDate,
-      clientName: invoiceType === 'estimate' ? (clientName.trim() || 'Quote / Estimate') : clientName.trim(),
+      clientName: invoiceType === 'estimate' 
+        ? (clientName.trim() || 'Quote / Estimate') 
+        : (clientName.trim() || (() => {
+            const now = new Date();
+            const formattedDate = now.toISOString().replace(/T/, ' ').replace(/\..+/, '');
+            const guestId = `Guest-${Math.floor(1000 + Math.random() * 9000)}`;
+            return `${guestId} (${formattedDate})`;
+          })()),
       clientEmail: invoiceType === 'estimate' ? '' : clientEmail.trim(),
       clientPhone: invoiceType === 'estimate' ? '' : clientPhone.trim(),
       clientAddress: invoiceType === 'estimate' ? '' : clientAddress.trim(),
