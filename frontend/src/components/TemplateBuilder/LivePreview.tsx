@@ -750,7 +750,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                           <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Mobile No:</span><span className="text-gray-900 font-bold">{renderInteractive(shipPhone, 'shippedToPhone', 'text', 'Phone')}</span></div>
                       )}
                       {config.shipping.fields.includes('email') && (
-                        isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Email ID</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipEmail, 'shippedToEmail', 'text', 'Email')}</span></div> :
+                        isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Email</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipEmail, 'shippedToEmail', 'text', 'Email')}</span></div> :
                           <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Email:</span><span className="text-gray-900 font-bold">{renderInteractive(shipEmail, 'shippedToEmail', 'text', 'Email')}</span></div>
                       )}
                       {config.shipping.fields.includes('pan') && (

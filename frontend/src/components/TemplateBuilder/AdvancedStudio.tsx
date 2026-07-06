@@ -97,7 +97,6 @@ const STEPS = [
   { id: 'table', title: 'Product Table', icon: Layout },
   { id: 'tax', title: 'Tax Engine', icon: Settings },
   { id: 'payment', title: 'Payment', icon: Settings },
-  { id: 'amountInWords', title: 'Amount in Words', icon: Type },
   { id: 'terms', title: 'Terms', icon: FileText },
   { id: 'signature', title: 'Signature', icon: Settings },
   { id: 'footer', title: 'Footer', icon: Layout },
