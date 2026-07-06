@@ -268,19 +268,23 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     .filter(s => s.visible)
     .sort((a, b) => a.order - b.order);
 
+  const gridSections = orderedSections.filter(
+    s => !((layout.type === 'Modal Classic' || isPrintMode) && ['terms', 'signature', 'footer'].includes(s.id))
+  );
+
   // Pre-calculate rows and columns for each visible section to handle side-by-side alignment in CSS Grid
   const sectionLayouts: Record<string, { row: number; colStart: number; span: number }> = {};
   const dynamicSpans: Record<string, number> = {};
   let currentRow = 0;
   let currentCol = 0;
 
-  for (let i = 0; i < orderedSections.length; i++) {
-    const secId = orderedSections[i].id;
+  for (let i = 0; i < gridSections.length; i++) {
+    const secId = gridSections[i].id;
     let currentSpan = sections[secId as keyof typeof sections].gridColumnSpan;
 
     // For Modal Classic: billTo, shipTo, transport adjust automatically. First two span 6, third spans 12.
     if (layout.type === 'Modal Classic' && ['billTo', 'shipTo', 'transport'].includes(secId)) {
-      const visibleAmigos = orderedSections.filter(s => ['billTo', 'shipTo', 'transport'].includes(s.id));
+      const visibleAmigos = gridSections.filter(s => ['billTo', 'shipTo', 'transport'].includes(s.id));
       const index = visibleAmigos.findIndex(a => a.id === secId);
       currentSpan = (index === 2) ? 12 : 6;
     } else if (layout.type === 'Modal Classic' && ['terms', 'signature'].includes(secId)) {
@@ -315,7 +319,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     const layoutInfo = sectionLayouts[sectionId];
     if (!layoutInfo) return 'left';
 
-    const sameRowFooters = orderedSections
+    const sameRowFooters = gridSections
       .filter(s => ['terms', 'signature', 'payment'].includes(s.id) && sectionLayouts[s.id]?.row === layoutInfo.row)
       .sort((a, b) => (sectionLayouts[a.id]?.colStart ?? 0) - (sectionLayouts[b.id]?.colStart ?? 0));
 
