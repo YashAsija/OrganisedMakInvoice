@@ -48,6 +48,7 @@ export default function Homepage({
 }: HomepageProps) {
   // Tabs for Auth: 'login' or 'signup'
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   // 3 sign-in methods: 'email' | 'phone_otp' | 'google'
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone_otp' | 'google'>('email');
   const [formData, setFormData] = useState({
@@ -454,17 +455,16 @@ export default function Homepage({
                 </>
               )}
             </div>
-
             <button
               type="button"
-              onClick={() => handleNavScroll('auth-section', 'login')}
-              className="px-3.5 py-2 text-slate-700 dark:text-slate-200 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-normal cursor-pointer transition-all rounded-xl hover:bg-slate-100/70 dark:hover:bg-neutral-900"
+              onClick={() => { setAuthMode('login'); setIsAuthModalOpen(true); }}
+              className="px-3.5 py-2 text-slate-700 dark:text-slate-200 hover:text-sky-505 dark:hover:text-sky-400 font-extrabold text-xs tracking-normal cursor-pointer transition-all rounded-xl hover:bg-slate-100/70 dark:hover:bg-neutral-900"
             >
               Sign In
             </button>
             <button
               type="button"
-              onClick={() => handleNavScroll('auth-section', 'signup')}
+              onClick={() => { setAuthMode('signup'); setIsAuthModalOpen(true); }}
               className="px-4 py-2 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-extrabold text-xs tracking-normal rounded-xl shadow-lg shadow-sky-500/10 cursor-pointer transition-all"
             >
               Get Started
@@ -575,14 +575,14 @@ export default function Homepage({
               <div className="mt-auto space-y-3">
                 <button
                   type="button"
-                  onClick={() => { handleNavScroll('auth-section', 'login'); setIsMobileNavOpen(false); }}
+                  onClick={() => { setAuthMode('login'); setIsAuthModalOpen(true); setIsMobileNavOpen(false); }}
                   className="w-full py-3 text-slate-700 dark:text-slate-200 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all rounded-xl bg-slate-100/50 hover:bg-slate-100/70 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-slate-200/40 dark:border-neutral-800/60 text-center"
                 >
                   Sign In to Account
                 </button>
                 <button
                   type="button"
-                  onClick={() => { handleNavScroll('auth-section', 'signup'); setIsMobileNavOpen(false); }}
+                  onClick={() => { setAuthMode('signup'); setIsAuthModalOpen(true); setIsMobileNavOpen(false); }}
                   className="w-full py-3 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-extrabold text-xs tracking-wide rounded-xl shadow-lg shadow-sky-500/20 cursor-pointer transition-all text-center"
                 >
                   Create New Workspace
@@ -621,6 +621,24 @@ export default function Homepage({
               Generate high-performance estimates, automate repeating client invoice cycles, 
               drawn signatures, visual financial analytics, and download professional PDFs instantly.
             </p>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => { setAuthMode('signup'); setIsAuthModalOpen(true); }}
+                className="px-6 py-3 bg-sky-600 hover:bg-sky-505 active:scale-95 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-sky-650/20 hover:shadow-sky-500/35 transition-all transform hover:-translate-y-0.5 cursor-pointer flex items-center gap-2"
+              >
+                <span>Get Started for Free</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAuthMode('login'); setIsAuthModalOpen(true); }}
+                className="px-6 py-3 bg-slate-100 hover:bg-slate-205 dark:bg-neutral-800 dark:hover:bg-neutral-700/90 active:scale-95 text-slate-700 dark:text-neutral-200 font-extrabold text-sm rounded-xl border border-slate-200/50 dark:border-neutral-700/40 transition-all transform hover:-translate-y-0.5 cursor-pointer"
+              >
+                Log In
+              </button>
+            </div>
 
             {/* Feature Cards Grid (Compact & Informative) */}
             <div id="features-section" className="grid sm:grid-cols-2 gap-4 pt-6">
@@ -1111,23 +1129,35 @@ export default function Homepage({
           </div>
         </div>
 
-        {/* 2. Interactive Secure Portal Activation Section */}
-        <div id="auth-section" className="mt-10 sm:mt-12 max-w-lg md:max-w-5xl lg:max-w-6xl mx-auto relative z-10 animate-fade-in scroll-mt-24">
-          
-          <div className="text-center space-y-2 mb-8">
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-805 tracking-tight uppercase">
-              Secure Ledger Access Panel
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-405">
-              Launch live synchronization or generate local offline sandbox credentials instantly.
-            </p>
-          </div>
+        {/* 2. Interactive Secure Portal Activation Section (Rendered as Modal) */}
+        {isAuthModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/75 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+            <div className="relative w-full max-w-lg md:max-w-5xl lg:max-w-6xl max-h-[90vh] overflow-y-auto rounded-3xl animate-in zoom-in-95 duration-205 shadow-2xl">
+              
+              {/* Close button */}
+              <button 
+                type="button"
+                onClick={() => setIsAuthModalOpen(false)}
+                className="absolute top-4 right-4 z-50 p-2 rounded-full bg-slate-100 hover:bg-slate-205 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-500 dark:text-neutral-404 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-slate-200/20 dark:border-neutral-700/30"
+              >
+                <X className="w-5 h-5" />
+              </button>
 
-          <div className={`w-full rounded-3xl border transition-all relative overflow-hidden ${
-            theme === 'dark' 
-              ? 'bg-neutral-900/90 border-neutral-800 shadow-2xl shadow-sky-500/5' 
-              : 'bg-white border-slate-150 shadow-xl'
-          }`}>
+              <div className={`w-full rounded-3xl border transition-all relative overflow-hidden ${
+                theme === 'dark' 
+                  ? 'bg-neutral-900/90 border-neutral-800 shadow-2xl shadow-sky-500/5' 
+                  : 'bg-white border-slate-150 shadow-xl'
+              }`}>
+                
+                {/* Title & Description inside modal */}
+                <div className="text-center pt-8 pb-2 space-y-1">
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-805 tracking-tight uppercase">
+                    Secure Ledger Access Panel
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-405">
+                    Launch live synchronization or generate local offline sandbox credentials instantly.
+                  </p>
+                </div>
             <div className="grid grid-cols-1 md:grid-cols-12">
               
               {/* Left Column: Sign-in Tabs & Methods */}
@@ -1506,7 +1536,9 @@ export default function Homepage({
 
             </div>
           </div>
-        </div>
+      </div>
+    </div>
+  )}
 
         {/* Premium Accordion-Style Help & FAQ Section */}
         <div id="faq-section" className="mt-10 sm:mt-12 max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300 scroll-mt-24">
