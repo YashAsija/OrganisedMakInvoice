@@ -69,7 +69,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
   const taxTotal = invoiceData?.taxTotal || 0;
   const grandTotal = invoiceData?.grandTotal || 0;
   
-  const rowStyle = "flex items-center text-[11px] mb-1.5";
+  const rowStyle = "flex items-center text-[11px] mb-0.5";
   const labelStyle = "w-28 font-medium text-gray-700";
   const valStyle = "flex-1 text-gray-900";
 
@@ -77,7 +77,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
     <div style={baseStyle} className="invoice-live-preview">
       {/* Header and Company */}
       {(sections.header?.visible !== false || sections.companyInfo?.visible !== false) && (
-        <div className="flex justify-between items-start mb-6">
+        <div className="flex justify-between items-start mb-3">
           <div style={{ textAlign: config.header.logoPosition === 'Center' ? 'center' : 'left', width: config.header.logoPosition === 'Center' ? '100%' : 'auto' }}>
             {sections.header?.visible !== false && config.header.showLogo && businessProfile?.logoUrl && (
               <div style={{
@@ -138,7 +138,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
 
       {/* Parties */}
       {(sections.billTo?.visible !== false || sections.shipTo?.visible !== false) && (
-        <div className="flex border border-gray-300 mb-6">
+        <div className="flex border border-gray-300 mb-3">
           <div className="w-1/2 border-r border-gray-300 p-2.5">
             {sections.billTo?.visible !== false && (
               <>
@@ -180,7 +180,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
 
       {/* Table */}
       {sections.productTable?.visible !== false && (
-        <table className="w-full mb-6 text-left border-collapse border border-gray-300">
+        <table className="w-full mb-3 text-left border-collapse border border-gray-300">
           <thead>
             <tr className="text-white text-[10px] uppercase tracking-wide" style={{ backgroundColor: styleConfig.tableHeaderBackground, color: styleConfig.tableHeaderTextColor }}>
               <th className="py-2.5 px-3 border border-gray-300 w-10 text-center">SL</th>

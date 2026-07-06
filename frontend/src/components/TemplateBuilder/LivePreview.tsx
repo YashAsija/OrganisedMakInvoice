@@ -347,7 +347,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
       }
     }
 
-    const baseMarginBottom = styleConfig.spacing === 'Compact' ? '10px' : styleConfig.spacing === 'Spacious' ? '30px' : '20px';
+    const baseMarginBottom = styleConfig.spacing === 'Compact' ? '6px' : styleConfig.spacing === 'Spacious' ? '16px' : '10px';
     // taxEngine and payment sit directly below productTable — no top gap
     const marginTop = (sectionId === 'taxEngine' || sectionId === 'payment') ? '0px' : undefined;
     // productTable has no bottom margin so taxEngine/payment hug it
