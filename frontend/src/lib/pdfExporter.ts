@@ -318,7 +318,7 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
     const items = tempInvoice.items || [];
     const N = items.length;
     const chunks: any[][] = [];
-    const availablePageHeight = pageHeight - footerHeight - 130; // 130px safety buffer to prevent footer clipping
+    const availablePageHeight = pageHeight - footerHeight - 190; // 190px safety buffer to prevent footer clipping
     const page1Budget = availablePageHeight - tableTop - tableHeaderHeight;
     const subsequentPageBudget = availablePageHeight - 50 - tableHeaderHeight;
 
