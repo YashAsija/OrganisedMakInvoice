@@ -622,21 +622,14 @@ export default function Homepage({
               drawn signatures, visual financial analytics, and download professional PDFs instantly.
             </p>
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="pt-3">
               <button
                 type="button"
                 onClick={() => { setAuthMode('signup'); setIsAuthModalOpen(true); }}
-                className="px-6 py-3 bg-sky-600 hover:bg-sky-505 active:scale-95 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-sky-650/20 hover:shadow-sky-500/35 transition-all transform hover:-translate-y-0.5 cursor-pointer flex items-center gap-2"
+                className="group px-8 py-4 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 active:scale-95 text-white font-extrabold text-base rounded-2xl shadow-xl shadow-sky-500/20 hover:shadow-sky-500/35 transition-all duration-300 transform hover:-translate-y-1 cursor-pointer flex items-center gap-3 w-full sm:w-auto justify-center"
               >
                 <span>Get Started for Free</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => { setAuthMode('login'); setIsAuthModalOpen(true); }}
-                className="px-6 py-3 bg-slate-100 hover:bg-slate-205 dark:bg-neutral-800 dark:hover:bg-neutral-700/90 active:scale-95 text-slate-700 dark:text-neutral-200 font-extrabold text-sm rounded-xl border border-slate-200/50 dark:border-neutral-700/40 transition-all transform hover:-translate-y-0.5 cursor-pointer"
-              >
-                Log In
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform duration-300 ease-out" />
               </button>
             </div>
 
