@@ -212,74 +212,93 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
   };
 
   return (
-    <div className={`min-h-screen w-full flex flex-col md:flex-row transition-colors duration-250 ${
-      theme === 'dark' ? 'bg-neutral-950 text-neutral-100' : 'bg-slate-50 text-slate-800'
+    <div className={`min-h-screen w-full flex flex-col md:flex-row transition-colors duration-305 ${
+      theme === 'dark' ? 'bg-neutral-950 text-neutral-100' : 'bg-slate-50 text-slate-805'
     }`}>
       
-      {/* Left side: Hero/Marketing Panel */}
-      <div className="hidden md:flex md:w-1/2 bg-gradient-to-tr from-neutral-900 to-slate-950 p-12 text-white flex-col justify-between relative overflow-hidden">
-        {/* Glow Effects */}
-        <div className="absolute top-[-20%] left-[-20%] w-96 h-96 bg-sky-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-[-20%] right-[-20%] w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+      {/* Left side: Premium Grid Marketing Panel */}
+      <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-neutral-950 via-slate-900 to-indigo-950 p-12 text-white flex-col justify-between relative overflow-hidden border-r border-slate-200/10">
+        {/* Glowing Ambient Mesh Points */}
+        <div className="absolute top-[-20%] left-[-20%] w-[500px] h-[500px] bg-sky-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-20%] w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+        
+        {/* Subtle Tech Grid overlay */}
+        <div 
+          className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
+            backgroundSize: '24px 24px'
+          }}
+        />
 
         {/* Logo Brand */}
-        <div className="flex items-center gap-2 cursor-pointer z-10" onClick={() => window.location.href = '/'}>
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white font-black text-base shadow-md">
+        <div className="flex items-center gap-2.5 cursor-pointer z-10 hover:scale-102 transition-transform" onClick={() => window.location.href = '/'}>
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-600 to-indigo-650 flex items-center justify-center text-white font-black text-lg shadow-md shadow-sky-500/20">
             MI
           </div>
           <div>
-            <span className="text-sm font-black tracking-tight text-white block">
-              Mak<span className="text-sky-405">Invoices</span>
+            <span className="text-base font-black tracking-tight text-white block">
+              Mak<span className="text-sky-400">Invoices</span>
             </span>
-            <span className="text-[8px] font-bold text-slate-400 block -mt-1 tracking-wider uppercase">Ledger Hub</span>
+            <span className="text-[9px] font-bold text-slate-400 block -mt-1.5 tracking-widest uppercase">Ledger Hub</span>
           </div>
         </div>
 
         {/* Key Features Pitch */}
         <div className="space-y-6 max-w-md z-10 my-auto">
-          <h1 className="text-4xl font-black tracking-tight leading-tight uppercase">
+          <span className="px-3 py-1 bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-full text-[10px] font-black uppercase tracking-widest">
+            PRO ACCOUNT ENROLLMENT
+          </span>
+          <h1 className="text-4xl lg:text-5xl font-black tracking-tight leading-tight uppercase">
             The Intelligent <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">Billing & Estimate</span> <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-sky-305 to-indigo-400">Billing & Estimate</span> <br />
             Platform.
           </h1>
-          <p className="text-slate-400 text-sm leading-relaxed">
+          <p className="text-slate-400 text-sm leading-relaxed font-medium">
             Join thousands of creators automating their billing cycles. Generate beautiful signatures, visual analytics, and export premium invoice documents instantly.
           </p>
 
-          <div className="space-y-4 pt-4 border-t border-slate-800">
-            <div className="flex items-start gap-3">
-              <ShieldCheck className="w-5 h-5 text-sky-400 shrink-0" />
+          <div className="space-y-4 pt-6 border-t border-slate-800/80">
+            <div className="flex items-start gap-3.5">
+              <div className="w-8 h-8 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-400 shrink-0 border border-sky-500/15">
+                <ShieldCheck className="w-4.5 h-4.5" />
+              </div>
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-205">Enterprise Security</h4>
-                <p className="text-[11px] text-slate-405 mt-0.5">Compliant end-to-end data encryption and Supabase Row Level Security.</p>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">Enterprise Security</h4>
+                <p className="text-[11px] text-slate-400 mt-0.5 leading-normal">Compliant end-to-end data encryption and Supabase Row Level Security.</p>
               </div>
             </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-indigo-400 shrink-0" />
+            <div className="flex items-start gap-3.5">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 shrink-0 border border-indigo-500/15">
+                <CheckCircle className="w-4.5 h-4.5" />
+              </div>
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-205">Offline Capability</h4>
-                <p className="text-[11px] text-slate-405 mt-0.5">Fully operational local sandbox caching ensures 100% offline data durability.</p>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">Offline Capability</h4>
+                <p className="text-[11px] text-slate-400 mt-0.5 leading-normal">Fully operational local sandbox caching ensures 100% offline data durability.</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="text-[10px] text-slate-500 z-10">
+        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider z-10">
           © {new Date().getFullYear()} MakInvoices. All rights reserved.
         </div>
       </div>
 
       {/* Right side: Auth Form Panel */}
-      <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-12 relative">
+      <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-12 relative bg-slate-50 dark:bg-neutral-950 transition-colors">
         
+        {/* Glow point behind card on mobile */}
+        <div className="absolute top-[20%] left-[10%] w-72 h-72 bg-sky-500/5 rounded-full blur-[100px] pointer-events-none md:hidden" />
+
         {/* Mobile Header Row */}
-        <div className="w-full max-w-md flex justify-between items-center mb-8 md:hidden">
+        <div className="w-full max-w-md flex justify-between items-center mb-8 md:hidden z-10">
           <div className="flex items-center gap-2" onClick={() => window.location.href = '/'}>
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-600 to-indigo-650 flex items-center justify-center text-white font-black text-xs">
               MI
             </div>
-            <span className="text-xs font-black text-slate-805 dark:text-white">MakInvoices</span>
+            <span className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">MakInvoices</span>
           </div>
           <button 
             onClick={() => window.location.href = '/'}
@@ -292,36 +311,40 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
         {/* Desktop Back button */}
         <button 
           onClick={() => window.location.href = '/'}
-          className="hidden md:flex absolute top-8 left-8 items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-sky-505 dark:hover:text-sky-400 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+          className="hidden md:flex absolute top-8 left-8 items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500 hover:text-sky-500 dark:hover:text-sky-405 hover:scale-105 active:scale-95 transition-all cursor-pointer z-10"
         >
           <ArrowLeft className="w-4 h-4" /> Return to landing page
         </button>
 
         {/* Form Container */}
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md z-10">
           
           <div className={`w-full rounded-3xl border transition-all relative overflow-hidden shadow-2xl ${
-            theme === 'dark' ? 'bg-neutral-900/50 border-neutral-800' : 'bg-white border-slate-150'
+            theme === 'dark' 
+              ? 'bg-neutral-900/40 border-neutral-800/80 backdrop-blur-xl' 
+              : 'bg-white/80 border-slate-200/60 backdrop-blur-xl shadow-slate-200/80'
           }`}>
             
             {/* Title */}
-            <div className="text-center pt-8 pb-4 border-b border-slate-100 dark:border-neutral-800">
-              <h2 className="text-lg font-black text-slate-805 dark:text-white uppercase tracking-wider">
+            <div className="text-center pt-8 pb-4 border-b border-slate-100 dark:border-neutral-800/60">
+              <h2 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-wider">
                 {authMode === 'signup' ? 'Create Your Workspace' : 'Welcome Back'}
               </h2>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-widest">
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 uppercase tracking-widest font-black">
                 {authMode === 'signup' ? 'Get started for free' : 'Access your dashboard'}
               </p>
             </div>
 
-            <div className="p-6">
+            <div className="p-6 sm:p-8">
               {/* Mode Toggle Tabs */}
-              <div className="flex border-b border-slate-100 dark:border-neutral-800 pb-3 mb-6">
+              <div className="flex border-b border-slate-100 dark:border-neutral-800/60 pb-3 mb-6">
                 <button
                   type="button"
                   onClick={() => { setAuthMode('signup'); setOtpSent(false); setSuccessMsg(''); }}
                   className={`flex-1 pb-2 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                    authMode === 'signup' ? 'text-sky-500 border-b-2 border-sky-500' : 'text-slate-400 hover:text-slate-650'
+                    authMode === 'signup' 
+                      ? 'text-sky-505 border-b-2 border-sky-500' 
+                      : 'text-slate-400 hover:text-slate-600 dark:hover:text-neutral-300'
                   }`}
                 >
                   Sign Up
@@ -330,7 +353,9 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                   type="button"
                   onClick={() => { setAuthMode('login'); setOtpSent(false); setSuccessMsg(''); }}
                   className={`flex-1 pb-2 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                    authMode === 'login' ? 'text-sky-500 border-b-2 border-sky-500' : 'text-slate-400 hover:text-slate-650'
+                    authMode === 'login' 
+                      ? 'text-sky-505 border-b-2 border-sky-500' 
+                      : 'text-slate-400 hover:text-slate-600 dark:hover:text-neutral-300'
                   }`}
                 >
                   Log In
@@ -342,45 +367,51 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                 <button
                   type="button"
                   onClick={() => { setLoginMethod('email'); setOtpSent(false); setSuccessMsg(''); }}
-                  className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl border transition-all cursor-pointer ${
-                    loginMethod === 'email' ? 'border-sky-500 bg-sky-500/5 text-sky-500' : 'border-slate-200 dark:border-neutral-800 text-slate-450 hover:bg-slate-50 dark:hover:bg-neutral-800'
+                  className={`flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl border transition-all cursor-pointer font-bold ${
+                    loginMethod === 'email' 
+                      ? 'border-sky-500 bg-sky-500/5 text-sky-500 shadow-md shadow-sky-500/5' 
+                      : 'border-slate-200 dark:border-neutral-800 text-slate-400 hover:border-slate-300 dark:hover:border-neutral-700 hover:bg-slate-50 dark:hover:bg-neutral-800/55'
                   }`}
                 >
-                  <Mail className="w-3.5 h-3.5" />
-                  <span className="text-[9px] font-bold">Email</span>
+                  <Mail className="w-4 h-4" />
+                  <span className="text-[9px] uppercase tracking-wider">Email</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => { setLoginMethod('phone_otp'); setOtpSent(false); setSuccessMsg(''); }}
-                  className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl border transition-all cursor-pointer ${
-                    loginMethod === 'phone_otp' ? 'border-sky-500 bg-sky-500/5 text-sky-500' : 'border-slate-200 dark:border-neutral-800 text-slate-450 hover:bg-slate-50 dark:hover:bg-neutral-800'
+                  className={`flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl border transition-all cursor-pointer font-bold ${
+                    loginMethod === 'phone_otp' 
+                      ? 'border-sky-500 bg-sky-500/5 text-sky-500 shadow-md shadow-sky-500/5' 
+                      : 'border-slate-200 dark:border-neutral-800 text-slate-400 hover:border-slate-300 dark:hover:border-neutral-700 hover:bg-slate-50 dark:hover:bg-neutral-800/55'
                   }`}
                 >
-                  <Phone className="w-3.5 h-3.5" />
-                  <span className="text-[9px] font-bold">Phone OTP</span>
+                  <Phone className="w-4 h-4" />
+                  <span className="text-[9px] uppercase tracking-wider">Phone OTP</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => { setLoginMethod('google'); setOtpSent(false); setSuccessMsg(''); }}
-                  className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl border transition-all cursor-pointer ${
-                    loginMethod === 'google' ? 'border-sky-500 bg-sky-500/5 text-sky-500' : 'border-slate-200 dark:border-neutral-800 text-slate-450 hover:bg-slate-50 dark:hover:bg-neutral-800'
+                  className={`flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl border transition-all cursor-pointer font-bold ${
+                    loginMethod === 'google' 
+                      ? 'border-sky-500 bg-sky-500/5 text-sky-500 shadow-md shadow-sky-500/5' 
+                      : 'border-slate-200 dark:border-neutral-800 text-slate-400 hover:border-slate-300 dark:hover:border-neutral-700 hover:bg-slate-50 dark:hover:bg-neutral-800/55'
                   }`}
                 >
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span className="text-[9px] font-bold">Google</span>
+                  <LogIn className="w-4 h-4" />
+                  <span className="text-[9px] uppercase tracking-wider">Google</span>
                 </button>
               </div>
 
               {/* Status Notifications */}
               {successMsg && (
-                <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold flex items-center gap-2 animate-fade-in">
+                <div className="mb-5 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold flex items-center gap-2 animate-fade-in">
                   <CheckCircle className="w-4 h-4 shrink-0" />
                   <span>{successMsg}</span>
                 </div>
               )}
 
               {formErrors.email && (
-                <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold animate-fade-in">
+                <div className="mb-5 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold animate-fade-in">
                   {formErrors.email}
                 </div>
               )}
@@ -390,7 +421,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  className="w-full py-3.5 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-neutral-200 text-xs font-black tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-3 border border-slate-200/50 dark:border-neutral-700/40 cursor-pointer animate-in fade-in duration-200"
+                  className="w-full py-3.5 px-4 bg-white hover:bg-slate-50 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-slate-700 dark:text-neutral-200 text-xs font-black tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-3 border border-slate-200 dark:border-neutral-800 shadow-sm cursor-pointer animate-in fade-in duration-200 hover:scale-102 active:scale-98"
                 >
                   <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -411,8 +442,12 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                           required
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          placeholder="John Doe"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                          placeholder="e.g. John Doe"
+                          className={`w-full px-3.5 py-3 rounded-xl border bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all ${
+                            formData.name 
+                              ? 'border-emerald-500/50 dark:border-emerald-500/30 focus:ring-emerald-500' 
+                              : 'border-slate-205 dark:border-neutral-800'
+                          }`}
                         />
                       </div>
                       <div>
@@ -422,8 +457,12 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                           required
                           value={formData.companyName}
                           onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                          placeholder="Acme Tech Solutions"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                          placeholder="e.g. Acme Tech Solutions"
+                          className={`w-full px-3.5 py-3 rounded-xl border bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all ${
+                            formData.companyName 
+                              ? 'border-emerald-500/50 dark:border-emerald-500/30 focus:ring-emerald-500' 
+                              : 'border-slate-205 dark:border-neutral-800'
+                          }`}
                         />
                       </div>
                       <div>
@@ -433,8 +472,12 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                           required
                           value={formData.phone}
                           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          placeholder="+91 98765 43210"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                          placeholder="e.g. +91 98765 43210"
+                          className={`w-full px-3.5 py-3 rounded-xl border bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all ${
+                            formData.phone 
+                              ? 'border-emerald-500/50 dark:border-emerald-500/30 focus:ring-emerald-500' 
+                              : 'border-slate-205 dark:border-neutral-800'
+                          }`}
                         />
                       </div>
                     </div>
@@ -447,8 +490,14 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                       required
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="sales@yourcompany.com"
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-505"
+                      placeholder="e.g. sales@yourcompany.com"
+                      className={`w-full px-3.5 py-3 rounded-xl border bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 transition-all ${
+                        formData.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
+                          ? 'border-emerald-500/50 dark:border-emerald-500/30 focus:ring-emerald-500'
+                          : formData.email 
+                          ? 'border-amber-500/50 focus:ring-amber-500' 
+                          : 'border-slate-205 dark:border-neutral-800 focus:ring-sky-500'
+                      }`}
                     />
                   </div>
 
@@ -460,7 +509,13 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       placeholder="••••••••"
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-505"
+                      className={`w-full px-3.5 py-3 rounded-xl border bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 transition-all ${
+                        formData.password.length >= 6 
+                          ? 'border-emerald-500/50 dark:border-emerald-500/30 focus:ring-emerald-500' 
+                          : formData.password 
+                          ? 'border-amber-500/50 focus:ring-amber-500' 
+                          : 'border-slate-205 dark:border-neutral-800 focus:ring-sky-500'
+                      }`}
                     />
                     {authMode === 'signup' && formData.password && (
                       <div className="mt-2 space-y-1">
@@ -469,10 +524,10 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                           <span className={strength.score >= 3 ? 'text-emerald-500' : 'text-amber-500'}>{strength.label}</span>
                         </div>
                         <div className="grid grid-cols-4 gap-1 h-1">
-                          <div className={`rounded-full ${strength.score >= 1 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
-                          <div className={`rounded-full ${strength.score >= 2 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
-                          <div className={`rounded-full ${strength.score >= 3 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
-                          <div className={`rounded-full ${strength.score >= 4 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
+                          <div className={`rounded-full ${strength.score >= 1 ? strength.color : 'bg-slate-205 dark:bg-neutral-800'}`} />
+                          <div className={`rounded-full ${strength.score >= 2 ? strength.color : 'bg-slate-205 dark:bg-neutral-800'}`} />
+                          <div className={`rounded-full ${strength.score >= 3 ? strength.color : 'bg-slate-205 dark:bg-neutral-800'}`} />
+                          <div className={`rounded-full ${strength.score >= 4 ? strength.color : 'bg-slate-205 dark:bg-neutral-800'}`} />
                         </div>
                       </div>
                     )}
@@ -481,13 +536,13 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3 px-4 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-sky-500/10"
+                    className="w-full py-3.5 px-4 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 disabled:from-slate-400 disabled:to-slate-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-sky-500/10 hover:shadow-sky-500/25 hover:-translate-y-0.5 active:scale-95 transform"
                   >
                     {isLoading ? (
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        <Mail className="w-3.5 h-3.5" />
+                        <Mail className="w-4 h-4" />
                         <span>{authMode === 'signup' ? 'Create Account with Email' : 'Log In with Email'}</span>
                       </>
                     )}
@@ -502,13 +557,17 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                       required
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="+91 98765 43210"
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      placeholder="e.g. +91 98765 43210"
+                      className={`w-full px-3.5 py-3 rounded-xl border bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all ${
+                        formData.phone 
+                          ? 'border-emerald-500/50 dark:border-emerald-500/30 focus:ring-emerald-500' 
+                          : 'border-slate-205 dark:border-neutral-800'
+                      }`}
                     />
                   </div>
 
                   {otpSent && (
-                    <div>
+                    <div className="animate-in slide-in-from-top-2 duration-200">
                       <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Enter 4-Digit OTP *</label>
                       <input
                         type="text"
@@ -516,8 +575,8 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                         required
                         value={otpValue}
                         onChange={(e) => setOtpValue(e.target.value)}
-                        placeholder="1234"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                        placeholder="e.g. 1234"
+                        className="w-full px-3.5 py-3 rounded-xl border border-slate-205 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
                       />
                     </div>
                   )}
@@ -525,13 +584,13 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3 px-4 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-sky-500/10"
+                    className="w-full py-3.5 px-4 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 disabled:from-slate-400 disabled:to-slate-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-sky-500/10 hover:shadow-sky-500/25 hover:-translate-y-0.5 active:scale-95 transform"
                   >
                     {isLoading ? (
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        <Phone className="w-3.5 h-3.5" />
+                        <Phone className="w-4 h-4" />
                         <span>{otpSent ? 'Verify OTP & Log In' : 'Send OTP to Log In'}</span>
                       </>
                     )}
@@ -542,9 +601,9 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
               {/* Guest / local mode separator */}
               <div className="relative flex items-center justify-center my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-100 dark:border-neutral-800" />
+                  <div className="w-full border-t border-slate-100 dark:border-neutral-800/80" />
                 </div>
-                <span className="relative px-3 text-[9px] font-black uppercase tracking-widest text-slate-400 bg-white dark:bg-neutral-900">OR</span>
+                <span className="relative px-3 text-[9px] font-black uppercase tracking-widest text-slate-400 bg-white dark:bg-neutral-900/90 rounded-full">OR</span>
               </div>
 
               {/* Sandbox Guest Mode Shortcut */}
@@ -552,11 +611,11 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                 <button
                   type="button"
                   onClick={handleGuestMode}
-                  className="text-xs font-black text-slate-500 hover:text-sky-500 hover:underline transition-all cursor-pointer"
+                  className="text-xs font-black text-slate-500 hover:text-sky-550 dark:hover:text-sky-400 hover:underline transition-all cursor-pointer hover:scale-102"
                 >
                   Try instantly as Guest (Local Offline Mode)
                 </button>
-                <p className="text-[9px] text-slate-400 mt-1 font-medium leading-normal max-w-[280px] mx-auto">
+                <p className="text-[9px] text-slate-400 mt-1.5 font-medium leading-normal max-w-[280px] mx-auto">
                   * Note: Guest data is saved in your local browser storage only. No cloud account will be created.
                 </p>
               </div>
