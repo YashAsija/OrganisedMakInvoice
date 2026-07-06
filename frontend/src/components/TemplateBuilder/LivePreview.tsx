@@ -452,7 +452,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gridAutoFlow: 'row', gap: '0px', position: 'relative', zIndex: 1, flex: 'none' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gridAutoFlow: 'row', columnGap: '20px', rowGap: '0px', position: 'relative', zIndex: 1, flex: 'none' }}>
 
         {orderedSections.filter(s => !['terms', 'signature', 'footer'].includes(s.id)).map(section => {
           if (['header', 'companyInfo', 'invoiceInfo', 'billTo', 'shipTo', 'transport'].includes(section.id)) {
