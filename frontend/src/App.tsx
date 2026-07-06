@@ -108,19 +108,34 @@ export default function App() {
   };
 
   // --- LOCAL CACHING LOAD MECHANISM (OFFLINE CAPABILITIES) ---
-  const loadLocalData = () => {
+  const loadLocalData = (emailParam?: string | null) => {
+    const activeEmail = emailParam !== undefined ? emailParam : userEmail;
+    const suffix = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
+
     // Profile
-    const localProfile = localStorage.getItem('invoice_maker_biz_profile');
+    const localProfile = localStorage.getItem(`invoice_maker_biz_profile${suffix}`);
     if (localProfile) {
       try {
         setProfile(JSON.parse(localProfile));
       } catch (e) {
         console.warn('Failed to parse local profile, using default', e);
       }
+    } else {
+      setProfile({
+        uid: activeEmail || 'local',
+        name: '',
+        email: activeEmail || '',
+        phone: '',
+        address: '',
+        taxId: '',
+        currency: 'INR',
+        defaultTaxRate: 18,
+        updatedAt: new Date().toISOString()
+      });
     }
 
     // Invoices list
-    const localInvoices = localStorage.getItem('invoice_maker_invoices');
+    const localInvoices = localStorage.getItem(`invoice_maker_invoices${suffix}`);
     if (localInvoices) {
       try {
         setInvoices(JSON.parse(localInvoices));
@@ -129,13 +144,13 @@ export default function App() {
       }
     } else {
       // Preload example invoices on first onboarding to make is extremely easy for new users
-      const sample = getSampleInvoice('freelance_tech', 'local');
+      const sample = getSampleInvoice('freelance_tech', activeEmail || 'local');
       setInvoices([sample]);
-      localStorage.setItem('invoice_maker_invoices', JSON.stringify([sample]));
+      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify([sample]));
     }
 
     // Presets catalog
-    const localPresets = localStorage.getItem('invoice_maker_presets');
+    const localPresets = localStorage.getItem(`invoice_maker_presets${suffix}`);
     if (localPresets) {
       try {
         setPresets(JSON.parse(localPresets));
@@ -146,18 +161,18 @@ export default function App() {
       // Load standard freelance templates catalog
       const standardTemplateItems = BUSINESS_TEMPLATES[0].items.map(it => ({
         id: it.id,
-        userId: 'local',
+        userId: activeEmail || 'local',
         name: it.name,
         rate: it.rate,
         taxPercentage: it.taxPercentage,
         description: it.description
       }));
       setPresets(standardTemplateItems);
-      localStorage.setItem('invoice_maker_presets', JSON.stringify(standardTemplateItems));
+      localStorage.setItem(`invoice_maker_presets${suffix}`, JSON.stringify(standardTemplateItems));
     }
 
     // Clients list
-    const localClients = localStorage.getItem('invoice_maker_clients');
+    const localClients = localStorage.getItem(`invoice_maker_clients${suffix}`);
     if (localClients) {
       try {
         setClients(JSON.parse(localClients));
@@ -169,7 +184,7 @@ export default function App() {
     }
 
     // Expenses list
-    const localExpenses = localStorage.getItem('invoice_maker_expenses');
+    const localExpenses = localStorage.getItem(`invoice_maker_expenses${suffix}`);
     if (localExpenses) {
       try {
         setExpenses(JSON.parse(localExpenses));
@@ -543,7 +558,10 @@ export default function App() {
   };
 
   const handleCustomLogin = async (email: string, password?: string, phone?: string): Promise<{ error?: string }> => {
-    if (isSupabaseConfigured && email && password) {
+    if (email && password) {
+      if (!isSupabaseConfigured) {
+        return { error: "Service unavailable, please try again later" };
+      }
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -554,6 +572,7 @@ export default function App() {
           return { error: error.message };
         }
         console.info("[AUTH] User Login Succeeded:", email);
+        return {};
       } catch (err: any) {
         console.error("[AUTH] User Login Error Exception:", email, err.message || err);
         return { error: err.message || 'Login failed' };
@@ -581,8 +600,8 @@ export default function App() {
       };
       setProfile(updatedProf);
       localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(updatedProf));
+      return {};
     }
-    return {};
   };
 
   const handleLogout = async () => {
