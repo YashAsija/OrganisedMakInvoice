@@ -479,7 +479,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                     ) : (
                       renderLogoPlaceholder('Center')
                     )}
-                    <h1 className="text-3xl font-bold tracking-wider text-gray-900 uppercase" style={{ color: styleConfig.primaryColor, textAlign: config.header.titleAlignment === 'Right' ? 'right' : config.header.titleAlignment === 'Left' ? 'left' : 'center' }}>{config.header.invoiceTitle}</h1>
+                    <h1 className="text-3xl font-bold tracking-wider text-gray-900 uppercase" style={{ color: styleConfig.primaryColor, textAlign: config.header.titleAlignment === 'Right' ? 'right' : config.header.titleAlignment === 'Left' ? 'left' : 'center', whiteSpace: 'nowrap' }}>{config.header.invoiceTitle}</h1>
                   </div>
                 );
               }
@@ -497,7 +497,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   )}
 
                   <div style={{ flex: 1, textAlign: config.header.titleAlignment === 'Right' ? 'right' : config.header.titleAlignment === 'Left' ? 'left' : 'center' }}>
-                    <h1 className="text-3xl font-bold tracking-wider text-gray-900 uppercase" style={{ color: styleConfig.primaryColor }}>{config.header.invoiceTitle}</h1>
+                    <h1 className="text-3xl font-bold tracking-wider text-gray-900 uppercase" style={{ color: styleConfig.primaryColor, whiteSpace: 'nowrap' }}>{config.header.invoiceTitle}</h1>
                   </div>
 
                   {config.header.logoPosition === 'Right' && config.header.showLogo && (
@@ -527,7 +527,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                       Logo Space
                     </div>
                   )}
-                  <h1 style={{ color: textColor, fontSize: '32px', margin: 0, fontWeight: 'bold' }}>{config.header.invoiceTitle}</h1>
+                  <h1 style={{ color: textColor, fontSize: '32px', margin: 0, fontWeight: 'bold', whiteSpace: 'nowrap' }}>{config.header.invoiceTitle}</h1>
                 </div>
               );
             }
@@ -547,7 +547,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 )}
 
                 <div style={{ flex: 1, textAlign: config.header.titleAlignment === 'Right' ? 'right' : config.header.titleAlignment === 'Left' ? 'left' : 'center' }}>
-                  <h1 style={{ color: textColor, fontSize: '32px', margin: 0, fontWeight: 'bold' }}>{config.header.invoiceTitle}</h1>
+                  <h1 style={{ color: textColor, fontSize: '32px', margin: 0, fontWeight: 'bold', whiteSpace: 'nowrap' }}>{config.header.invoiceTitle}</h1>
                 </div>
 
                 {config.header.logoPosition === 'Right' && config.header.showLogo && (
