@@ -337,21 +337,14 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     const bg = styleConfig.sectionBackgroundColors[sectionId as keyof typeof styleConfig.sectionBackgroundColors];
     const span = dynamicSpans[sectionId] || sections[sectionId as keyof typeof sections].gridColumnSpan;
 
-    // Let grid naturally flow left if previous sibling is hidden.
-    let colStart = 'auto';
-    if (layout.type === 'Modal Classic') {
-      if (sectionId === 'payment' || sectionId === 'signature') {
-        colStart = '7';
-      } else if (sectionId === 'taxEngine' || sectionId === 'amountInWords' || sectionId === 'terms') {
-        colStart = '1';
-      }
-    }
+    const layoutInfo = sectionLayouts[sectionId];
+    const colStart = layoutInfo ? `${layoutInfo.colStart + 1}` : 'auto';
+    const gridRow = layoutInfo ? `${layoutInfo.row + 1}` : 'auto';
 
     const baseMarginBottom = styleConfig.spacing === 'Compact' ? '6px' : styleConfig.spacing === 'Spacious' ? '16px' : '10px';
-    // taxEngine and payment sit directly below productTable — no top gap
     const marginTop = (sectionId === 'taxEngine' || sectionId === 'payment') ? '0px' : undefined;
-    // productTable has no bottom margin so taxEngine/payment hug it
     const marginBottom = sectionId === 'productTable' ? '0px' : baseMarginBottom;
+
     const padVal = bg ? '15px' : '0px';
     return {
       backgroundColor: bg || 'transparent',
@@ -363,7 +356,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
       marginBottom,
       marginTop,
       alignSelf: 'start',
-      gridColumn: `${colStart} / span ${span}`
+      gridColumn: `${colStart} / span ${span}`,
+      gridRow
     };
   };
 
