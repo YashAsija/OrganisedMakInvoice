@@ -449,7 +449,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gridAutoFlow: 'row', gap: '0px', position: 'relative', zIndex: 1, flex: isPrintMode ? 'none' : 1 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gridAutoFlow: 'row', gap: '0px', position: 'relative', zIndex: 1, flex: 'none' }}>
 
         {orderedSections.filter(s => !((layout.type === 'Modal Classic' || isPrintMode) && ['terms', 'signature', 'footer'].includes(s.id))).map(section => {
           if (['header', 'companyInfo', 'invoiceInfo', 'billTo', 'shipTo', 'transport'].includes(section.id)) {
