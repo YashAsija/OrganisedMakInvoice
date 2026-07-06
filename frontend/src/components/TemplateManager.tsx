@@ -13,7 +13,23 @@ export default function TemplateManager() {
       const saved = localStorage.getItem('makbills_custom_templates');
       if (saved) {
         try {
-          return JSON.parse(saved);
+          let parsed = JSON.parse(saved) as InvoiceTemplate[];
+          let changed = false;
+          parsed = parsed.map(t => {
+            if (t.name.includes('MakBills')) {
+              changed = true;
+              return { ...t, name: t.name.replace(/MakBills/g, 'MakInvoices') };
+            }
+            if (t.name.includes('MakInvoice')) {
+              changed = true;
+              return { ...t, name: t.name.replace(/MakInvoice/g, 'MakInvoices') };
+            }
+            return t;
+          });
+          if (changed) {
+            localStorage.setItem('makbills_custom_templates', JSON.stringify(parsed));
+          }
+          return parsed;
         } catch (e) {
           console.error("Failed to parse templates", e);
         }
