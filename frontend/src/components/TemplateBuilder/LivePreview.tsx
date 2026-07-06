@@ -348,11 +348,10 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     const span = dynamicSpans[sectionId] || sections[sectionId as keyof typeof sections].gridColumnSpan;
 
     const baseMarginBottom = styleConfig.spacing === 'Compact' ? '6px' : styleConfig.spacing === 'Spacious' ? '16px' : '10px';
-    const isModalClassic = layout.type === 'Modal Classic';
-    const marginTop = (sectionId === 'taxEngine' || sectionId === 'payment') ? (isModalClassic ? '8px' : '0px') : undefined;
+    const marginTop = (sectionId === 'taxEngine' || sectionId === 'payment') ? '8px' : undefined;
     const marginBottom = sectionId === 'productTable' 
-      ? (isModalClassic ? '8px' : '0px') 
-      : (['taxEngine', 'payment'].includes(sectionId) && isModalClassic ? '8px' : baseMarginBottom);
+      ? '8px' 
+      : (['taxEngine', 'payment'].includes(sectionId) ? '8px' : baseMarginBottom);
 
     const padVal = bg ? '15px' : '0px';
     return {
