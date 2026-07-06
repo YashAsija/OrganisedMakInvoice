@@ -1198,9 +1198,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             if (layout.type === 'Modal Classic') {
               if (!config.amountInWords.enabled) return null;
               const words = numberToWords(invoiceData?.grandTotal || 0, config.amountInWords.format);
+              const align = getSectionAlignment('amountInWords');
+              const paddingStyle = align === 'right' ? { paddingRight: '20px', paddingLeft: '0px' } : { paddingLeft: '20px', paddingRight: '0px' };
+              
               return (
-                <div key="amountInWords" style={getSectionStyle('amountInWords')}>
-                  <div className="text-left pt-4">
+                <div key="amountInWords" style={{ ...getSectionStyle('amountInWords'), ...paddingStyle, textAlign: align, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', width: '100%' }}>
+                  <div className="text-left pt-4" style={{ textAlign: align }}>
                     <div className="font-bold text-[10px] text-gray-800">Amount in Words:</div>
                     <div className="text-[10px] text-gray-500 italic mt-0.5">{words}</div>
                   </div>
