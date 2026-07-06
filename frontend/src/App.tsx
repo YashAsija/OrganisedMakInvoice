@@ -476,9 +476,18 @@ export default function App() {
             }
           }
         });
-        if (error) return { error: error.message };
+        if (error) {
+          console.warn("[AUTH] New User Sign-Up Failed:", email, error.message);
+          return { error: error.message };
+        }
+        
+        if (data.user && !data.session) {
+          console.info("[AUTH] New User Sign-Up Success (Confirmation Pending):", email);
+          return { error: "Account created! Please confirm your email address (check your inbox/spam folder) before logging in." };
+        }
         
         if (data.user) {
+          console.info("[AUTH] New User Sign-Up Success (Auto Logged-In):", email);
           const initProf: BusinessProfile = {
             uid: data.user.id,
             name: companyName || '',
@@ -540,8 +549,13 @@ export default function App() {
           email,
           password
         });
-        if (error) return { error: error.message };
+        if (error) {
+          console.warn("[AUTH] User Login Failed:", email, error.message);
+          return { error: error.message };
+        }
+        console.info("[AUTH] User Login Succeeded:", email);
       } catch (err: any) {
+        console.error("[AUTH] User Login Error Exception:", email, err.message || err);
         return { error: err.message || 'Login failed' };
       }
     } else {
@@ -576,6 +590,14 @@ export default function App() {
       await supabase.auth.signOut();
       localStorage.removeItem('makbills_custom_email');
       localStorage.removeItem('makbills_custom_brand');
+      localStorage.removeItem('makbills_custom_phone');
+      localStorage.removeItem('makbills_custom_owner');
+      localStorage.removeItem('invoice_maker_biz_profile');
+      localStorage.removeItem('invoice_maker_invoices');
+      localStorage.removeItem('invoice_maker_presets');
+      localStorage.removeItem('invoice_maker_clients');
+      localStorage.removeItem('invoice_maker_expenses');
+      
       setUser(null);
       setUserEmail(null);
       // Data falls back to local storage

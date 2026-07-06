@@ -208,8 +208,16 @@ export default function Homepage({
         setFormErrors({ email: 'Please fill out your Email Address.' });
         return;
       }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+        setFormErrors({ email: 'Please enter a valid Email Address.' });
+        return;
+      }
       if (!formData.password.trim()) {
         setFormErrors({ password: 'Please enter a Password.' });
+        return;
+      }
+      if (formData.password.length < 6) {
+        setFormErrors({ password: 'Password must be at least 6 characters long.' });
         return;
       }
     } else {

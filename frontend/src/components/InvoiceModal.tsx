@@ -8,6 +8,7 @@ import jsPDF from 'jspdf';
 import { LivePreview } from './TemplateBuilder/LivePreview';
 import { Country, State } from 'country-state-city';
 import { TEMPLATE_PRESETS } from '../lib/templatePresets';
+import { supabase } from '../lib/supabase';
 
 interface InvoiceModalProps {
   invoice: Invoice | null; // null means create new
@@ -504,9 +505,15 @@ export default function InvoiceModal({
     }
     setIsAiLoading(true);
     try {
+      const sessionRes = await supabase.auth.getSession();
+      const token = sessionRes.data.session?.access_token;
+
       const response = await fetch('/api/ai/parse-invoice', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ prompt: aiPromptText })
       });
       const data = await response.json();
@@ -551,9 +558,15 @@ export default function InvoiceModal({
     }
     setIsAiGeneratingDescription(true);
     try {
+      const sessionRes = await supabase.auth.getSession();
+      const token = sessionRes.data.session?.access_token;
+
       const response = await fetch('/api/ai/generate-description', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ name: newItemName })
       });
       const data = await response.json();
