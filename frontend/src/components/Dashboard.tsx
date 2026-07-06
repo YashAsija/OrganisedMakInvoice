@@ -435,7 +435,7 @@ export default function Dashboard({
             }`}
           >
             <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
-            <span>Learn MakBills</span>
+            <span>Learn MakInvoices</span>
           </button>
 
           <button
@@ -1238,7 +1238,7 @@ export default function Dashboard({
     const link = document.createElement("a");
     link.style.display = 'none';
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `MakBills_Ledger_Spreadsheet_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `MakInvoices_Ledger_Spreadsheet_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1489,7 +1489,7 @@ export default function Dashboard({
       <!-- Footer / Guidelines -->
       <div class="footer-note">
         <strong>Terms & Conditions Guidance:</strong> ${inv.invoiceTerms || 'Billing services subject to prompt bank transfer. Settle within designated period. Thank you for choosing Acme Services!'}<br/>
-        <span style="font-size: 9px; display: block; margin-top: 8px; color: #94a3b8;">This is a premium-formatted Microsoft Word billing document generated from MakBills.</span>
+        <span style="font-size: 9px; display: block; margin-top: 8px; color: #94a3b8;">This is a premium-formatted Microsoft Word billing document generated from MakInvoices.</span>
       </div>
 
       </body></html>
@@ -2599,7 +2599,7 @@ export default function Dashboard({
                 </div>
                 <div>
                   <h2 className="text-sm font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-tight">
-                    Welcome to {profile.name || 'MakBills Workspace'}
+                    Welcome to {profile.name || 'MakInvoices Workspace'}
                   </h2>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5 font-medium">Real-time financials, pre-coded GST collections, and catalog registries.</span>
                 </div>

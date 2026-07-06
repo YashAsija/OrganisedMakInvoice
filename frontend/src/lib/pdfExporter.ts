@@ -179,7 +179,7 @@ export function exportCollectiveReportPDF(
     doc.setPage(p);
     doc.setFillColor(15,23,42); doc.rect(0,H-3.5,W,3.5,'F');
     doc.setFontSize(6.8); doc.setFont('Helvetica','normal'); doc.setTextColor(148,163,184);
-    doc.text(`Ledger Statement  |  Page ${p} of ${totalPgs}  |  MakBills`, W/2, H-6, {align:'center'});
+    doc.text(`Ledger Statement  |  Page ${p} of ${totalPgs}  |  MakInvoices`, W/2, H-6, {align:'center'});
   }
 
   doc.save(`ledger_${periodName.toLowerCase().replace(/\s+/g,'_')}.pdf`);
