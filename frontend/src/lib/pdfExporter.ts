@@ -282,19 +282,19 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
     const pageHeight = activeTemplate.layout.pageSize === 'A4' ? 1123 : 1056;
     
     const footerEl = container.querySelector('#pinned-footer-container') as HTMLElement;
-    const footerHeight = footerEl && footerEl.offsetHeight > 50 ? footerEl.offsetHeight : 180;
+    const footerHeight = footerEl && footerEl.offsetHeight > 50 ? footerEl.offsetHeight : 240;
     
     const tableEl = container.querySelector('table') as HTMLElement;
-    let tableTop = tableEl ? tableEl.getBoundingClientRect().top - container.getBoundingClientRect().top : 380;
+    let tableTop = tableEl ? tableEl.getBoundingClientRect().top - container.getBoundingClientRect().top : 450;
     if (tableTop < 100) {
-      tableTop = 380;
+      tableTop = 450;
     }
     
     const theadEl = container.querySelector('thead') as HTMLElement;
     const tableHeaderHeight = theadEl && theadEl.offsetHeight > 10 ? theadEl.offsetHeight : 35;
     
     const rows = Array.from(container.querySelectorAll('tbody tr')) as HTMLElement[];
-    const rowHeights = rows.map(r => r.offsetHeight > 20 ? r.offsetHeight : 45);
+    const rowHeights = rows.map(r => r.offsetHeight > 20 ? r.offsetHeight : 55);
     
     // Calculate totalsHeight by measuring bottom totals grid
     let totalsHeight = 180;
@@ -318,7 +318,7 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
     const items = tempInvoice.items || [];
     const N = items.length;
     const chunks: any[][] = [];
-    const availablePageHeight = pageHeight - footerHeight - 70; // 70px safety buffer to prevent footer clipping
+    const availablePageHeight = pageHeight - footerHeight - 130; // 130px safety buffer to prevent footer clipping
     const page1Budget = availablePageHeight - tableTop - tableHeaderHeight;
     const subsequentPageBudget = availablePageHeight - 50 - tableHeaderHeight;
 
