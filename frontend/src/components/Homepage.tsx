@@ -458,16 +458,16 @@ export default function Homepage({
             <button
               type="button"
               onClick={() => { setAuthMode('login'); setIsAuthModalOpen(true); }}
-              className="px-3.5 py-2 text-slate-700 dark:text-slate-200 hover:text-sky-505 dark:hover:text-sky-400 font-extrabold text-xs tracking-normal cursor-pointer transition-all rounded-xl hover:bg-slate-100/70 dark:hover:bg-neutral-900"
+              className="px-4 py-2 text-slate-700 dark:text-slate-200 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-normal cursor-pointer transition-all duration-300 rounded-xl hover:bg-slate-100/80 dark:hover:bg-neutral-800 hover:scale-105 active:scale-95"
             >
-              Sign In
+              Log In
             </button>
             <button
               type="button"
               onClick={() => { setAuthMode('signup'); setIsAuthModalOpen(true); }}
-              className="px-4 py-2 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-extrabold text-xs tracking-normal rounded-xl shadow-lg shadow-sky-500/10 cursor-pointer transition-all"
+              className="px-5 py-2 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-extrabold text-xs tracking-normal rounded-xl shadow-lg shadow-sky-500/15 hover:shadow-sky-500/30 transition-all duration-300 hover:scale-105 active:scale-95 hover:-translate-y-0.5 cursor-pointer"
             >
-              Get Started
+              Sign Up
             </button>
 
           </div>
@@ -576,16 +576,16 @@ export default function Homepage({
                 <button
                   type="button"
                   onClick={() => { setAuthMode('login'); setIsAuthModalOpen(true); setIsMobileNavOpen(false); }}
-                  className="w-full py-3 text-slate-700 dark:text-slate-200 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all rounded-xl bg-slate-100/50 hover:bg-slate-100/70 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-slate-200/40 dark:border-neutral-800/60 text-center"
+                  className="w-full py-3 text-slate-700 dark:text-slate-200 hover:text-sky-505 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all duration-300 rounded-xl bg-slate-100/50 hover:bg-slate-100/70 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-slate-200/40 dark:border-neutral-800/60 text-center hover:scale-102 active:scale-98"
                 >
-                  Sign In to Account
+                  Log In to Account
                 </button>
                 <button
                   type="button"
                   onClick={() => { setAuthMode('signup'); setIsAuthModalOpen(true); setIsMobileNavOpen(false); }}
-                  className="w-full py-3 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-extrabold text-xs tracking-wide rounded-xl shadow-lg shadow-sky-500/20 cursor-pointer transition-all text-center"
+                  className="w-full py-3 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-extrabold text-xs tracking-wide rounded-xl shadow-lg shadow-sky-500/20 hover:shadow-sky-500/35 cursor-pointer transition-all duration-300 text-center hover:scale-102 active:scale-98"
                 >
-                  Create New Workspace
+                  Sign Up
                 </button>
               </div>
               
@@ -1190,7 +1190,7 @@ export default function Homepage({
                     >
                       <div className="flex items-center justify-center gap-1.5">
                         <LogIn className="w-4 h-4" />
-                        <span>Sign In</span>
+                        <span>Log In</span>
                       </div>
                     </button>
                   </div>
@@ -1425,7 +1425,7 @@ export default function Homepage({
                         ) : (
                           <>
                             <Mail className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                            <span>{authMode === 'signup' ? 'Create Account with Email' : 'Sign In with Email'}</span>
+                            <span>{authMode === 'signup' ? 'Create Account with Email' : 'Log In with Email'}</span>
                           </>
                         )}
                       </button>
