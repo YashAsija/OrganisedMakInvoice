@@ -347,6 +347,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
       }
     }
 
+    const baseMarginBottom = styleConfig.spacing === 'Compact' ? '10px' : styleConfig.spacing === 'Spacious' ? '30px' : '20px';
+    // taxEngine and payment sit directly below productTable — no top gap
+    const marginTop = (sectionId === 'taxEngine' || sectionId === 'payment') ? '0px' : undefined;
+    // productTable has no bottom margin so taxEngine/payment hug it
+    const marginBottom = sectionId === 'productTable' ? '0px' : baseMarginBottom;
     const padVal = bg ? '15px' : '0px';
     return {
       backgroundColor: bg || 'transparent',
@@ -355,7 +360,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
       paddingRight: padVal,
       paddingBottom: padVal,
       paddingLeft: padVal,
-      marginBottom: styleConfig.spacing === 'Compact' ? '10px' : styleConfig.spacing === 'Spacious' ? '30px' : '20px',
+      marginBottom,
+      marginTop,
       gridColumn: `${colStart} / span ${span}`
     };
   };
@@ -443,7 +449,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gridAutoFlow: 'row', gap: '20px', position: 'relative', zIndex: 1, flex: isPrintMode ? 'none' : 1 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gridAutoFlow: 'row', gap: '0px', position: 'relative', zIndex: 1, flex: isPrintMode ? 'none' : 1 }}>
 
         {orderedSections.filter(s => !((layout.type === 'Modal Classic' || isPrintMode) && ['terms', 'signature', 'footer'].includes(s.id))).map(section => {
           if (['header', 'companyInfo', 'invoiceInfo', 'billTo', 'shipTo', 'transport'].includes(section.id)) {
