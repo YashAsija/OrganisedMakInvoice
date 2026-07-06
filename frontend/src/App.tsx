@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { supabase, handleSupabaseError, OperationType } from './lib/supabase';
+import { supabase, handleSupabaseError, OperationType, isSupabaseConfigured } from './lib/supabase';
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from './types';
 import { getSampleInvoice, BUSINESS_TEMPLATES } from './lib/presets';
 import { getSecuritySettings, saveSecuritySettings, SecuritySettings } from './lib/biometrics';
@@ -462,25 +462,61 @@ export default function App() {
     }
   };
 
-  const handleCustomSignup = (name: string, companyName: string, email: string, phone: string) => {
-    const resolvedEmail = email || `${phone.replace(/\s+/g, '') || 'user'}@makbills.local`;
-    setUserEmail(resolvedEmail);
-    localStorage.setItem('makbills_custom_email', resolvedEmail);
-    localStorage.setItem('makbills_custom_brand', companyName);
-    localStorage.setItem('makbills_custom_owner', name);
-    localStorage.setItem('makbills_custom_phone', phone);
-    
-    // Update company brand profile instantly so it starts with the custom business name they registered
-    const updatedProf: BusinessProfile = {
-      ...profile,
-      name: companyName || '',
-      email: resolvedEmail,
-      phone: phone || '',
-      ownerName: name,
-      updatedAt: new Date().toISOString()
-    };
-    setProfile(updatedProf);
-    localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(updatedProf));
+  const handleCustomSignup = async (name: string, companyName: string, email: string, phone: string, password?: string): Promise<{ error?: string }> => {
+    if (isSupabaseConfigured && password) {
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: name,
+              phone: phone,
+              company_name: companyName
+            }
+          }
+        });
+        if (error) return { error: error.message };
+        
+        if (data.user) {
+          const initProf: BusinessProfile = {
+            uid: data.user.id,
+            name: companyName || '',
+            email: email,
+            phone: phone || '',
+            ownerName: name,
+            address: profile.address || '',
+            taxId: profile.taxId || '',
+            currency: profile.currency || 'INR',
+            defaultTaxRate: profile.defaultTaxRate || 18,
+            updatedAt: new Date().toISOString()
+          };
+          await supabase.from('users').upsert(initProf);
+          setProfile(initProf);
+          localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(initProf));
+        }
+      } catch (err: any) {
+        return { error: err.message || 'Sign up failed' };
+      }
+    } else {
+      const resolvedEmail = email || `${phone.replace(/\s+/g, '') || 'user'}@makbills.local`;
+      setUserEmail(resolvedEmail);
+      localStorage.setItem('makbills_custom_email', resolvedEmail);
+      localStorage.setItem('makbills_custom_brand', companyName);
+      localStorage.setItem('makbills_custom_owner', name);
+      localStorage.setItem('makbills_custom_phone', phone);
+      
+      const updatedProf: BusinessProfile = {
+        ...profile,
+        name: companyName || '',
+        email: resolvedEmail,
+        phone: phone || '',
+        ownerName: name,
+        updatedAt: new Date().toISOString()
+      };
+      setProfile(updatedProf);
+      localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(updatedProf));
+    }
     
     // Clear invoices, presets, clients, and expenses so a brand-new account starts completely fresh
     setInvoices([]);
@@ -494,31 +530,45 @@ export default function App() {
     
     setIsOnboarding(true);
     setIsProfileOpen(true);
+    return {};
   };
 
-  const handleCustomLogin = (email: string, phone?: string) => {
-    const resolvedEmail = email || `${(phone || '').replace(/\s+/g, '') || 'user'}@makbills.local`;
-    setUserEmail(resolvedEmail);
-    localStorage.setItem('makbills_custom_email', resolvedEmail);
-    
-    if (phone) {
-      localStorage.setItem('makbills_custom_phone', phone);
+  const handleCustomLogin = async (email: string, password?: string, phone?: string): Promise<{ error?: string }> => {
+    if (isSupabaseConfigured && email && password) {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        if (error) return { error: error.message };
+      } catch (err: any) {
+        return { error: err.message || 'Login failed' };
+      }
+    } else {
+      const resolvedEmail = email || `${(phone || '').replace(/\s+/g, '') || 'user'}@makbills.local`;
+      setUserEmail(resolvedEmail);
+      localStorage.setItem('makbills_custom_email', resolvedEmail);
+      
+      if (phone) {
+        localStorage.setItem('makbills_custom_phone', phone);
+      }
+      
+      const cachedBrand = localStorage.getItem('makbills_custom_brand') || '';
+      const cachedPhone = localStorage.getItem('makbills_custom_phone') || phone || '';
+      const cachedOwner = localStorage.getItem('makbills_custom_owner') || '';
+      
+      const updatedProf: BusinessProfile = {
+        ...profile,
+        name: cachedBrand,
+        email: resolvedEmail,
+        phone: cachedPhone,
+        ownerName: cachedOwner,
+        updatedAt: new Date().toISOString()
+      };
+      setProfile(updatedProf);
+      localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(updatedProf));
     }
-    
-    const cachedBrand = localStorage.getItem('makbills_custom_brand') || '';
-    const cachedPhone = localStorage.getItem('makbills_custom_phone') || phone || '';
-    const cachedOwner = localStorage.getItem('makbills_custom_owner') || '';
-    
-    const updatedProf: BusinessProfile = {
-      ...profile,
-      name: cachedBrand,
-      email: resolvedEmail,
-      phone: cachedPhone,
-      ownerName: cachedOwner,
-      updatedAt: new Date().toISOString()
-    };
-    setProfile(updatedProf);
-    localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(updatedProf));
+    return {};
   };
 
   const handleLogout = async () => {

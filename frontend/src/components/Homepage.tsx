@@ -34,8 +34,8 @@ import {
 interface HomepageProps {
   theme: 'light' | 'dark';
   onGoogleLogin: () => void;
-  onCustomSignup: (name: string, companyName: string, email: string, phone: string) => void;
-  onCustomLogin: (email: string, phone?: string) => void;
+  onCustomSignup: (name: string, companyName: string, email: string, phone: string, password?: string) => Promise<{ error?: string }>;
+  onCustomLogin: (email: string, password?: string, phone?: string) => Promise<{ error?: string }>;
   isOnline: boolean;
 }
 
@@ -187,7 +187,7 @@ export default function Homepage({
 
   const strength = getPasswordStrength(formData.password);
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormErrors({});
 
@@ -208,10 +208,20 @@ export default function Homepage({
         setFormErrors({ email: 'Please fill out your Email Address.' });
         return;
       }
-    } else {
-      if (loginMethod === 'email' && !formData.email.trim()) {
-        setFormErrors({ email: 'Please enter your Registered Email Address.' });
+      if (!formData.password.trim()) {
+        setFormErrors({ password: 'Please enter a Password.' });
         return;
+      }
+    } else {
+      if (loginMethod === 'email') {
+        if (!formData.email.trim()) {
+          setFormErrors({ email: 'Please enter your Registered Email Address.' });
+          return;
+        }
+        if (!formData.password.trim()) {
+          setFormErrors({ password: 'Please enter your Password.' });
+          return;
+        }
       }
       if (loginMethod === 'phone_otp') {
         if (!formData.phone.trim()) {
@@ -238,24 +248,41 @@ export default function Homepage({
     setIsLoading(true);
     setSuccessMsg('');
 
-    // Simulate standard fast secure database sign in / sign up
-    setTimeout(() => {
-      setIsLoading(false);
-      setSuccessMsg(authMode === 'signup' ? 'Profile Created Successfully! Syncing workspace...' : 'Welcome back! Retrieving workspace state...');
-      
-      // Delay transition to make it feel extremely stable and satisfying
-      setTimeout(() => {
-        if (authMode === 'signup') {
-          onCustomSignup(formData.name, formData.companyName, formData.email, formData.phone);
+    try {
+      if (authMode === 'signup') {
+        const res = await onCustomSignup(formData.name, formData.companyName, formData.email, formData.phone, formData.password);
+        if (res?.error) {
+          setFormErrors({ email: res.error });
+          setIsLoading(false);
         } else {
-          if (loginMethod === 'email') {
-            onCustomLogin(formData.email, '');
-          } else if (loginMethod === 'phone_otp') {
-            onCustomLogin('', formData.phone);
+          setSuccessMsg('Profile Created Successfully! Syncing workspace...');
+          setIsLoading(false);
+        }
+      } else {
+        if (loginMethod === 'email') {
+          const res = await onCustomLogin(formData.email, formData.password, '');
+          if (res?.error) {
+            setFormErrors({ email: res.error });
+            setIsLoading(false);
+          } else {
+            setSuccessMsg('Welcome back! Retrieving workspace state...');
+            setIsLoading(false);
+          }
+        } else if (loginMethod === 'phone_otp') {
+          const res = await onCustomLogin('', '', formData.phone);
+          if (res?.error) {
+            setFormErrors({ phone: res.error });
+            setIsLoading(false);
+          } else {
+            setSuccessMsg('Welcome back! Retrieving workspace state...');
+            setIsLoading(false);
           }
         }
-      }, 1000);
-    }, 1200);
+      }
+    } catch (err: any) {
+      setFormErrors({ email: err.message || 'Authentication failed. Please try again.' });
+      setIsLoading(false);
+    }
   };
 
   const accentClasses = {
@@ -1133,7 +1160,7 @@ export default function Homepage({
                   {/* 3-Method Sign-In Selector */}
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-450 dark:text-slate-500 mb-3">
-                      Choose sign-in method
+                      {authMode === 'signup' ? 'Choose sign-up method' : 'Choose sign-in method'}
                     </p>
                     <div className="grid grid-cols-3 gap-2">
                       {/* Method 1: Email */}
