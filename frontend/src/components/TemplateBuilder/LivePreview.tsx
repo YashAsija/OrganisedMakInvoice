@@ -838,9 +838,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               return (
                 <div key="productTable" style={{ ...getSectionStyle('productTable'), marginTop: isFirstPage ? '20px' : '0px', gridColumn: 'span 12' }}>
                   {!isFirstPage && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #cbd5e1', paddingBottom: '8px', marginBottom: '20px' }}>
-                      <span style={{ fontSize: '10px', color: styleConfig.primaryColor || '#64748b', fontWeight: 'bold' }}>TAX INVOICE</span>
-                      <span style={{ fontSize: '10px', color: '#64748b' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid #cbd5e1', paddingBottom: '12px', marginBottom: '20px' }}>
+                      <span style={{ fontSize: '10px', color: styleConfig.primaryColor || '#64748b', fontWeight: 'bold', whiteSpace: 'nowrap' }}>TAX INVOICE</span>
+                      <span style={{ fontSize: '10px', color: '#64748b', whiteSpace: 'nowrap' }}>
                         Invoice No: {invoiceData?.invoiceNumber || ''} | Date: {invoiceData?.date || ''} | Page {pageIdx + 1} of {totalPages}
                       </span>
                     </div>
@@ -961,9 +961,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             return (
               <div key="productTable" style={{ ...getSectionStyle('productTable'), marginTop: isFirstPage ? '0px' : '0px', gridColumn: 'span 12' }}>
                 {!isFirstPage && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #cbd5e1', paddingBottom: '8px', marginBottom: '20px' }}>
-                    <span style={{ fontSize: '10px', color: styleConfig.primaryColor || '#64748b', fontWeight: 'bold' }}>TAX INVOICE</span>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid #cbd5e1', paddingBottom: '12px', marginBottom: '20px' }}>
+                    <span style={{ fontSize: '10px', color: styleConfig.primaryColor || '#64748b', fontWeight: 'bold', whiteSpace: 'nowrap' }}>TAX INVOICE</span>
+                    <span style={{ fontSize: '10px', color: '#64748b', whiteSpace: 'nowrap' }}>
                       Invoice No: {invoiceData?.invoiceNumber || ''} | Date: {invoiceData?.date || ''} | Page {pageIdx + 1} of {totalPages}
                     </span>
                   </div>
