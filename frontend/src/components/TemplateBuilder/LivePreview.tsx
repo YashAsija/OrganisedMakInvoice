@@ -341,10 +341,6 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     const bg = styleConfig.sectionBackgroundColors[sectionId as keyof typeof styleConfig.sectionBackgroundColors];
     const span = dynamicSpans[sectionId] || sections[sectionId as keyof typeof sections].gridColumnSpan;
 
-    const layoutInfo = sectionLayouts[sectionId];
-    const colStart = layoutInfo ? `${layoutInfo.colStart + 1}` : 'auto';
-    const gridRow = layoutInfo ? `${layoutInfo.row + 1}` : 'auto';
-
     const baseMarginBottom = styleConfig.spacing === 'Compact' ? '6px' : styleConfig.spacing === 'Spacious' ? '16px' : '10px';
     const marginTop = (sectionId === 'taxEngine' || sectionId === 'payment') ? '0px' : undefined;
     const marginBottom = sectionId === 'productTable' ? '0px' : baseMarginBottom;
@@ -360,8 +356,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
       marginBottom,
       marginTop,
       alignSelf: 'start',
-      gridColumn: `${colStart} / span ${span}`,
-      gridRow
+      gridColumn: `span ${span}`
     };
   };
 
