@@ -1,15 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { signInWithPopup, signOut, User, getAdditionalUserInfo } from 'firebase/auth';
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  getDocs, 
-  deleteDoc, 
-  onSnapshot 
-} from 'firebase/firestore';
-import { auth, db, googleProvider, handleFirestoreError, OperationType } from './lib/firebase';
+import type { User } from '@supabase/supabase-js';
+import { supabase, handleSupabaseError, OperationType } from './lib/supabase';
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from './types';
 import { getSampleInvoice, BUSINESS_TEMPLATES } from './lib/presets';
 import { getSecuritySettings, saveSecuritySettings, SecuritySettings } from './lib/biometrics';
@@ -190,159 +181,217 @@ export default function App() {
     }
   };
 
-  // --- CONNECT FIREBASE LISTENERS OR DEGRADE GRACEFULLY (CLOUD SYNCING) ---
+  // --- CONNECT SUPABASE LISTENERS OR DEGRADE GRACEFULLY (CLOUD SYNCING) ---
   useEffect(() => {
     // Load local storage fallback immediately so the app shows data instantly before network resolves (and works fully offline)
     loadLocalData();
 
-    let activeUnsubscribes: (() => void)[] = [];
+    let activeChannels: ReturnType<typeof supabase.channel>[] = [];
 
-    const cleanupActiveListeners = () => {
-      activeUnsubscribes.forEach((unsub) => {
+    const cleanupActiveListeners = async () => {
+      for (const channel of activeChannels) {
         try {
-          unsub();
+          await supabase.removeChannel(channel);
         } catch (e) {
-          console.error('Error cleaning up active Firebase listener:', e);
+          console.error('Error cleaning up active Supabase listener:', e);
         }
-      });
-      activeUnsubscribes = [];
+      }
+      activeChannels = [];
     };
 
     // Setup Auth State Listener
-    const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
-      // First clean up any active snapshot listeners to prevent orphaned loops upon auth state shifts
-      cleanupActiveListeners();
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        // First clean up any active snapshot listeners to prevent orphaned loops upon auth state shifts
+        cleanupActiveListeners();
 
-      if (currentUser) {
-        setUser(currentUser);
-        setUserEmail(currentUser.email);
+        const currentUser = session?.user ?? null;
 
-        if (isOnline) {
-          // --- SYNC / RESOLVE FROM CLOUD ---
-          const uid = currentUser.uid;
+        if (currentUser) {
+          setUser(currentUser);
+          setUserEmail(currentUser.email ?? null);
 
-          // 1. Fetch Cloud Profile
-          try {
-            const profileRef = doc(db, 'users', uid);
-            const profileSnap = await getDoc(profileRef);
-            if (profileSnap.exists()) {
-              const cloudProf = profileSnap.data() as BusinessProfile;
-              setProfile(cloudProf);
-              localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(cloudProf));
-            } else {
-              // Creating initial business profile for new users in Firestore
-              const initProf: BusinessProfile = {
-                uid,
-                name: profile.name || currentUser.displayName || '',
-                email: profile.email || currentUser.email || '',
-                phone: profile.phone || '',
-                address: profile.address || '',
-                taxId: profile.taxId || '',
-                currency: profile.currency || 'INR',
-                defaultTaxRate: profile.defaultTaxRate || 18,
-                updatedAt: new Date().toISOString()
-              };
-              await setDoc(profileRef, initProf);
-              setProfile(initProf);
+          if (isOnline) {
+            // --- SYNC / RESOLVE FROM CLOUD ---
+            const uid = currentUser.id;
+
+            // 1. Fetch Cloud Profile
+            try {
+              const { data: cloudProf } = await supabase
+                .from('users')
+                .select('*')
+                .eq('uid', uid)
+                .single();
+
+              if (cloudProf) {
+                setProfile(cloudProf as BusinessProfile);
+                localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(cloudProf));
+              } else {
+                // Creating initial business profile for new users in Supabase
+                const initProf: BusinessProfile = {
+                  uid,
+                  name: profile.name || currentUser.user_metadata?.full_name || '',
+                  email: profile.email || currentUser.email || '',
+                  phone: profile.phone || '',
+                  address: profile.address || '',
+                  taxId: profile.taxId || '',
+                  currency: profile.currency || 'INR',
+                  defaultTaxRate: profile.defaultTaxRate || 18,
+                  updatedAt: new Date().toISOString()
+                };
+                await supabase.from('users').upsert(initProf);
+                setProfile(initProf);
+              }
+            } catch (err) {
+              console.error('Error fetching/setting cloud profile:', err);
             }
-          } catch (err) {
-            console.error('Error fetching/setting cloud profile:', err);
+
+            // 2. Load Invoices from Supabase and attach realtime listener
+            try {
+              const { data: cloudInvoices } = await supabase
+                .from('invoices')
+                .select('*')
+                .eq('userId', uid)
+                .order('date', { ascending: false });
+
+              if (cloudInvoices) {
+                setInvoices(cloudInvoices as Invoice[]);
+                localStorage.setItem('invoice_maker_invoices', JSON.stringify(cloudInvoices));
+              }
+            } catch (err) {
+              handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
+            }
+
+            const invoicesChannel = supabase
+              .channel(`invoices:${uid}`)
+              .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'invoices', filter: `userId=eq.${uid}` },
+                async () => {
+                  const { data } = await supabase
+                    .from('invoices')
+                    .select('*')
+                    .eq('userId', uid)
+                    .order('date', { ascending: false });
+                  if (data) {
+                    setInvoices(data as Invoice[]);
+                    localStorage.setItem('invoice_maker_invoices', JSON.stringify(data));
+                  }
+                }
+              )
+              .subscribe();
+            activeChannels.push(invoicesChannel);
+
+            // 3. Load Presets and attach realtime listener
+            try {
+              const { data: cloudPresets } = await supabase
+                .from('preset_items')
+                .select('*')
+                .eq('userId', uid);
+              if (cloudPresets) {
+                setPresets(cloudPresets as PresetItem[]);
+                localStorage.setItem('invoice_maker_presets', JSON.stringify(cloudPresets));
+              }
+            } catch (err) {
+              handleSupabaseError(err, OperationType.GET, `preset_items[userId=${uid}]`);
+            }
+
+            const presetsChannel = supabase
+              .channel(`preset_items:${uid}`)
+              .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'preset_items', filter: `userId=eq.${uid}` },
+                async () => {
+                  const { data } = await supabase
+                    .from('preset_items')
+                    .select('*')
+                    .eq('userId', uid);
+                  if (data) {
+                    setPresets(data as PresetItem[]);
+                    localStorage.setItem('invoice_maker_presets', JSON.stringify(data));
+                  }
+                }
+              )
+              .subscribe();
+            activeChannels.push(presetsChannel);
+
+            // 4. Load Clients and attach realtime listener
+            try {
+              const { data: cloudClients } = await supabase
+                .from('clients')
+                .select('*')
+                .eq('userId', uid);
+              if (cloudClients) {
+                setClients(cloudClients as ClientProfile[]);
+                localStorage.setItem('invoice_maker_clients', JSON.stringify(cloudClients));
+              }
+            } catch (err) {
+              handleSupabaseError(err, OperationType.GET, `clients[userId=${uid}]`);
+            }
+
+            const clientsChannel = supabase
+              .channel(`clients:${uid}`)
+              .on(
+                 'postgres_changes',
+                { event: '*', schema: 'public', table: 'clients', filter: `userId=eq.${uid}` },
+                async () => {
+                  const { data } = await supabase
+                    .from('clients')
+                    .select('*')
+                    .eq('userId', uid);
+                  if (data) {
+                    setClients(data as ClientProfile[]);
+                    localStorage.setItem('invoice_maker_clients', JSON.stringify(data));
+                  }
+                }
+              )
+              .subscribe();
+            activeChannels.push(clientsChannel);
+
+            // 5. Load Expenses and attach realtime listener
+            try {
+              const { data: cloudExpenses } = await supabase
+                .from('expenses')
+                .select('*')
+                .eq('userId', uid);
+              if (cloudExpenses) {
+                setExpenses(cloudExpenses as Expense[]);
+                localStorage.setItem('invoice_maker_expenses', JSON.stringify(cloudExpenses));
+              }
+            } catch (err) {
+              handleSupabaseError(err, OperationType.GET, `expenses[userId=${uid}]`);
+            }
+
+            const expensesChannel = supabase
+              .channel(`expenses:${uid}`)
+              .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'expenses', filter: `userId=eq.${uid}` },
+                async () => {
+                  const { data } = await supabase
+                    .from('expenses')
+                    .select('*')
+                    .eq('userId', uid);
+                  if (data) {
+                    setExpenses(data as Expense[]);
+                    localStorage.setItem('invoice_maker_expenses', JSON.stringify(data));
+                  }
+                }
+              )
+              .subscribe();
+            activeChannels.push(expensesChannel);
           }
-
-          // 2. Attach Live Listener to Invoices
-          const invoicesPath = `users/${uid}/invoices`;
-          const unsubscribeInvoices = onSnapshot(
-            collection(db, 'users', uid, 'invoices'),
-            (snapshot) => {
-              const cloudInvoices: Invoice[] = [];
-              snapshot.forEach((d) => {
-                cloudInvoices.push(d.data() as Invoice);
-              });
-              
-              // Sort by date descending
-              cloudInvoices.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-              
-              setInvoices(cloudInvoices);
-              localStorage.setItem('invoice_maker_invoices', JSON.stringify(cloudInvoices));
-            },
-            (error) => {
-              if (auth.currentUser) {
-                handleFirestoreError(error, OperationType.GET, invoicesPath);
-              }
-            }
-          );
-          activeUnsubscribes.push(unsubscribeInvoices);
-
-          // 3. Attach Live Listener to Presets
-          const presetsPath = `users/${uid}/presetItems`;
-          const unsubscribePresets = onSnapshot(
-            collection(db, 'users', uid, 'presetItems'),
-            (snapshot) => {
-              const cloudPresets: PresetItem[] = [];
-              snapshot.forEach((d) => {
-                cloudPresets.push(d.data() as PresetItem);
-              });
-              setPresets(cloudPresets);
-              localStorage.setItem('invoice_maker_presets', JSON.stringify(cloudPresets));
-            },
-            (error) => {
-              if (auth.currentUser) {
-                handleFirestoreError(error, OperationType.GET, presetsPath);
-              }
-            }
-          );
-          activeUnsubscribes.push(unsubscribePresets);
-
-          // 4. Attach Live Listener to Clients
-          const clientsPath = `users/${uid}/clients`;
-          const unsubscribeClients = onSnapshot(
-            collection(db, 'users', uid, 'clients'),
-            (snapshot) => {
-              const cloudClients: ClientProfile[] = [];
-              snapshot.forEach((d) => {
-                cloudClients.push(d.data() as ClientProfile);
-              });
-              setClients(cloudClients);
-              localStorage.setItem('invoice_maker_clients', JSON.stringify(cloudClients));
-            },
-            (error) => {
-              if (auth.currentUser) {
-                handleFirestoreError(error, OperationType.GET, clientsPath);
-              }
-            }
-          );
-          activeUnsubscribes.push(unsubscribeClients);
-
-          // 5. Attach Live Listener to Expenses
-          const expensesPath = `users/${uid}/expenses`;
-          const unsubscribeExpenses = onSnapshot(
-            collection(db, 'users', uid, 'expenses'),
-            (snapshot) => {
-              const cloudExpenses: Expense[] = [];
-              snapshot.forEach((d) => {
-                cloudExpenses.push(d.data() as Expense);
-              });
-              setExpenses(cloudExpenses);
-              localStorage.setItem('invoice_maker_expenses', JSON.stringify(cloudExpenses));
-            },
-            (error) => {
-              if (auth.currentUser) {
-                handleFirestoreError(error, OperationType.GET, expensesPath);
-              }
-            }
-          );
-          activeUnsubscribes.push(unsubscribeExpenses);
+        } else {
+          setUser(null);
+          setUserEmail(null);
+          // Fall back to offline local storage data
+          loadLocalData();
         }
-      } else {
-        setUser(null);
-        setUserEmail(null);
-        // Fall back to offline local storage data
-        loadLocalData();
       }
-    });
+    );
 
     return () => {
-      unsubscribeAuth();
+      authSubscription.unsubscribe();
       cleanupActiveListeners();
     };
   }, [isOnline]);
@@ -366,7 +415,7 @@ export default function App() {
           clientsChanged = true;
           updatedClients.push({
             id: crypto.randomUUID(),
-            userId: user ? user.uid : '',
+            userId: user ? user.id : '',
             name: inv.clientName.trim(),
             companyName: inv.clientName.trim(),
             address: inv.clientAddress || '',
@@ -384,11 +433,9 @@ export default function App() {
       localStorage.setItem('invoice_maker_clients', JSON.stringify(updatedClients));
       
       if (isOnline && user) {
-        updatedClients.forEach(client => {
-          const clientWithUser = { ...client, userId: user.uid };
-          setDoc(doc(db, 'users', user.uid, 'clients', client.id), clientWithUser).catch(e => {
-            console.error('Failed to retroactively sync client to cloud:', e);
-          });
+        const clientsWithUser = updatedClients.map(c => ({ ...c, userId: user.id }));
+        supabase.from('clients').upsert(clientsWithUser).then(null, (e: unknown) => {
+          console.error('Failed to retroactively sync clients to cloud:', e);
         });
       }
     }
@@ -396,19 +443,20 @@ export default function App() {
 
   // --- ACTIONS SYSTEM ---
 
-  // 1. Google OAuth Popup login trigger
+  // 1. Google OAuth login trigger via Supabase
   const handleLogin = async () => {
     if (!isOnline) {
       alert('You are currently offline. Please reconnect to sign in and sync to the cloud.');
       return;
     }
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const isNewUser = getAdditionalUserInfo(result)?.isNewUser;
-      if (isNewUser) {
-        setIsOnboarding(true);
-        setIsProfileOpen(true);
-      }
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        },
+      });
+      if (error) console.error('Login flow failed:', error);
     } catch (e) {
       console.error('Login flow failed:', e);
     }
@@ -465,7 +513,7 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
       localStorage.removeItem('makbills_custom_email');
       localStorage.removeItem('makbills_custom_brand');
       setUser(null);
@@ -483,11 +531,11 @@ export default function App() {
     localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(updatedProfile));
 
     if (isOnline && user) {
-      const path = `users/${user.uid}`;
+      const path = `users[uid=${user.id}]`;
       try {
-        await setDoc(doc(db, 'users', user.uid), updatedProfile);
+        await supabase.from('users').upsert({ ...updatedProfile, uid: user.id });
       } catch (error) {
-        handleFirestoreError(error, OperationType.WRITE, path);
+        handleSupabaseError(error, OperationType.WRITE, path);
       }
     }
   };
@@ -511,7 +559,7 @@ export default function App() {
         updatedAt: new Date().toISOString()
       } : {
         id: crypto.randomUUID(),
-        userId: user ? user.uid : '',
+        userId: user ? user.id : '',
         name: invoice.clientName.trim(),
         companyName: invoice.clientName.trim(),
         address: invoice.clientAddress || '',
@@ -535,12 +583,12 @@ export default function App() {
 
     if (isOnline && user) {
       // Propagate directly to Cloud
-      const updatedInvoiceData = { ...invoice, userId: user.uid };
-      const path = `users/${user.uid}/invoices/${invoice.id}`;
+      const updatedInvoiceData = { ...invoice, userId: user.id };
+      const path = `invoices[id=${invoice.id}]`;
       try {
-        await setDoc(doc(db, 'users', user.uid, 'invoices', invoice.id), updatedInvoiceData);
+        await supabase.from('invoices').upsert(updatedInvoiceData);
       } catch (error) {
-        handleFirestoreError(error, OperationType.WRITE, path);
+        handleSupabaseError(error, OperationType.WRITE, path);
       }
     }
   };
@@ -555,11 +603,11 @@ export default function App() {
     localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
 
     if (isOnline && user) {
-      const path = `users/${user.uid}/invoices/${invoiceId}`;
+      const path = `invoices[id=${invoiceId}]`;
       try {
-        await deleteDoc(doc(db, 'users', user.uid, 'invoices', invoiceId));
+        await supabase.from('invoices').delete().eq('id', invoiceId).eq('userId', user.id);
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, path);
+        handleSupabaseError(error, OperationType.DELETE, path);
       }
     }
   };
@@ -575,12 +623,10 @@ export default function App() {
     localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
 
     if (isOnline && user) {
-      for (const invoiceId of invoiceIds) {
-        try {
-          await deleteDoc(doc(db, 'users', user.uid, 'invoices', invoiceId));
-        } catch (error) {
-          console.error(`Failed to delete invoice ${invoiceId} in bulk:`, error);
-        }
+      try {
+        await supabase.from('invoices').delete().in('id', invoiceIds).eq('userId', user.id);
+      } catch (error) {
+        console.error('Failed to bulk delete invoices:', error);
       }
     }
   };
@@ -602,15 +648,14 @@ export default function App() {
     localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
 
     if (isOnline && user) {
-      for (const invoiceId of invoiceIds) {
-        const inv = invoices.find(i => i.id === invoiceId);
-        if (inv) {
-          try {
-            await setDoc(doc(db, 'users', user.uid, 'invoices', invoiceId), { ...inv, status, userId: user.uid, updatedAt: new Date().toISOString() });
-          } catch (error) {
-            console.error(`Failed to update invoice ${invoiceId} client status in bulk:`, error);
-          }
-        }
+      try {
+        const bulkUpdates = invoiceIds.map(invoiceId => {
+          const inv = invoices.find(i => i.id === invoiceId);
+          return { ...inv, status, userId: user.id, updatedAt: new Date().toISOString() };
+        }).filter(Boolean);
+        await supabase.from('invoices').upsert(bulkUpdates);
+      } catch (error) {
+        console.error('Failed to bulk update invoices status:', error);
       }
     }
   };
@@ -622,7 +667,7 @@ export default function App() {
 
     // Load business details
     const cleanProfile: BusinessProfile = {
-      uid: user ? user.uid : 'local',
+      uid: user ? user.id : 'local',
       name: template.defaultProfile.name || '',
       email: template.defaultProfile.email || '',
       phone: template.defaultProfile.phone || '',
@@ -639,7 +684,7 @@ export default function App() {
     // Seed preset catalog items
     const seededPresets: PresetItem[] = template.items.map((it) => ({
       id: it.id,
-      userId: user ? user.uid : 'local',
+      userId: user ? user.id : 'local',
       name: it.name,
       rate: it.rate,
       taxPercentage: it.taxPercentage,
@@ -650,21 +695,19 @@ export default function App() {
     localStorage.setItem('invoice_maker_presets', JSON.stringify(seededPresets));
 
     // Clear and seed an initial example bill matching template
-    const sample = getSampleInvoice(templateId, user ? user.uid : 'local');
+    const sample = getSampleInvoice(templateId, user ? user.id : 'local');
     setInvoices([sample]);
     localStorage.setItem('invoice_maker_invoices', JSON.stringify([sample]));
 
     if (isOnline && user) {
-      // Sync seeded configurations to firesore
+      // Sync seeded configurations to Supabase
       try {
-        await setDoc(doc(db, 'users', user.uid), cleanProfile);
-        
-        // Write standard invoice
-        await setDoc(doc(db, 'users', user.uid, 'invoices', sample.id), { ...sample, userId: user.uid });
-
-        // Write seeded presets
-        for (const presetItem of seededPresets) {
-          await setDoc(doc(db, 'users', user.uid, 'presetItems', presetItem.id), presetItem);
+        await supabase.from('users').upsert({ ...cleanProfile, uid: user.id });
+        await supabase.from('invoices').upsert({ ...sample, userId: user.id });
+        if (seededPresets.length > 0) {
+          await supabase.from('preset_items').upsert(
+            seededPresets.map(p => ({ ...p, userId: user.id }))
+          );
         }
       } catch (err) {
         console.error('Failed to sync seeded template configurations', err);
@@ -681,16 +724,16 @@ export default function App() {
     const localInvoices = invoices.filter(inv => inv.userId === 'local');
     if (localInvoices.length === 0) return;
 
-    let syncedCount = 0;
     try {
-      for (const inv of localInvoices) {
-        const syncedInv = { ...inv, userId: user.uid, updatedAt: new Date().toISOString() };
-        await setDoc(doc(db, 'users', user.uid, 'invoices', inv.id), syncedInv);
-        syncedCount++;
-      }
-      alert(`Cloud sync complete. ${syncedCount} offline invoices synced to your cloud account!`);
-      
-      // Live snapshot listener will auto-update state from Firestore
+      const syncedInvoices = localInvoices.map(inv => ({
+        ...inv,
+        userId: user.id,
+        updatedAt: new Date().toISOString(),
+      }));
+      const { error } = await supabase.from('invoices').upsert(syncedInvoices);
+      if (error) throw error;
+      alert(`Cloud sync complete. ${syncedInvoices.length} offline invoices synced to your cloud account!`);
+      // Realtime channel will auto-update state from Supabase
     } catch (err) {
       console.error('Failed syncing offline invoices:', err);
     }
@@ -704,9 +747,9 @@ export default function App() {
     localStorage.setItem('invoice_maker_clients', JSON.stringify(updated));
 
     if (isOnline && user) {
-      const clientWithUser = { ...client, userId: user.uid };
+      const clientWithUser = { ...client, userId: user.id };
       try {
-        await setDoc(doc(db, 'users', user.uid, 'clients', client.id), clientWithUser);
+        await supabase.from('clients').upsert(clientWithUser);
       } catch (err) {
         console.error('Failed to sync client profile:', err);
       }
@@ -723,7 +766,7 @@ export default function App() {
 
     if (isOnline && user) {
       try {
-        await deleteDoc(doc(db, 'users', user.uid, 'clients', clientId));
+        await supabase.from('clients').delete().eq('id', clientId).eq('userId', user.id);
       } catch (err) {
         console.error('Failed to delete client profile:', err);
       }
@@ -738,9 +781,9 @@ export default function App() {
     localStorage.setItem('invoice_maker_expenses', JSON.stringify(updated));
 
     if (isOnline && user) {
-      const expenseWithUser = { ...expense, userId: user.uid };
+      const expenseWithUser = { ...expense, userId: user.id };
       try {
-        await setDoc(doc(db, 'users', user.uid, 'expenses', expense.id), expenseWithUser);
+        await supabase.from('expenses').upsert(expenseWithUser);
       } catch (err) {
         console.error('Failed to sync business expense:', err);
       }
@@ -757,7 +800,7 @@ export default function App() {
 
     if (isOnline && user) {
       try {
-        await deleteDoc(doc(db, 'users', user.uid, 'expenses', expenseId));
+        await supabase.from('expenses').delete().eq('id', expenseId).eq('userId', user.id);
       } catch (err) {
         console.error('Failed to delete business expense:', err);
       }
@@ -863,17 +906,21 @@ export default function App() {
 
       updatedParents.forEach((up) => {
         nextInvoices = nextInvoices.map(it => it.id === up.id ? up : it);
-        if (isOnline && user) {
-          setDoc(doc(db, 'users', user.uid, 'invoices', up.id), { ...up, userId: user.uid }).catch(console.error);
-        }
       });
 
       newSpawned.forEach((ch) => {
         nextInvoices = [ch, ...nextInvoices];
-        if (isOnline && user) {
-          setDoc(doc(db, 'users', user.uid, 'invoices', ch.id), { ...ch, userId: user.uid }).catch(console.error);
-        }
       });
+
+      if (isOnline && user) {
+        const allToSync = [
+          ...updatedParents.map(up => ({ ...up, userId: user.id })),
+          ...newSpawned.map(ch => ({ ...ch, userId: user.id })),
+        ];
+        supabase.from('invoices').upsert(allToSync).then(({ error }) => {
+          if (error) console.error('Failed to sync recurring invoices:', error);
+        });
+      }
 
       setInvoices(nextInvoices);
       localStorage.setItem('invoice_maker_invoices', JSON.stringify(nextInvoices));
