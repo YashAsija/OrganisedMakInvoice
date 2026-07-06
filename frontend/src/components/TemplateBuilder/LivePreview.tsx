@@ -337,6 +337,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     return 'right';
   };
 
+  const getSectionAlignment = (sectionId: string): 'left' | 'right' => {
+    const layoutInfo = sectionLayouts[sectionId];
+    if (!layoutInfo) return 'left';
+    return layoutInfo.colStart >= 6 ? 'right' : 'left';
+  };
+
   const getSectionStyle = (sectionId: string): React.CSSProperties => {
     const bg = styleConfig.sectionBackgroundColors[sectionId as keyof typeof styleConfig.sectionBackgroundColors];
     const span = dynamicSpans[sectionId] || sections[sectionId as keyof typeof sections].gridColumnSpan;
@@ -1114,9 +1120,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           }
           if (section.id === 'taxEngine') {
             if (layout.type === 'Modal Classic') {
+              const align = getSectionAlignment('taxEngine');
+              const paddingStyle = align === 'right' ? { paddingRight: '20px', paddingLeft: '0px' } : { paddingLeft: '20px', paddingRight: '0px' };
+              
               return (
-                <div key="taxEngine" style={{ ...getSectionStyle('taxEngine'), paddingLeft: '20px' }}>
-                  <div className="space-y-2 text-[11px]">
+                <div key="taxEngine" style={{ ...getSectionStyle('taxEngine'), ...paddingStyle, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', width: '100%' }}>
+                  <div className="space-y-2 text-[11px] w-full max-w-[240px]">
                     {config.tax.showTotal && (
                       <div className="flex justify-between text-gray-600">
                         <span>Sub Total</span>
@@ -1234,17 +1243,18 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
            if (section.id === 'payment') {
             if (layout.type === 'Modal Classic') {
-
+              const align = getSectionAlignment('payment');
               return (
-                <div key="payment" style={getSectionStyle('payment')}>
+                <div key="payment" style={{ ...getSectionStyle('payment'), textAlign: align, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', width: '100%' }}>
                   <div className="font-bold text-gray-800 text-[10px] mb-1">Banking Information</div>
-                  <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap">
+                  <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap" style={{ textAlign: align, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start' }}>
                     {config.payment.generateQrCode && <div style={{ width: 60, height: 60, backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '5px' }}>QR</div>}
-                    {config.payment.customNote || `Bank Name: Axis\nAccount No.: 098654345678\nIFSC Code: UTIB00056`}
+                    <div style={{ whiteSpace: 'pre-wrap', textAlign: align }}>
+                      {config.payment.customNote || `Bank Name: Axis\nAccount No.: 098654345678\nIFSC Code: UTIB00056`}
+                    </div>
                   </div>
                 </div>
               );
-
             }
             const payAlign = getFooterAlignment('payment');
             const payJustify = payAlign === 'left' ? 'flex-start' : payAlign === 'center' ? 'center' : 'flex-end';
