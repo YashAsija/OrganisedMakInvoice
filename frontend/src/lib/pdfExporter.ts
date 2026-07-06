@@ -282,19 +282,22 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
     const pageHeight = activeTemplate.layout.pageSize === 'A4' ? 1123 : 1056;
     
     const footerEl = container.querySelector('#pinned-footer-container') as HTMLElement;
-    const footerHeight = footerEl ? footerEl.offsetHeight : 200;
+    const footerHeight = footerEl && footerEl.offsetHeight > 50 ? footerEl.offsetHeight : 180;
     
     const tableEl = container.querySelector('table') as HTMLElement;
-    const tableTop = tableEl ? tableEl.getBoundingClientRect().top - container.getBoundingClientRect().top : 400;
+    let tableTop = tableEl ? tableEl.getBoundingClientRect().top - container.getBoundingClientRect().top : 380;
+    if (tableTop < 100) {
+      tableTop = 380;
+    }
     
     const theadEl = container.querySelector('thead') as HTMLElement;
-    const tableHeaderHeight = theadEl ? theadEl.offsetHeight : 40;
+    const tableHeaderHeight = theadEl && theadEl.offsetHeight > 10 ? theadEl.offsetHeight : 35;
     
     const rows = Array.from(container.querySelectorAll('tbody tr')) as HTMLElement[];
-    const rowHeights = rows.map(r => r.offsetHeight || 40);
+    const rowHeights = rows.map(r => r.offsetHeight > 20 ? r.offsetHeight : 45);
     
     // Calculate totalsHeight by measuring bottom totals grid
-    let totalsHeight = 220;
+    let totalsHeight = 180;
     const totalsEls = Array.from(container.querySelectorAll('[key="taxEngine"], [key="payment"], [key="amountInWords"]')) as HTMLElement[];
     if (totalsEls.length > 0) {
       let minTop = Infinity;
@@ -307,7 +310,7 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
         if (top < minTop) minTop = top;
         if (bottom > maxBottom) maxBottom = bottom;
       });
-      if (maxBottom > minTop) {
+      if (maxBottom > minTop && (maxBottom - minTop) > 50) {
         totalsHeight = maxBottom - minTop;
       }
     }
