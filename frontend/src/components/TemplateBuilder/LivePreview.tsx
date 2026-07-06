@@ -615,7 +615,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               const referenceNumber = (invoiceData as any)?.referenceNumber || "N/A";
               return (
                 <div key="invoiceInfo" style={{ ...getSectionStyle('invoiceInfo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px' }}>
-                  <div className="border border-gray-300 p-2.5 h-full">
+                  <div className="border border-gray-300 p-2.5 h-full" style={{ borderRadius: getBorderRadius() }}>
                     {config.invoiceInfo.fields.includes('invoiceNumber') && <div className={rowStyle}><span className={labelStyle}>{noLabel}</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(invNo, 'invoiceNumber')}</span></div>}
                     {config.invoiceInfo.fields.includes('invoiceDate') && <div className={rowStyle}><span className={labelStyle}>Dated</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(invDate, 'date')}</span></div>}
                     {config.invoiceInfo.fields.includes('dueDate') && <div className={rowStyle}><span className={labelStyle}>{dueDateLabel}</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(dueDate, 'dueDate')}</span></div>}
@@ -659,7 +659,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
               return (
                 <div key="billTo" style={{ ...getSectionStyle('billTo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginTop: '20px' }}>
-                  <div className={`border border-gray-300 p-2.5 h-full flex ${isAdjacent ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`}>
+                  <div className={`border border-gray-300 p-2.5 h-full flex ${isAdjacent ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
                     <h3 className={`font-bold text-[11px] text-gray-800 uppercase ${isAdjacent ? 'mb-1' : 'w-full mb-0'}`}>BILLED TO</h3>
                     {config.client.fields.includes('name') && <div className={`${isAdjacent ? 'text-[12px] font-medium text-gray-900 mb-0.5' : 'flex items-center text-[10px]'}`}>{isAdjacent ? renderInteractive(clientName, 'clientName', 'text', 'Client Name') : <><span className="text-gray-500 font-medium mr-1">Name:</span><span className="text-gray-900 font-bold">{renderInteractive(clientName, 'clientName', 'text', 'Client Name')}</span></>}</div>}
                     {config.client.fields.includes('phone') && (
@@ -730,7 +730,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
               return (
                 <div key="shipTo" style={{ ...getSectionStyle('shipTo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginTop: '20px' }}>
-                  <div className={`border border-gray-300 p-2.5 h-full flex ${isAdjacent ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`}>
+                  <div className={`border border-gray-300 p-2.5 h-full flex ${isAdjacent ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
                     <div className={`flex justify-between items-center ${isAdjacent ? 'mb-1' : 'w-full mb-0'}`}>
                       <h3 className={`font-bold text-[11px] text-gray-800 uppercase`}>SHIPPED TO</h3>
                       {isInteractive && onCopyBillingToShipping && (
@@ -844,16 +844,17 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                       </span>
                     </div>
                   )}
-                  <table className="w-full text-left border-collapse border border-gray-300">
-                    <thead>
-                      <tr className="text-white text-[10px] uppercase tracking-wide" style={{ backgroundColor: styleConfig.tableHeaderBackground, color: styleConfig.tableHeaderTextColor }}>
-                        {renderCols.map(col => (
-                          <th key={col.id} className="py-2.5 px-3 border border-gray-300 text-left uppercase">
-                            {col.id === 'tax' ? dynamicTaxHeader : col.label}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
+                  <div style={{ borderRadius: getBorderRadius(), overflow: 'hidden', border: styleConfig.roundedCorners ? '1px solid #d1d5db' : 'none' }}>
+                    <table className="w-full text-left border-collapse border border-gray-300" style={{ border: styleConfig.roundedCorners ? 'none' : undefined }}>
+                      <thead>
+                        <tr className="text-white text-[10px] uppercase tracking-wide" style={{ backgroundColor: styleConfig.tableHeaderBackground, color: styleConfig.tableHeaderTextColor }}>
+                          {renderCols.map(col => (
+                            <th key={col.id} className="py-2.5 px-3 border border-gray-300 text-left uppercase">
+                              {col.id === 'tax' ? dynamicTaxHeader : col.label}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
                     <tbody className="divide-y divide-gray-300">
                       {activeItems.map((item, idx) => {
                         return (
@@ -929,7 +930,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         </tr>
                       )}
                     </tbody>
-                  </table>
+                    </table>
+                  </div>
                 </div>
               );
 
@@ -967,7 +969,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                     </span>
                   </div>
                 )}
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <div style={{ borderRadius: getBorderRadius(), overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: styleConfig.roundedCorners ? 'separate' : 'collapse', borderSpacing: '0', fontSize: '12px' }}>
                   <thead>
                     <tr style={{ backgroundColor: styleConfig.tableHeaderBackground, color: styleConfig.tableHeaderTextColor }}>
                       {renderCols.map((col, idx) => (
@@ -1036,7 +1039,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                       </tr>
                     )}
                   </tbody>
-                </table>
+                  </table>
+                </div>
               </div>
             );
           }
@@ -1058,7 +1062,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
               return (
                 <div key="transport" style={{ ...getSectionStyle('transport'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginTop: '20px' }}>
-                  <div className={`border border-gray-300 p-2.5 h-full flex ${(isAdjacent && !bothAdded) ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderLeft: isSecondCol ? 'none' : '1px solid #d1d5db' }}>
+                  <div className={`border border-gray-300 p-2.5 h-full flex ${(isAdjacent && !bothAdded) ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderLeft: isSecondCol ? 'none' : '1px solid #d1d5db', borderRadius: getBorderRadius() }}>
                     <div className={`flex justify-between items-center ${(isAdjacent && !bothAdded) ? 'mb-1' : 'w-full mb-0'}`}>
                       <h3 className={`font-bold text-[11px] text-gray-800 uppercase`}>TRANSPORT</h3>
                       {isInteractive && onUpdateHasTransport && (
