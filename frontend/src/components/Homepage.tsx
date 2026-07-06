@@ -1242,6 +1242,9 @@ export default function Homepage({
                   >
                     Try instantly as Guest (Local Offline Mode)
                   </button>
+                  <p className="text-[10px] text-slate-455 dark:text-neutral-500 mt-1.5 font-medium select-none max-w-[200px] mx-auto leading-normal">
+                    * Note: Guest data is saved in your local browser storage only. No cloud account will be created.
+                  </p>
                 </div>
               </div>
 
@@ -1347,7 +1350,7 @@ export default function Homepage({
                         value={formData.email}
                         onChange={(e) => { setFormData({ ...formData, email: e.target.value }); setFormErrors(prev => ({...prev, email: ''})); }}
                         placeholder="sales@yourcompany.com"
-                        className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.email ? 'border-rose-500 focus:ring-rose-500' : formData.email ? 'border-emerald-500 focus:ring-emerald-500' : 'border-slate-200 dark:border-neutral-805 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
+                        className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.email ? 'border-rose-500 focus:ring-rose-500' : (formData.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) ? 'border-emerald-500 focus:ring-emerald-500' : formData.email ? 'border-amber-500 focus:ring-amber-500' : 'border-slate-200 dark:border-neutral-805 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
                       />
                       {formErrors.email && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.email}</p>}
                     </div>
@@ -1357,10 +1360,11 @@ export default function Homepage({
                         type="password"
                         required
                         value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        onChange={(e) => { setFormData({ ...formData, password: e.target.value }); setFormErrors(prev => ({...prev, password: ''})); }}
                         placeholder="••••••••"
-                        className="w-full px-3 py-3 sm:py-2.5 rounded-xl border border-slate-200 dark:border-neutral-805 bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all"
+                        className={`w-full px-3 py-3 sm:py-2.5 rounded-xl border ${formErrors.password ? 'border-rose-500 focus:ring-rose-500' : formData.password.length >= 6 ? 'border-emerald-500 focus:ring-emerald-500' : formData.password ? 'border-amber-500 focus:ring-amber-500' : 'border-slate-200 dark:border-neutral-805 focus:ring-sky-500'} bg-slate-50 dark:bg-neutral-950 text-slate-805 dark:text-white text-sm sm:text-xs font-medium focus:ring-1 focus:outline-none transition-all`}
                       />
+                      {formErrors.password && <p className="text-[10px] text-rose-500 mt-1 font-bold animate-fade-in">{formErrors.password}</p>}
                       {formData.password && (
                         <div className="mt-2 space-y-1.5 animate-fade-in">
                           <div className="flex items-center justify-between text-[10px]">
@@ -1493,6 +1497,9 @@ export default function Homepage({
                   >
                     Try instantly as Guest (Local Offline Mode)
                   </button>
+                  <p className="text-[10px] text-slate-455 dark:text-neutral-500 mt-1.5 font-medium select-none max-w-[280px] mx-auto leading-normal">
+                    * Note: Guest data is saved in your local browser storage only. No cloud account will be created.
+                  </p>
                 </div>
 
               </div>

@@ -13,13 +13,13 @@ RATE_LIMIT_WINDOW = 60  # seconds
 MAX_REQUESTS_PER_WINDOW = 60  # limit requests per client IP to 60 per minute
 
 async def verify_supabase_token(credentials: HTTPAuthorizationCredentials = Security(security)):
-    supabase_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
-    supabase_key = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+    supabase_url = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_ANON_KEY") or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
     
-    # If Supabase credentials are not supplied or contain template placeholders, default to sandbox bypass
+    # Fail closed if credentials are missing or contain template placeholders
     if (not supabase_url or "YOUR_PROJECT_REF" in supabase_url or 
         not supabase_key or "YOUR_ANON_KEY" in supabase_key or "sb_publishable_" in supabase_key):
-        return None
+        raise HTTPException(status_code=500, detail="Database authentication is unconfigured on the server")
 
     if not credentials:
         raise HTTPException(status_code=401, detail="Authentication token required")
