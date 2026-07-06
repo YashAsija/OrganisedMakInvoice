@@ -478,7 +478,10 @@ export default function App() {
   };
 
   const handleCustomSignup = async (name: string, companyName: string, email: string, phone: string, password?: string): Promise<{ error?: string }> => {
-    if (isSupabaseConfigured && password) {
+    if (password) {
+      if (!isSupabaseConfigured) {
+        return { error: "Service unavailable, please try again later" };
+      }
       try {
         const { data, error } = await supabase.auth.signUp({
           email,
