@@ -8,12 +8,13 @@ const supabaseAnonKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   'placeholder-anon-key'; // replaced at runtime by real env var
 
-/** True only when real Supabase credentials are configured */
 export const isSupabaseConfigured =
   !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
   !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
   !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder') &&
-  !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('placeholder');
+  !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('YOUR_PROJECT_REF') &&
+  !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('placeholder') &&
+  !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('YOUR_ANON_KEY');
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
