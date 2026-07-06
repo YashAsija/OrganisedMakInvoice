@@ -454,7 +454,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gridAutoFlow: 'row', gap: '0px', position: 'relative', zIndex: 1, flex: 'none' }}>
 
-        {orderedSections.filter(s => !((layout.type === 'Modal Classic' || isPrintMode) && ['terms', 'signature', 'footer'].includes(s.id))).map(section => {
+        {orderedSections.filter(s => !['terms', 'signature', 'footer'].includes(s.id)).map(section => {
           if (['header', 'companyInfo', 'invoiceInfo', 'billTo', 'shipTo', 'transport'].includes(section.id)) {
             if (!isFirstPage) return null;
           }
@@ -1339,7 +1339,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
         })}
       </div>
 
-      {(layout.type === 'Modal Classic' || isPrintMode) && (
+      {true && (
         <div id="pinned-footer-container" style={{ marginTop: 'auto', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '15px', zIndex: 1 }}>
           {/* Row for Terms and Signature */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '40px' }}>
