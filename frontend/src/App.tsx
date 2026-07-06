@@ -482,6 +482,16 @@ export default function App() {
     setProfile(updatedProf);
     localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(updatedProf));
     
+    // Clear invoices, presets, clients, and expenses so a brand-new account starts completely fresh
+    setInvoices([]);
+    localStorage.setItem('invoice_maker_invoices', JSON.stringify([]));
+    setPresets([]);
+    localStorage.setItem('invoice_maker_presets', JSON.stringify([]));
+    setClients([]);
+    localStorage.setItem('invoice_maker_clients', JSON.stringify([]));
+    setExpenses([]);
+    localStorage.setItem('invoice_maker_expenses', JSON.stringify([]));
+    
     setIsOnboarding(true);
     setIsProfileOpen(true);
   };
