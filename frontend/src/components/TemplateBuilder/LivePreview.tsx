@@ -362,6 +362,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
       paddingLeft: padVal,
       marginBottom,
       marginTop,
+      alignSelf: 'start',
       gridColumn: `${colStart} / span ${span}`
     };
   };
