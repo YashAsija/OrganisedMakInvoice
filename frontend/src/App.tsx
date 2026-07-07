@@ -3,7 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import { supabase, handleSupabaseError, OperationType, isSupabaseConfigured } from './lib/supabase';
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from './types';
 import { getSampleInvoice, BUSINESS_TEMPLATES } from './lib/presets';
-import { getSecuritySettings, saveSecuritySettings, SecuritySettings } from './lib/biometrics';
+import { getSecuritySettings, saveSecuritySettings, SecuritySettings, hashPin } from './lib/biometrics';
 
 // Sub-components
 import BiometricVerification from './components/BiometricVerification';
@@ -26,7 +26,7 @@ export default function App() {
   const [isUnlocked, setIsUnlocked] = useState(() => {
     // If locks are active, require unlock screen on startup
     const current = getSecuritySettings();
-    return !current.isPinLockEnabled && !current.isBiometricsEnabled;
+    return !current.isPinLockEnabled;
   });
 
   // User details
@@ -84,24 +84,26 @@ export default function App() {
   }, []);
 
   // --- INITIALIZE SECURITY SETTINGS OR RE-SYNC ON EDIT ---
-  const handleToggleSecurity = (type: 'pin' | 'bio') => {
+  const handleToggleSecurity = async (type: 'pin' | 'bio') => {
+    if (type !== 'pin') return;
     const current = getSecuritySettings();
-    let updated: SecuritySettings;
 
-    if (type === 'pin') {
-      const enable = !current.isPinLockEnabled;
-      updated = {
-        ...current,
-        isPinLockEnabled: enable,
-        hashedPin: enable ? '1234' : '' // Default passcode for testing
-      };
-      if (enable) alert("Security Passcode set to '1234' for preview lock. You will be prompted on app refresh!");
-    } else {
-      updated = {
-        ...current,
-        isBiometricsEnabled: !current.isBiometricsEnabled
-      };
+    const enable = !current.isPinLockEnabled;
+    let pinVal = '';
+    if (enable) {
+      const rawPin = prompt("Enter a new 4-digit security PIN passcode:");
+      if (!rawPin || rawPin.length !== 4 || isNaN(Number(rawPin))) {
+        alert("Invalid PIN. It must be exactly 4 digits. Setup cancelled.");
+        return;
+      }
+      pinVal = await hashPin(rawPin);
+      alert(`Passcode set successfully! You will be prompted on next app refresh.`);
     }
+    const updated: SecuritySettings = {
+      ...current,
+      isPinLockEnabled: enable,
+      hashedPin: pinVal
+    };
 
     setSecuritySettings(updated);
     saveSecuritySettings(updated);
@@ -218,7 +220,7 @@ export default function App() {
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         // First clean up any active snapshot listeners to prevent orphaned loops upon auth state shifts
-        cleanupActiveListeners();
+        await cleanupActiveListeners();
 
         const currentUser = session?.user ?? null;
 
@@ -278,7 +280,7 @@ export default function App() {
             }
 
             const invoicesChannel = supabase
-              .channel(`invoices:${uid}`)
+              .channel(`invoices:${uid}:${Date.now()}`)
               .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'invoices', filter: `userId=eq.${uid}` },
@@ -312,7 +314,7 @@ export default function App() {
             }
 
             const presetsChannel = supabase
-              .channel(`preset_items:${uid}`)
+              .channel(`preset_items:${uid}:${Date.now()}`)
               .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'preset_items', filter: `userId=eq.${uid}` },
@@ -345,7 +347,7 @@ export default function App() {
             }
 
             const clientsChannel = supabase
-              .channel(`clients:${uid}`)
+              .channel(`clients:${uid}:${Date.now()}`)
               .on(
                  'postgres_changes',
                 { event: '*', schema: 'public', table: 'clients', filter: `userId=eq.${uid}` },
@@ -378,7 +380,7 @@ export default function App() {
             }
 
             const expensesChannel = supabase
-              .channel(`expenses:${uid}`)
+              .channel(`expenses:${uid}:${Date.now()}`)
               .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'expenses', filter: `userId=eq.${uid}` },
@@ -610,6 +612,8 @@ export default function App() {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
+      
+      // Clear unsuffixed keys
       localStorage.removeItem('makbills_custom_email');
       localStorage.removeItem('makbills_custom_brand');
       localStorage.removeItem('makbills_custom_phone');
@@ -620,6 +624,16 @@ export default function App() {
       localStorage.removeItem('invoice_maker_clients');
       localStorage.removeItem('invoice_maker_expenses');
       
+      // Clear suffixed keys for current user to prevent cross-account bleed
+      if (userEmail) {
+        const suffix = `_${encodeURIComponent(userEmail)}`;
+        localStorage.removeItem(`invoice_maker_biz_profile${suffix}`);
+        localStorage.removeItem(`invoice_maker_invoices${suffix}`);
+        localStorage.removeItem(`invoice_maker_presets${suffix}`);
+        localStorage.removeItem(`invoice_maker_clients${suffix}`);
+        localStorage.removeItem(`invoice_maker_expenses${suffix}`);
+      }
+
       setUser(null);
       setUserEmail(null);
       // Data falls back to local storage
@@ -825,21 +839,111 @@ export default function App() {
   const handleSyncLocalInvoices = async () => {
     if (!user || !isOnline) return;
 
-    const localInvoices = invoices.filter(inv => inv.userId === 'local');
-    if (localInvoices.length === 0) return;
+    // Load guest/offline data from localStorage (suffix is '')
+    const localInvoicesStr = localStorage.getItem('invoice_maker_invoices');
+    const localClientsStr = localStorage.getItem('invoice_maker_clients');
+    const localExpensesStr = localStorage.getItem('invoice_maker_expenses');
+    const localPresetsStr = localStorage.getItem('invoice_maker_presets');
+    const localProfileStr = localStorage.getItem('invoice_maker_biz_profile');
 
     try {
-      const syncedInvoices = localInvoices.map(inv => ({
-        ...inv,
-        userId: user.id,
-        updatedAt: new Date().toISOString(),
-      }));
-      const { error } = await supabase.from('invoices').upsert(syncedInvoices);
-      if (error) throw error;
-      alert(`Cloud sync complete. ${syncedInvoices.length} offline invoices synced to your cloud account!`);
-      // Realtime channel will auto-update state from Supabase
+      // 1. Sync Invoices
+      let syncedCount = 0;
+      if (localInvoicesStr) {
+        const localInvoices: Invoice[] = JSON.parse(localInvoicesStr);
+        const toSync = localInvoices
+          .filter(inv => inv.userId === 'local' || !inv.userId)
+          .map(inv => ({
+            ...inv,
+            userId: user.id,
+            updatedAt: new Date().toISOString(),
+          }));
+        if (toSync.length > 0) {
+          const { error } = await supabase.from('invoices').upsert(toSync);
+          if (error) console.error('Failed syncing offline invoices:', error);
+          else syncedCount = toSync.length;
+        }
+      }
+
+      // 2. Sync Clients
+      if (localClientsStr) {
+        const localClients: ClientProfile[] = JSON.parse(localClientsStr);
+        const toSync = localClients
+          .filter(c => c.userId === 'local' || !c.userId)
+          .map(c => ({
+            ...c,
+            userId: user.id,
+            updatedAt: new Date().toISOString(),
+          }));
+        if (toSync.length > 0) {
+          const { error } = await supabase.from('clients').upsert(toSync);
+          if (error) console.error('Failed syncing offline clients:', error);
+        }
+      }
+
+      // 3. Sync Expenses
+      if (localExpensesStr) {
+        const localExpenses: Expense[] = JSON.parse(localExpensesStr);
+        const toSync = localExpenses
+          .filter(e => e.userId === 'local' || !e.userId)
+          .map(e => ({
+            ...e,
+            userId: user.id,
+            updatedAt: new Date().toISOString(),
+          }));
+        if (toSync.length > 0) {
+          const { error } = await supabase.from('expenses').upsert(toSync);
+          if (error) console.error('Failed syncing offline expenses:', error);
+        }
+      }
+
+      // 4. Sync Presets
+      if (localPresetsStr) {
+        const localPresets: PresetItem[] = JSON.parse(localPresetsStr);
+        const toSync = localPresets
+          .filter(p => p.userId === 'local' || !p.userId)
+          .map(p => ({
+            ...p,
+            userId: user.id,
+            updatedAt: new Date().toISOString(),
+          }));
+        if (toSync.length > 0) {
+          const { error } = await supabase.from('preset_items').upsert(toSync);
+          if (error) console.error('Failed syncing offline presets:', error);
+        }
+      }
+
+      // 5. Sync Business Profile
+      if (localProfileStr) {
+        const localProfile: BusinessProfile = JSON.parse(localProfileStr);
+        if (localProfile.uid === 'local' || !localProfile.uid) {
+          const updatedProfile = {
+            ...localProfile,
+            uid: user.id,
+            email: user.email || localProfile.email,
+            updatedAt: new Date().toISOString(),
+          };
+          const { error } = await supabase.from('users').upsert(updatedProfile);
+          if (error) console.error('Failed syncing business profile:', error);
+        }
+      }
+
+      // Alert only if something was synced
+      if (syncedCount > 0) {
+        alert(`Cloud sync complete. ${syncedCount} offline invoices synced to your cloud account!`);
+      }
+      
+      // Clear offline local storage keys to prevent duplicate syncs
+      localStorage.removeItem('invoice_maker_invoices');
+      localStorage.removeItem('invoice_maker_clients');
+      localStorage.removeItem('invoice_maker_expenses');
+      localStorage.removeItem('invoice_maker_presets');
+      localStorage.removeItem('invoice_maker_biz_profile');
+      
+      // Reload current data from cloud/active profile suffix
+      loadLocalData(user.email);
     } catch (err) {
-      console.error('Failed syncing offline invoices:', err);
+      console.error('Failed syncing offline data:', err);
     }
   };
 
@@ -1110,7 +1214,6 @@ export default function App() {
         onBulkUpdateInvoicesStatus={handleBulkUpdateInvoicesStatus}
         onLoadPresetTemplate={handleLoadPresetTemplate}
         isPinLockEnabled={securitySettings.isPinLockEnabled}
-        isBiometricsEnabled={securitySettings.isBiometricsEnabled}
         onToggleSecurity={handleToggleSecurity}
         onSyncLocalInvoices={handleSyncLocalInvoices}
         onSaveClient={handleSaveClient}

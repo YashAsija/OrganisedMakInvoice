@@ -77,7 +77,6 @@ interface DashboardProps {
   onBulkUpdateInvoicesStatus: (ids: string[], status: InvoiceStatus) => void;
   onLoadPresetTemplate: (templateId: string) => void;
   isPinLockEnabled: boolean;
-  isBiometricsEnabled: boolean;
   onToggleSecurity: (type: 'pin' | 'bio') => void;
   onSyncLocalInvoices: () => void;
   onSaveClient: (client: ClientProfile) => void;
@@ -105,7 +104,6 @@ export default function Dashboard({
   onBulkUpdateInvoicesStatus,
   onLoadPresetTemplate,
   isPinLockEnabled,
-  isBiometricsEnabled,
   onToggleSecurity,
   onSyncLocalInvoices,
   onSaveClient,
@@ -2845,6 +2843,28 @@ export default function Dashboard({
                 <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-850">
                   <span className="text-[8px] uppercase font-extrabold text-slate-400 block">Mobile Number</span>
                   <span className="text-[11px] font-bold text-slate-800 dark:text-slate-205 mt-1 block truncate">{profile.mobile || profile.phone || 'N/A'}</span>
+                </div>
+              </div>
+
+              {/* Security Controls */}
+              <div className="mt-6 border-t border-slate-50 dark:border-slate-850 pt-6 text-left">
+                <h3 className="text-xs font-black text-slate-805 uppercase tracking-widest mb-3">Security Locks & Access Control</h3>
+                <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase font-extrabold text-slate-500 block">PIN Passcode Lock</span>
+                    <span className="text-[11px] text-slate-405 mt-0.5 block">Requires a secure 4-digit PIN code on app refresh</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onToggleSecurity('pin')}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      isPinLockEnabled 
+                        ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-sm' 
+                        : 'bg-slate-205 dark:bg-slate-800 text-slate-700 dark:text-slate-350 hover:bg-slate-300 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {isPinLockEnabled ? 'Disable PIN' : 'Enable PIN'}
+                  </button>
                 </div>
               </div>
 

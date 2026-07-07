@@ -80,40 +80,61 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
     e.preventDefault();
     setFormErrors({});
 
-    if (authMode === 'signup') {
-      if (!formData.name.trim()) return setFormErrors({ name: 'Please fill out Your Name.' });
-      if (!formData.companyName.trim()) return setFormErrors({ companyName: 'Please fill out Your Company Name.' });
-      if (!formData.phone.trim()) return setFormErrors({ phone: 'Please fill out your Phone Number.' });
-      if (!formData.email.trim()) return setFormErrors({ email: 'Please fill out your Email Address.' });
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) return setFormErrors({ email: 'Please enter a valid Email Address.' });
-      if (!formData.password.trim()) return setFormErrors({ password: 'Please enter a Password.' });
-      if (formData.password.length < 6) return setFormErrors({ password: 'Password must be at least 6 characters long.' });
-    } else {
-      if (loginMethod === 'email') {
+    if (loginMethod === 'email') {
+      if (authMode === 'signup') {
+        if (!formData.name.trim()) return setFormErrors({ email: 'Please fill out Your Name.' });
+        if (!formData.companyName.trim()) return setFormErrors({ email: 'Please fill out Your Company Name.' });
+        if (!formData.phone.trim()) return setFormErrors({ email: 'Please fill out your Phone Number.' });
+        if (!formData.email.trim()) return setFormErrors({ email: 'Please fill out your Email Address.' });
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) return setFormErrors({ email: 'Please enter a valid Email Address.' });
+        if (!formData.password.trim()) return setFormErrors({ email: 'Please enter a Password.' });
+        if (formData.password.length < 6) return setFormErrors({ email: 'Password must be at least 6 characters long.' });
+      } else {
         if (!formData.email.trim()) return setFormErrors({ email: 'Please enter your Registered Email Address.' });
-        if (!formData.password.trim()) return setFormErrors({ password: 'Please enter your Password.' });
+        if (!formData.password.trim()) return setFormErrors({ email: 'Please enter your Password.' });
       }
-      if (loginMethod === 'phone_otp') {
-        if (!formData.phone.trim()) return setFormErrors({ phone: 'Please enter your Phone Number.' });
-        if (otpSent && otpValue.length < 4) return setFormErrors({ otp: 'Please enter the OTP sent to your phone.' });
-        
-        if (!otpSent) {
-          setIsLoading(true);
-          setTimeout(() => {
-            setIsLoading(false);
-            setOtpSent(true);
-            setSuccessMsg(`OTP sent to ${formData.phone} — use 1234 for demo.`);
-          }, 1000);
-          return;
-        }
-      }
+    } else if (loginMethod === 'phone_otp') {
+      if (!formData.name.trim()) return setFormErrors({ email: 'Please fill out Your Name.' });
+      if (!formData.companyName.trim()) return setFormErrors({ email: 'Please fill out Your Company Name.' });
+      if (!formData.phone.trim()) return setFormErrors({ email: 'Please enter a local Workspace Key.' });
     }
 
     setIsLoading(true);
     setSuccessMsg('');
 
+    if (loginMethod === 'phone_otp') {
+      // Local/Offline Demo Guest fallback
+      const sanitizedKey = formData.phone.replace(/[^a-zA-Z0-9]/g, '');
+      const resolvedEmail = `${sanitizedKey}@makbills.local`;
+      localStorage.setItem('makbills_custom_email', resolvedEmail);
+      localStorage.setItem('makbills_custom_phone', formData.phone);
+      localStorage.setItem('makbills_custom_brand', formData.companyName);
+      localStorage.setItem('makbills_custom_owner', formData.name);
+      
+      const initProf: BusinessProfile = {
+        uid: resolvedEmail,
+        name: formData.companyName,
+        email: resolvedEmail,
+        phone: formData.phone,
+        ownerName: formData.name,
+        address: '',
+        taxId: '',
+        currency: 'INR',
+        defaultTaxRate: 18,
+        updatedAt: new Date().toISOString()
+      };
+      localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(initProf));
+      
+      setSuccessMsg('Guest session initialized! Redirecting...');
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
+      return;
+    }
+
     try {
       if (authMode === 'signup') {
+
         if (!isSupabaseConfigured) {
           throw new Error("Supabase is not configured. Service unavailable.");
         }
@@ -165,15 +186,6 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
           });
           if (error) throw error;
           setSuccessMsg('Welcome back! Redirecting...');
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 1500);
-        } else if (loginMethod === 'phone_otp') {
-          // Local/Offline Demo OTP fallback
-          const resolvedEmail = `${formData.phone.replace(/\s+/g, '')}@makbills.local`;
-          localStorage.setItem('makbills_custom_email', resolvedEmail);
-          localStorage.setItem('makbills_custom_phone', formData.phone);
-          setSuccessMsg('Guest session initialized! Redirecting...');
           setTimeout(() => {
             window.location.href = '/';
           }, 1500);
@@ -378,15 +390,15 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setLoginMethod('phone_otp'); setOtpSent(false); setSuccessMsg(''); }}
+                  onClick={() => { setLoginMethod('phone_otp'); setOtpSent(false); setFormErrors({}); setSuccessMsg(''); }}
                   className={`flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl border transition-all cursor-pointer font-bold ${
                     loginMethod === 'phone_otp' 
                       ? 'border-sky-500 bg-sky-500/5 text-sky-500 shadow-md shadow-sky-500/5' 
-                      : 'border-slate-200 dark:border-neutral-800 text-slate-400 hover:border-slate-300 dark:hover:border-neutral-700 hover:bg-slate-50 dark:hover:bg-neutral-800/55'
+                      : 'border-slate-205 dark:border-neutral-800 text-slate-400 hover:border-slate-300 dark:hover:border-neutral-700 hover:bg-slate-50 dark:hover:bg-neutral-800/55'
                   }`}
                 >
-                  <Phone className="w-4 h-4" />
-                  <span className="text-[9px] uppercase tracking-wider">Phone OTP</span>
+                  <User className="w-4 h-4" />
+                  <span className="text-[9px] uppercase tracking-wider">Guest Mode</span>
                 </button>
                 <button
                   type="button"
@@ -551,13 +563,43 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
               ) : (
                 <form onSubmit={handleFormSubmit} className="space-y-4 animate-in fade-in duration-200">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Phone Number *</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Your Name *</label>
                     <input
-                      type="tel"
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="e.g. John Doe"
+                      className={`w-full px-3.5 py-3 rounded-xl border bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all ${
+                        formData.name 
+                          ? 'border-emerald-500/50 dark:border-emerald-500/30 focus:ring-emerald-500' 
+                          : 'border-slate-205 dark:border-neutral-800'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Company Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.companyName}
+                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                      placeholder="e.g. Acme Corporation"
+                      className={`w-full px-3.5 py-3 rounded-xl border bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all ${
+                        formData.companyName 
+                          ? 'border-emerald-500/50 dark:border-emerald-500/30 focus:ring-emerald-500' 
+                          : 'border-slate-205 dark:border-neutral-800'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Local Workspace Identifier Key *</label>
+                    <input
+                      type="text"
                       required
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="e.g. +91 98765 43210"
+                      placeholder="e.g. guest-session"
                       className={`w-full px-3.5 py-3 rounded-xl border bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all ${
                         formData.phone 
                           ? 'border-emerald-500/50 dark:border-emerald-500/30 focus:ring-emerald-500' 
@@ -565,21 +607,6 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                       }`}
                     />
                   </div>
-
-                  {otpSent && (
-                    <div className="animate-in slide-in-from-top-2 duration-200">
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Enter 4-Digit OTP *</label>
-                      <input
-                        type="text"
-                        maxLength={4}
-                        required
-                        value={otpValue}
-                        onChange={(e) => setOtpValue(e.target.value)}
-                        placeholder="e.g. 1234"
-                        className="w-full px-3.5 py-3 rounded-xl border border-slate-205 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
-                      />
-                    </div>
-                  )}
 
                   <button
                     type="submit"
@@ -590,8 +617,8 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        <Phone className="w-4 h-4" />
-                        <span>{otpSent ? 'Verify OTP & Log In' : 'Send OTP to Log In'}</span>
+                        <User className="w-4 h-4" />
+                        <span>Enter Guest Workspace</span>
                       </>
                     )}
                   </button>

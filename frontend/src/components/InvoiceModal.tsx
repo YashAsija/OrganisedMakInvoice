@@ -1978,6 +1978,7 @@ export default function InvoiceModal({
                    setShippedToState(clientState);
                    setShippedToAddress(clientAddress);
                    setShippedToGstin(clientGstin);
+                   setShippedToPan(clientPan);
                  }}
                  hasTransport={hasTransport}
                  onUpdateHasTransport={setHasTransport}

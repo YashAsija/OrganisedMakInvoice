@@ -15,7 +15,9 @@ async def generate_description(req: DescriptionRequest):
         is_mock = desc.startswith("Provides premium professional")
         return {"description": desc, "isMock": is_mock}
     except Exception as e:
-        raise HTTPException(status_code=505, detail=str(e))
+        import logging
+        logging.error(f"Error in generate-description: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error occurred during description generation.")
 
 @router.post("/parse-invoice", dependencies=[Depends(verify_supabase_token)])
 async def parse_invoice(req: ParseRequest):
@@ -25,4 +27,6 @@ async def parse_invoice(req: ParseRequest):
     try:
         return parse_invoice_cached(req.prompt.strip().lower())
     except Exception as e:
-        raise HTTPException(status_code=505, detail=str(e))
+        import logging
+        logging.error(f"Error in parse-invoice: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error occurred during natural language invoice parsing.")
