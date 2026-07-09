@@ -82,14 +82,108 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
     },
     sections: {
       ...generateBaseTemplate('preset_modal_classic', 'MakInvoices Original', 'Default').sections,
-      transport: { id: 'transport', visible: true, order: 3.5, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
-      payment: { id: 'payment', visible: true, order: 8, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
-      taxEngine: { id: 'taxEngine', visible: true, order: 9, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
-      amountInWords: { id: 'amountInWords', visible: true, order: 10, gridColumnSpan: 12, customLabels: {}, customStyles: {} },
-      terms: { id: 'terms', visible: true, order: 11, gridColumnSpan: 6, customLabels: {}, customStyles: {} }
+      // All major sections visible by default to match the original invoice view
+      shipTo:       { id: 'shipTo',       visible: true,  order: 5,    gridColumnSpan: 6,  customLabels: {}, customStyles: {} },
+      transport:    { id: 'transport',    visible: true,  order: 6,    gridColumnSpan: 12, customLabels: {}, customStyles: {} },
+      payment:      { id: 'payment',      visible: true,  order: 8,    gridColumnSpan: 6,  customLabels: {}, customStyles: {} },
+      taxEngine:    { id: 'taxEngine',    visible: true,  order: 9,    gridColumnSpan: 6,  customLabels: {}, customStyles: {} },
+      amountInWords:{ id: 'amountInWords',visible: true,  order: 10,   gridColumnSpan: 12, customLabels: {}, customStyles: {} },
+      terms:        { id: 'terms',        visible: true,  order: 11,   gridColumnSpan: 6,  customLabels: {}, customStyles: {} },
+      signature:    { id: 'signature',    visible: true,  order: 12,   gridColumnSpan: 6,  customLabels: {}, customStyles: {} },
+      footer:       { id: 'footer',       visible: true,  order: 13,   gridColumnSpan: 12, customLabels: {}, customStyles: {} },
     },
     config: {
-      ...generateBaseTemplate('preset_modal_classic', 'MakInvoices Original', 'Default').config
+      ...generateBaseTemplate('preset_modal_classic', 'MakInvoices Original', 'Default').config,
+      // Header: Logo left, TAX INVOICE right
+      header: {
+        showLogo: true,
+        logoPosition: 'Left',
+        logoWidth: 120,
+        logoHeight: 60,
+        titleAlignment: 'Right',
+        invoiceTitle: 'TAX INVOICE'
+      },
+      // Company info: all fields shown as in screenshot
+      company: {
+        fields: ['name', 'owner', 'email', 'phone', 'address', 'state', 'country', 'gstin']
+      },
+      // Invoice info block: all right-side fields shown in screenshot
+      invoiceInfo: {
+        fields: ['invoiceNumber', 'invoiceDate', 'dueDate', 'placeOfSupply', 'grRrNo', 'referenceNumber'],
+        customFields: [],
+        position: 'Right'
+      },
+      // Bill To: all fields shown in screenshot
+      client: {
+        fields: ['name', 'phone', 'country', 'state', 'address', 'gstin']
+      },
+      // Ship To: mirrors Bill To fields as shown in screenshot
+      shipping: {
+        fields: ['name', 'phone', 'country', 'state', 'address', 'gstin'],
+        sameAsBilling: false
+      },
+      // Transport: all 3 fields shown in screenshot
+      transport: {
+        fields: ['vehicleNo', 'driverMobile', 'ewayBillNo']
+      },
+      // Product table columns matching screenshot: SR NO, ITEM NAME, QTY, RATE, AMOUNT
+      table: {
+        columns: [
+          { id: 'sr',     visible: true,  label: 'SR NO',      type: 'Number',  order: 1 },
+          { id: 'name',   visible: true,  label: 'ITEM NAME',  type: 'Text',    order: 2 },
+          { id: 'hsn',    visible: false, label: 'HSN/SAC',    type: 'Text',    order: 3 },
+          { id: 'qty',    visible: true,  label: 'QTY',        type: 'Number',  order: 4 },
+          { id: 'rate',   visible: true,  label: 'RATE',       type: 'Currency',order: 5 },
+          { id: 'tax',    visible: false, label: 'Tax %',      type: 'Number',  order: 6 },
+          { id: 'amount', visible: true,  label: 'AMOUNT',     type: 'Formula', formula: 'qty*rate', order: 7 }
+        ]
+      },
+      // Tax engine: Sub Total + IGST/CGST+SGST + Total
+      tax: {
+        showTaxableAmount: true,
+        showCgstSgst: true,
+        showIgst: true,
+        showCess: false,
+        showDiscount: true,
+        showRoundOff: true,
+        showTotal: true,
+        enableHsnSummary: false,
+        enableGstSummary: false,
+        enableTaxBreakdown: true
+      },
+      // Payment / Banking block with QR
+      payment: {
+        generateQrCode: true,
+        enableInstructions: true,
+        customNote: 'Please include invoice number in payment.'
+      },
+      // Amount in words
+      amountInWords: { format: 'Indian', enabled: true },
+      // Terms & conditions
+      terms: {
+        presetId: 'default',
+        customText: '1. Subject to local jurisdiction.\n2. Goods once sold will not be taken back.'
+      },
+      // Authorized Signatory on right
+      signature: {
+        showSignature: true,
+        showStamp: false,
+        position: 'Right',
+        width: 150,
+        height: 60,
+        signatoryName: 'Authorized Signatory',
+        designation: ''
+      },
+      // Footer with page numbers
+      footer: {
+        message: 'Thank you for your business!',
+        thankYouNote: '',
+        supportContact: '',
+        website: '',
+        showPageNumbers: true,
+        showGeneratedBy: true,
+        customText: ''
+      }
     },
     styleConfig: {
       ...generateBaseTemplate('preset_modal_classic', 'MakInvoices Original', 'Default').styleConfig,
