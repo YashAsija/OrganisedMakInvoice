@@ -843,11 +843,20 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       let uploadedSignatureUrl = signature;
       if (signature && signature.startsWith('data:image/png;base64,')) {
         try {
+          const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+          console.log("[SETTINGS] Active session checked:", sessionData.session, "error:", sessionErr);
+          
+          if (!sessionData.session) {
+            alert("No active session found. Please log in again.");
+            setIsSaving(false);
+            return;
+          }
+
           const blob = dataURLtoBlob(signature);
           if (blob) {
             const { error: uploadError } = await supabase.storage
               .from('Signature')
-              .upload(`Signature/${user.id}/signature.png`, blob, {
+              .upload(`${user.id}/signature.png`, blob, {
                 cacheControl: '3600',
                 upsert: true
               });
@@ -859,7 +868,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
             }
             const { data: { publicUrl } } = supabase.storage
               .from('Signature')
-              .getPublicUrl(`Signature/${user.id}/signature.png`);
+              .getPublicUrl(`${user.id}/signature.png`);
             uploadedSignatureUrl = publicUrl;
           }
         } catch (uploadErr: any) {
