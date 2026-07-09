@@ -36,6 +36,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
   const compEmail = businessProfile?.email || "";
   const compPhone = businessProfile?.phone || "";
   const compGst = businessProfile?.taxId || "";
+  const ownerName = businessProfile?.displayName || businessProfile?.ownerName || "";
   
   const invNo = invoiceData?.invoiceNumber || "INV-2026-8528";
   const date = invoiceData?.date || "";
@@ -96,13 +97,13 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
             
             {sections.companyInfo?.visible !== false && (
               <>
-                <h1 className="text-2xl font-bold text-gray-900 mb-1" style={{ color: styleConfig.primaryColor }}>{compName}</h1>
+                {compName && <h1 className="text-2xl font-bold text-gray-900 mb-1" style={{ color: styleConfig.primaryColor }}>{compName}</h1>}
                 <div className="text-[11px] text-gray-600 leading-relaxed">
-                  {config.company.fields.includes('name') && <div>Owner: Guest User</div>}
-                  {config.company.fields.includes('email') && <div>Email: {compEmail}</div>}
-                  {config.company.fields.includes('phone') && <div>Phone: {compPhone}</div>}
-                  {config.company.fields.includes('address') && <div className="whitespace-pre-wrap">{compAddr}</div>}
-                  {config.company.fields.includes('gstin') && <div>GSTIN: {compGst}</div>}
+                  {config.company.fields.includes('name') && ownerName && ownerName.trim() !== '' && <div>Owner: {ownerName}</div>}
+                  {config.company.fields.includes('email') && compEmail && compEmail.trim() !== '' && <div>Email: {compEmail}</div>}
+                  {config.company.fields.includes('phone') && compPhone && compPhone.trim() !== '' && <div>Phone: {compPhone}</div>}
+                  {config.company.fields.includes('address') && compAddr && compAddr.trim() !== '' && <div className="whitespace-pre-wrap">{compAddr}</div>}
+                  {config.company.fields.includes('gstin') && compGst && compGst.trim() !== '' && <div>GSTIN: {compGst}</div>}
                 </div>
               </>
             )}

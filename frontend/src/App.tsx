@@ -35,6 +35,8 @@ export default function App() {
     return localStorage.getItem('makbills_custom_email') || null;
   });
 
+  const suffix = userEmail ? `_${encodeURIComponent(userEmail)}` : '';
+
   // Main Business state
   const [profile, setProfile] = useState<BusinessProfile>({
     uid: 'local',
@@ -142,13 +144,12 @@ export default function App() {
       try {
         setInvoices(JSON.parse(localInvoices));
       } catch (e) {
-        console.warn('Failed to parse local invoices, importing examples');
+        console.warn('Failed to parse local invoices');
+        setInvoices([]);
       }
     } else {
-      // Preload example invoices on first onboarding to make is extremely easy for new users
-      const sample = getSampleInvoice('freelance_tech', activeEmail || 'local');
-      setInvoices([sample]);
-      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify([sample]));
+      setInvoices([]);
+      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify([]));
     }
 
     // Presets catalog
@@ -226,7 +227,9 @@ export default function App() {
 
         if (currentUser) {
           setUser(currentUser);
-          setUserEmail(currentUser.email ?? null);
+          const activeEmail = currentUser.email ?? null;
+          setUserEmail(activeEmail);
+          const suffix = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
 
           if (isOnline) {
             // --- SYNC / RESOLVE FROM CLOUD ---
@@ -242,7 +245,7 @@ export default function App() {
 
               if (cloudProf) {
                 setProfile(cloudProf as BusinessProfile);
-                localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(cloudProf));
+                localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(cloudProf));
               } else {
                 // Creating initial business profile for new users in Supabase
                 const initProf: BusinessProfile = {
@@ -258,6 +261,7 @@ export default function App() {
                 };
                 await supabase.from('users').upsert(initProf);
                 setProfile(initProf);
+                localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(initProf));
               }
             } catch (err) {
               console.error('Error fetching/setting cloud profile:', err);
@@ -273,7 +277,7 @@ export default function App() {
 
               if (cloudInvoices) {
                 setInvoices(cloudInvoices as Invoice[]);
-                localStorage.setItem('invoice_maker_invoices', JSON.stringify(cloudInvoices));
+                localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(cloudInvoices));
               }
             } catch (err) {
               handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
@@ -292,7 +296,7 @@ export default function App() {
                     .order('date', { ascending: false });
                   if (data) {
                     setInvoices(data as Invoice[]);
-                    localStorage.setItem('invoice_maker_invoices', JSON.stringify(data));
+                    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(data));
                   }
                 }
               )
@@ -307,7 +311,7 @@ export default function App() {
                 .eq('userId', uid);
               if (cloudPresets) {
                 setPresets(cloudPresets as PresetItem[]);
-                localStorage.setItem('invoice_maker_presets', JSON.stringify(cloudPresets));
+                localStorage.setItem(`invoice_maker_presets${suffix}`, JSON.stringify(cloudPresets));
               }
             } catch (err) {
               handleSupabaseError(err, OperationType.GET, `preset_items[userId=${uid}]`);
@@ -325,7 +329,7 @@ export default function App() {
                     .eq('userId', uid);
                   if (data) {
                     setPresets(data as PresetItem[]);
-                    localStorage.setItem('invoice_maker_presets', JSON.stringify(data));
+                    localStorage.setItem(`invoice_maker_presets${suffix}`, JSON.stringify(data));
                   }
                 }
               )
@@ -340,7 +344,7 @@ export default function App() {
                 .eq('userId', uid);
               if (cloudClients) {
                 setClients(cloudClients as ClientProfile[]);
-                localStorage.setItem('invoice_maker_clients', JSON.stringify(cloudClients));
+                localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(cloudClients));
               }
             } catch (err) {
               handleSupabaseError(err, OperationType.GET, `clients[userId=${uid}]`);
@@ -358,7 +362,7 @@ export default function App() {
                     .eq('userId', uid);
                   if (data) {
                     setClients(data as ClientProfile[]);
-                    localStorage.setItem('invoice_maker_clients', JSON.stringify(data));
+                    localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(data));
                   }
                 }
               )
@@ -373,7 +377,7 @@ export default function App() {
                 .eq('userId', uid);
               if (cloudExpenses) {
                 setExpenses(cloudExpenses as Expense[]);
-                localStorage.setItem('invoice_maker_expenses', JSON.stringify(cloudExpenses));
+                localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(cloudExpenses));
               }
             } catch (err) {
               handleSupabaseError(err, OperationType.GET, `expenses[userId=${uid}]`);
@@ -391,7 +395,7 @@ export default function App() {
                     .eq('userId', uid);
                   if (data) {
                     setExpenses(data as Expense[]);
-                    localStorage.setItem('invoice_maker_expenses', JSON.stringify(data));
+                    localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(data));
                   }
                 }
               )
@@ -447,7 +451,7 @@ export default function App() {
 
     if (clientsChanged) {
       setClients(updatedClients);
-      localStorage.setItem('invoice_maker_clients', JSON.stringify(updatedClients));
+      localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(updatedClients));
       
       if (isOnline && user) {
         const clientsWithUser = updatedClients.map(c => ({ ...c, userId: user.id }));
@@ -522,7 +526,8 @@ export default function App() {
           };
           await supabase.from('users').upsert(initProf);
           setProfile(initProf);
-          localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(initProf));
+          const signupSuffix = data.user.email ? `_${encodeURIComponent(data.user.email)}` : '';
+          localStorage.setItem(`invoice_maker_biz_profile${signupSuffix}`, JSON.stringify(initProf));
         }
       } catch (err: any) {
         return { error: err.message || 'Sign up failed' };
@@ -544,18 +549,21 @@ export default function App() {
         updatedAt: new Date().toISOString()
       };
       setProfile(updatedProf);
-      localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(updatedProf));
+      const signupSuffix = resolvedEmail ? `_${encodeURIComponent(resolvedEmail)}` : '';
+      localStorage.setItem(`invoice_maker_biz_profile${signupSuffix}`, JSON.stringify(updatedProf));
     }
     
     // Clear invoices, presets, clients, and expenses so a brand-new account starts completely fresh
+    const targetEmail = (authMode === 'signup' && email) || resolvedEmail || '';
+    const newSuffix = targetEmail ? `_${encodeURIComponent(targetEmail)}` : '';
     setInvoices([]);
-    localStorage.setItem('invoice_maker_invoices', JSON.stringify([]));
+    localStorage.setItem(`invoice_maker_invoices${newSuffix}`, JSON.stringify([]));
     setPresets([]);
-    localStorage.setItem('invoice_maker_presets', JSON.stringify([]));
+    localStorage.setItem(`invoice_maker_presets${newSuffix}`, JSON.stringify([]));
     setClients([]);
-    localStorage.setItem('invoice_maker_clients', JSON.stringify([]));
+    localStorage.setItem(`invoice_maker_clients${newSuffix}`, JSON.stringify([]));
     setExpenses([]);
-    localStorage.setItem('invoice_maker_expenses', JSON.stringify([]));
+    localStorage.setItem(`invoice_maker_expenses${newSuffix}`, JSON.stringify([]));
     
     setIsOnboarding(true);
     setIsProfileOpen(true);
@@ -604,7 +612,8 @@ export default function App() {
         updatedAt: new Date().toISOString()
       };
       setProfile(updatedProf);
-      localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(updatedProf));
+      const loginSuffix = resolvedEmail ? `_${encodeURIComponent(resolvedEmail)}` : '';
+      localStorage.setItem(`invoice_maker_biz_profile${loginSuffix}`, JSON.stringify(updatedProf));
       return {};
     }
   };
@@ -613,7 +622,7 @@ export default function App() {
     try {
       await supabase.auth.signOut();
       
-      // Clear unsuffixed keys
+      // Clear unsuffixed active keys
       localStorage.removeItem('makbills_custom_email');
       localStorage.removeItem('makbills_custom_brand');
       localStorage.removeItem('makbills_custom_phone');
@@ -623,20 +632,10 @@ export default function App() {
       localStorage.removeItem('invoice_maker_presets');
       localStorage.removeItem('invoice_maker_clients');
       localStorage.removeItem('invoice_maker_expenses');
-      
-      // Clear suffixed keys for current user to prevent cross-account bleed
-      if (userEmail) {
-        const suffix = `_${encodeURIComponent(userEmail)}`;
-        localStorage.removeItem(`invoice_maker_biz_profile${suffix}`);
-        localStorage.removeItem(`invoice_maker_invoices${suffix}`);
-        localStorage.removeItem(`invoice_maker_presets${suffix}`);
-        localStorage.removeItem(`invoice_maker_clients${suffix}`);
-        localStorage.removeItem(`invoice_maker_expenses${suffix}`);
-      }
 
       setUser(null);
       setUserEmail(null);
-      // Data falls back to local storage
+      // Data falls back to default local storage
       loadLocalData();
     } catch (e) {
       console.error('Logout failed:', e);
@@ -646,7 +645,7 @@ export default function App() {
   // 2. Save Profile (Settings modifier)
   const handleSaveProfile = async (updatedProfile: BusinessProfile) => {
     setProfile(updatedProfile);
-    localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(updatedProfile));
+    localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(updatedProfile));
 
     if (isOnline && user) {
       const path = `users[uid=${user.id}]`;
@@ -697,7 +696,7 @@ export default function App() {
     const matchesList = exists ? updatedInvoices : [invoice, ...invoices];
 
     setInvoices(matchesList);
-    localStorage.setItem('invoice_maker_invoices', JSON.stringify(matchesList));
+    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(matchesList));
 
     if (isOnline && user) {
       // Propagate directly to Cloud
@@ -718,7 +717,7 @@ export default function App() {
 
     const remaining = invoices.filter(inv => inv.id !== invoiceId);
     setInvoices(remaining);
-    localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
+    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
 
     if (isOnline && user) {
       const path = `invoices[id=${invoiceId}]`;
@@ -738,7 +737,7 @@ export default function App() {
 
     const remaining = invoices.filter(inv => !invoiceIds.includes(inv.id));
     setInvoices(remaining);
-    localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
+    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
 
     if (isOnline && user) {
       try {
@@ -763,7 +762,7 @@ export default function App() {
       return inv;
     });
     setInvoices(updated);
-    localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
+    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
 
     if (isOnline && user) {
       try {
@@ -797,7 +796,7 @@ export default function App() {
     };
 
     setProfile(cleanProfile);
-    localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(cleanProfile));
+    localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(cleanProfile));
 
     // Seed preset catalog items
     const seededPresets: PresetItem[] = template.items.map((it) => ({
@@ -810,12 +809,12 @@ export default function App() {
     }));
 
     setPresets(seededPresets);
-    localStorage.setItem('invoice_maker_presets', JSON.stringify(seededPresets));
+    localStorage.setItem(`invoice_maker_presets${suffix}`, JSON.stringify(seededPresets));
 
     // Clear and seed an initial example bill matching template
     const sample = getSampleInvoice(templateId, user ? user.id : 'local');
     setInvoices([sample]);
-    localStorage.setItem('invoice_maker_invoices', JSON.stringify([sample]));
+    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify([sample]));
 
     if (isOnline && user) {
       // Sync seeded configurations to Supabase
@@ -952,7 +951,7 @@ export default function App() {
     const exists = clients.some(c => c.id === client.id);
     const updated = exists ? clients.map(c => c.id === client.id ? client : c) : [client, ...clients];
     setClients(updated);
-    localStorage.setItem('invoice_maker_clients', JSON.stringify(updated));
+    localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(updated));
 
     if (isOnline && user) {
       const clientWithUser = { ...client, userId: user.id };
@@ -970,7 +969,7 @@ export default function App() {
 
     const remaining = clients.filter(c => c.id !== clientId);
     setClients(remaining);
-    localStorage.setItem('invoice_maker_clients', JSON.stringify(remaining));
+    localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(remaining));
 
     if (isOnline && user) {
       try {
@@ -986,7 +985,7 @@ export default function App() {
     const exists = expenses.some(e => e.id === expense.id);
     const updated = exists ? expenses.map(e => e.id === expense.id ? expense : e) : [expense, ...expenses];
     setExpenses(updated);
-    localStorage.setItem('invoice_maker_expenses', JSON.stringify(updated));
+    localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(updated));
 
     if (isOnline && user) {
       const expenseWithUser = { ...expense, userId: user.id };
@@ -1004,7 +1003,7 @@ export default function App() {
 
     const remaining = expenses.filter(e => e.id !== expenseId);
     setExpenses(remaining);
-    localStorage.setItem('invoice_maker_expenses', JSON.stringify(remaining));
+    localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(remaining));
 
     if (isOnline && user) {
       try {
@@ -1131,7 +1130,7 @@ export default function App() {
       }
 
       setInvoices(nextInvoices);
-      localStorage.setItem('invoice_maker_invoices', JSON.stringify(nextInvoices));
+      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(nextInvoices));
     }
   }, [invoices.length, user, isOnline]);
 

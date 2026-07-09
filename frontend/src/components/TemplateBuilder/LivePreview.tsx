@@ -369,13 +369,14 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   };
 
   // Safe data getters
-  const compName = (businessProfile as any)?.name || (businessProfile as any)?.companyName || 'Shiv Hardware';
-  const compAddr = businessProfile?.address || '123 Business Block, Main Street, New Delhi, India';
-  const compGst = (businessProfile as any)?.taxId || (businessProfile as any)?.gstin || '07AAAAA1111A1Z1';
-  const compPhone = businessProfile?.phone || '+91 9899728185';
-  const compEmail = businessProfile?.email || 'contact@shivhardware.com';
-  const compPan = (businessProfile as any)?.pan || 'ABCDE1234F';
-  const compWebsite = (businessProfile as any)?.website || 'www.shivhardware.com';
+  const compName = (businessProfile as any)?.name || (businessProfile as any)?.companyName || "";
+  const compAddr = businessProfile?.address || "";
+  const compGst = (businessProfile as any)?.taxId || (businessProfile as any)?.gstin || "";
+  const compPhone = businessProfile?.phone || "";
+  const compEmail = businessProfile?.email || "";
+  const compPan = (businessProfile as any)?.pan || "";
+  const compWebsite = (businessProfile as any)?.website || "";
+  const ownerName = (businessProfile as any)?.displayName || (businessProfile as any)?.ownerName || "";
   const compLogo = (businessProfile as any)?.logoUrl || (businessProfile as any)?.logo || null;
 
   const invNo = invoiceData?.invoiceNumber || 'INV-2023-001';
@@ -565,20 +566,28 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           }
 
           if (section.id === 'companyInfo') {
+            const hasOwner = config.company.fields.includes('name') && ownerName && ownerName.trim() !== '';
+            const hasEmail = config.company.fields.includes('email') && compEmail && compEmail.trim() !== '';
+            const hasPhone = config.company.fields.includes('phone') && compPhone && compPhone.trim() !== '';
+            const hasAddr = config.company.fields.includes('address') && compAddr && compAddr.trim() !== '';
+            const hasGst = config.company.fields.includes('gstin') && compGst && compGst.trim() !== '';
+            const hasPan = config.company.fields.includes('pan') && compPan && compPan.trim() !== '';
+            const hasWebsite = config.company.fields.includes('website') && compWebsite && compWebsite.trim() !== '';
+
             if (layout.type === 'Modal Classic') {
               if (!compLogo && !config.header.showLogo) return null;
 
               return (
                 <div key="companyInfo" style={{ ...getSectionStyle('companyInfo'), marginBottom: '20px' }}>
-                  <h1 className="text-2xl font-bold text-gray-900 mb-1" style={{ color: styleConfig.primaryColor }}>{compName}</h1>
+                  {compName && <h1 className="text-2xl font-bold text-gray-900 mb-1" style={{ color: styleConfig.primaryColor }}>{compName}</h1>}
                   <div className="text-[11px] text-gray-600 leading-relaxed">
-                    {config.company.fields.includes('name') && <div>Owner: Guest User</div>}
-                    {config.company.fields.includes('email') && <div>Email: {compEmail}</div>}
-                    {config.company.fields.includes('phone') && <div>Phone: {compPhone}</div>}
-                    {config.company.fields.includes('address') && <div className="whitespace-pre-wrap">{compAddr}</div>}
-                    {config.company.fields.includes('gstin') && <div>GSTIN: {compGst}</div>}
-                    {config.company.fields.includes('pan') && <div>PAN: {compPan}</div>}
-                    {config.company.fields.includes('website') && <div>Website: {compWebsite}</div>}
+                    {hasOwner && <div>Owner: {ownerName}</div>}
+                    {hasEmail && <div>Email: {compEmail}</div>}
+                    {hasPhone && <div>Phone: {compPhone}</div>}
+                    {hasAddr && <div className="whitespace-pre-wrap">{compAddr}</div>}
+                    {hasGst && <div>GSTIN: {compGst}</div>}
+                    {hasPan && <div>PAN: {compPan}</div>}
+                    {hasWebsite && <div>Website: {compWebsite}</div>}
                   </div>
                 </div>
               );
@@ -586,13 +595,13 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             }
             return (
               <div key="companyInfo" style={getSectionStyle('companyInfo')}>
-                <h3 style={{ fontWeight: 'bold', fontSize: '16px', color: styleConfig.primaryColor, marginBottom: '5px' }}>{compName}</h3>
-                {config.company.fields.includes('address') && <p style={{ fontSize: '12px', margin: '2px 0', whiteSpace: 'pre-wrap' }}>{compAddr}</p>}
-                {config.company.fields.includes('gstin') && compGst && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>GSTIN:</strong> {compGst}</p>}
-                {config.company.fields.includes('phone') && compPhone && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Phone:</strong> {compPhone}</p>}
-                {config.company.fields.includes('email') && compEmail && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Email:</strong> {compEmail}</p>}
-                {config.company.fields.includes('pan') && compPan && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>PAN:</strong> {compPan}</p>}
-                {config.company.fields.includes('website') && compWebsite && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Website:</strong> {compWebsite}</p>}
+                {compName && <h3 style={{ fontWeight: 'bold', fontSize: '16px', color: styleConfig.primaryColor, marginBottom: '5px' }}>{compName}</h3>}
+                {hasAddr && <p style={{ fontSize: '12px', margin: '2px 0', whiteSpace: 'pre-wrap' }}>{compAddr}</p>}
+                {hasGst && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>GSTIN:</strong> {compGst}</p>}
+                {hasPhone && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Phone:</strong> {compPhone}</p>}
+                {hasEmail && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Email:</strong> {compEmail}</p>}
+                {hasPan && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>PAN:</strong> {compPan}</p>}
+                {hasWebsite && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Website:</strong> {compWebsite}</p>}
               </div>
             );
           }

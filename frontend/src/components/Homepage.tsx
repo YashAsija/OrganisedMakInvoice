@@ -603,10 +603,7 @@ export default function Homepage({
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             className="lg:col-span-7 space-y-6 order-1"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-sky-500/10 dark:bg-sky-505/15 text-sky-600 dark:text-sky-400 rounded-full text-xs font-bold leading-none animate-fade-in">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Beautiful invoices created in seconds</span>
-            </div>
+
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-slate-805">
               The Intelligent <br />

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Check, Trash2, Upload, CreditCard, ShieldCheck, Sparkles, Building2, Landmark, Sliders, Award, FileSpreadsheet, KeyRound, ArrowLeft, ArrowRight, Plus, AlertCircle } from 'lucide-react';
 import { BusinessProfile } from '../types';
 import { Country, State } from 'country-state-city';
+import { supabase } from '../lib/supabase';
 
 interface BusinessProfileModalProps {
   profile: BusinessProfile;
@@ -16,6 +17,16 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const [activeTab, setActiveTab] = useState<'company' | 'banking' | 'billing' | 'subscription' | 'tax'>('company');
   const [showErrors, setShowErrors] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [deletedTaxIds, setDeletedTaxIds] = useState<string[]>([]);
+
+  // Subscription states
+  const [subPlanName, setSubPlanName] = useState('Acme Ledger Hub Professional');
+  const [subPlanType, setSubPlanType] = useState('Enterprise Unlimited');
+  const [subStatus, setSubStatus] = useState('Royal Elite Status');
+  const [subExpiresAt, setSubExpiresAt] = useState('June 30, 2029');
+  const [subAuthorizedToken, setSubAuthorizedToken] = useState('');
 
   // Fields state holding actual values
   const [name, setName] = useState(() => isOnboarding ? '' : (profile.name || ''));
@@ -122,92 +133,185 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const fileInputRef = useRef<HTMLInputElement>(null);
   const signatureImageInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto initialize values when editing or creating
+  // Load settings, tax_configs, and subscriptions on mount / open
   useEffect(() => {
-    if (isOnboarding) {
-      setName('');
-      setDisplayName('');
-      setEmail('');
-      setPhone('');
-      setAddress('');
-      setTaxId('');
-      setCurrency('');
-      setDefaultTaxRate(0);
-      setLogoUrl('');
-      setSignature('');
-      setSignatureSize(150);
-      setThemeAccent('sky');
-      setInvoiceFont('inter');
-      setInvoiceLayout('professional');
+    if (!isOpen) return;
 
-      setCompanyCode('');
-      setState('');
-      setStateCode('');
-      setCountry('');
-      setCurrencySymbol('');
-      setMobile('');
+    const loadData = async () => {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          console.warn("[SETTINGS] No logged in user found:", userError);
+          // Fall back to props if no auth
+          if (!isOnboarding) {
+            setName(profile.name || '');
+            setDisplayName(profile.displayName || '');
+            setEmail(profile.email || '');
+            setPhone(profile.phone || '');
+            setAddress(profile.address || '');
+            setTaxId(profile.taxId || '');
+            setCurrency(profile.currency || 'USD');
+            setDefaultTaxRate(profile.defaultTaxRate || 0);
+            setLogoUrl(profile.logoUrl || '');
+            setSignature(profile.signature || '');
+            setSignatureSize(profile.signatureSize || 150);
+            setThemeAccent(profile.themeAccent || 'sky');
+            setInvoiceFont(profile.invoiceFont || 'inter');
+            setInvoiceLayout(profile.invoiceLayout || 'professional');
 
-      setBankName('');
-      setAccountNumber('');
-      setIfsc('');
-      setUpiId('');
+            setCompanyCode(profile.companyCode || '');
+            setState(profile.state || '');
+            setStateCode(profile.stateCode || '');
+            setCountry(profile.country || '');
+            setCurrencySymbol(profile.currencySymbol || '');
+            setMobile(profile.mobile || '');
 
-      setInvoicePrefix('');
-      setStartingInvoiceNumber('');
-      setPostedInvoiceEdit('Disabled');
-      setMaterialRateEdit('Disabled');
-      setMaterialCategorization('Optional');
-      setDefaultNotes('');
-      setDefaultTerms('');
+            setBankName(profile.bankName || '');
+            setAccountNumber(profile.accountNumber || '');
+            setIfsc(profile.ifsc || '');
+            setUpiId(profile.upiId || '');
 
-      setTaxMode('dynamic');
-      setCustomTaxName('');
-      setCustomTaxPercentage(0);
-      setCustomTaxCols([]);
-      setAdditionalTaxes([]);
-    } else {
-      setName(profile.name || '');
-      setDisplayName(profile.displayName || '');
-      setEmail(profile.email || '');
-      setPhone(profile.phone || '');
-      setAddress(profile.address || '');
-      setTaxId(profile.taxId || '');
-      setCurrency(profile.currency || 'USD');
-      setDefaultTaxRate(profile.defaultTaxRate || 0);
-      setLogoUrl(profile.logoUrl || '');
-      setSignature(profile.signature || '');
-      setSignatureSize(profile.signatureSize || 150);
-      setThemeAccent(profile.themeAccent || 'sky');
-      setInvoiceFont(profile.invoiceFont || 'inter');
-      setInvoiceLayout(profile.invoiceLayout || 'professional');
+            setInvoicePrefix(profile.invoicePrefix || 'INV');
+            setStartingInvoiceNumber(profile.startingInvoiceNumber || '1');
+            setPostedInvoiceEdit(profile.postedInvoiceEdit || 'Disabled');
+            setMaterialRateEdit(profile.materialRateEdit || 'Disabled');
+            setMaterialCategorization(profile.materialCategorization || 'Optional');
+            setDefaultNotes(profile.defaultNotes || 'Thank you for your business.');
+            setDefaultTerms(profile.defaultTerms || 'Goods once sold will not be taken back or exchanged.');
 
-      setCompanyCode(profile.companyCode || '');
-      setState(profile.state || '');
-      setStateCode(profile.stateCode || '');
-      setCountry(profile.country || '');
-      setCurrencySymbol(profile.currencySymbol || '');
-      setMobile(profile.mobile || '');
+            setTaxMode(profile.taxMode || 'dynamic');
+            setCustomTaxName(profile.customTaxName || 'Tax');
+            setCustomTaxPercentage(profile.customTaxPercentage !== undefined ? profile.customTaxPercentage : 18);
+            setCustomTaxCols(profile.customTaxCols || ['Tax']);
+            setAdditionalTaxes(profile.additionalTaxes || []);
+          }
+          return;
+        }
 
-      setBankName(profile.bankName || '');
-      setAccountNumber(profile.accountNumber || '');
-      setIfsc(profile.ifsc || '');
-      setUpiId(profile.upiId || '');
+        // Fetch company settings
+        const { data: settings, error: settingsError } = await supabase
+          .from('company_settings')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
 
-      setInvoicePrefix(profile.invoicePrefix || 'INV');
-      setStartingInvoiceNumber(profile.startingInvoiceNumber || '1');
-      setPostedInvoiceEdit(profile.postedInvoiceEdit || 'Disabled');
-      setMaterialRateEdit(profile.materialRateEdit || 'Disabled');
-      setMaterialCategorization(profile.materialCategorization || 'Optional');
-      setDefaultNotes(profile.defaultNotes || 'Thank you for your business.');
-      setDefaultTerms(profile.defaultTerms || 'Goods once sold will not be taken back or exchanged.');
+        if (settingsError && settingsError.code !== 'PGRST116') {
+          console.error("[SETTINGS] Error fetching settings:", settingsError);
+        }
 
-      setTaxMode(profile.taxMode || 'dynamic');
-      setCustomTaxName(profile.customTaxName || 'Tax');
-      setCustomTaxPercentage(profile.customTaxPercentage !== undefined ? profile.customTaxPercentage : 18);
-      setCustomTaxCols(profile.customTaxCols || ['Tax']);
-      setAdditionalTaxes(profile.additionalTaxes || []);
-    }
-  }, [profile, isOpen, isOnboarding]);
+        if (settings) {
+          setName(settings.business_name || '');
+          setDisplayName(settings.owner_name || '');
+          setEmail(settings.email || '');
+          setPhone(settings.phone || '');
+          setAddress(settings.address || '');
+          setTaxId(settings.gstin || '');
+          setCurrency(settings.currency || 'USD');
+          setLogoUrl(settings.logo_url || '');
+          setSignature(settings.signature_url || '');
+          setSignatureMode(settings.signature_type || 'draw');
+          
+          setCompanyCode(settings.company_code || '');
+          setState(settings.state || '');
+          setStateCode(settings.state_code || '');
+          setCountry(settings.country || '');
+          setCurrencySymbol(settings.currency_symbol || '');
+          setMobile(settings.mobile || '');
+
+          setBankName(settings.bank_name || '');
+          setAccountNumber(settings.account_number || '');
+          setIfsc(settings.ifsc || '');
+          setUpiId(settings.upi_id || '');
+
+          setInvoicePrefix(settings.invoice_prefix || 'INV');
+          setStartingInvoiceNumber(settings.starting_invoice_number || '1');
+          setPostedInvoiceEdit(settings.posted_invoice_edit || 'Disabled');
+          setMaterialRateEdit(settings.material_rate_edit || 'Disabled');
+          setMaterialCategorization(settings.material_categorization || 'Optional');
+          setDefaultNotes(settings.default_notes || 'Thank you for your business.');
+          setDefaultTerms(settings.default_terms || 'Goods once sold will not be taken back or exchanged.');
+        } else {
+          // If no row exists yet, use props / defaults
+          setName(profile.name || '');
+          setDisplayName(profile.displayName || '');
+          setEmail(profile.email || '');
+          setPhone(profile.phone || '');
+          setAddress(profile.address || '');
+          setTaxId(profile.taxId || '');
+          setCurrency(profile.currency || 'USD');
+          setDefaultTaxRate(profile.defaultTaxRate || 0);
+          setLogoUrl(profile.logoUrl || '');
+          setSignature(profile.signature || '');
+          setSignatureSize(profile.signatureSize || 150);
+          setThemeAccent(profile.themeAccent || 'sky');
+          setInvoiceFont(profile.invoiceFont || 'inter');
+          setInvoiceLayout(profile.invoiceLayout || 'professional');
+
+          setCompanyCode(profile.companyCode || '');
+          setState(profile.state || '');
+          setStateCode(profile.stateCode || '');
+          setCountry(profile.country || '');
+          setCurrencySymbol(profile.currencySymbol || '');
+          setMobile(profile.mobile || '');
+
+          setBankName(profile.bankName || '');
+          setAccountNumber(profile.accountNumber || '');
+          setIfsc(profile.ifsc || '');
+          setUpiId(profile.upiId || '');
+
+          setInvoicePrefix(profile.invoicePrefix || 'INV');
+          setStartingInvoiceNumber(profile.startingInvoiceNumber || '1');
+          setPostedInvoiceEdit(profile.postedInvoiceEdit || 'Disabled');
+          setMaterialRateEdit(profile.materialRateEdit || 'Disabled');
+          setMaterialCategorization(profile.materialCategorization || 'Optional');
+          setDefaultNotes(profile.defaultNotes || 'Thank you for your business.');
+          setDefaultTerms(profile.defaultTerms || 'Goods once sold will not be taken back or exchanged.');
+        }
+
+        // Fetch tax configs
+        const { data: taxes, error: taxesError } = await supabase
+          .from('tax_configs')
+          .select('*')
+          .eq('user_id', user.id);
+
+        if (taxesError) {
+          console.error("[SETTINGS] Error fetching tax configs:", taxesError);
+        } else if (taxes && taxes.length > 0) {
+          const mappedTaxes = taxes.map(t => ({
+            id: t.id,
+            name: t.tax_label,
+            rate: Number(t.tax_percentage)
+          }));
+          setAdditionalTaxes(mappedTaxes);
+        } else {
+          setAdditionalTaxes(profile.additionalTaxes || []);
+        }
+
+        // Fetch subscriptions
+        const { data: sub, error: subError } = await supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (subError && subError.code !== 'PGRST116') {
+          console.error("[SETTINGS] Error fetching subscription:", subError);
+        }
+
+        if (sub) {
+          setSubPlanName(sub.plan_name || 'Acme Ledger Hub Professional');
+          setSubPlanType(sub.plan_type || 'Enterprise Unlimited');
+          setSubStatus(sub.status || 'Royal Elite Status');
+          setSubExpiresAt(sub.expires_at || 'June 30, 2029');
+          setSubAuthorizedToken(sub.authorized_token_node || '');
+        }
+      } catch (err) {
+        console.error("[SETTINGS] Unexpected error loading profile settings:", err);
+      }
+    };
+
+    loadData();
+  }, [isOpen, profile]);
 
   // Handle opening of Canvas & Initializing signature preview
   useEffect(() => {
@@ -699,7 +803,25 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
     e.target.value = '';
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const dataURLtoBlob = (dataurl: string) => {
+    try {
+      const arr = dataurl.split(',');
+      if (arr.length < 2) return null;
+      const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new Blob([u8arr], { type: mime });
+    } catch (e) {
+      console.error("[SETTINGS] dataURLtoBlob conversion error:", e);
+      return null;
+    }
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateCompanyProfile()) {
@@ -707,47 +829,196 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       return;
     }
 
-    onSave({
-      uid: profile.uid || 'local',
-      name,
-      displayName,
-      email,
-      phone: phone || mobile,
-      address,
-      taxId,
-      currency,
-      logoUrl,
-      signature,
-      signatureSize,
-      themeAccent,
-      invoiceFont,
-      invoiceLayout,
-      companyCode,
-      state,
-      stateCode,
-      country,
-      currencySymbol,
-      mobile,
-      bankName,
-      accountNumber,
-      ifsc,
-      upiId,
-      invoicePrefix,
-      startingInvoiceNumber,
-      postedInvoiceEdit,
-      materialRateEdit,
-      materialCategorization,
-      defaultNotes,
-      defaultTerms,
-      taxMode,
-      customTaxName,
-      customTaxPercentage: Number(customTaxPercentage),
-      defaultTaxRate: Number(customTaxPercentage),
-      customTaxCols,
-      additionalTaxes,
-      updatedAt: new Date().toISOString()
-    });
-    onClose();
+    setIsSaving(true);
+
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        alert("Authentication error: Please log in again.");
+        setIsSaving(false);
+        return;
+      }
+
+      // 1. Process and upload signature if base64
+      let uploadedSignatureUrl = signature;
+      if (signature && signature.startsWith('data:image/png;base64,')) {
+        try {
+          const blob = dataURLtoBlob(signature);
+          if (blob) {
+            const { error: uploadError } = await supabase.storage
+              .from('signature')
+              .upload(`signature/${user.id}/signature.png`, blob, {
+                cacheControl: '3600',
+                upsert: true
+              });
+            if (uploadError) {
+              console.error("[SETTINGS] Signature upload error:", uploadError);
+              alert(`Failed to upload signature: ${uploadError.message}`);
+              setIsSaving(false);
+              return;
+            }
+            const { data: { publicUrl } } = supabase.storage
+              .from('signature')
+              .getPublicUrl(`signature/${user.id}/signature.png`);
+            uploadedSignatureUrl = publicUrl;
+          }
+        } catch (uploadErr: any) {
+          console.error("[SETTINGS] Signature convert/upload exception:", uploadErr);
+          alert(`Failed to process signature: ${uploadErr.message || uploadErr}`);
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      // 2. Prepare company settings data
+      const selectedCountry = Country.getAllCountries().find(c => c.name === country);
+      const prefix = selectedCountry?.phonecode ? `+${selectedCountry.phonecode} ` : '';
+      const fullPhone = mobile.trim().startsWith('+') ? mobile.trim() : `${prefix}${mobile.trim()}`;
+
+      const settingData: any = {
+        user_id: user.id,
+        business_name: name,
+        owner_name: displayName,
+        country,
+        state,
+        state_code: stateCode,
+        address,
+        currency_symbol: currencySymbol,
+        mobile,
+        email,
+        gstin: taxId,
+        logo_url: logoUrl,
+        signature_url: uploadedSignatureUrl,
+        signature_type: signatureMode,
+        bank_name: bankName,
+        account_number: accountNumber,
+        ifsc,
+        upi_id: upiId,
+        invoice_prefix: invoicePrefix,
+        starting_invoice_number: startingInvoiceNumber,
+        posted_invoice_edit: postedInvoiceEdit,
+        material_rate_edit: materialRateEdit,
+        material_categorization: materialCategorization,
+        default_notes: defaultNotes,
+        default_terms: defaultTerms,
+        updated_at: new Date().toISOString()
+      };
+
+      if (companyCode && companyCode.trim() !== '') {
+        settingData.custom_company_code = companyCode.trim();
+        settingData.company_code = companyCode.trim();
+      }
+
+      // 3. Upsert company settings
+      const { data: savedSetting, error: settingError } = await supabase
+        .from('company_settings')
+        .upsert(settingData, { onConflict: 'user_id' })
+        .select('id')
+        .single();
+
+      if (settingError) {
+        console.error("[SETTINGS] Error saving company settings:", settingError);
+        if (settingError.code === '23505' || (settingError.message && settingError.message.toLowerCase().includes('unique'))) {
+          alert("This company code is already taken, please choose another.");
+        } else {
+          alert(`Failed to save settings: ${settingError.message}`);
+        }
+        setIsSaving(false);
+        return;
+      }
+
+      const settingsRowId = savedSetting?.id;
+
+      // 4. Handle tax configurations deletion
+      if (deletedTaxIds.length > 0) {
+        const { error: deleteTaxError } = await supabase
+          .from('tax_configs')
+          .delete()
+          .in('id', deletedTaxIds);
+        
+        if (deleteTaxError) {
+          console.error("[SETTINGS] Error deleting tax configs:", deleteTaxError);
+        }
+      }
+
+      // 5. Handle tax configurations upsert
+      if (additionalTaxes.length > 0 && settingsRowId) {
+        const taxRows = additionalTaxes.map(tax => {
+          const isTempId = tax.id.startsWith('tax_');
+          const row: any = {
+            user_id: user.id,
+            company_settings_id: settingsRowId,
+            tax_label: tax.name,
+            tax_percentage: Number(tax.rate),
+            is_default: false
+          };
+          if (!isTempId) {
+            row.id = tax.id; // Keep database uuid if it exists
+          }
+          return row;
+        });
+
+        const { error: taxUpsertError } = await supabase
+          .from('tax_configs')
+          .upsert(taxRows);
+
+        if (taxUpsertError) {
+          console.error("[SETTINGS] Error upserting tax configs:", taxUpsertError);
+          alert(`Saved profile settings, but failed to save some tax configs: ${taxUpsertError.message}`);
+        }
+      }
+
+      // Save local state for App.tsx component tree compatibility
+      onSave({
+        uid: user.id,
+        name,
+        displayName,
+        ownerName: displayName,
+        email,
+        phone: fullPhone,
+        address,
+        taxId,
+        currency,
+        logoUrl,
+        signature: uploadedSignatureUrl,
+        signatureSize,
+        themeAccent,
+        invoiceFont,
+        invoiceLayout,
+        companyCode,
+        state,
+        stateCode,
+        country,
+        currencySymbol,
+        mobile,
+        bankName,
+        accountNumber,
+        ifsc,
+        upiId,
+        invoicePrefix,
+        startingInvoiceNumber,
+        postedInvoiceEdit,
+        materialRateEdit,
+        materialCategorization,
+        defaultNotes,
+        defaultTerms,
+        taxMode,
+        customTaxName,
+        customTaxPercentage: Number(customTaxPercentage),
+        defaultTaxRate: Number(customTaxPercentage),
+        customTaxCols,
+        additionalTaxes,
+        updatedAt: new Date().toISOString()
+      });
+
+      alert("Settings successfully saved!");
+      onClose();
+    } catch (err: any) {
+      console.error("[SETTINGS] Unexpected error during form submission:", err);
+      alert(`Unexpected error: ${err.message || err}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -1383,10 +1654,11 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 <div className="pt-4">
                   <button
                     type="submit"
-                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                    disabled={isSaving}
+                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer disabled:opacity-50"
                   >
                     <Check className="w-4 h-4" />
-                    Save Company Details
+                    {isSaving ? 'Saving...' : 'Save Company Details'}
                   </button>
                 </div>
               )}
@@ -1519,27 +1791,27 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                       <ShieldCheck className="w-3.5 h-3.5" />
                       Premium Service Stack Enabled
                     </div>
-                    <span className="text-xs text-sky-600 dark:text-sky-400 font-mono font-extrabold uppercase tracking-wider">Royal Elite Status</span>
+                    <span className="text-xs text-sky-600 dark:text-sky-400 font-mono font-extrabold uppercase tracking-wider">{subStatus}</span>
                   </div>
 
                   <div className="space-y-1">
-                    <h3 className="text-xl sm:text-2xl font-extrabold text-slate-805 dark:text-white">Acme Ledger Hub Professional</h3>
+                    <h3 className="text-xl sm:text-2xl font-extrabold text-slate-805 dark:text-white">{subPlanName}</h3>
                     <p className="text-xs text-slate-550 dark:text-slate-400">The corporate grade cloud syncing environment. Bound strictly in military local encryptions.</p>
                   </div>
 
                   <div className="border-t border-slate-200 dark:border-slate-850 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <span className="block text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Active Plan Type</span>
-                      <span className="text-sm font-bold text-slate-805 dark:text-white">Enterprise Unlimited</span>
+                      <span className="text-sm font-bold text-slate-805 dark:text-white">{subPlanType}</span>
                     </div>
                     <div>
                       <span className="block text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Authorized Token Node</span>
-                      <span className="text-sm font-medium text-sky-600 dark:text-sky-400 font-mono tracking-wide">{companyCode}</span>
+                      <span className="text-sm font-medium text-sky-600 dark:text-sky-400 font-mono tracking-wide">{subAuthorizedToken || companyCode || 'N/A'}</span>
                     </div>
                     <div>
                       <span className="block text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Expires / Renews</span>
                       <span className="text-sm font-bold text-[#10b981] dark:text-[#34d399] flex items-center gap-1">
-                        June 30, 2029
+                        {subExpiresAt}
                       </span>
                     </div>
                     <div>
@@ -1727,7 +1999,12 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                           <div className="sm:col-span-1 h-[42px] flex items-center justify-center">
                             <button
                               type="button"
-                              onClick={() => setAdditionalTaxes(additionalTaxes.filter((t) => t.id !== tax.id))}
+                              onClick={() => {
+                                if (!tax.id.startsWith('tax_')) {
+                                  setDeletedTaxIds([...deletedTaxIds, tax.id]);
+                                }
+                                setAdditionalTaxes(additionalTaxes.filter((t) => t.id !== tax.id));
+                              }}
                               className="w-9 h-9 bg-rose-50 hover:bg-rose-100 dark:bg-rose-955/20 dark:hover:bg-rose-955/40 text-rose-600 dark:text-rose-400 border border-transparent dark:border-rose-900/35 rounded-xl flex items-center justify-center cursor-pointer transition-all active:scale-95"
                               title="Remove Tax"
                             >
@@ -1772,16 +2049,18 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-5 py-2.5 rounded-xl text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 rounded-xl text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                  disabled={isSaving}
+                  className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer disabled:opacity-50"
                 >
                   <Check className="w-4.5 h-4.5" />
-                  Save Settings
+                  {isSaving ? 'Saving...' : 'Save Settings'}
                 </button>
               </>
             ) : (
@@ -1819,10 +2098,11 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 {activeTab === 'tax' && (
                   <button
                     type="submit"
-                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                    disabled={isSaving}
+                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer disabled:opacity-50"
                   >
                     <Check className="w-4.5 h-4.5" />
-                    <span>Save Details</span>
+                    <span>{isSaving ? 'Saving...' : 'Save Details'}</span>
                   </button>
                 )}
                 {/* Subscription tab fallback just in case */}
