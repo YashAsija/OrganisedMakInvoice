@@ -227,7 +227,11 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           setStartingInvoiceNumber(settings.starting_invoice_number || '1');
           setPostedInvoiceEdit(settings.posted_invoice_edit === true ? 'Enabled' : 'Disabled');
           setMaterialRateEdit(settings.material_rate_edit === true ? 'Enabled' : 'Disabled');
-          setMaterialCategorization(settings.material_categorization || 'Optional');
+          setMaterialCategorization(
+            settings.material_categorization 
+              ? (settings.material_categorization.charAt(0).toUpperCase() + settings.material_categorization.slice(1)) 
+              : 'Optional'
+          );
           setDefaultNotes(settings.default_notes || 'Thank you for your business.');
           setDefaultTerms(settings.default_terms || 'Goods once sold will not be taken back or exchanged.');
         } else {
@@ -908,7 +912,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         starting_invoice_number: startingInvoiceNumber,
         posted_invoice_edit: postedInvoiceEdit === 'Enabled',
         material_rate_edit: materialRateEdit === 'Enabled',
-        material_categorization: materialCategorization,
+        material_categorization: materialCategorization.toLowerCase(),
         default_notes: defaultNotes,
         default_terms: defaultTerms,
         updated_at: new Date().toISOString()
