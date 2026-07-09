@@ -484,6 +484,7 @@ export default function App() {
   };
 
   const handleCustomSignup = async (name: string, companyName: string, email: string, phone: string, password?: string): Promise<{ error?: string }> => {
+    let targetEmail = email;
     if (password) {
       if (!isSupabaseConfigured) {
         return { error: "Service unavailable, please try again later" };
@@ -534,6 +535,7 @@ export default function App() {
       }
     } else {
       const resolvedEmail = email || `${phone.replace(/\s+/g, '') || 'user'}@makbills.local`;
+      targetEmail = resolvedEmail;
       setUserEmail(resolvedEmail);
       localStorage.setItem('makbills_custom_email', resolvedEmail);
       localStorage.setItem('makbills_custom_brand', companyName);
@@ -554,8 +556,8 @@ export default function App() {
     }
     
     // Clear invoices, presets, clients, and expenses so a brand-new account starts completely fresh
-    const targetEmail = (authMode === 'signup' && email) || resolvedEmail || '';
-    const newSuffix = targetEmail ? `_${encodeURIComponent(targetEmail)}` : '';
+    const finalEmail = targetEmail || '';
+    const newSuffix = finalEmail ? `_${encodeURIComponent(finalEmail)}` : '';
     setInvoices([]);
     localStorage.setItem(`invoice_maker_invoices${newSuffix}`, JSON.stringify([]));
     setPresets([]);
