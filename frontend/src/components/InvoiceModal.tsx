@@ -1111,7 +1111,7 @@ export default function InvoiceModal({
           </div>
 
           {/* Client Info */}
-          {invoiceType !== 'estimate' && (
+          {activeTemplate.sections.billTo?.visible !== false && (
             <div className="space-y-3">
             <h3 className="text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-1 flex justify-between items-center">
               <span>Client Details</span>
@@ -1227,7 +1227,7 @@ export default function InvoiceModal({
             <div className="flex items-center justify-between pt-2">
             </div>
 
-            {(
+            {activeTemplate.sections.shipTo?.visible !== false && (
               <div className="space-y-3 pt-3 border-t border-slate-150 dark:border-slate-800">
                 <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
                   Shipped To Details
@@ -1291,7 +1291,7 @@ export default function InvoiceModal({
           )}
 
           {/* Transport Details */}
-          {invoiceType !== 'estimate' && (
+          {activeTemplate.sections.transport?.visible !== false && (
             <div className="space-y-3 pt-4 border-t border-slate-150 dark:border-slate-800">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1">
               <h3 className="text-xs font-medium uppercase tracking-wider text-slate-400">
