@@ -846,8 +846,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           const blob = dataURLtoBlob(signature);
           if (blob) {
             const { error: uploadError } = await supabase.storage
-              .from('signature')
-              .upload(`signature/${user.id}/signature.png`, blob, {
+              .from('Signature')
+              .upload(`Signature/${user.id}/signature.png`, blob, {
                 cacheControl: '3600',
                 upsert: true
               });
@@ -858,8 +858,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               return;
             }
             const { data: { publicUrl } } = supabase.storage
-              .from('signature')
-              .getPublicUrl(`signature/${user.id}/signature.png`);
+              .from('Signature')
+              .getPublicUrl(`Signature/${user.id}/signature.png`);
             uploadedSignatureUrl = publicUrl;
           }
         } catch (uploadErr: any) {
