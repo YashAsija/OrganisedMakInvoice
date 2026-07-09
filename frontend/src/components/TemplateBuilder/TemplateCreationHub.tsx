@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
-import { InvoiceTemplate } from '../../types';
+import { InvoiceTemplate, BusinessProfile } from '../../types';
 import { Layout, Zap, Settings, ArrowLeft } from 'lucide-react';
 import AdvancedStudio from './AdvancedStudio';
 import QuickBuilder from './QuickBuilder';
 
 interface TemplateCreationHubProps {
   initialTemplate?: InvoiceTemplate | null;
+  businessProfile?: BusinessProfile;
   onSave: (template: InvoiceTemplate) => void;
   onCancel: () => void;
 }
 
-export default function TemplateCreationHub({ initialTemplate, onSave, onCancel }: TemplateCreationHubProps) {
+export default function TemplateCreationHub({ initialTemplate, businessProfile, onSave, onCancel }: TemplateCreationHubProps) {
   const [mode, setMode] = useState<'selection' | 'quick' | 'advanced'>(initialTemplate ? 'advanced' : 'selection');
 
   if (mode === 'advanced') {
-    return <AdvancedStudio initialTemplate={initialTemplate} onSave={onSave} onCancel={onCancel} />;
+    return <AdvancedStudio initialTemplate={initialTemplate} businessProfile={businessProfile} onSave={onSave} onCancel={onCancel} />;
   }
 
   if (mode === 'quick') {

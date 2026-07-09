@@ -2087,7 +2087,7 @@ export default function Dashboard({
         {/* ------------------ TAB: INVOICE TEMPLATES ROUTE ------------------ */}
         {activeTab === 'invoice_templates' && (
           <div className="space-y-4">
-            <TemplateManager />
+            <TemplateManager businessProfile={profile} />
           </div>
         )}
 

@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, LayoutTemplate, FileText, Check, Trash2, Edit2, Copy, Download, Upload, Search, Filter } from 'lucide-react';
-import { InvoiceTemplate } from '../types';
+import { InvoiceTemplate, BusinessProfile } from '../types';
 import { LivePreview } from './TemplateBuilder/LivePreview';
 import { exportInvoicePDFAsync } from '../lib/pdfExporter';
 
 import TemplateCreationHub from './TemplateBuilder/TemplateCreationHub';
 import { TEMPLATE_PRESETS } from '../lib/templatePresets';
 
-export default function TemplateManager() {
+export default function TemplateManager({ businessProfile }: { businessProfile?: BusinessProfile }) {
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('makbills_custom_templates');
@@ -240,6 +240,7 @@ export default function TemplateManager() {
         return (
       <TemplateCreationHub 
         initialTemplate={editingTemplate} 
+        businessProfile={businessProfile}
         onSave={handleSaveTemplate}
         onCancel={() => {
           setIsBuilding(false);
@@ -389,7 +390,7 @@ export default function TemplateManager() {
               <svg viewBox="0 0 794 1123" className="w-full h-auto origin-top" preserveAspectRatio="xMidYMin slice">
                 <foreignObject width="794" height="1123">
                   <div className="w-[794px] h-[1123px] bg-white">
-                    <LivePreview template={template} />
+                    <LivePreview template={template} businessProfile={businessProfile} />
                   </div>
                 </foreignObject>
               </svg>

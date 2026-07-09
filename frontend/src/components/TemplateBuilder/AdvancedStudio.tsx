@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { InvoiceTemplate } from '../../types';
+import { InvoiceTemplate, BusinessProfile } from '../../types';
 import { Layout, Palette, Settings, Type, FileText, CheckCircle, Smartphone, MousePointer2, Menu, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 import { LivePreview } from './LivePreview';
 import { TEMPLATE_PRESETS } from '../../lib/templatePresets';
@@ -15,6 +15,7 @@ import { StepCanvas } from './StepCanvas';
 
 interface TemplateBuilderProps {
   initialTemplate?: InvoiceTemplate | null;
+  businessProfile?: BusinessProfile;
   onSave: (template: InvoiceTemplate) => void;
   onCancel: () => void;
 }
@@ -104,7 +105,7 @@ const STEPS = [
   { id: 'canvas', title: 'Drag & Drop Canvas', icon: MousePointer2 },
 ];
 
-export default function AdvancedStudio({ initialTemplate, onSave, onCancel }: TemplateBuilderProps) {
+export default function AdvancedStudio({ initialTemplate, businessProfile, onSave, onCancel }: TemplateBuilderProps) {
   const { template, updateTemplate, undo, redo, canUndo, canRedo } = useTemplateHistory(initialTemplate || defaultTemplate);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -371,7 +372,7 @@ export default function AdvancedStudio({ initialTemplate, onSave, onCancel }: Te
                     transition: 'transform 0.2s ease',
                   }}
                 >
-                  <LivePreview template={template} />
+                  <LivePreview template={template} businessProfile={businessProfile} />
                 </div>
               </div>
             </div>
