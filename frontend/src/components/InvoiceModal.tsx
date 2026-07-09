@@ -276,14 +276,16 @@ export default function InvoiceModal({
       }
 
       // Geographic/tax options loader
+      // Geographic/tax options loader
       setCompanyState(invoice.companyState || profile.state || localStorage.getItem('makbills_tax_company_state') || 'Maharashtra');
       setCompanyCountry(invoice.companyCountry || profile.country || localStorage.getItem('makbills_tax_company_country') || 'India');
       setClientState(invoice.clientState || '');
       setClientCountry(invoice.clientCountry || 'India');
-      setTaxMode(invoice.taxMode || 'dynamic');
-      setCustomTaxName(invoice.customTaxName || 'Custom VAT');
-      setCustomTaxPercentage(invoice.customTaxPercentage !== undefined ? invoice.customTaxPercentage : 0);
+      setTaxMode(invoice.taxMode || profile.taxMode || 'dynamic');
+      setCustomTaxName(invoice.customTaxName || profile.customTaxName || 'Custom VAT');
+      setCustomTaxPercentage(invoice.customTaxPercentage !== undefined ? invoice.customTaxPercentage : (profile.customTaxPercentage !== undefined ? profile.customTaxPercentage : 0));
       setCustomTaxType(invoice.customTaxType || 'generic');
+      setAdditionalTaxes(invoice.additionalTaxes || profile.additionalTaxes || []);
 
       if (invoice.recurringSettings) {
         setIsRecurring(invoice.recurringSettings.isRecurring);
@@ -360,9 +362,10 @@ export default function InvoiceModal({
       setClientCountry('India');
       setCompanyState(profile.state || localStorage.getItem('makbills_tax_company_state') || 'Maharashtra');
       setCompanyCountry(profile.country || localStorage.getItem('makbills_tax_company_country') || 'India');
-      setTaxMode('dynamic');
-      setCustomTaxName('Custom VAT');
-      setCustomTaxPercentage(0);
+      setTaxMode(profile.taxMode || 'dynamic');
+      setCustomTaxName(profile.customTaxName || 'Custom VAT');
+      setCustomTaxPercentage(profile.customTaxPercentage !== undefined ? profile.customTaxPercentage : 0);
+      setAdditionalTaxes(profile.additionalTaxes || []);
     }
   }, [invoice, isOpen, defaultTaxRate]);
 
