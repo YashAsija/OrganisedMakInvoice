@@ -135,6 +135,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     }
 
     const img = new Image();
+    img.crossOrigin = 'anonymous'; // Prevent canvas taint from cross-origin Supabase Storage URLs
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
@@ -146,7 +147,14 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
       }
       ctx.drawImage(img, 0, 0);
 
-      const imgData = ctx.getImageData(0, 0, img.width, img.height);
+      let imgData: ImageData;
+      try {
+        imgData = ctx.getImageData(0, 0, img.width, img.height);
+      } catch {
+        // Canvas tainted (e.g. CORS mismatch) — just use raw URL directly
+        setCroppedSignature(rawSig);
+        return;
+      }
       const data = imgData.data;
       let minX = img.width, minY = img.height, maxX = 0, maxY = 0;
       let hasContent = false;
