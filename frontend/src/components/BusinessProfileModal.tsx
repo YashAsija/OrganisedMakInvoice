@@ -338,6 +338,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         // Preload signature if exists
         if (signature) {
           const img = new Image();
+          img.crossOrigin = 'anonymous';
           img.onload = () => {
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           };
