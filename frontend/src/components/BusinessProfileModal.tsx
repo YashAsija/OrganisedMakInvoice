@@ -859,7 +859,6 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
           const blob = dataURLtoBlob(signature);
           if (blob) {
-            alert(`Supabase Upload Parameters:\n- Bucket: Signature\n- File Path: ${user.id}/signature.png\n- Auth User ID: ${user?.id}`);
             const { error: uploadError } = await supabase.storage
               .from('Signature')
               .upload(`${user.id}/signature.png`, blob, {
