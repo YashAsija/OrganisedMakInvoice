@@ -235,7 +235,7 @@ export default function App() {
             // --- SYNC / RESOLVE FROM CLOUD ---
             const uid = currentUser.id;
 
-            // 1. Fetch Cloud Profile
+            // 1. Fetch Cloud Profile (users table) + company_settings for full details
             try {
               const { data: cloudProf } = await supabase
                 .from('users')
@@ -243,18 +243,58 @@ export default function App() {
                 .eq('uid', uid)
                 .single();
 
+              // Also fetch company_settings to get the detailed profile fields
+              const { data: companySettings } = await supabase
+                .from('company_settings')
+                .select('*')
+                .eq('user_id', uid)
+                .single();
+
               if (cloudProf) {
-                setProfile(cloudProf as BusinessProfile);
-                localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(cloudProf));
+                // Merge company_settings fields into the profile if available
+                const mergedProf: BusinessProfile = companySettings ? {
+                  ...(cloudProf as BusinessProfile),
+                  name: companySettings.business_name || cloudProf.name || '',
+                  displayName: companySettings.owner_name || cloudProf.displayName || '',
+                  ownerName: companySettings.owner_name || cloudProf.ownerName || '',
+                  email: companySettings.email || cloudProf.email || '',
+                  phone: companySettings.mobile || cloudProf.phone || '',
+                  mobile: companySettings.mobile || '',
+                  address: companySettings.address || cloudProf.address || '',
+                  taxId: companySettings.gstin || cloudProf.taxId || '',
+                  logoUrl: companySettings.logo_url || cloudProf.logoUrl || '',
+                  signature: companySettings.signature_url || cloudProf.signature || '',
+                  country: companySettings.country || cloudProf.country || '',
+                  state: companySettings.state || cloudProf.state || '',
+                  stateCode: companySettings.state_code || cloudProf.stateCode || '',
+                  currencySymbol: companySettings.currency_symbol || cloudProf.currencySymbol || '',
+                  bankName: companySettings.bank_name || cloudProf.bankName || '',
+                  accountNumber: companySettings.account_number || cloudProf.accountNumber || '',
+                  ifsc: companySettings.ifsc || cloudProf.ifsc || '',
+                  upiId: companySettings.upi_id || cloudProf.upiId || '',
+                  invoicePrefix: companySettings.invoice_prefix || cloudProf.invoicePrefix || 'INV',
+                  startingInvoiceNumber: companySettings.starting_invoice_number || cloudProf.startingInvoiceNumber || '1',
+                  defaultNotes: companySettings.default_notes || cloudProf.defaultNotes || '',
+                  defaultTerms: companySettings.default_terms || cloudProf.defaultTerms || '',
+                } : (cloudProf as BusinessProfile);
+
+                setProfile(mergedProf);
+                localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(mergedProf));
               } else {
                 // Creating initial business profile for new users in Supabase
                 const initProf: BusinessProfile = {
                   uid,
-                  name: profile.name || currentUser.user_metadata?.full_name || '',
-                  email: profile.email || currentUser.email || '',
-                  phone: profile.phone || '',
-                  address: profile.address || '',
-                  taxId: profile.taxId || '',
+                  name: companySettings?.business_name || profile.name || currentUser.user_metadata?.full_name || '',
+                  displayName: companySettings?.owner_name || profile.displayName || '',
+                  ownerName: companySettings?.owner_name || profile.ownerName || '',
+                  email: companySettings?.email || profile.email || currentUser.email || '',
+                  phone: companySettings?.mobile || profile.phone || '',
+                  mobile: companySettings?.mobile || '',
+                  address: companySettings?.address || profile.address || '',
+                  taxId: companySettings?.gstin || profile.taxId || '',
+                  country: companySettings?.country || profile.country || '',
+                  state: companySettings?.state || profile.state || '',
+                  stateCode: companySettings?.state_code || profile.stateCode || '',
                   currency: profile.currency || 'INR',
                   defaultTaxRate: profile.defaultTaxRate || 18,
                   updatedAt: new Date().toISOString()

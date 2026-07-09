@@ -34,9 +34,12 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
   const compName = businessProfile?.name || "";
   const compAddr = businessProfile?.address || "";
   const compEmail = businessProfile?.email || "";
-  const compPhone = businessProfile?.phone || "";
-  const compGst = businessProfile?.taxId || "";
+  const compPhone = businessProfile?.phone || (businessProfile as any)?.mobile || "";
+  const compGst = businessProfile?.taxId || (businessProfile as any)?.gstin || "";
   const ownerName = businessProfile?.displayName || businessProfile?.ownerName || "";
+  const compState = (businessProfile as any)?.state || "";
+  const compStateCode = (businessProfile as any)?.stateCode || "";
+  const compCountry = (businessProfile as any)?.country || "";
   
   const invNo = invoiceData?.invoiceNumber || "INV-2026-8528";
   const date = invoiceData?.date || "";
@@ -103,6 +106,8 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
                   {config.company.fields.includes('email') && compEmail && compEmail.trim() !== '' && <div>Email: {compEmail}</div>}
                   {config.company.fields.includes('phone') && compPhone && compPhone.trim() !== '' && <div>Phone: {compPhone}</div>}
                   {config.company.fields.includes('address') && compAddr && compAddr.trim() !== '' && <div className="whitespace-pre-wrap">{compAddr}</div>}
+                  {compState.trim() !== '' && <div>State: {compState}{compStateCode.trim() !== '' ? ` (${compStateCode})` : ''}</div>}
+                  {compCountry.trim() !== '' && <div>Country: {compCountry}</div>}
                   {config.company.fields.includes('gstin') && compGst && compGst.trim() !== '' && <div>GSTIN: {compGst}</div>}
                 </div>
               </>

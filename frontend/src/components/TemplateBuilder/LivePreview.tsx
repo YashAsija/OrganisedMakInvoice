@@ -372,12 +372,13 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const compName = (businessProfile as any)?.name || (businessProfile as any)?.companyName || "";
   const compAddr = businessProfile?.address || "";
   const compGst = (businessProfile as any)?.taxId || (businessProfile as any)?.gstin || "";
-  const compPhone = businessProfile?.phone || "";
+  const compPhone = businessProfile?.phone || (businessProfile as any)?.mobile || "";
   const compEmail = businessProfile?.email || "";
   const compPan = (businessProfile as any)?.pan || "";
   const compWebsite = (businessProfile as any)?.website || "";
   const ownerName = (businessProfile as any)?.displayName || (businessProfile as any)?.ownerName || "";
   const compLogo = (businessProfile as any)?.logoUrl || (businessProfile as any)?.logo || null;
+  const compStateCode = (businessProfile as any)?.stateCode || "";
 
   const invNo = invoiceData?.invoiceNumber || 'INV-2023-001';
   const invDate = invoiceData?.date || '';
@@ -573,6 +574,13 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             const hasGst = config.company.fields.includes('gstin') && compGst && compGst.trim() !== '';
             const hasPan = config.company.fields.includes('pan') && compPan && compPan.trim() !== '';
             const hasWebsite = config.company.fields.includes('website') && compWebsite && compWebsite.trim() !== '';
+            // Read company location fields directly — these always render if set
+            const compStateFull = (businessProfile as any)?.state || '';
+            const compStateCodeFull = (businessProfile as any)?.stateCode || compStateCode || '';
+            const compCountryFull = (businessProfile as any)?.country || '';
+            const hasState = compStateFull.trim() !== '';
+            const hasStateCode = compStateCodeFull.trim() !== '';
+            const hasCountry = compCountryFull.trim() !== '';
 
             if (layout.type === 'Modal Classic') {
               if (!compLogo && !config.header.showLogo) return null;
@@ -585,6 +593,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                     {hasEmail && <div>Email: {compEmail}</div>}
                     {hasPhone && <div>Phone: {compPhone}</div>}
                     {hasAddr && <div className="whitespace-pre-wrap">{compAddr}</div>}
+                    {hasState && <div>State: {compStateFull}{hasStateCode ? ` (${compStateCodeFull})` : ''}</div>}
+                    {hasCountry && <div>Country: {compCountryFull}</div>}
                     {hasGst && <div>GSTIN: {compGst}</div>}
                     {hasPan && <div>PAN: {compPan}</div>}
                     {hasWebsite && <div>Website: {compWebsite}</div>}
@@ -596,7 +606,10 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             return (
               <div key="companyInfo" style={getSectionStyle('companyInfo')}>
                 {compName && <h3 style={{ fontWeight: 'bold', fontSize: '16px', color: styleConfig.primaryColor, marginBottom: '5px' }}>{compName}</h3>}
+                {hasOwner && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Owner:</strong> {ownerName}</p>}
                 {hasAddr && <p style={{ fontSize: '12px', margin: '2px 0', whiteSpace: 'pre-wrap' }}>{compAddr}</p>}
+                {hasState && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>State:</strong> {compStateFull}{hasStateCode ? ` (${compStateCodeFull})` : ''}</p>}
+                {hasCountry && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Country:</strong> {compCountryFull}</p>}
                 {hasGst && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>GSTIN:</strong> {compGst}</p>}
                 {hasPhone && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Phone:</strong> {compPhone}</p>}
                 {hasEmail && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Email:</strong> {compEmail}</p>}
