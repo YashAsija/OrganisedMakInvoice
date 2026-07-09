@@ -72,6 +72,33 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
   const subTotal = invoiceData?.subtotal || 0;
   const taxTotal = invoiceData?.taxTotal || 0;
   const grandTotal = invoiceData?.grandTotal || 0;
+
+  // Compute the same dynamic tax header as LivePreview — determines CGST+SGST vs IGST
+  const taxMode = invoiceData?.taxMode || (businessProfile as any)?.taxMode || 'dynamic';
+  const taxName = taxMode === 'custom'
+    ? (invoiceData?.customTaxName || (businessProfile as any)?.customTaxName || 'Tax')
+    : 'GST';
+  const taxRate = taxMode === 'custom'
+    ? ((invoiceData as any)?.customTaxPercentage !== undefined ? (invoiceData as any).customTaxPercentage : ((businessProfile as any)?.customTaxPercentage !== undefined ? (businessProfile as any).customTaxPercentage : 18))
+    : ((invoiceData as any)?.taxRate !== undefined ? (invoiceData as any).taxRate : ((businessProfile as any)?.defaultTaxRate !== undefined ? (businessProfile as any).defaultTaxRate : 18));
+  const taxAmount = (subTotal * taxRate) / 100;
+
+  const shipStateForTax = ((invoiceData as any)?.shippedToState || invoiceData?.clientState || '').trim().toLowerCase();
+  const compCountryForTax = ((businessProfile as any)?.country || 'india').trim().toLowerCase();
+  const compStateForTax = ((businessProfile as any)?.state || '').trim().toLowerCase();
+
+  let dynamicTaxHeader = 'TAX %';
+  if (taxMode === 'custom') {
+    dynamicTaxHeader = `${taxName} (${taxRate}%)`;
+  } else if ((compCountryForTax === 'india' || compCountryForTax === 'in') && shipStateForTax === compStateForTax && shipStateForTax !== '') {
+    dynamicTaxHeader = `CGST + SGST (${taxRate}%)`;
+  } else {
+    dynamicTaxHeader = `IGST (${taxRate}%)`;
+  }
+
+  const isCgstSgst = dynamicTaxHeader.toUpperCase().startsWith('CGST');
+  const isIgst = dynamicTaxHeader.toUpperCase().startsWith('IGST');
+  const isCustomTax = taxMode === 'custom';
   
   const rowStyle = "flex items-center text-[11px] mb-0.5";
   const labelStyle = "w-28 font-medium text-gray-700";
@@ -254,9 +281,30 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
                   <span>{subTotal.toFixed(2)}</span>
                 </div>
               )}
-              {config.tax.showIgst && (
+              {isCustomTax ? (
                 <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
-                  <span>IGST ({items[0]?.taxPercentage || 0}%)</span>
+                  <span>{taxName} ({taxRate}%)</span>
+                  <span>{taxAmount.toFixed(2)}</span>
+                </div>
+              ) : isCgstSgst ? (
+                <>
+                  <div className="flex justify-between text-gray-600">
+                    <span>CGST ({taxRate / 2}%)</span>
+                    <span>{(taxAmount / 2).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
+                    <span>SGST ({taxRate / 2}%)</span>
+                    <span>{(taxAmount / 2).toFixed(2)}</span>
+                  </div>
+                </>
+              ) : isIgst ? (
+                <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
+                  <span>IGST ({taxRate}%)</span>
+                  <span>{taxTotal.toFixed(2)}</span>
+                </div>
+              ) : (
+                <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
+                  <span>{dynamicTaxHeader}</span>
                   <span>{taxTotal.toFixed(2)}</span>
                 </div>
               )}

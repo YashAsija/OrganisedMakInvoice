@@ -1147,6 +1147,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             );
           }
           if (section.id === 'taxEngine') {
+            // Determine which tax type to show — must match the items table column header
+            const isCgstSgst = dynamicTaxHeader.toUpperCase().startsWith('CGST');
+            const isIgst = dynamicTaxHeader.toUpperCase().startsWith('IGST');
+            const isCustomTax = taxMode === 'custom';
+
             if (layout.type === 'Modal Classic') {
               const align = getSectionAlignment('taxEngine');
               const paddingStyle = align === 'right' ? { paddingRight: '20px', paddingLeft: '0px' } : { paddingLeft: '0px', paddingRight: '0px' };
@@ -1160,32 +1165,32 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         <span>{subTotal.toFixed(2)}</span>
                       </div>
                     )}
-                    {taxMode === 'custom' ? (
+                    {isCustomTax ? (
                       <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
                         <span>{taxName} ({taxRate}%)</span>
                         <span>{taxAmount.toFixed(2)}</span>
                       </div>
-                    ) : (
+                    ) : isCgstSgst ? (
                       <>
-                        {config.tax.showCgstSgst && (
-                          <>
-                            <div className="flex justify-between text-gray-600">
-                              <span>CGST ({taxRate / 2}%)</span>
-                              <span>{(taxAmount / 2).toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between text-gray-600">
-                              <span>SGST ({taxRate / 2}%)</span>
-                              <span>{(taxAmount / 2).toFixed(2)}</span>
-                            </div>
-                          </>
-                        )}
-                        {config.tax.showIgst && (
-                          <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
-                            <span>IGST ({taxRate}%)</span>
-                            <span>{taxAmount.toFixed(2)}</span>
-                          </div>
-                        )}
+                        <div className="flex justify-between text-gray-600">
+                          <span>CGST ({taxRate / 2}%)</span>
+                          <span>{(taxAmount / 2).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
+                          <span>SGST ({taxRate / 2}%)</span>
+                          <span>{(taxAmount / 2).toFixed(2)}</span>
+                        </div>
                       </>
+                    ) : isIgst ? (
+                      <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
+                        <span>IGST ({taxRate}%)</span>
+                        <span>{taxAmount.toFixed(2)}</span>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
+                        <span>{dynamicTaxHeader}</span>
+                        <span>{taxAmount.toFixed(2)}</span>
+                      </div>
                     )}
                     <div className="flex justify-between text-gray-900 font-bold text-[14px] pt-1">
                       <span>TOTAL</span>
@@ -1200,20 +1205,21 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 {config.tax.enableTaxBreakdown && (
                   <div style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: getBorderRadius(), border: '1px solid #e2e8f0', width: '100%' }}>
                     {config.tax.showTaxableAmount && <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}><span>Taxable Amount:</span> <span>{currencySymbol} {subTotal.toFixed(2)}</span></div>}
-                    {taxMode === 'custom' ? (
+                    {isCustomTax ? (
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}>
                         <span>{taxName} ({taxRate}%):</span>
                         <span>{currencySymbol} {taxAmount.toFixed(2)}</span>
                       </div>
-                    ) : (
+                    ) : isCgstSgst ? (
                       <>
-                        {config.tax.showCgstSgst && (
-                          <>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}><span>CGST ({taxRate / 2}%):</span> <span>{currencySymbol} {(taxAmount / 2).toFixed(2)}</span></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}><span>SGST ({taxRate / 2}%):</span> <span>{currencySymbol} {(taxAmount / 2).toFixed(2)}</span></div>
-                          </>
-                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}><span>CGST ({taxRate / 2}%):</span> <span>{currencySymbol} {(taxAmount / 2).toFixed(2)}</span></div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}><span>SGST ({taxRate / 2}%):</span> <span>{currencySymbol} {(taxAmount / 2).toFixed(2)}</span></div>
                       </>
+                    ) : (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}>
+                        <span>{dynamicTaxHeader}:</span>
+                        <span>{currencySymbol} {taxAmount.toFixed(2)}</span>
+                      </div>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', paddingTop: '10px', borderTop: '2px solid #e2e8f0', fontSize: '16px', fontWeight: 'bold', color: styleConfig.primaryColor }}><span>Grand Total:</span> <span>{currencySymbol} {grandTotal.toFixed(2)}</span></div>
                   </div>
