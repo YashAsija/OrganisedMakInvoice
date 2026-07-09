@@ -225,8 +225,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
           setInvoicePrefix(settings.invoice_prefix || 'INV');
           setStartingInvoiceNumber(settings.starting_invoice_number || '1');
-          setPostedInvoiceEdit(settings.posted_invoice_edit || 'Disabled');
-          setMaterialRateEdit(settings.material_rate_edit || 'Disabled');
+          setPostedInvoiceEdit(settings.posted_invoice_edit === true ? 'Enabled' : 'Disabled');
+          setMaterialRateEdit(settings.material_rate_edit === true ? 'Enabled' : 'Disabled');
           setMaterialCategorization(settings.material_categorization || 'Optional');
           setDefaultNotes(settings.default_notes || 'Thank you for your business.');
           setDefaultTerms(settings.default_terms || 'Goods once sold will not be taken back or exchanged.');
@@ -906,8 +906,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         upi_id: upiId,
         invoice_prefix: invoicePrefix,
         starting_invoice_number: startingInvoiceNumber,
-        posted_invoice_edit: postedInvoiceEdit,
-        material_rate_edit: materialRateEdit,
+        posted_invoice_edit: postedInvoiceEdit === 'Enabled',
+        material_rate_edit: materialRateEdit === 'Enabled',
         material_categorization: materialCategorization,
         default_notes: defaultNotes,
         default_terms: defaultTerms,
@@ -918,6 +918,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         settingData.custom_company_code = companyCode.trim();
         settingData.company_code = companyCode.trim();
       }
+
+      console.log('Payload being sent:', settingData);
 
       // 3. Upsert company settings
       const { data: savedSetting, error: settingError } = await supabase
