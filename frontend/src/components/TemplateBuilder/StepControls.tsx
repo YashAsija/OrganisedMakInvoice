@@ -154,16 +154,28 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
   }
 
   if (stepId === 'company') {
+    const companyFieldOptions = [
+      { id: 'name',    label: 'NAME' },
+      { id: 'owner',   label: 'OWNER / CONTACT PERSON' },
+      { id: 'email',   label: 'EMAIL' },
+      { id: 'phone',   label: 'PHONE' },
+      { id: 'address', label: 'ADDRESS' },
+      { id: 'state',   label: 'STATE' },
+      { id: 'country', label: 'COUNTRY' },
+      { id: 'gstin',   label: 'GSTIN' },
+      { id: 'pan',     label: 'PAN' },
+      { id: 'website', label: 'WEBSITE' },
+    ];
     return (
       <div className="space-y-4">
         <p className="text-xs text-slate-500 mb-2">Select the fields to display from your Company Settings.</p>
-        {['name', 'address', 'gstin', 'pan', 'phone', 'email', 'website'].map(field => (
-           <label key={field} className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
-              <input type="checkbox" checked={config.company.fields.includes(field)} onChange={e => {
-                 const newFields = e.target.checked ? [...config.company.fields, field] : config.company.fields.filter(f => f !== field);
+        {companyFieldOptions.map(({ id, label }) => (
+           <label key={id} className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
+              <input type="checkbox" checked={config.company.fields.includes(id)} onChange={e => {
+                 const newFields = e.target.checked ? [...config.company.fields, id] : config.company.fields.filter(f => f !== id);
                  updateConfig('company', { fields: newFields });
               }} />
-              Show {field.toUpperCase()}
+              Show {label}
            </label>
         ))}
       </div>
@@ -171,16 +183,26 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
   }
 
   if (stepId === 'invoiceInfo') {
+    const invoiceInfoFieldOptions = [
+      { id: 'invoiceNumber',   label: 'Invoice No.' },
+      { id: 'invoiceDate',     label: 'Dated' },
+      { id: 'dueDate',         label: 'Due Date' },
+      { id: 'placeOfSupply',   label: 'Place of Supply' },
+      { id: 'grRrNo',          label: 'GR/RR No.' },
+      { id: 'referenceNumber', label: 'Ref. No.' },
+      { id: 'poNumber',        label: 'PO Number' },
+      { id: 'deliveryNote',    label: 'Delivery Note' },
+    ];
     return (
       <div className="space-y-4">
         <p className="text-xs text-slate-500 mb-2">Select invoice meta fields to display.</p>
-        {['invoiceNumber', 'invoiceDate', 'dueDate', 'poNumber', 'deliveryNote'].map(field => (
-           <label key={field} className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
-              <input type="checkbox" checked={config.invoiceInfo.fields.includes(field)} onChange={e => {
-                 const newFields = e.target.checked ? [...config.invoiceInfo.fields, field] : config.invoiceInfo.fields.filter(f => f !== field);
+        {invoiceInfoFieldOptions.map(({ id, label }) => (
+           <label key={id} className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
+              <input type="checkbox" checked={config.invoiceInfo.fields.includes(id)} onChange={e => {
+                 const newFields = e.target.checked ? [...config.invoiceInfo.fields, id] : config.invoiceInfo.fields.filter(f => f !== id);
                  updateConfig('invoiceInfo', { fields: newFields });
               }} />
-              Show {field}
+              Show {label}
            </label>
         ))}
         <div>
@@ -331,16 +353,24 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
   }
 
   if (stepId === 'transport') {
+    const transportFieldOptions = [
+      { id: 'vehicleNo',    label: 'Vehicle No' },
+      { id: 'driverMobile', label: 'Driver Mobile' },
+      { id: 'ewayBillNo',   label: 'E-Way Bill No' },
+      { id: 'transport',    label: 'Transport Name' },
+      { id: 'station',      label: 'Station' },
+      { id: 'grRrNo',       label: 'GR/RR No.' },
+    ];
     return (
       <div className="space-y-4">
         <p className="text-xs text-slate-500 mb-2">Select fields to display for Transport section.</p>
-        {['vehicleNo', 'transportName', 'eWayBillNo', 'station', 'driverMobileNo'].map(field => (
-           <label key={field} className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
-              <input type="checkbox" checked={config.transport.fields.includes(field)} onChange={e => {
-                 const newFields = e.target.checked ? [...config.transport.fields, field] : config.transport.fields.filter(f => f !== field);
+        {transportFieldOptions.map(({ id, label }) => (
+           <label key={id} className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
+              <input type="checkbox" checked={config.transport.fields.includes(id)} onChange={e => {
+                 const newFields = e.target.checked ? [...config.transport.fields, id] : config.transport.fields.filter(f => f !== id);
                  updateConfig('transport', { fields: newFields });
               }} />
-              Show {field === 'eWayBillNo' ? 'E-Way Bill No' : field === 'station' ? 'Station' : field === 'driverMobileNo' ? 'Driver Mobile No' : field === 'vehicleNo' ? 'Vehicle No' : 'Transport Name'}
+              Show {label}
            </label>
         ))}
       </div>
