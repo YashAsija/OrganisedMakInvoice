@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { 
   Plus, 
   Download,
+  Upload,
   Search, 
   Sparkles, 
   FileText, 
@@ -527,7 +529,7 @@ export default function Dashboard({
                   activeTab === 'master_vendor' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
-                🏢 Vendor Master
+                🏢 Client Database
               </button>
               <button
                 onClick={() => handleTabClick('master_hsn')}
@@ -536,14 +538,6 @@ export default function Dashboard({
                 }`}
               >
                 🔢 HSN Registry
-              </button>
-              <button
-                onClick={() => handleTabClick('master_gl')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
-                  activeTab === 'master_gl' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                }`}
-              >
-                📒 General Ledger
               </button>
             </div>
           )}
@@ -577,38 +571,6 @@ export default function Dashboard({
                 }`}
               >
                 🏷️ Product Category
-              </button>
-              <button
-                onClick={() => handleTabClick('catalog_sub_category')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
-                  activeTab === 'catalog_sub_category' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                }`}
-              >
-                📑 Sub-Category
-              </button>
-              <button
-                onClick={() => handleTabClick('catalog_mapping')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
-                  activeTab === 'catalog_mapping' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                }`}
-              >
-                📊 Class Mapping
-              </button>
-              <button
-                onClick={() => handleTabClick('catalog_packing_unit')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
-                  activeTab === 'catalog_packing_unit' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                }`}
-              >
-                📦 Packing Unit
-              </button>
-              <button
-                onClick={() => handleTabClick('catalog_measurement_unit')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
-                  activeTab === 'catalog_measurement_unit' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                }`}
-              >
-                📐 Measurement Unit
               </button>
             </div>
           )}
@@ -653,37 +615,37 @@ export default function Dashboard({
 
     switch (activeTab) {
       case 'master_vendor':
-        title = 'Vendor Master Directory';
-        description = 'Authorized supplier entities, software licensing portals, and utilities';
+        title = 'Client Database';
+        description = 'Pre-saved client profiles, company settings, and billing contact information';
         list = vendors;
         columns = [
-          { header: 'Supplier Name', key: 'name' },
-          { header: 'Affiliation Company', key: 'company' },
-          { header: 'Tax Category', key: 'category' },
-          { header: 'Email Coordinates', key: 'email' }
+          { header: 'Client Name', key: 'name' },
+          { header: 'Company Name', key: 'company' },
+          { header: 'Email Address', key: 'email' },
+          { header: 'Phone Number', key: 'phone' }
         ];
         fields = [
-          { label: 'Supplier Name', key: 'name', type: 'text' },
+          { label: 'Client Name', key: 'name', type: 'text' },
           { label: 'Company / Organization', key: 'company', type: 'text' },
-          { label: 'Category', key: 'category', type: 'text' },
-          { label: 'Email', key: 'email', type: 'email' },
-          { label: 'Telephone Number', key: 'phone', type: 'text' },
-          { label: 'Corporate Address', key: 'address', type: 'text' }
+          { label: 'Category / Tag', key: 'category', type: 'text' },
+          { label: 'Email Address', key: 'email', type: 'email' },
+          { label: 'Phone Number', key: 'phone', type: 'text' },
+          { label: 'Billing Address', key: 'address', type: 'text' }
         ];
         break;
       case 'master_hsn':
-        title = 'HSN Code & GST SAC Registry';
-        description = 'Official Service Accounting Codes (SAC) paired with standard taxation coefficients';
+        title = 'HSN / SAC Tax Registry';
+        description = 'Standard tax rates, HSN/SAC codes, and custom tax classifications';
         list = hsnCodes;
         columns = [
           { header: 'HSN/SAC Code', key: 'code' },
-          { header: 'Description / Activity', key: 'description' },
-          { header: 'GST Multiplier Percentage', key: 'gstRate' }
+          { header: 'Description', key: 'description' },
+          { header: 'Tax Rate (%)', key: 'gstRate' }
         ];
         fields = [
           { label: 'HSN/SAC Code', key: 'code', type: 'text' },
-          { label: 'HSN Code Description', key: 'description', type: 'text' },
-          { label: 'GST Percentage Rate', key: 'gstRate', type: 'number' }
+          { label: 'Description', key: 'description', type: 'text' },
+          { label: 'Tax Rate (%)', key: 'gstRate', type: 'number' }
         ];
         break;
       case 'master_gl':
@@ -702,34 +664,34 @@ export default function Dashboard({
         ];
         break;
       case 'catalog_material':
-        title = 'Itemized Catalog Material Database';
-        description = 'Pre-configured product configurations, consultancy deliverables, and custom rates';
+        title = 'Material & Product Catalog';
+        description = 'Manage pre-saved products, materials, services, and standard rates';
         list = materials;
         columns = [
-          { header: 'Material / Product Name', key: 'name' },
-          { header: 'Consultancy rate', key: 'rate' },
-          { header: 'Measurement standard', key: 'uom' },
-          { header: 'Associated SAC', key: 'hsn' }
+          { header: 'Item Name', key: 'name' },
+          { header: 'Standard Rate', key: 'rate' },
+          { header: 'Unit (UOM)', key: 'uom' },
+          { header: 'HSN/SAC Code', key: 'hsn' }
         ];
         fields = [
-          { label: 'Material Name', key: 'name', type: 'text' },
-          { label: 'Standard Rate per Unit', key: 'rate', type: 'number' },
-          { label: 'HSN/SAC Reference', key: 'hsn', type: 'text' },
-          { label: 'Measurement standard (UOM)', key: 'uom', type: 'text' },
-          { label: 'Custom Category', key: 'category', type: 'text' }
+          { label: 'Item Name', key: 'name', type: 'text' },
+          { label: 'Standard Rate / Unit Price', key: 'rate', type: 'number' },
+          { label: 'HSN/SAC Code', key: 'hsn', type: 'text' },
+          { label: 'Unit of Measure (UOM)', key: 'uom', type: 'text' },
+          { label: 'Category', key: 'category', type: 'text' }
         ];
         break;
       case 'catalog_category':
-        title = 'Inventory & Service Categories';
-        description = 'Macro directories for sorting catalog materials and advisory items';
+        title = 'Product Categories';
+        description = 'Manage categories to organize materials, products, and services';
         list = categories;
         columns = [
           { header: 'Category Name', key: 'name' },
-          { header: 'Scope / Definition', key: 'description' }
+          { header: 'Description', key: 'description' }
         ];
         fields = [
           { label: 'Category Name', key: 'name', type: 'text' },
-          { label: 'Scope Description', key: 'description', type: 'text' }
+          { label: 'Description', key: 'description', type: 'text' }
         ];
         break;
       case 'catalog_sub_category':
@@ -805,17 +767,184 @@ export default function Dashboard({
             <span className="text-[10px] text-slate-400 block mt-0.5">{description}</span>
           </div>
           
-          <button
-            onClick={() => {
-              setEditingMasterItem({ id: 'm_item_' + Date.now() });
-              setIsMasterModalOpen(true);
-            }}
-            className="px-3.5 py-1.5 self-start sm:self-center bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-[10px] font-extrabold tracking-wide flex items-center gap-1 cursor-pointer shadow-md shadow-sky-950/10 animate-bounce"
-            style={{ animationDuration: '3s' }}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Registry Record</span>
-          </button>
+          <div className="flex gap-2 self-start sm:self-center">
+            <button
+              onClick={() => {
+                setEditingMasterItem({ id: 'm_item_' + Date.now() });
+                setIsMasterModalOpen(true);
+              }}
+              className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-[10px] font-extrabold tracking-wide flex items-center gap-1 cursor-pointer shadow-md shadow-sky-950/10"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Registry Record</span>
+            </button>
+            {(activeTab === 'master_vendor' || activeTab === 'master_hsn' || activeTab === 'catalog_material' || activeTab === 'catalog_category') && (
+              <>
+                <button
+                  onClick={() => {
+                    let headers: string[] = [];
+                    let filename = '';
+                    let sampleRow: string[] = [];
+                    
+                    if (activeTab === 'master_vendor') {
+                      headers = ['Client Name', 'Company Name', 'Category / Tag', 'Email Address', 'Phone Number', 'Billing Address'];
+                      sampleRow = ['John Doe', 'Acme Corp', 'VIP Client', 'john@acme.com', '+1 555-0199', '123 Business Rd, New York'];
+                      filename = 'client_database_template.csv';
+                    } else if (activeTab === 'master_hsn') {
+                      headers = ['HSN/SAC Code', 'Description', 'Tax Rate (%)'];
+                      sampleRow = ['998311', 'Management Consulting Services', '18'];
+                      filename = 'hsn_registry_template.csv';
+                    } else if (activeTab === 'catalog_material') {
+                      headers = ['Item Name', 'Standard Rate / Unit Price', 'HSN/SAC Code', 'Unit of Measure (UOM)', 'Category'];
+                      sampleRow = ['Premium Advisory Service', '150', '998311', 'hour', 'Consulting'];
+                      filename = 'material_catalog_template.csv';
+                    } else if (activeTab === 'catalog_category') {
+                      headers = ['Category Name', 'Description'];
+                      sampleRow = ['Consulting', 'Advisory and business optimization services'];
+                      filename = 'product_category_template.csv';
+                    }
+
+                    const csvContent = [
+                      headers.join(','),
+                      sampleRow.map(v => `"${v.replace(/"/g, '""')}"`).join(',')
+                    ].join('\n');
+
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', filename);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-705 dark:text-slate-300 rounded-xl text-[10px] font-extrabold tracking-wide flex items-center gap-1 cursor-pointer border border-slate-200 dark:border-slate-700 shadow-xs"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Template</span>
+                </button>
+                <button
+                  onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel';
+                  input.onchange = (e: any) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (evt) => {
+                        try {
+                          const data = evt.target?.result;
+                          const workbook = XLSX.read(data, { type: 'binary' });
+                          const firstSheetName = workbook.SheetNames[0];
+                          const worksheet = workbook.Sheets[firstSheetName];
+                          const parsedData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                          
+                          if (parsedData.length === 0) {
+                            alert('No valid items found in file.');
+                            return;
+                          }
+
+                          // First row contains the headers
+                          const headers = parsedData[0].map((h: any) => String(h || '').trim().replace(/^"|"$/g, ''));
+                          const rows = parsedData.slice(1);
+
+                          const finalItems = rows.filter(r => r && r.length > 0).map((row, index) => {
+                            const rowData: any = {};
+                            headers.forEach((header: string, headerIdx: number) => {
+                              if (header) {
+                                rowData[header] = row[headerIdx] !== undefined ? row[headerIdx] : '';
+                              }
+                            });
+
+                            const id = `bulk_${activeTab}_${Date.now()}_${index}`;
+                            if (activeTab === 'master_vendor') {
+                              return {
+                                id,
+                                name: rowData.name || rowData['Client Name'] || rowData['name'] || 'Unnamed Client',
+                                company: rowData.company || rowData['Company Name'] || rowData['company'] || '',
+                                category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || rowData['category'] || '',
+                                email: rowData.email || rowData['Email Address'] || rowData['email'] || '',
+                                phone: rowData.phone || rowData['Phone Number'] || rowData['phone'] || '',
+                                address: rowData.address || rowData['Billing Address'] || rowData['address'] || ''
+                              };
+                            } else if (activeTab === 'master_hsn') {
+                              return {
+                                id,
+                                code: rowData.code || rowData['HSN/SAC Code'] || rowData['code'] || '000000',
+                                description: rowData.description || rowData['Description'] || rowData['description'] || '',
+                                gstRate: Number(rowData.gstRate || rowData['Tax Rate (%)'] || rowData['GST Rate'] || rowData['gstRate'] || 18)
+                              };
+                            } else if (activeTab === 'catalog_material') {
+                              return {
+                                id,
+                                name: rowData.name || rowData['Item Name'] || rowData['Material Name'] || rowData['name'] || 'Unnamed Material',
+                                rate: Number(rowData.rate || rowData['Standard Rate / Unit Price'] || rowData['Standard Rate'] || rowData['rate'] || 0),
+                                hsn: rowData.hsn || rowData['HSN/SAC Code'] || rowData['HSN/SAC Reference'] || rowData['hsn'] || '',
+                                uom: rowData.uom || rowData['Unit of Measure (UOM)'] || rowData['UOM'] || rowData['uom'] || 'pcs',
+                                category: rowData.category || rowData['Category'] || rowData['category'] || ''
+                              };
+                            } else if (activeTab === 'catalog_category') {
+                              return {
+                                id,
+                                name: rowData.name || rowData['Category Name'] || rowData['name'] || 'Unnamed Category',
+                                description: rowData.description || rowData['Description'] || rowData['Scope Description'] || rowData['description'] || ''
+                              };
+                            }
+                            return null;
+                          }).filter(Boolean);
+
+                          if (finalItems.length === 0) {
+                            alert('No valid items found in file.');
+                            return;
+                          }
+
+                          let currentList: any[] = [];
+                          let storageKey = '';
+                          let setterFn: any = null;
+
+                          if (activeTab === 'master_vendor') {
+                            currentList = vendors;
+                            storageKey = 'makbills_masters_vendors';
+                            setterFn = setVendors;
+                          } else if (activeTab === 'master_hsn') {
+                            currentList = hsnCodes;
+                            storageKey = 'makbills_masters_hsn';
+                            setterFn = setHsnCodes;
+                          } else if (activeTab === 'catalog_material') {
+                            currentList = materials;
+                            storageKey = 'makbills_masters_materials';
+                            setterFn = setMaterials;
+                          } else if (activeTab === 'catalog_category') {
+                            currentList = categories;
+                            storageKey = 'makbills_masters_categories';
+                            setterFn = setCategories;
+                          }
+
+                          if (setterFn) {
+                            const updatedList = [...finalItems, ...currentList];
+                            setterFn(updatedList);
+                            localStorage.setItem(storageKey, JSON.stringify(updatedList));
+                            alert(`Successfully uploaded ${finalItems.length} items!`);
+                          }
+                        } catch (err: any) {
+                          alert('Error parsing file: ' + err.message);
+                        }
+                      };
+                      reader.readAsBinaryString(file);
+                    }
+                  };
+                  input.click();
+                }}
+                className="px-3.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-[10px] font-extrabold tracking-wide flex items-center gap-1 cursor-pointer shadow-md"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>Bulk Upload</span>
+              </button>
+            </>
+          )}
+          </div>
         </div>
 
         {/* Live Filter bar */}
@@ -1280,7 +1409,7 @@ export default function Dashboard({
   const [reportEndDate, setReportEndDate] = useState('');
   const [reportClientFilter, setReportClientFilter] = useState('all');
 
-  const currencySymbol = getCurrencySymbol(profile.currency);
+  const currencySymbol = profile.currencySymbol || getCurrencySymbol(profile.currency);
 
   // --- STATS ENGINES ---
   const filteredInvoices = invoices.filter(inv => {
@@ -2967,7 +3096,7 @@ export default function Dashboard({
                           template={resolvedTemplate}
                           invoiceData={activePreviewInvoice}
                           businessProfile={profile}
-                          currencySymbol={profile.currency === 'INR' ? '₹' : (profile.currency === 'USD' ? '$' : (profile.currency || '₹'))}
+                          currencySymbol={profile.currencySymbol || (profile.currency === 'INR' ? '₹' : (profile.currency === 'USD' ? '$' : (profile.currency || '₹')))}
                           isInteractive={false}
                         />
                       </div>

@@ -200,6 +200,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         }
 
         if (settings) {
+          console.log("[SETTINGS] Loaded settings logo_url:", settings.logo_url, "signature_url:", settings.signature_url);
           setName(settings.business_name || '');
           setDisplayName(settings.owner_name || '');
           setEmail(settings.email || '');
@@ -341,6 +342,13 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           img.crossOrigin = 'anonymous';
           img.onload = () => {
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          };
+          img.onerror = () => {
+            const cleanImg = new Image();
+            cleanImg.onload = () => {
+              ctx.drawImage(cleanImg, 0, 0, canvas.width, canvas.height);
+            };
+            cleanImg.src = signature;
           };
           img.src = signature;
         }
@@ -641,20 +649,28 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return;
       
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      if (signatureText.trim()) {
-        ctx.font = `italic 96px "${signatureFont}", "Brush Script MT", cursive`;
-        ctx.fillStyle = '#000000';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(signatureText, canvas.width / 2, canvas.height / 2);
+      const drawText = () => {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        const croppedCanvas = getCroppedCanvas(canvas);
-        setSignature(croppedCanvas.toDataURL('image/png'));
+        if (signatureText.trim()) {
+          ctx.font = `italic 96px "${signatureFont}", "Brush Script MT", cursive`;
+          ctx.fillStyle = '#000000';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(signatureText, canvas.width / 2, canvas.height / 2);
+          
+          const croppedCanvas = getCroppedCanvas(canvas);
+          setSignature(croppedCanvas.toDataURL('image/png'));
+        } else {
+          setSignature('');
+        }
+      };
+
+      if (document.fonts) {
+        document.fonts.load(`italic 96px "${signatureFont}"`).then(drawText).catch(drawText);
       } else {
-        setSignature('');
+        drawText();
       }
     }
   }, [signatureText, signatureMode, signatureFont]);
@@ -844,7 +860,70 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         return;
       }
 
-      // 1. Process and upload signature if base64
+      // 1. Process and upload logo if base64
+      let uploadedLogoUrl = logoUrl;
+      if (logoUrl && logoUrl.startsWith('data:image/png;base64,')) {
+        try {
+          const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+          if (!sessionData.session) {
+            alert("No active session found. Please log in again.");
+            setIsSaving(false);
+            return;
+          }
+
+          const blob = dataURLtoBlob(logoUrl);
+          if (blob) {
+            let bucketUsed = 'CompanyLogo';
+            let { error: uploadError } = await supabase.storage
+              .from('CompanyLogo')
+              .upload(`${user.id}/logo.png`, blob, {
+                cacheControl: '3600',
+                upsert: true
+              });
+            
+            if (uploadError) {
+              bucketUsed = 'Logo';
+              const { error: fallbackError } = await supabase.storage
+                .from('Logo')
+                .upload(`${user.id}/logo.png`, blob, {
+                  cacheControl: '3600',
+                  upsert: true
+                });
+              uploadError = fallbackError;
+            }
+
+            if (uploadError) {
+              bucketUsed = 'Signature';
+              const { error: signatureFallbackError } = await supabase.storage
+                .from('Signature')
+                .upload(`${user.id}/logo.png`, blob, {
+                  cacheControl: '3600',
+                  upsert: true
+                });
+              uploadError = signatureFallbackError;
+            }
+
+            if (uploadError) {
+              console.error("[SETTINGS] Logo upload error:", uploadError);
+              alert(`Failed to upload logo: ${uploadError.message}`);
+              setIsSaving(false);
+              return;
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+              .from(bucketUsed)
+              .getPublicUrl(`${user.id}/logo.png`);
+            uploadedLogoUrl = publicUrl;
+          }
+        } catch (uploadErr: any) {
+          console.error("[SETTINGS] Logo convert/upload exception:", uploadErr);
+          alert(`Failed to process logo: ${uploadErr.message || uploadErr}`);
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      // 2. Process and upload signature if base64
       let uploadedSignatureUrl = signature;
       if (signature && signature.startsWith('data:image/png;base64,')) {
         try {
@@ -884,7 +963,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         }
       }
 
-      // 2. Prepare company settings data
+      // 3. Prepare company settings data
       const selectedCountry = Country.getAllCountries().find(c => c.name === country);
       const prefix = selectedCountry?.phonecode ? `+${selectedCountry.phonecode} ` : '';
       const fullPhone = mobile.trim().startsWith('+') ? mobile.trim() : `${prefix}${mobile.trim()}`;
@@ -901,7 +980,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         mobile,
         email,
         gstin: taxId,
-        logo_url: logoUrl,
+        logo_url: uploadedLogoUrl,
         signature_url: uploadedSignatureUrl,
         signature_type: signatureMode,
         bank_name: bankName,
@@ -925,7 +1004,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
       console.log('Payload being sent:', settingData);
 
-      // 3. Upsert company settings
+      // 4. Upsert company settings
       const { data: savedSetting, error: settingError } = await supabase
         .from('company_settings')
         .upsert(settingData, { onConflict: 'user_id' })
@@ -945,7 +1024,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
       const settingsRowId = savedSetting?.id;
 
-      // 4. Handle tax configurations deletion
+      // 5. Handle tax configurations deletion
       if (deletedTaxIds.length > 0) {
         const { error: deleteTaxError } = await supabase
           .from('tax_configs')
@@ -957,7 +1036,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         }
       }
 
-      // 5. Handle tax configurations upsert
+      // 6. Handle tax configurations upsert
       if (additionalTaxes.length > 0 && settingsRowId) {
         const taxRows = additionalTaxes.map(tax => {
           const isTempId = tax.id.startsWith('tax_');
@@ -984,6 +1063,9 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         }
       }
 
+      setSignature(uploadedSignatureUrl);
+      setLogoUrl(uploadedLogoUrl);
+
       // Save local state for App.tsx component tree compatibility
       onSave({
         uid: user.id,
@@ -995,7 +1077,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         address,
         taxId,
         currency,
-        logoUrl,
+        logoUrl: uploadedLogoUrl,
         signature: uploadedSignatureUrl,
         signatureSize,
         themeAccent,

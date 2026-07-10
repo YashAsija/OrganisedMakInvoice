@@ -71,6 +71,7 @@ export default function InvoiceModal({
 
   // Active Template
   const [activeTemplate, setActiveTemplate] = useState<InvoiceTemplate>(TEMPLATE_PRESETS[0]);
+  const [activeProfile, setActiveProfile] = useState<BusinessProfile>(profile);
 
   // Advanced features and billing options
   const [invoiceType, setInvoiceType] = useState<'invoice' | 'estimate'>('invoice');
@@ -388,6 +389,66 @@ export default function InvoiceModal({
       if (grRrNo === 'N/A') setGrRrNo('');
     }
   }, [hasTransport]);
+
+  // Auto-update items' tax percentages to match template columns and default tax rate
+  useEffect(() => {
+    if (items.length > 0) {
+      const hasTaxCol = activeTemplate.config.table.columns.some(c => c.id === 'tax' && c.visible !== false);
+      const targetTax = hasTaxCol ? defaultTaxRate : 0;
+      
+      setItems(prev => prev.map(item => {
+        if (item.taxPercentage !== targetTax) {
+          return { ...item, taxPercentage: targetTax };
+        }
+        return item;
+      }));
+    }
+  }, [activeTemplate, defaultTaxRate]);
+
+  // Sync activeProfile with profile prop
+  useEffect(() => {
+    setActiveProfile(profile);
+  }, [profile]);
+
+  // Fetch fresh company settings from Supabase on modal mount/open
+  useEffect(() => {
+    if (isOpen) {
+      const fetchFreshCompanySettings = async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: settings } = await supabase
+              .from('company_settings')
+              .select('*')
+              .eq('user_id', user.id)
+              .single();
+            if (settings) {
+              setActiveProfile(prev => ({
+                ...prev,
+                logoUrl: settings.logo_url || prev.logoUrl,
+                signature: settings.signature_url || prev.signature,
+                name: settings.business_name || prev.name,
+                displayName: settings.owner_name || prev.displayName,
+                ownerName: settings.owner_name || prev.ownerName,
+                address: settings.address || prev.address,
+                phone: settings.phone || prev.phone,
+                taxId: settings.gstin || prev.taxId,
+                state: settings.state || prev.state,
+                country: settings.country || prev.country,
+                currencySymbol: settings.currency_symbol || prev.currencySymbol,
+                stateCode: settings.state_code || prev.stateCode
+              }));
+              if (settings.state) setCompanyState(settings.state);
+              if (settings.country) setCompanyCountry(settings.country);
+            }
+          }
+        } catch (e) {
+          console.warn('[INVOICE_MODAL] Failed to fetch fresh company settings:', e);
+        }
+      };
+      fetchFreshCompanySettings();
+    }
+  }, [isOpen]);
 
 
   // --- DYNAMIC SELECTION LISTS FROM PAST DATA & PRESETS ---
@@ -810,7 +871,7 @@ export default function InvoiceModal({
 
   const handleAddItem = () => {
     const newItemId = `item_${Date.now()}`;
-    let defaultTax = 0;
+    let defaultTax = defaultTaxRate;
     if (taxClassification.type === 'custom' || taxClassification.zeroTax) defaultTax = 0;
 
     const initialCustomTaxes: Record<string, number> = {};
@@ -840,7 +901,7 @@ export default function InvoiceModal({
     const tempInvoice = buildTempInvoice();
     if (tempInvoice) {
       try {
-        await exportInvoicePDFAsync(tempInvoice, profile, 'save', activeTemplate);
+        await exportInvoicePDFAsync(tempInvoice, activeProfile, 'save', activeTemplate);
       } catch (err: any) {
         alert('Failed to export PDF: ' + (err.message || err.toString()));
       }
@@ -1930,13 +1991,11 @@ export default function InvoiceModal({
               <div className="w-[794px] mx-auto bg-white p-4 sm:p-8 relative min-h-[1123px] shadow-sm border border-slate-200 dark:border-slate-300" id="pdf-export-content-editable">
                
                <LivePreview 
- 
                  template={activeTemplate} 
                  invoiceData={liveInvoiceData || invoice || {}} 
-                 businessProfile={profile} 
+                 businessProfile={activeProfile} 
                  currencySymbol={currencySymbol} 
                  isInteractive={true} 
-
                  onUpdateField={(field, val) => {
                     if(field==='invoiceNumber') setInvoiceNumber(val);
                     if(field==='date') setDate(val);

@@ -128,14 +128,22 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const [croppedSignature, setCroppedSignature] = useState<string>('');
 
   useEffect(() => {
-    const rawSig = (businessProfile as any)?.signatureUrl || (businessProfile as any)?.signature;
+    let rawSig = (businessProfile as any)?.signatureUrl || (businessProfile as any)?.signature;
     if (!rawSig) {
       setCroppedSignature('');
       return;
     }
 
+    if (typeof rawSig === 'string' && rawSig.includes('supabase') && rawSig.includes('/storage/')) {
+      const buster = `t=${businessProfile?.updatedAt ? new Date(businessProfile.updatedAt).getTime() : Date.now()}`;
+      rawSig = rawSig.includes('?') ? `${rawSig}&${buster}` : `${rawSig}?${buster}`;
+    }
+
     const img = new Image();
     img.crossOrigin = 'anonymous'; // Prevent canvas taint from cross-origin Supabase Storage URLs
+    img.onerror = () => {
+      setCroppedSignature(rawSig);
+    };
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
@@ -385,7 +393,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const compPan = (businessProfile as any)?.pan || "";
   const compWebsite = (businessProfile as any)?.website || "";
   const ownerName = (businessProfile as any)?.displayName || (businessProfile as any)?.ownerName || "";
-  const compLogo = (businessProfile as any)?.logoUrl || (businessProfile as any)?.logo || null;
+  let compLogo = (businessProfile as any)?.logoUrl || (businessProfile as any)?.logo || null;
+  if (compLogo && typeof compLogo === 'string' && compLogo.includes('supabase') && compLogo.includes('/storage/')) {
+    const buster = `t=${businessProfile?.updatedAt ? new Date(businessProfile.updatedAt).getTime() : Date.now()}`;
+    compLogo = compLogo.includes('?') ? `${compLogo}&${buster}` : `${compLogo}?${buster}`;
+  }
   const compStateCode = (businessProfile as any)?.stateCode || "";
 
   const invNo = invoiceData?.invoiceNumber || 'INV-2023-001';
@@ -402,7 +414,10 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
   const items: any[] = invoiceData?.items || [];
 
-  const subTotal = items.reduce((a: number, b: any) => a + ((b as any).amount || ((b as any).quantity * (b as any).rate) || 0), 0);
+  const subTotal = invoiceData?.subtotal !== undefined
+    ? invoiceData.subtotal
+    : items.reduce((a: number, b: any) => a + ((b as any).amount || ((b as any).quantity * (b as any).rate) || 0), 0);
+
   const taxMode = invoiceData?.taxMode || businessProfile?.taxMode || 'dynamic';
   const taxName = taxMode === 'custom'
     ? (invoiceData?.customTaxName || businessProfile?.customTaxName || 'Tax')
@@ -423,13 +438,21 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   } else {
     if ((compCountry === 'india' || compCountry === 'in') && shipState === compState && shipState !== '') {
       dynamicTaxHeader = `CGST + SGST (${taxRate}%)`;
-    } else {
+    } else if (compCountry === 'india' || compCountry === 'in') {
       dynamicTaxHeader = `IGST (${taxRate}%)`;
+    } else {
+      const internationalTaxName = businessProfile?.customTaxName || invoiceData?.customTaxName || 'TAX';
+      dynamicTaxHeader = `${internationalTaxName} (${taxRate}%)`;
     }
   }
 
-  const taxAmount = (subTotal * taxRate) / 100;
-  const grandTotal = subTotal + taxAmount;
+  const hasTaxCol = ensureAllColumns(config.table.columns).some(c => c.id === 'tax' && c.visible !== false);
+  const taxAmount = invoiceData?.taxTotal !== undefined
+    ? invoiceData.taxTotal
+    : (hasTaxCol ? (subTotal * taxRate) / 100 : 0);
+  const grandTotal = invoiceData?.grandTotal !== undefined
+    ? invoiceData.grandTotal
+    : subTotal + taxAmount;
 
   const renderInvoiceContent = (
     currentItems?: any[],
@@ -1115,12 +1138,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">PO Number</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(poNumber, 'poNumber', 'text', 'PO Number')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">PO Number:</span><span className="text-gray-900 font-bold">{renderInteractive(poNumber, 'poNumber', 'text', 'PO Number')}</span></div>
                     )}
-                    {config.transport.fields.includes('transportName') && (
+                    {config.transport.fields.includes('transport') && (
                       (isAdjacent && !bothAdded) ?
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Transport Name</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive((invoiceData as any)?.transportName || (isInteractive ? '' : 'N/A'), 'transport', 'text', 'Transporter Name')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Transport Name:</span><span className="text-gray-900 font-bold">{renderInteractive((invoiceData as any)?.transportName || (isInteractive ? '' : 'N/A'), 'transport', 'text', 'Transporter Name')}</span></div>
                     )}
-                    {config.transport.fields.includes('driverMobileNo') && (
+                    {config.transport.fields.includes('driverMobile') && (
                       (isAdjacent && !bothAdded) ?
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Driver Mobile</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(driverMobile, 'driverMobile', 'text', 'Driver Mobile')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Driver Mobile:</span><span className="text-gray-900 font-bold">{renderInteractive(driverMobile, 'driverMobile', 'text', 'Driver Mobile')}</span></div>
@@ -1130,7 +1153,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Station</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(station, 'station', 'text', 'Station')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Station:</span><span className="text-gray-900 font-bold">{renderInteractive(station, 'station', 'text', 'Station')}</span></div>
                     )}
-                    {config.transport.fields.includes('eWayBillNo') && (
+                    {config.transport.fields.includes('ewayBillNo') && (
                       (isAdjacent && !bothAdded) ?
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">E-Way Bill No.</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(ewayBillNo, 'ewayBillNo', 'text', 'E-Way Bill No')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">E-Way Bill No:</span><span className="text-gray-900 font-bold">{renderInteractive(ewayBillNo, 'ewayBillNo', 'text', 'E-Way Bill No')}</span></div>
@@ -1146,15 +1169,16 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 <div style={bothAdded ? { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', columnGap: '24px', rowGap: '6px', alignItems: 'center' } : { display: 'flex', flexDirection: 'column', rowGap: '4px' }}>
                   {config.transport.fields.includes('vehicleNo') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Vehicle No:</strong> {renderInteractive((invoiceData as any)?.vehicleNo || (isInteractive ? '' : 'MH 12 AB 1234'), 'vehicleNo', 'text', 'Vehicle No')}</div>}
                   {config.transport.fields.includes('poNumber') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>PO Number:</strong> {renderInteractive((invoiceData as any)?.poNumber || (isInteractive ? '' : 'N/A'), 'poNumber', 'text', 'PO Number')}</div>}
-                  {config.transport.fields.includes('transportName') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Transporter:</strong> {renderInteractive((invoiceData as any)?.transportName || (isInteractive ? '' : 'Fast Logistics'), 'transport', 'text', 'Transporter Name')}</div>}
-                  {config.transport.fields.includes('eWayBillNo') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>E-Way Bill No:</strong> {renderInteractive((invoiceData as any)?.eWayBillNo || (isInteractive ? '' : '123456789012'), 'ewayBillNo', 'text', 'E-Way Bill No')}</div>}
+                  {config.transport.fields.includes('transport') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Transporter:</strong> {renderInteractive((invoiceData as any)?.transportName || (isInteractive ? '' : 'Fast Logistics'), 'transport', 'text', 'Transporter Name')}</div>}
+                  {config.transport.fields.includes('ewayBillNo') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>E-Way Bill No:</strong> {renderInteractive((invoiceData as any)?.eWayBillNo || (isInteractive ? '' : '123456789012'), 'ewayBillNo', 'text', 'E-Way Bill No')}</div>}
                   {config.transport.fields.includes('station') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Station:</strong> {renderInteractive((invoiceData as any)?.station || (isInteractive ? '' : 'Mumbai HQ'), 'station', 'text', 'Station')}</div>}
-                  {config.transport.fields.includes('driverMobileNo') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Driver Mobile No:</strong> {renderInteractive((invoiceData as any)?.driverMobileNo || (isInteractive ? '' : '+91 9876543210'), 'driverMobile', 'text', 'Driver Mobile')}</div>}
+                  {config.transport.fields.includes('driverMobile') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Driver Mobile No:</strong> {renderInteractive((invoiceData as any)?.driverMobileNo || (isInteractive ? '' : '+91 9876543210'), 'driverMobile', 'text', 'Driver Mobile')}</div>}
                 </div>
               </div>
             );
           }
           if (section.id === 'taxEngine') {
+            const hasTaxCol = ensureAllColumns(config.table.columns).some(c => c.id === 'tax' && c.visible !== false);
             // Determine which tax type to show — must match the items table column header
             const isCgstSgst = dynamicTaxHeader.toUpperCase().startsWith('CGST');
             const isIgst = dynamicTaxHeader.toUpperCase().startsWith('IGST');
@@ -1173,32 +1197,34 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         <span>{subTotal.toFixed(2)}</span>
                       </div>
                     )}
-                    {isCustomTax ? (
-                      <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
-                        <span>{taxName} ({taxRate}%)</span>
-                        <span>{taxAmount.toFixed(2)}</span>
-                      </div>
-                    ) : isCgstSgst ? (
-                      <>
-                        <div className="flex justify-between text-gray-600">
-                          <span>CGST ({taxRate / 2}%)</span>
-                          <span>{(taxAmount / 2).toFixed(2)}</span>
-                        </div>
+                    {hasTaxCol && (
+                      isCustomTax ? (
                         <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
-                          <span>SGST ({taxRate / 2}%)</span>
-                          <span>{(taxAmount / 2).toFixed(2)}</span>
+                          <span>{taxName} ({taxRate}%)</span>
+                          <span>{taxAmount.toFixed(2)}</span>
                         </div>
-                      </>
-                    ) : isIgst ? (
-                      <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
-                        <span>IGST ({taxRate}%)</span>
-                        <span>{taxAmount.toFixed(2)}</span>
-                      </div>
-                    ) : (
-                      <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
-                        <span>{dynamicTaxHeader}</span>
-                        <span>{taxAmount.toFixed(2)}</span>
-                      </div>
+                      ) : isCgstSgst ? (
+                        <>
+                          <div className="flex justify-between text-gray-600">
+                            <span>CGST ({taxRate / 2}%)</span>
+                            <span>{(taxAmount / 2).toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
+                            <span>SGST ({taxRate / 2}%)</span>
+                            <span>{(taxAmount / 2).toFixed(2)}</span>
+                          </div>
+                        </>
+                      ) : isIgst ? (
+                        <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
+                          <span>IGST ({taxRate}%)</span>
+                          <span>{taxAmount.toFixed(2)}</span>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
+                          <span>{dynamicTaxHeader}</span>
+                          <span>{taxAmount.toFixed(2)}</span>
+                        </div>
+                      )
                     )}
                     <div className="flex justify-between text-gray-900 font-bold text-[14px] pt-1">
                       <span>TOTAL</span>
@@ -1213,21 +1239,23 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 {config.tax.enableTaxBreakdown && (
                   <div style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: getBorderRadius(), border: '1px solid #e2e8f0', width: '100%' }}>
                     {config.tax.showTaxableAmount && <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}><span>Taxable Amount:</span> <span>{currencySymbol} {subTotal.toFixed(2)}</span></div>}
-                    {isCustomTax ? (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}>
-                        <span>{taxName} ({taxRate}%):</span>
-                        <span>{currencySymbol} {taxAmount.toFixed(2)}</span>
-                      </div>
-                    ) : isCgstSgst ? (
-                      <>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}><span>CGST ({taxRate / 2}%):</span> <span>{currencySymbol} {(taxAmount / 2).toFixed(2)}</span></div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}><span>SGST ({taxRate / 2}%):</span> <span>{currencySymbol} {(taxAmount / 2).toFixed(2)}</span></div>
-                      </>
-                    ) : (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}>
-                        <span>{dynamicTaxHeader}:</span>
-                        <span>{currencySymbol} {taxAmount.toFixed(2)}</span>
-                      </div>
+                    {hasTaxCol && (
+                      isCustomTax ? (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}>
+                          <span>{taxName} ({taxRate}%):</span>
+                          <span>{currencySymbol} {taxAmount.toFixed(2)}</span>
+                        </div>
+                      ) : isCgstSgst ? (
+                        <>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}><span>CGST ({taxRate / 2}%):</span> <span>{currencySymbol} {(taxAmount / 2).toFixed(2)}</span></div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}><span>SGST ({taxRate / 2}%):</span> <span>{currencySymbol} {(taxAmount / 2).toFixed(2)}</span></div>
+                        </>
+                      ) : (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}>
+                          <span>{dynamicTaxHeader}:</span>
+                          <span>{currencySymbol} {taxAmount.toFixed(2)}</span>
+                        </div>
+                      )
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', paddingTop: '10px', borderTop: '2px solid #e2e8f0', fontSize: '16px', fontWeight: 'bold', color: styleConfig.primaryColor }}><span>Grand Total:</span> <span>{currencySymbol} {grandTotal.toFixed(2)}</span></div>
                   </div>
@@ -1239,7 +1267,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           if (section.id === 'amountInWords') {
             if (layout.type === 'Modal Classic') {
               if (!config.amountInWords.enabled) return null;
-              const words = numberToWords(invoiceData?.grandTotal || 0, config.amountInWords.format);
+              const words = numberToWords((invoiceData?.grandTotal !== undefined ? invoiceData.grandTotal : grandTotal) || 0, config.amountInWords.format);
               return (
                 <div key="amountInWords" style={getSectionStyle('amountInWords')}>
                   <div className="text-left pt-4">
@@ -1251,7 +1279,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
             }
             if (!config.amountInWords.enabled) return null;
-            const words = numberToWords(invoiceData?.grandTotal || 0, config.amountInWords.format);
+            const words = numberToWords((invoiceData?.grandTotal !== undefined ? invoiceData.grandTotal : grandTotal) || 0, config.amountInWords.format);
             return (
               <div key="amountInWords" style={getSectionStyle('amountInWords')}>
                 <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>Amount in Words:</p>

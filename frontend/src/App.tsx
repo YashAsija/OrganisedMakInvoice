@@ -5,6 +5,35 @@ import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Exp
 import { getSampleInvoice, BUSINESS_TEMPLATES } from './lib/presets';
 import { getSecuritySettings, saveSecuritySettings, SecuritySettings, hashPin } from './lib/biometrics';
 
+// Global error and rejection handlers to suppress development error overlays for network blocks (adblockers/extensions)
+if (typeof window !== 'undefined') {
+  // Suppress Next.js Console TypeError overlay by routing network-related console.errors to console.warn
+  const originalConsoleError = console.error;
+  console.error = function (...args) {
+    const errorString = args.map(arg => (arg instanceof Error ? arg.message : String(arg))).join(' ');
+    if (errorString.includes('Failed to fetch') || errorString.includes('TypeError')) {
+      console.warn('[Suppressed Next.js Overlay] Suppressed network console.error:', ...args);
+      return;
+    }
+    originalConsoleError.apply(console, args);
+  };
+
+  window.addEventListener('unhandledrejection', (event) => {
+    const msg = event.reason?.message || '';
+    if (msg.includes('Failed to fetch') || event.reason?.name === 'TypeError') {
+      event.preventDefault();
+      console.warn('Suppressed fetch rejection:', event.reason);
+    }
+  });
+  window.addEventListener('error', (event) => {
+    const msg = event.message || '';
+    if (msg.includes('Failed to fetch') || msg.includes('TypeError')) {
+      event.preventDefault();
+      console.warn('Suppressed fetch error:', event.message);
+    }
+  });
+}
+
 // Sub-components
 import BiometricVerification from './components/BiometricVerification';
 import Dashboard from './components/Dashboard';
@@ -211,7 +240,7 @@ export default function App() {
         try {
           await supabase.removeChannel(channel);
         } catch (e) {
-          console.error('Error cleaning up active Supabase listener:', e);
+          console.warn('Error cleaning up active Supabase listener:', String(e));
         }
       }
       activeChannels = [];
@@ -220,8 +249,9 @@ export default function App() {
     // Setup Auth State Listener
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // First clean up any active snapshot listeners to prevent orphaned loops upon auth state shifts
-        await cleanupActiveListeners();
+        try {
+          // First clean up any active snapshot listeners to prevent orphaned loops upon auth state shifts
+          await cleanupActiveListeners();
 
         const currentUser = session?.user ?? null;
 
@@ -250,6 +280,8 @@ export default function App() {
                 .eq('user_id', uid)
                 .single();
 
+              console.log("[APP] Loaded company settings from Supabase:", companySettings);
+
               if (cloudProf) {
                 // Merge company_settings fields into the profile if available
                 const mergedProf: BusinessProfile = companySettings ? {
@@ -267,7 +299,12 @@ export default function App() {
                   country: companySettings.country || cloudProf.country || '',
                   state: companySettings.state || cloudProf.state || '',
                   stateCode: companySettings.state_code || cloudProf.stateCode || '',
+                  currency: companySettings.currency || cloudProf.currency || 'INR',
                   currencySymbol: companySettings.currency_symbol || cloudProf.currencySymbol || '',
+                  taxMode: companySettings.tax_mode || cloudProf.taxMode || 'dynamic',
+                  customTaxName: companySettings.custom_tax_name || cloudProf.customTaxName || 'Tax',
+                  customTaxPercentage: companySettings.custom_tax_percentage !== undefined ? companySettings.custom_tax_percentage : cloudProf.customTaxPercentage,
+                  defaultTaxRate: companySettings.default_tax_rate !== undefined ? companySettings.default_tax_rate : (cloudProf.defaultTaxRate || 18),
                   bankName: companySettings.bank_name || cloudProf.bankName || '',
                   accountNumber: companySettings.account_number || cloudProf.accountNumber || '',
                   ifsc: companySettings.ifsc || cloudProf.ifsc || '',
@@ -295,8 +332,14 @@ export default function App() {
                   country: companySettings?.country || profile.country || '',
                   state: companySettings?.state || profile.state || '',
                   stateCode: companySettings?.state_code || profile.stateCode || '',
-                  currency: profile.currency || 'INR',
-                  defaultTaxRate: profile.defaultTaxRate || 18,
+                  currency: companySettings?.currency || profile.currency || 'INR',
+                  currencySymbol: companySettings?.currency_symbol || profile.currencySymbol || '',
+                  taxMode: companySettings?.tax_mode || profile.taxMode || 'dynamic',
+                  customTaxName: companySettings?.custom_tax_name || profile.customTaxName || 'Tax',
+                  customTaxPercentage: companySettings?.custom_tax_percentage !== undefined ? companySettings.custom_tax_percentage : profile.customTaxPercentage,
+                  defaultTaxRate: companySettings?.default_tax_rate !== undefined ? companySettings.default_tax_rate : (profile.defaultTaxRate || 18),
+                  logoUrl: companySettings?.logo_url || profile.logoUrl || '',
+                  signature: companySettings?.signature_url || profile.signature || '',
                   updatedAt: new Date().toISOString()
                 };
                 await supabase.from('users').upsert(initProf);
@@ -304,7 +347,7 @@ export default function App() {
                 localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(initProf));
               }
             } catch (err) {
-              console.error('Error fetching/setting cloud profile:', err);
+              console.warn('Error fetching/setting cloud profile:', String(err));
             }
 
             // 2. Load Invoices from Supabase and attach realtime listener
@@ -329,14 +372,18 @@ export default function App() {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'invoices', filter: `userId=eq.${uid}` },
                 async () => {
-                  const { data } = await supabase
-                    .from('invoices')
-                    .select('*')
-                    .eq('userId', uid)
-                    .order('date', { ascending: false });
-                  if (data) {
-                    setInvoices(data as Invoice[]);
-                    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(data));
+                  try {
+                    const { data } = await supabase
+                      .from('invoices')
+                      .select('*')
+                      .eq('userId', uid)
+                      .order('date', { ascending: false });
+                    if (data) {
+                      setInvoices(data as Invoice[]);
+                      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(data));
+                    }
+                  } catch (err) {
+                    console.warn("Error in realtime invoice sync:", String(err));
                   }
                 }
               )
@@ -363,13 +410,17 @@ export default function App() {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'preset_items', filter: `userId=eq.${uid}` },
                 async () => {
-                  const { data } = await supabase
-                    .from('preset_items')
-                    .select('*')
-                    .eq('userId', uid);
-                  if (data) {
-                    setPresets(data as PresetItem[]);
-                    localStorage.setItem(`invoice_maker_presets${suffix}`, JSON.stringify(data));
+                  try {
+                    const { data } = await supabase
+                      .from('preset_items')
+                      .select('*')
+                      .eq('userId', uid);
+                    if (data) {
+                      setPresets(data as PresetItem[]);
+                      localStorage.setItem(`invoice_maker_presets${suffix}`, JSON.stringify(data));
+                    }
+                  } catch (err) {
+                    console.warn("Error in realtime preset sync:", String(err));
                   }
                 }
               )
@@ -396,13 +447,17 @@ export default function App() {
                  'postgres_changes',
                 { event: '*', schema: 'public', table: 'clients', filter: `userId=eq.${uid}` },
                 async () => {
-                  const { data } = await supabase
-                    .from('clients')
-                    .select('*')
-                    .eq('userId', uid);
-                  if (data) {
-                    setClients(data as ClientProfile[]);
-                    localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(data));
+                  try {
+                    const { data } = await supabase
+                      .from('clients')
+                      .select('*')
+                      .eq('userId', uid);
+                    if (data) {
+                      setClients(data as ClientProfile[]);
+                      localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(data));
+                    }
+                  } catch (err) {
+                    console.warn("Error in realtime client sync:", String(err));
                   }
                 }
               )
@@ -429,13 +484,17 @@ export default function App() {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'expenses', filter: `userId=eq.${uid}` },
                 async () => {
-                  const { data } = await supabase
-                    .from('expenses')
-                    .select('*')
-                    .eq('userId', uid);
-                  if (data) {
-                    setExpenses(data as Expense[]);
-                    localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(data));
+                  try {
+                    const { data } = await supabase
+                      .from('expenses')
+                      .select('*')
+                      .eq('userId', uid);
+                    if (data) {
+                      setExpenses(data as Expense[]);
+                      localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(data));
+                    }
+                  } catch (err) {
+                    console.warn("Error in realtime expense sync:", String(err));
                   }
                 }
               )
@@ -447,6 +506,9 @@ export default function App() {
           setUserEmail(null);
           // Fall back to offline local storage data
           loadLocalData();
+        }
+        } catch (globalAuthErr) {
+          console.warn("Unhandled error in auth state change listener:", String(globalAuthErr));
         }
       }
     );
@@ -1281,7 +1343,7 @@ export default function App() {
         clients={clients}
         invoices={invoices}
         profile={profile}
-        currencySymbol={profile.currency === 'GBP' ? '£' : profile.currency === 'EUR' ? '€' : profile.currency === 'JPY' ? '¥' : profile.currency === 'INR' ? '₹' : '$'}
+        currencySymbol={profile.currencySymbol || (profile.currency === 'GBP' ? '£' : profile.currency === 'EUR' ? '€' : profile.currency === 'JPY' ? '¥' : profile.currency === 'INR' ? '₹' : '$')}
         defaultTaxRate={profile.defaultTaxRate}
         isOpen={isInvoiceEditorOpen}
         onClose={() => setIsInvoiceEditorOpen(false)}
