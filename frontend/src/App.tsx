@@ -40,6 +40,27 @@ import Dashboard from './components/Dashboard';
 import BusinessProfileModal from './components/BusinessProfileModal';
 import InvoiceModal from './components/InvoiceModal';
 import Homepage from './components/Homepage';
+import PricingPage from './components/PricingPage';
+import GuidePage from './components/GuidePage';
+import ContactPage from './components/ContactPage';
+// Path to Sidebar Tab Mapping Definitions
+const tabToPath: Record<string, string> = {
+  dashboard: '/dashboard',
+  learn: '/learn',
+  invoice_templates: '/invoice-templates',
+  invoices: '/invoices',
+  clients: '/clients',
+  reports: '/reports',
+  master_vendor: '/master-vendor',
+  master_hsn: '/master-hsn',
+  catalog_material: '/catalog-material',
+  catalog_category: '/catalog-category',
+};
+
+const pathToTab: Record<string, string> = Object.entries(tabToPath).reduce(
+  (acc, [tab, path]) => ({ ...acc, [path]: tab }),
+  {} as Record<string, string>
+);
 
 export default function App() {
   // Theme & Network states
@@ -62,6 +83,22 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(() => {
     return localStorage.getItem('makbills_custom_email') || null;
+  });
+
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      return pathToTab[path] || 'dashboard';
+    }
+    return 'dashboard';
+  });
+
+  const [publicPath, setPublicPath] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      return ['/pricing', '/guide', '/contact', '/features', '/faq'].includes(path) ? path : '/';
+    }
+    return '/';
   });
 
   const suffix = userEmail ? `_${encodeURIComponent(userEmail)}` : '';
@@ -100,6 +137,47 @@ export default function App() {
     }
     localStorage.setItem('invoice_maker_theme', theme);
   }, [theme]);
+
+  // --- SYNC BROWSER URL PATH WITH DASHBOARD STATE ---
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (userEmail) {
+        const expectedPath = tabToPath[activeTab] || '/dashboard';
+        if (path !== expectedPath) {
+          window.history.pushState(null, '', expectedPath);
+        }
+      } else {
+        const expectedPath = publicPath;
+        if (path !== expectedPath) {
+          window.history.pushState(null, '', expectedPath);
+        }
+      }
+    }
+  }, [userEmail, activeTab, publicPath]);
+
+  // --- HANDLE BROWSER BACK/FORWARD BUTTONS (POPSTATE) ---
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handlePopState = () => {
+        const path = window.location.pathname;
+        if (userEmail) {
+          const matchedTab = pathToTab[path];
+          if (matchedTab) {
+            setActiveTab(matchedTab);
+          } else if (path === '/') {
+            // If at root and logged in, default back to dashboard
+            setActiveTab('dashboard');
+          }
+        } else {
+          setPublicPath(['/pricing', '/guide', '/contact'].includes(path) ? path : '/');
+        }
+      };
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+    }
+  }, [userEmail]);
+
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -1277,8 +1355,54 @@ export default function App() {
     `;
   };
 
+  const handlePublicNavigate = (path: string) => {
+    if (path.includes('#')) {
+      const [base, hash] = path.split('#');
+      setPublicPath(base || '/');
+      window.history.pushState({}, '', path);
+      setTimeout(() => {
+        const el = document.getElementById(hash);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    } else {
+      setPublicPath(path);
+      window.history.pushState({}, '', path);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   // --- RENDERING CONFIGURATION ---
   if (!userEmail) {
+    if (publicPath === '/pricing') {
+      return (
+        <PricingPage
+          theme={theme}
+          onNavigate={handlePublicNavigate}
+          onGoogleLogin={handleLogin}
+        />
+      );
+    }
+    if (publicPath === '/guide') {
+      return (
+        <GuidePage
+          theme={theme}
+          onNavigate={handlePublicNavigate}
+          onGoogleLogin={handleLogin}
+        />
+      );
+    }
+    if (publicPath === '/contact') {
+      return (
+        <ContactPage
+          theme={theme}
+          onNavigate={handlePublicNavigate}
+          onGoogleLogin={handleLogin}
+        />
+      );
+    }
+
     return (
       <Homepage
         theme={theme}
@@ -1286,6 +1410,7 @@ export default function App() {
         onCustomSignup={handleCustomSignup}
         onCustomLogin={handleCustomLogin}
         isOnline={isOnline}
+        onNavigate={handlePublicNavigate}
       />
     );
   }
@@ -1323,6 +1448,8 @@ export default function App() {
         onDeleteClient={handleDeleteClient}
         onSaveExpense={handleSaveExpense}
         onDeleteExpense={handleDeleteExpense}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
 
       {/* Sub-modals Settings View selectors */}

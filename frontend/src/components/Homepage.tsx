@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, 
   TrendingUp, 
@@ -28,7 +28,10 @@ import {
   KeyRound,
   RefreshCw,
   Menu,
-  X
+  X,
+  DollarSign,
+  CreditCard,
+  Upload
 } from 'lucide-react';
 
 interface HomepageProps {
@@ -37,6 +40,7 @@ interface HomepageProps {
   onCustomSignup: (name: string, companyName: string, email: string, phone: string, password?: string) => Promise<{ error?: string }>;
   onCustomLogin: (email: string, password?: string, phone?: string) => Promise<{ error?: string }>;
   isOnline: boolean;
+  onNavigate: (path: string) => void;
 }
 
 export default function Homepage({ 
@@ -44,7 +48,8 @@ export default function Homepage({
   onGoogleLogin, 
   onCustomSignup, 
   onCustomLogin,
-  isOnline 
+  isOnline,
+  onNavigate
 }: HomepageProps) {
   // Tabs for Auth: 'login' or 'signup'
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
@@ -77,6 +82,59 @@ export default function Homepage({
 
   // Inline form errors
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Pricing toggle state
+  const [isYearly, setIsYearly] = useState(false);
+
+  // Interactive showcases states
+  const [showLogistics, setShowLogistics] = useState(false);
+  const [prefix, setPrefix] = useState('INV');
+  const [taxModeSelection, setTaxModeSelection] = useState<'intra' | 'inter'>('intra');
+  const [showcaseColor, setShowcaseColor] = useState<'sky' | 'emerald' | 'indigo' | 'rose'>('sky');
+  const [showcaseWatermark, setShowcaseWatermark] = useState(false);
+  const [points, setPoints] = useState<{x: number, y: number}[]>([]);
+  const [isDrawingSig, setIsDrawingSig] = useState(false);
+  const [catalogCategory, setCatalogCategory] = useState<'all' | 'raw' | 'service'>('all');
+  const [newExpenseAmount, setNewExpenseAmount] = useState('150');
+  const [demoExpenses, setDemoExpenses] = useState<{ id: string, name: string, amount: number, date: string }[]>([
+    { id: '1', name: 'Cloud Server hosting', amount: 80, date: '2026-07-09' },
+    { id: '2', name: 'Chartered accountant audit', amount: 300, date: '2026-07-08' }
+  ]);
+
+  // Expanded interactive features states
+  const [demoInvoiceItems, setDemoInvoiceItems] = useState<{ id: string, name: string, rate: number, qty: number }[]>([
+    { id: '1', name: 'Premium Consultant Hours', rate: 120, qty: 8 },
+    { id: '2', name: 'Stock Inventory Materials', rate: 35, qty: 10 }
+  ]);
+  const [demoTemplateLayout, setDemoTemplateLayout] = useState<'Classic' | 'Modern' | 'Minimal' | 'Retail'>('Classic');
+  const [bulkFileUploaded, setBulkFileUploaded] = useState(false);
+  const [bulkDataType, setBulkDataType] = useState<'products' | 'clients'>('products');
+  const [demoPinCode, setDemoPinCode] = useState('');
+  const [isDemoPinEnabled, setIsDemoPinEnabled] = useState(false);
+  const [isDemoBioEnabled, setIsDemoBioEnabled] = useState(false);
+  const [selectedGlAccount, setSelectedGlAccount] = useState<'4001' | '5002' | '1010'>('4001');
+  const [demoUom, setDemoUom] = useState<'bags' | 'kg' | 'meters' | 'pcs'>('pcs');
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<'month' | 'quarter' | 'year'>('month');
+
+  const handleSignatureMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setPoints([{ x, y }]);
+    setIsDrawingSig(true);
+  };
+
+  const handleSignatureMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!isDrawingSig) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setPoints(prev => [...prev, { x, y }]);
+  };
+
+  const handleSignatureMouseUp = () => {
+    setIsDrawingSig(false);
+  };
 
   // Scroll to top state
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -136,7 +194,7 @@ export default function Homepage({
     setTimeout(() => {
       const element = document.getElementById(sectionId);
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 60);
   };
@@ -161,6 +219,14 @@ export default function Homepage({
     {
       question: "Can I track my business expenses and visual profits in the application?",
       answer: "Yes. In addition to creating compliant invoices and estimates, you have access to a live analytical visual dashboard. Log client-related or personal operating expenses, categorize overhead, and view your net margins in real-time on visual revenue charts."
+    },
+    {
+      question: "Does MakInvoices offer offline support or require an active internet connection?",
+      answer: "No, you don't need to be online. MakInvoices is built with an offline-first architecture using client-side caching. You can generate invoices, log client profiles, update your catalog index, and edit tax records completely offline. Your changes are saved securely in your browser and synced to the cloud once you reconnect."
+    },
+    {
+      question: "What are Master Vendors and HSN catalog registers inside the workspace?",
+      answer: "These are advanced bookkeeping tools for high-volume billing. The Master Vendor panel logs default suppliers and invoice origins, the HSN registry pre-defines unified commodities classification codes, and the Catalog Material module manages product item lines with predefined unit prices and categories."
     }
   ];
 
@@ -340,86 +406,80 @@ export default function Homepage({
         : 'bg-slate-50 text-slate-800'
     }`}>
       
-      {/* Decorative ambient top glow - clipped to prevent overflow */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none overflow-hidden" style={{maxWidth:'100vw'}} />
-      <div className="absolute top-10 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none overflow-hidden" />
-
-      {/* Main Container */}
-      <div className="max-w-[1400px] mx-auto px-2 sm:px-3 lg:px-4 py-4 md:pb-4 lg:pt-6 relative">
-        
-        {/* Desktop Navigation Area */}
-        <nav className="hidden sm:flex items-center justify-between gap-4 mb-6 border-b pb-4 border-slate-200/50 dark:border-neutral-800 bg-transparent relative z-50">
+      {/* Embedded Navigation Bar (Desktop) */}
+      <nav className="fixed top-0 left-0 right-0 z-50 hidden sm:flex border-b border-slate-200/40 dark:border-neutral-800/35 bg-white/70 dark:bg-neutral-955/75 backdrop-blur-md transition-all duration-300 w-full">
+        <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4 w-full">
           
           {/* Logo Brand */}
-          <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-sky-500/20 animate-pulse">
+          <div className="flex items-center gap-2 cursor-pointer select-none group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-650 flex items-center justify-center text-white font-black text-lg shadow-md shadow-sky-500/25 group-hover:scale-105 transition-transform duration-300">
               MI
             </div>
             <div>
-              <span className="text-lg font-black tracking-tight text-slate-805">
+              <span className="text-base font-black tracking-tight text-slate-805 block leading-none">
                 Mak<span className="text-sky-500">Invoices</span>
               </span>
-              <span className="text-[10px] font-bold text-slate-400 block -mt-1 tracking-wider uppercase">Advanced Ledger Hub</span>
+              <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-500 block tracking-wider uppercase mt-1">Advanced Ledger Hub</span>
             </div>
           </div>
 
-          {/* Navigation Links (Features, FAQ, How to use) */}
-          <div className="flex items-center gap-1 sm:gap-3">
+          {/* Navigation Links */}
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               type="button"
               onClick={() => handleNavScroll('features-section')}
-              className="text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-2.5 sm:px-3.5 py-2 rounded-xl hover:bg-slate-100/60 dark:hover:bg-neutral-900"
+              className="text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3 py-2 rounded-xl hover:bg-slate-100/50 dark:hover:bg-neutral-900 flex items-center gap-1.5"
             >
-              <span className="flex items-center gap-1">
-                <Layers className="w-3.5 h-3.5" />
-                Features
-              </span>
+              <Layers className="w-3.5 h-3.5 text-slate-400" />
+              Features
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigate('/guide')}
+              className="text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3 py-2 rounded-xl hover:bg-slate-100/50 dark:hover:bg-neutral-900 flex items-center gap-1.5"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-slate-400" />
+              Guide
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigate('/pricing')}
+              className="text-slate-600 dark:text-slate-305 hover:text-sky-550 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3 py-2 rounded-xl hover:bg-slate-100/50 dark:hover:bg-neutral-900 flex items-center gap-1.5"
+            >
+              <CreditCard className="w-3.5 h-3.5 text-slate-400" />
+              Pricing
             </button>
 
             <button
               type="button"
               onClick={() => handleNavScroll('faq-section')}
-              className="text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-2.5 sm:px-3.5 py-2 rounded-xl hover:bg-slate-100/60 dark:hover:bg-neutral-900"
+              className="text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3 py-2 rounded-xl hover:bg-slate-100/50 dark:hover:bg-neutral-900 flex items-center gap-1.5"
             >
-              <span className="flex items-center gap-1">
-                <HelpCircle className="w-3.5 h-3.5" />
-                FAQ
-              </span>
+              <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+              FAQ
             </button>
 
             <button
               type="button"
-              onClick={() => handleNavScroll('how-to-use-section')}
-              className="text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-2.5 sm:px-3.5 py-2 rounded-xl hover:bg-slate-100/60 dark:hover:bg-neutral-900"
+              onClick={() => onNavigate('/contact')}
+              className="text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3 py-2 rounded-xl hover:bg-slate-100/50 dark:hover:bg-neutral-900 flex items-center gap-1.5"
             >
-              <span className="flex items-center gap-1">
-                <BookOpen className="w-3.5 h-3.5" />
-                How to Use
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleNavScroll('contact-section')}
-              className="text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-2.5 sm:px-3.5 py-2 rounded-xl hover:bg-slate-100/60 dark:hover:bg-neutral-900"
-            >
-              <span className="flex items-center gap-1">
-                <Mail className="w-3.5 h-3.5" />
-                Contact
-              </span>
+              <Mail className="w-3.5 h-3.5 text-slate-400" />
+              Contact
             </button>
           </div>
 
-          {/* Authentication Quick Action buttons (Sign In / Get Started) */}
-          <div className="flex items-center gap-2.5">
-            {/* Language Dropdown Selector */}
+          {/* Quick Actions & Language dropdown */}
+          <div className="flex items-center gap-3">
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-                className="flex items-center gap-1.5 px-3 py-2 text-slate-600 dark:text-slate-350 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all rounded-xl hover:bg-slate-100/60 dark:hover:bg-neutral-900 border border-slate-200/40 dark:border-neutral-800/60"
+                className="flex items-center gap-1.5 px-3 py-2 text-slate-600 dark:text-slate-350 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all rounded-xl hover:bg-slate-100/50 dark:hover:bg-neutral-900 border border-slate-200/40 dark:border-neutral-800/40"
               >
-                <Globe className="w-3.5 h-3.5 text-slate-400" />
+                <Globe className="w-3.5 h-3.5 text-slate-405" />
                 <span>{selectedLanguage.label}</span>
                 <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isLangDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -455,155 +515,160 @@ export default function Homepage({
                 </>
               )}
             </div>
+
             <button
               type="button"
               onClick={() => window.location.href = '/login'}
-              className="px-4 py-2 text-slate-700 dark:text-slate-200 hover:text-sky-505 dark:hover:text-sky-400 font-extrabold text-xs tracking-normal cursor-pointer transition-all duration-300 rounded-xl hover:bg-slate-100/80 dark:hover:bg-neutral-800 hover:scale-105 active:scale-95"
+              className="px-3.5 py-2 text-slate-700 dark:text-slate-205 hover:text-sky-505 dark:hover:text-sky-400 font-extrabold text-xs transition-all duration-300 rounded-xl hover:bg-slate-100/50 dark:hover:bg-neutral-900 active:scale-95"
             >
               Log In
             </button>
             <button
               type="button"
               onClick={() => window.location.href = '/signup'}
-              className="px-5 py-2 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-extrabold text-xs tracking-normal rounded-xl shadow-lg shadow-sky-500/15 hover:shadow-sky-500/30 transition-all duration-300 hover:scale-105 active:scale-95 hover:-translate-y-0.5 cursor-pointer"
+              className="px-4 py-2.5 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-sky-505/15 hover:shadow-sky-500/30 transition-all duration-300 hover:scale-103 cursor-pointer"
             >
               Sign Up
             </button>
-
           </div>
+        </div>
+      </nav>
 
-        </nav>
-
-        {/* Mobile Navigation Area */}
-        <nav className="flex sm:hidden flex-col mb-6 bg-transparent relative z-50">
-          
-          {/* Mobile Top Row: Logo & Authentication Buttons */}
-          <div className={`flex items-center justify-between w-full pb-4 ${isMobileNavOpen ? 'border-none' : 'border-b border-slate-200/50 dark:border-neutral-800'}`}>
-            
-            {/* Logo Brand */}
-            <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white font-black text-base shadow-md shadow-sky-500/20 animate-pulse">
-                MI
-              </div>
-              <div className="text-left">
-                <span className="text-sm font-black tracking-tight text-slate-805 block">
-                  Mak<span className="text-sky-500">Invoices</span>
-                </span>
-                <span className="text-[8px] font-bold text-slate-400 block -mt-1 tracking-wider uppercase">Ledger Hub</span>
-              </div>
+      {/* Embedded Navigation Bar (Mobile) */}
+      <nav className="fixed top-0 left-0 right-0 z-50 flex sm:hidden border-b border-slate-200/40 dark:border-neutral-800/35 bg-white/75 dark:bg-neutral-950/85 backdrop-blur-md transition-all duration-300 w-full">
+        <div className="max-w-[1550px] mx-auto px-4 py-4 flex items-center justify-between w-full">
+          {/* Logo Brand */}
+          <div className="flex items-center gap-1.5 cursor-pointer select-none" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md">
+              MI
             </div>
-
-            {/* Hamburger Button */}
-            <button
-              type="button"
-              onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
-              className="p-2 text-slate-600 dark:text-slate-350 hover:text-sky-500 dark:hover:text-sky-400 cursor-pointer transition-all rounded-lg hover:bg-slate-100/60 dark:hover:bg-neutral-900 border border-slate-200/40 dark:border-neutral-800/60"
-            >
-              {isMobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+            <span className="text-sm font-black tracking-tight text-slate-805">
+              Mak<span className="text-sky-500">Invoices</span>
+            </span>
           </div>
 
-          {/* Mobile Side Drawer Menu */}
-          {/* Backdrop */}
-          {isMobileNavOpen && (
-            <div 
-              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] sm:hidden transition-opacity"
-              onClick={() => setIsMobileNavOpen(false)}
-            />
-          )}
-          
-          {/* Drawer Panel */}
-          <div className={`fixed inset-y-0 right-0 z-[70] w-72 bg-white dark:bg-neutral-950 border-l border-slate-200/50 dark:border-neutral-800 shadow-2xl transform transition-transform duration-300 ease-in-out sm:hidden ${isMobileNavOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-            <div className="flex flex-col h-full p-5">
-              
-              <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-neutral-800/60">
-                <span className="text-sm font-black tracking-tight text-slate-805">
-                  Menu
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsMobileNavOpen(false)}
-                  className="p-1.5 text-slate-500 hover:text-rose-500 transition-colors rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+          {/* Hamburger Menu Button */}
+          <button
+            type="button"
+            onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+            className="p-2 text-slate-600 dark:text-slate-350 hover:text-sky-505 dark:hover:text-sky-400 cursor-pointer rounded-xl hover:bg-slate-100/50 dark:hover:bg-neutral-900 border border-slate-250/20 dark:border-neutral-800/60"
+          >
+            {isMobileNavOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
 
-              <div className="flex flex-col gap-3 mb-8">
-                <button
-                  type="button"
-                  onClick={() => { handleNavScroll('features-section'); setIsMobileNavOpen(false); }}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-neutral-900/50 border border-slate-100 dark:border-neutral-800/60 hover:border-sky-500/30 transition-all text-left"
+          {/* Drawer Menu Panel */}
+          <AnimatePresence>
+            {isMobileNavOpen && (
+              <>
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[60]" 
+                  onClick={() => setIsMobileNavOpen(false)} 
+                />
+                <motion.div 
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                  className="fixed inset-y-4 right-4 z-[70] w-64 bg-white dark:bg-neutral-955 border border-slate-200/50 dark:border-neutral-800/80 shadow-2xl rounded-2xl p-5 flex flex-col justify-between"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-500 flex items-center justify-center shrink-0">
-                    <Layers className="w-4 h-4" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Features & Tools</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { handleNavScroll('faq-section'); setIsMobileNavOpen(false); }}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-neutral-900/50 border border-slate-100 dark:border-neutral-800/60 hover:border-emerald-500/30 transition-all text-left"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                    <HelpCircle className="w-4 h-4" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Common Questions</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { handleNavScroll('how-to-use-section'); setIsMobileNavOpen(false); }}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-neutral-900/50 border border-slate-100 dark:border-neutral-800/60 hover:border-indigo-500/30 transition-all text-left"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
-                    <BookOpen className="w-4 h-4" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">User Guide</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { handleNavScroll('contact-section'); setIsMobileNavOpen(false); }}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-neutral-900/50 border border-slate-100 dark:border-neutral-800/60 hover:border-rose-500/30 transition-all text-left"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
-                    <Mail className="w-4 h-4" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Contact Support</span>
-                </button>
-              </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-100 dark:border-neutral-850">
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-400">Navigation</span>
+                      <button type="button" onClick={() => setIsMobileNavOpen(false)} className="p-1 text-slate-400 hover:text-rose-500 transition-colors">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
 
-              <div className="mt-auto space-y-3">
-                <button
-                  type="button"
-                  onClick={() => { window.location.href = '/login'; setIsMobileNavOpen(false); }}
-                  className="w-full py-3 text-slate-700 dark:text-slate-200 hover:text-sky-505 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all duration-300 rounded-xl bg-slate-100/50 hover:bg-slate-100/70 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-slate-200/40 dark:border-neutral-800/60 text-center hover:scale-102 active:scale-98"
-                >
-                  Log In to Account
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { window.location.href = '/signup'; setIsMobileNavOpen(false); }}
-                  className="w-full py-3 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-extrabold text-xs tracking-wide rounded-xl shadow-lg shadow-sky-500/20 hover:shadow-sky-500/35 cursor-pointer transition-all duration-300 text-center hover:scale-102 active:scale-98"
-                >
-                  Sign Up
-                </button>
-              </div>
-              
-            </div>
-          </div>
-        </nav>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { handleNavScroll('features-section'); setIsMobileNavOpen(false); }}
+                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900 transition-all text-left w-full"
+                      >
+                        <Layers className="w-4 h-4 text-sky-500" />
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Features</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { onNavigate('/guide'); setIsMobileNavOpen(false); }}
+                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900 transition-all text-left w-full"
+                      >
+                        <BookOpen className="w-4 h-4 text-indigo-500" />
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Guide</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { onNavigate('/pricing'); setIsMobileNavOpen(false); }}
+                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900 transition-all text-left w-full"
+                      >
+                        <CreditCard className="w-4 h-4 text-emerald-500" />
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Pricing</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { handleNavScroll('faq-section'); setIsMobileNavOpen(false); }}
+                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900 transition-all text-left w-full"
+                      >
+                        <HelpCircle className="w-4 h-4 text-amber-500" />
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">FAQ</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { onNavigate('/contact'); setIsMobileNavOpen(false); }}
+                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900 transition-all text-left w-full"
+                      >
+                        <Mail className="w-4 h-4 text-rose-500" />
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Contact</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mt-auto">
+                    <button
+                      type="button"
+                      onClick={() => { window.location.href = '/login'; setIsMobileNavOpen(false); }}
+                      className="w-full py-2.5 text-center text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-neutral-900 border border-slate-200/50 dark:border-neutral-800/80 rounded-xl"
+                    >
+                      Log In
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { window.location.href = '/signup'; setIsMobileNavOpen(false); }}
+                      className="w-full py-2.5 text-center text-xs font-bold text-white bg-sky-600 rounded-xl shadow-md"
+                    >
+                      Sign Up
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+      </nav>
+
+      {/* Main Container */}
+      <div className="max-w-[1550px] mx-auto px-3 sm:px-6 lg:px-8 pt-20 pb-4 lg:pt-24 relative">
 
         {/* Hero Grid Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center overflow-hidden">
           
           {/* Left: Headline & Key Details */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:col-span-7 space-y-6 order-1"
+            className="lg:col-span-6 space-y-6 order-1"
           >
 
+
+            {/* Modern Developer-style 'Newly launched' Label */}
+            <div className="flex items-center gap-1.5 text-[10px] font-mono tracking-wider select-none w-fit">
+              <span className="text-sky-500 font-black">//</span>
+              <span className="text-slate-800 dark:text-slate-200 font-black uppercase">Newly Launched</span>
+            </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-slate-805">
               The Intelligent <br />
@@ -619,6 +684,46 @@ export default function Homepage({
               drawn signatures, visual financial analytics, and download professional PDFs instantly.
             </p>
 
+            {/* Feature Highlights Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 text-sm max-w-2xl">
+              <div className="flex items-start gap-2.5">
+                <div className="mt-0.5 p-1 bg-emerald-500/10 text-emerald-500 rounded-lg shrink-0">
+                  <CheckCircle className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-extrabold text-slate-800 dark:text-slate-200 block">Offline-First Safety</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-xs">Work seamlessly without internet; your data is encrypted & cached locally.</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div className="mt-0.5 p-1 bg-indigo-500/10 text-indigo-500 rounded-lg shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-extrabold text-slate-800 dark:text-slate-200 block">AI Smart Billing</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-xs">Describe your bill in simple English and let our AI compile the invoice.</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div className="mt-0.5 p-1 bg-sky-500/10 text-sky-500 rounded-lg shrink-0">
+                  <CheckCircle className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-extrabold text-slate-800 dark:text-slate-200 block">GST Compliance Split</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-xs">Auto-calculates CGST, SGST, & IGST splits based on client registry states.</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div className="mt-0.5 p-1 bg-purple-500/10 text-purple-500 rounded-lg shrink-0">
+                  <CheckCircle className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-extrabold text-slate-800 dark:text-slate-200 block">Bespoke Design Studio</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-xs">Custom branding themes, margins, watermarks, and drawn stylus signatures.</span>
+                </div>
+              </div>
+            </div>
+
             <div className="pt-3">
               <button
                 type="button"
@@ -629,65 +734,6 @@ export default function Homepage({
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform duration-300 ease-out" />
               </button>
             </div>
-
-            {/* Feature Cards Grid (Compact & Informative) */}
-            <div id="features-section" className="grid sm:grid-cols-2 gap-4 pt-6">
-              <div className={`group p-4 rounded-2xl border transition-all duration-300 flex flex-col hover:-translate-y-1 hover:shadow-xl hover:shadow-sky-500/5 ${
-                theme === 'dark' 
-                  ? 'bg-neutral-900/60 border-neutral-800 hover:border-sky-500/30' 
-                  : 'bg-white border-slate-100 hover:border-sky-500/20'
-              }`}>
-                <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-sky-500/15 transition-all duration-300">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-bold text-slate-805 mb-1 group-hover:text-sky-505 transition-colors">Tailored Invoice Designer</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-405 leading-relaxed">
-                  Select premium layout presets, customized typography styling, high-contrast borders, upload custom corporate logo graphics, and paint stunning brand styles.
-                </p>
-              </div>
-
-              <div className={`group p-4 rounded-2xl border transition-all duration-300 flex flex-col hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/5 ${
-                theme === 'dark' 
-                  ? 'bg-neutral-900/60 border-neutral-800 hover:border-indigo-500/30' 
-                  : 'bg-white border-slate-100 hover:border-indigo-500/20'
-              }`}>
-                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-indigo-500/15 transition-all duration-300">
-                  <Database className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-bold text-slate-805 mb-1 group-hover:text-indigo-500 transition-colors">Compliance Tax Engine</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-405 leading-relaxed">
-                  Support state GST codes map to automate splits. Calculate intra-state CGST & SGST or foreign/national IGST with direct discount caps.
-                </p>
-              </div>
-
-              <div className={`group p-4 rounded-2xl border transition-all duration-300 flex flex-col hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/5 ${
-                theme === 'dark' 
-                  ? 'bg-neutral-900/60 border-neutral-800 hover:border-emerald-500/30' 
-                  : 'bg-white border-slate-100 hover:border-emerald-500/20'
-              }`}>
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-emerald-500/15 transition-all duration-300">
-                  <TrendingUp className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-bold text-slate-805 mb-1 group-hover:text-emerald-505 transition-colors">Interactive Revenue Sparklines</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-405 leading-relaxed">
-                  Monitor outstanding invoices, total collections, log custom operating business expenses, and review margins inside real-time interactive analytical widgets.
-                </p>
-              </div>
-
-              <div className={`group p-4 rounded-2xl border transition-all duration-300 flex flex-col hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-500/5 ${
-                theme === 'dark' 
-                  ? 'bg-neutral-900/60 border-neutral-800 hover:border-purple-500/30' 
-                  : 'bg-white border-slate-100 hover:border-purple-500/20'
-              }`}>
-                <div className="w-8 h-8 rounded-xl bg-purple-505/10 text-purple-500 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-purple-500/15 transition-all duration-300">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-bold text-slate-805 mb-1 group-hover:text-purple-505 transition-colors">Interactive Signature Sketching</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-405 leading-relaxed">
-                  Draw high-resolution digital ink vector pen signatures in your client workspace or corporate profile to seal invoice PDF documents reliably.
-                </p>
-              </div>
-            </div>
           </motion.div>
 
           {/* Right: Premium Live-Rendered Mockup representing Sample Dashboard and Sample Invoice */}
@@ -695,10 +741,10 @@ export default function Homepage({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:col-span-5 flex flex-col items-center justify-start lg:mt-0 mt-8 relative order-2"
+            className="lg:col-span-6 flex flex-col items-center justify-start lg:mt-0 mt-8 relative order-2"
           >
             {/* Live Interactive Control Panel */}
-            <div className="w-full max-w-[390px] xl:max-w-[430px] mb-4 bg-white/75 dark:bg-neutral-900/80 backdrop-blur-md rounded-2xl p-3 border border-slate-200/60 dark:border-neutral-800/85 shadow-md relative z-30 transition-all text-xs">
+            <div className="w-full max-w-[500px] mb-4 bg-white/75 dark:bg-neutral-900/80 backdrop-blur-md rounded-2xl p-3 border border-slate-200/60 dark:border-neutral-800/85 shadow-md relative z-30 transition-all text-xs">
               <div className="flex flex-col gap-2">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-1.5 mb-1">
@@ -791,8 +837,8 @@ export default function Homepage({
             </div>
 
             {/* Mockup Canvas Screen */}
-            <div className="w-full max-w-[100vw] sm:max-w-[420px] overflow-x-auto no-scrollbar pb-6 -mx-2 px-2 sm:mx-0 sm:px-0">
-              <div className="w-full max-w-[380px] sm:max-w-full h-[400px] sm:h-[480px] lg:h-[500px] relative overflow-hidden rounded-3xl">
+            <div className="w-full max-w-full sm:max-w-[580px] overflow-x-auto no-scrollbar pb-6 -mx-2 px-2 sm:mx-0 sm:px-0">
+              <div className="w-full h-[400px] sm:h-[520px] lg:h-[550px] relative overflow-hidden rounded-3xl">
               
               {/* Background glowing visual accents */}
               <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full blur-3xl pointer-events-none transition-colors duration-500 ${
@@ -803,7 +849,7 @@ export default function Homepage({
               }`} />
               
               {/* DASHBOARD PREVIEW PANEL (Base Underlay window) */}
-              <div className="absolute left-0 sm:left-2 top-0 sm:top-2 w-[85%] max-w-[390px] rounded-3xl bg-[#090d16] border border-slate-800 shadow-2xl shadow-slate-950/40 overflow-hidden transform -rotate-3 hover:-rotate-1 transition-all duration-550 text-slate-100 p-4 z-10">
+              <div className="absolute left-0 sm:left-2 top-0 sm:top-2 w-[85%] max-w-[440px] rounded-3xl bg-[#090d16] border border-slate-800 shadow-2xl shadow-slate-950/40 overflow-hidden transform -rotate-3 hover:-rotate-1 transition-all duration-550 text-slate-100 p-4 z-10">
                 
                 {/* Window controls bar */}
                 <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-slate-850">
@@ -907,7 +953,7 @@ export default function Homepage({
               </div>
 
               {/* HIGH-FIDELITY INVOICE PAPER (Overlapping, angled, beautifully structured) */}
-              <div className={`absolute right-0 sm:right-2 bottom-0 sm:bottom-2 w-[76%] sm:w-[72%] max-w-[270px] bg-white text-slate-800 rounded-2xl shadow-2xl shadow-slate-950/40 border p-3.5 transform rotate-3 hover:rotate-1 transition-all duration-550 z-20 flex flex-col font-sans border-slate-150 ${
+              <div className={`absolute right-0 sm:right-2 bottom-0 sm:bottom-2 w-[76%] sm:w-[72%] max-w-[320px] bg-white text-slate-800 rounded-2xl shadow-2xl shadow-slate-950/40 border p-3.5 transform rotate-3 hover:rotate-1 transition-all duration-550 z-20 flex flex-col font-sans border-slate-150 ${
                 demoLayout === 'minimal' ? 'border-dashed !shadow-none !bg-slate-50/95 font-mono' : ''
               }`}>
                 
@@ -1038,133 +1084,546 @@ export default function Homepage({
           </motion.div>
 
         </div>
-
-        {/* 1. How to Use Section */}
-        <div id="how-to-use-section" className="mt-10 sm:mt-12 max-w-6xl mx-auto space-y-12 animate-fade-in relative z-10">
+        <div id="features-section" className="mt-12 space-y-12 max-w-full relative z-10 text-left scroll-mt-24">
+          
           <div className="text-center space-y-3">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 rounded-full text-xs font-bold leading-none uppercase tracking-widest">
-              <BookOpen className="w-3.5 h-3.5 animate-bounce" />
-              <span>Simple Workflow Walkthrough</span>
-            </div>
-            <h2 className="text-2xl sm:text-3.5xl font-black tracking-tight text-slate-805 leading-none">
-              How to Use MakInvoices
+            <h2 className="text-3xl sm:text-4.5xl font-black text-slate-805 uppercase tracking-tight leading-none">
+              A Complete Personalised Billing Engine
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-405 max-w-xl mx-auto">
-              Follow our lightweight 3-step dynamic billing lifecycle to build, customize, and secure your financial billing ledger.
+              Explore the real-world operational capabilities of MakInvoices. Interact with the live mockups below to see how our engine automates your ledger.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 relative">
-            
-            {/* Visual connector lines on desktop sizes */}
-            <div className="hidden md:block absolute top-1/2 left-[15%] right-[15%] h-[2px] bg-slate-200/50 dark:bg-neutral-800 -translate-y-1/2 -z-10" />
-
-            {/* Step 1 */}
-            <div className={`p-6 sm:p-8 rounded-2xl border transition-all text-center relative ${
-              theme === 'dark' 
-                ? 'bg-neutral-900/60 border-neutral-800 hover:border-neutral-700' 
-                : 'bg-white border-slate-100 hover:border-slate-250 shadow-sm'
-            }`}>
-              <div className="absolute top-[-16px] left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white font-extrabold text-sm shadow-md border-4 border-slate-50 dark:border-neutral-950">
-                1
+          {/* Showcase 1: Bespoke Invoicing & Logistics Hub */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+            {/* Text Description */}
+            <div className="lg:col-span-6 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center shadow-inner">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-805 uppercase tracking-tight">Billing & Logistics Hub</h3>
               </div>
-              
-              <div className="w-12 h-12 rounded-2xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto mb-4 mt-2 shadow-inner">
-                <UserPlus className="w-5 h-5" />
-              </div>
-              <h4 className="text-sm font-black text-slate-805 mb-2 block tracking-tight uppercase">Set up profile</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-405 leading-normal">
-                Initialize a sandbox guest token or log in securely to define your default tax categories, state GST numbers, currencies, and bank details.
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl">
+                Generate pro-forma estimates, client quotes, and formal invoices. Track Purchase Orders (PO), reference codes, custom payment terms, and client state registries instantly.
               </p>
+              
+              <div className="border-l-2 border-sky-500 pl-4 py-1 space-y-3 text-xs max-w-xl">
+                <p className="leading-relaxed text-slate-600 dark:text-slate-350">
+                  <strong className="text-slate-800 dark:text-slate-200">E-Way Bills & Logistics Fields:</strong> Capture transporter names, delivery routes, vehicle codes, driver mobile contacts, and GR/RR logs inside a dynamic panel.
+                </p>
+                <p className="leading-relaxed text-slate-600 dark:text-slate-350">
+                  <strong className="text-slate-800 dark:text-slate-200">Shipped-To Coordinates:</strong> Override billing addresses to document separate delivery destinations (Name, Phone, State, and unique GSTIN).
+                </p>
+              </div>
             </div>
 
-            {/* Step 2 */}
-            <div className={`p-6 sm:p-8 rounded-2xl border transition-all text-center relative ${
-              theme === 'dark' 
-                ? 'bg-neutral-900/60 border-neutral-800 hover:border-neutral-700' 
-                : 'bg-white border-slate-100 hover:border-slate-250 shadow-sm'
-            }`}>
-              <div className="absolute top-[-16px] left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white font-extrabold text-sm shadow-md border-4 border-slate-50 dark:border-neutral-950">
-                2
+            {/* Interactive Mockup */}
+            <div className="lg:col-span-6">
+              <div className={`p-5 sm:p-6 rounded-3xl border transition-all ${
+                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800 shadow-2xl shadow-sky-550/5' : 'bg-white border-slate-150 shadow-xl'
+              }`}>
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-ping" />
+                    <span className="text-[10px] font-black uppercase text-slate-405 dark:text-slate-500 tracking-wider">Logistics & PO Control</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-extrabold text-slate-400">Prefix:</span>
+                    <input 
+                      type="text" 
+                      value={prefix} 
+                      onChange={(e) => setPrefix(e.target.value.toUpperCase())}
+                      className="w-12 px-1 py-0.5 rounded border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-[10px] font-black text-center text-slate-800 dark:text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3 text-[10px]">
+                    <div className="space-y-1">
+                      <span className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Invoice Number</span>
+                      <div className="p-2 rounded-xl bg-slate-50 dark:bg-neutral-955 border border-slate-100 dark:border-neutral-900 font-mono font-bold">
+                        {prefix}-2026-0045
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="block text-[8px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wide">PO Reference</span>
+                      <div className="p-2 rounded-xl bg-slate-50 dark:bg-neutral-955 border border-slate-105 dark:border-neutral-900 font-mono font-bold">
+                        PO-77890-X
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-50/50 dark:bg-neutral-950/40 rounded-2xl border border-slate-100/50 dark:border-neutral-900 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold text-slate-705 dark:text-slate-300">Enable Logistics E-Way Bill Fields</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setShowLogistics(!showLogistics)}
+                        className="w-8 h-4.5 rounded-full bg-slate-200 dark:bg-neutral-800 p-0.5 transition-colors relative cursor-pointer flex items-center"
+                      >
+                        <div className={`w-3.5 h-3.5 rounded-full bg-sky-600 dark:bg-sky-500 shadow transition-transform transform ${showLogistics ? 'translate-x-3.5' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+
+                    {showLogistics && (
+                      <div className="grid grid-cols-2 gap-3 text-[9px] animate-fade-in border-t border-slate-100 dark:border-neutral-900 pt-3">
+                        <div className="space-y-1">
+                          <span className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase">Vehicle Registration</span>
+                          <span className="block font-mono font-bold text-slate-700 dark:text-slate-350">DL-1GA-9988</span>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase">E-Way Bill ID</span>
+                          <span className="block font-mono font-bold text-slate-700 dark:text-slate-350">171299878891</span>
+                        </div>
+                        <div className="space-y-1 col-span-2">
+                          <span className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase">Shipped To Override</span>
+                          <span className="block font-bold text-slate-705 dark:text-slate-350">Alex Morgan - GSTIN 07AAAAA0000A1Z5</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-              
-              <div className="w-12 h-12 rounded-2xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto mb-4 mt-2 shadow-inner">
-                <Layers className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* Showcase 2: Personalised Template Studio & Vector Signatures */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+            {/* Interactive Mockup (Order 2 on mobile, 1 on desktop) */}
+            <div className="lg:col-span-6 lg:order-1 order-2">
+              <div className={`p-5 sm:p-6 rounded-3xl border transition-all ${
+                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800 shadow-2xl shadow-purple-550/5' : 'bg-white border-slate-150 shadow-xl'
+              }`}>
+                <div className="flex items-center justify-between border-b border-slate-105 dark:border-neutral-800 pb-3 mb-4 text-[10px]">
+                  <span className="font-black uppercase text-slate-405 dark:text-slate-500 tracking-wider">Visual Customizer Studio</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-extrabold text-slate-400">Layout:</span>
+                    <select
+                      value={demoTemplateLayout}
+                      onChange={(e) => setDemoTemplateLayout(e.target.value as any)}
+                      className="px-2 py-0.5 rounded border border-slate-205 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-955 text-[10px] font-black text-slate-805 dark:text-white focus:outline-none"
+                    >
+                      <option value="Classic">Classic GST</option>
+                      <option value="Modern">Modern Tech</option>
+                      <option value="Minimal">Minimal B2B</option>
+                      <option value="Retail">Retail Slip</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Miniature Invoice A4 Canvas Simulation */}
+                  <div className={`p-3 rounded-2xl border transition-all relative ${
+                    theme === 'dark' ? 'bg-neutral-955 border-neutral-800' : 'bg-slate-50 border-slate-100'
+                  } ${
+                    demoTemplateLayout === 'Minimal' ? 'border-t-4 border-t-slate-800 dark:border-t-neutral-200' :
+                    demoTemplateLayout === 'Modern' ? 'border-t-4 border-t-purple-600' :
+                    demoTemplateLayout === 'Retail' ? 'max-w-[280px] mx-auto border-dashed' :
+                    'border-t-4 border-t-sky-600'
+                  }`}>
+                    <div className="relative z-10 space-y-2 text-[9px]">
+                      <div className="flex justify-between border-b pb-1.5">
+                        <div>
+                          <span className="font-black block text-slate-800 dark:text-white">MI Corp.</span>
+                          <span className="text-[7.5px] text-slate-450 block">Delhi Registry (07)</span>
+                        </div>
+                        <span className="font-mono text-slate-400 font-bold">#INV-0045</span>
+                      </div>
+                      <div className="space-y-1 py-1">
+                        <div className="flex justify-between font-bold text-slate-650">
+                          <span>1. Consultation Services</span>
+                          <span className="font-mono">$960.00</span>
+                        </div>
+                      </div>
+                      <div className="border-t pt-1.5 flex justify-between items-center text-[10px]">
+                        <div className="space-y-0.5">
+                          <span className="block text-[6px] font-bold text-slate-400 uppercase">Drawn Sign</span>
+                          <div className="w-12 h-4 border border-dashed rounded flex items-center justify-center bg-white dark:bg-neutral-900">
+                            {points.length > 0 ? (
+                              <svg className="w-full h-full" viewBox="0 0 100 30" fill="none">
+                                <path d={`M 10 15 ` + points.slice(1, 10).map(p => `L ${p.x/2} ${p.y/4}`).join(' ')} stroke="#4f46e5" strokeWidth="1.5" />
+                              </svg>
+                            ) : (
+                              <span className="text-[6px] text-slate-400 font-bold">Ink Stamp</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-black text-slate-805 dark:text-white">Total: $1,310.00</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Draw Signature Sketchpad */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[8px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wide">Stylus Ink Signature sketchpad</span>
+                      <button type="button" onClick={() => setPoints([])} className="text-[8px] font-bold text-purple-600 hover:underline">Clear</button>
+                    </div>
+                    <div className="border border-dashed rounded-xl overflow-hidden bg-slate-50 dark:bg-neutral-955">
+                      <svg 
+                        className="w-full h-16 cursor-crosshair"
+                        onMouseDown={handleSignatureMouseDown}
+                        onMouseMove={handleSignatureMouseMove}
+                        onMouseUp={handleSignatureMouseUp}
+                        onMouseLeave={handleSignatureMouseUp}
+                      >
+                        {points.length > 1 && (
+                          <path 
+                            d={`M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')}
+                            fill="none" 
+                            stroke="#4f46e5"
+                            strokeWidth="2" 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                          />
+                        )}
+                        {points.length === 0 && (
+                          <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-[8.5px] font-bold fill-slate-400 dark:fill-slate-500 select-none">
+                            Draw signature here to embed in preview
+                          </text>
+                        )}
+                      </svg>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <h4 className="text-sm font-black text-slate-805 mb-2 block tracking-tight uppercase">Craft dynamically</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-405 leading-normal">
-                Assemble items, adjust intra-state/inter-state IGST tax levels, set discount caps, write custom terms and conditions, and sign with our on-screen sketchpad.
-              </p>
             </div>
 
-            {/* Step 3 */}
-            <div className={`p-6 sm:p-8 rounded-2xl border transition-all text-center relative ${
-              theme === 'dark' 
-                ? 'bg-neutral-900/60 border-neutral-800 hover:border-neutral-700' 
-                : 'bg-white border-slate-100 hover:border-slate-250 shadow-sm'
-            }`}>
-              <div className="absolute top-[-16px] left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white font-extrabold text-sm shadow-md border-4 border-slate-50 dark:border-neutral-950">
-                3
+            {/* Text Description (Order 1 on mobile, 2 on desktop) */}
+            <div className="lg:col-span-6 lg:order-2 order-1 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center shadow-inner">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-805 uppercase tracking-tight">Personalised Template Studio</h3>
               </div>
-              
-              <div className="w-12 h-12 rounded-2xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto mb-4 mt-2 shadow-inner">
-                <FileText className="w-5 h-5" />
-              </div>
-              <h4 className="text-sm font-black text-slate-805 mb-2 block tracking-tight uppercase">Print & export</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-405 leading-normal">
-                Instantly trigger our browser native print configuration which uses precision media stylesheets to generate high-fidelity physical papers or PDF copies.
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl">
+                Design custom invoice layouts that fit your brand guidelines. Control font families, border styles, margin layouts, watermarks, page orientation (portrait/landscape), and PDF page sizing (A4/Letter).
               </p>
+              
+              <div className="border-l-2 border-purple-500 pl-4 py-1 space-y-3 text-xs max-w-xl">
+                <p className="leading-relaxed text-slate-600 dark:text-slate-350">
+                  <strong className="text-slate-800 dark:text-slate-205">Custom Layout Creator:</strong> Design self-styled templates. Configure colors, watermark rotation, opacity, and drag sections to re-order.
+                </p>
+                <p className="leading-relaxed text-slate-600 dark:text-slate-350">
+                  <strong className="text-slate-800 dark:text-slate-205">Stylus Vector Signatures:</strong> Draw signature paths on an active canvas. Captured base64 vectors are printed directly onto client invoices.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Showcase 3: Compliance State Tax splits & Bulk Imports */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+            {/* Text Description */}
+            <div className="lg:col-span-6 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shadow-inner">
+                  <Database className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-805 uppercase tracking-tight">Compliance & Bulk Import</h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl">
+                Eliminate computational errors. Automatically calculate regional splits, register items to General Ledger codes, and import complete catalogs in seconds.
+              </p>
+              
+              <div className="border-l-2 border-indigo-500 pl-4 py-1 space-y-3 text-xs max-w-xl">
+                <p className="leading-relaxed text-slate-600 dark:text-slate-350">
+                  <strong className="text-slate-800 dark:text-slate-205">Auto State splits (CGST/SGST/IGST):</strong> Maps business state codes (e.g. Delhi-07) to auto-split taxes for intra-state transactions or apply IGST for inter-state supply.
+                </p>
+                <p className="leading-relaxed text-slate-600 dark:text-slate-350">
+                  <strong className="text-slate-800 dark:text-slate-205">Bulk Spreadsheet Sandboxing:</strong> Drag-and-drop XLS/CSV spreadsheet sheets to populate customer registers and product lists in bulk.
+                </p>
+              </div>
             </div>
 
+            {/* Interactive Mockup */}
+            <div className="lg:col-span-6">
+              <div className={`p-5 sm:p-6 rounded-3xl border transition-all ${
+                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800 shadow-2xl shadow-indigo-550/5' : 'bg-white border-slate-150 shadow-xl'
+              }`}>
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-3 mb-4 text-[10px]">
+                  <span className="font-black uppercase text-slate-405 dark:text-slate-505 tracking-wider">Spreadsheet Bulk Import Vault</span>
+                  <div className="flex gap-1">
+                    {(['products', 'clients'] as const).map((type) => (
+                      <button 
+                        key={type}
+                        type="button" 
+                        onClick={() => { setBulkDataType(type); setBulkFileUploaded(false); }}
+                        className={`px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all cursor-pointer ${
+                          bulkDataType === type 
+                            ? 'bg-indigo-600 text-white' 
+                            : 'bg-slate-105 dark:bg-neutral-950 text-slate-550 dark:text-slate-400 hover:bg-slate-200'
+                        }`}
+                      >
+                        {type === 'products' ? 'Products' : 'Clients'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Dropzone mockup */}
+                  <div 
+                    onClick={() => setBulkFileUploaded(true)}
+                    className="border-2 border-dashed border-indigo-500/30 rounded-2xl p-5 text-center cursor-pointer hover:bg-indigo-500/5 dark:hover:bg-indigo-500/10 transition-all space-y-2"
+                  >
+                    <Upload className="w-7 h-7 text-indigo-500 mx-auto animate-bounce" />
+                    <div>
+                      <span className="block text-[9px] font-black text-slate-700 dark:text-slate-300">
+                        {bulkFileUploaded ? 'File Parsed Successfully!' : `Upload Bulk ${bulkDataType === 'products' ? 'Product Catalog' : 'Client Directory'}`}
+                      </span>
+                      <span className="block text-[8px] text-slate-400 dark:text-slate-500">Supports spreadsheet XLS, XLSX, and CSV documents</span>
+                    </div>
+                  </div>
+
+                  {bulkFileUploaded && (
+                    <div className="p-3 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-1 animate-fade-in text-[9px]">
+                      <div className="flex justify-between items-center text-indigo-600 dark:text-indigo-400 font-bold">
+                        <span>Status: Validated</span>
+                        <span>[24 rows parsed]</span>
+                      </div>
+                      <div className="space-y-0.5 font-mono text-[8px] text-slate-500 dark:text-slate-405">
+                        <p>1. {bulkDataType === 'products' ? 'Development consulting service - $120.00' : 'Alex Morgan - San Francisco'}</p>
+                        <p>2. {bulkDataType === 'products' ? 'Aluminum Casting rods inventory - $45.00' : 'Intez B2B Systems - Delhi'}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Showcase 4: General Ledger & Cash Flow Books */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+            {/* Interactive Mockup (Order 2 on mobile, 1 on desktop) */}
+            <div className="lg:col-span-6 lg:order-1 order-2">
+              <div className={`p-5 sm:p-6 rounded-3xl border transition-all ${
+                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800 shadow-2xl shadow-amber-550/5' : 'bg-white border-slate-150 shadow-xl'
+              }`}>
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-3 mb-4 text-[10px]">
+                  <span className="font-black uppercase text-slate-450 dark:text-slate-500 tracking-wider">GL Mapping & Inventory Ledger</span>
+                  <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest bg-amber-500/10 px-2 py-0.5 rounded">BOOKKEEPING LOGS</span>
+                </div>
+
+                <div className="space-y-4 text-[10px]">
+                  {/* Item catalog selection */}
+                  <div className="p-3 bg-slate-50/50 dark:bg-neutral-955/40 border border-slate-100 dark:border-neutral-900 rounded-2xl space-y-3">
+                    <div className="flex justify-between items-center text-slate-705 dark:text-slate-350">
+                      <span className="font-bold">Catalog Item:</span>
+                      <span className="font-mono font-bold">INV-ITEM-0045 (Aluminium Rods)</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <span className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase">Unit of Measure (UOM)</span>
+                        <select 
+                          value={demoUom}
+                          onChange={(e) => setDemoUom(e.target.value as any)}
+                          className="w-full px-2 py-1 rounded border border-slate-205 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-slate-805 dark:text-white text-[10px] focus:outline-none"
+                        >
+                          <option value="pcs">Pieces (pcs)</option>
+                          <option value="bags">Bags (bags)</option>
+                          <option value="kg">Kilograms (kg)</option>
+                          <option value="meters">Meters (mtr)</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase">General Ledger Code</span>
+                        <select 
+                          value={selectedGlAccount}
+                          onChange={(e) => setSelectedGlAccount(e.target.value as any)}
+                          className="w-full px-2 py-1 rounded border border-slate-205 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-slate-805 dark:text-white text-[10px] focus:outline-none"
+                        >
+                          <option value="4001">4001 - Revenue Account</option>
+                          <option value="5002">5002 - Operating Cost</option>
+                          <option value="1010">1010 - Cash Equivalents</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mapping Output Simulation */}
+                  <div className="p-3 bg-amber-500/5 border border-amber-500/10 rounded-2xl text-[9px] font-mono space-y-1">
+                    <div className="flex justify-between items-center font-bold text-amber-600 dark:text-amber-400">
+                      <span>Ledger State Mapping:</span>
+                      <span>ACTIVE</span>
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-405">
+                      Item stock unit set to <strong className="text-slate-700 dark:text-slate-200">[{demoUom}]</strong>. All item invoice records will auto-route transactions to <strong className="text-slate-700 dark:text-slate-200">[GL Account #{selectedGlAccount}]</strong>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Text Description (Order 1 on mobile, 2 on desktop) */}
+            <div className="lg:col-span-6 lg:order-2 order-1 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shadow-inner">
+                  <Settings className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-805 uppercase tracking-tight">General Ledger Books</h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl">
+                Connect your physical operations with formal accounting databases. Map invoice items to specific ledger codes and maintain audit records of operational costs.
+              </p>
+              
+              <div className="border-l-2 border-amber-500 pl-4 py-1 space-y-3 text-xs max-w-xl">
+                <p className="leading-relaxed text-slate-600 dark:text-slate-350">
+                  <strong className="text-slate-800 dark:text-slate-202">Flexible Units of Measure (UOM):</strong> Track inventory, services, raw materials, or hardware catalogs using custom units (bags, boxes, kg, meters, pieces, hours).
+                </p>
+                <p className="leading-relaxed text-slate-600 dark:text-slate-355">
+                  <strong className="text-slate-800 dark:text-slate-202">Bookkeeping Registry:</strong> Route business revenue and operational overhead costs automatically to designated accounts for quick ledger balance audits.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Showcase 5: Billing Analytics & Cash Flow Reports */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+            {/* Text Description */}
+            <div className="lg:col-span-6 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shadow-inner">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-805 uppercase tracking-tight">Billing Analytics</h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl">
+                Evaluate business health at a glance. Access instant cash flow summaries, profit margin reviews, collection ratios, and outstanding receivables tracking.
+              </p>
+              
+              <div className="border-l-2 border-emerald-500 pl-4 py-1 space-y-3 text-xs max-w-xl">
+                <p className="leading-relaxed text-slate-600 dark:text-slate-350">
+                  <strong className="text-slate-800 dark:text-slate-202">Cash Flow Reporting Filters:</strong> Group collections and pending balances dynamically by Month, Quarter, or Year to evaluate growth cycles.
+                </p>
+                <p className="leading-relaxed text-slate-600 dark:text-slate-350">
+                  <strong className="text-slate-800 dark:text-slate-202">Spreadsheet Compilation:</strong> Compile overhead summaries, client registries, and invoicing details to formatted XLSX files for tax reporting.
+                </p>
+              </div>
+            </div>
+
+            {/* Interactive Mockup */}
+            <div className="lg:col-span-6">
+              <div className={`p-5 sm:p-6 rounded-3xl border transition-all ${
+                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800 shadow-2xl shadow-emerald-550/5' : 'bg-white border-slate-150 shadow-xl'
+              }`}>
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-3 mb-4 text-[10px]">
+                  <span className="font-black uppercase text-slate-405 dark:text-slate-500 tracking-wider">Reports & Reporting Studio</span>
+                  <div className="flex gap-1">
+                    {(['month', 'quarter', 'year'] as const).map((period) => (
+                      <button 
+                        key={period}
+                        type="button" 
+                        onClick={() => setAnalyticsPeriod(period)}
+                        className={`px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all cursor-pointer ${
+                          analyticsPeriod === period 
+                            ? 'bg-emerald-600 text-white' 
+                            : 'bg-slate-100 dark:bg-neutral-950 text-slate-550 dark:text-slate-400 hover:bg-slate-200'
+                        }`}
+                      >
+                        {period === 'month' ? 'Monthly' : period === 'quarter' ? 'Quarterly' : 'Yearly'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4 text-[10px]">
+                  {/* Reports Stats Panel */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-2.5 rounded-xl bg-slate-50/50 dark:bg-neutral-950/40 border border-slate-100 dark:border-neutral-900 text-center">
+                      <span className="block text-[7px] font-bold text-slate-400 uppercase">Total Collected</span>
+                      <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                        {analyticsPeriod === 'month' ? '$9,500' : analyticsPeriod === 'quarter' ? '$28,500' : '$114,000'}
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-50/50 dark:bg-neutral-955/40 border border-slate-100 dark:border-neutral-900 text-center">
+                      <span className="block text-[7px] font-bold text-slate-400 uppercase">Outstanding</span>
+                      <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                        {analyticsPeriod === 'month' ? '$1,310' : analyticsPeriod === 'quarter' ? '$4,120' : '$12,400'}
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-50/50 dark:bg-neutral-950/40 border border-slate-100 dark:border-neutral-900 text-center">
+                      <span className="block text-[7px] font-bold text-slate-400 uppercase">Net Margin</span>
+                      <span className="font-mono font-bold text-emerald-500">
+                        {analyticsPeriod === 'month' ? '84%' : analyticsPeriod === 'quarter' ? '81%' : '78%'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Profit Curve Bar Simulation */}
+                  <div className="p-3 bg-slate-50/50 dark:bg-neutral-955/40 border border-slate-100 dark:border-neutral-900 rounded-2xl space-y-2">
+                    <span className="block text-[8px] font-bold text-slate-400 uppercase">Growth Revenue Stream</span>
+                    <div className="flex items-end gap-2.5 h-12 pt-3">
+                      <div className="w-full bg-slate-200 dark:bg-neutral-800 rounded-t h-4 transition-all" />
+                      <div className="w-full bg-slate-200 dark:bg-neutral-800 rounded-t h-7 transition-all" />
+                      <div className="w-full bg-slate-200 dark:bg-neutral-800 rounded-t h-9 transition-all" />
+                      <div className="w-full bg-emerald-500 rounded-t h-12 transition-all animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Premium Accordion-Style Help & FAQ Section */}
-        <div id="faq-section" className="mt-10 sm:mt-12 max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300 scroll-mt-24">
-          <div className="text-center space-y-2">
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-805 uppercase tracking-wide">
+        <div id="faq-section" className="mt-10 sm:mt-12 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-300 scroll-mt-24 px-4 sm:px-6 mb-10 text-center">
+          <div className="space-y-2 max-w-2xl mx-auto">
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 uppercase">
               Frequently Asked Questions
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-405 max-w-lg mx-auto">
-              Got questions about billing, offline-mode security, or customization? Find quick answers below.
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Got questions about billing, offline-mode security, or customization? Find
+              quick answers below.
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-1 text-left">
             {faqItems.map((faq, index) => {
               const isOpen = openFaqIndex === index;
               return (
                 <div 
                   key={index} 
-                  className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
-                    isOpen 
-                      ? theme === 'dark' 
-                        ? 'bg-neutral-900/90 border-sky-500/50 shadow-md shadow-sky-500/5' 
-                        : 'bg-white border-sky-500/40 shadow-sm ring-1 ring-sky-100/30'
-                      : theme === 'dark'
-                        ? 'bg-neutral-900/40 border-neutral-800/80 hover:border-neutral-750'
-                        : 'bg-white border-slate-150 hover:border-slate-200'
+                  className={`border-b transition-colors duration-300 ${
+                    theme === 'dark' 
+                      ? 'border-neutral-800/80 hover:border-neutral-700' 
+                      : 'border-slate-200 hover:border-slate-300'
                   }`}
                 >
                   <button
                     type="button"
                     onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                    className="w-full px-5 py-4 flex items-center justify-between text-left cursor-pointer focus:outline-none select-none transition-colors"
+                    className="w-full py-5 flex items-center justify-between text-left cursor-pointer focus:outline-none select-none group"
                   >
-                    <span className="text-xs sm:text-sm font-bold text-slate-805 pr-4 leading-snug">
+                    <span className={`text-[15px] font-semibold leading-snug transition-colors duration-200 pr-6 ${
+                      isOpen 
+                        ? theme === 'dark' ? 'text-sky-400' : 'text-sky-600'
+                        : theme === 'dark' ? 'text-slate-300 group-hover:text-white' : 'text-slate-800 group-hover:text-sky-600'
+                    }`}>
                       {faq.question}
                     </span>
-                    <span className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all bg-slate-100/30 dark:bg-neutral-850 shrink-0 ${
-                      isOpen ? 'rotate-180 text-sky-500' : 'text-slate-400 dark:text-slate-500'
+                    <span className={`w-6 h-6 flex items-center justify-center transition-transform duration-300 shrink-0 ${
+                      isOpen ? 'rotate-180' : ''
                     }`}>
-                      <ChevronDown className="w-3.5 h-3.5" />
+                      <ChevronDown className={`w-4.5 h-4.5 transition-colors duration-200 ${
+                        isOpen 
+                          ? theme === 'dark' ? 'text-sky-400' : 'text-sky-600'
+                          : theme === 'dark' ? 'text-slate-500 group-hover:text-slate-300' : 'text-slate-400 group-hover:text-sky-600'
+                      }`} />
                     </span>
                   </button>
 
                   <div className={`transition-all duration-300 ease-in-out ${
-                    isOpen ? 'max-h-52 opacity-100 border-t border-slate-100 dark:border-neutral-800' : 'max-h-0 opacity-0 pointer-events-none'
+                    isOpen ? 'max-h-64 opacity-100 pb-6' : 'max-h-0 opacity-0 pointer-events-none'
                   } overflow-hidden`}>
-                    <p className="px-5 py-3.5 text-[10.5px] sm:text-xs text-slate-500 dark:text-slate-405 leading-relaxed bg-slate-50/20 dark:bg-neutral-950/20">
+                    <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} leading-relaxed pr-8`}>
                       {faq.answer}
                     </p>
                   </div>
@@ -1174,172 +1633,11 @@ export default function Homepage({
           </div>
         </div>
 
-        {/* 3. Inline Contact Support Section */}
-        <div id="contact-section" className="mt-10 sm:mt-12 max-w-lg md:max-w-5xl lg:max-w-6xl mx-auto relative z-10 animate-fade-in scroll-mt-24">
-          <div className="text-center space-y-2 mb-8">
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-805 tracking-tight uppercase">
-              Get in Touch
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-405">
-              Have questions, feedback, or need help? Contact our support team directly.
-            </p>
-          </div>
-
-          <div className={`w-full rounded-3xl border transition-all relative overflow-hidden ${
-            theme === 'dark' 
-              ? 'bg-neutral-900/90 border-neutral-800 shadow-2xl shadow-sky-500/5' 
-              : 'bg-white border-slate-150 shadow-xl'
-          }`}>
-            <div className="grid grid-cols-1 md:grid-cols-12">
-              
-              {/* Left Column: Direct Support Channels */}
-              <div className="p-5 sm:p-8 md:col-span-5 bg-slate-50/50 dark:bg-neutral-950/20 border-b md:border-b-0 md:border-r border-slate-150 dark:border-neutral-800 flex flex-col justify-between">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-sm font-extrabold text-slate-805 mb-2">Direct Channels</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-405">Reach out to us directly via email or phone for urgent issues.</p>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center shrink-0">
-                        <Mail className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Email Address</span>
-                        <a href="mailto:support@makinvoices.com" className="text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-sky-505 transition-colors">support@makinvoices.com</a>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                        <Phone className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider">Phone Support</span>
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200">+1 (800) 555-MAKI</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
-                        <Globe className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider">Support Hours</span>
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200">24/7 Global Response Desk</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-sky-500/5 dark:bg-sky-500/10 border border-sky-500/10 rounded-2xl mt-8">
-                  <p className="text-[10px] font-black text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-1">Response Guarantee</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-normal">Our system automatically routes ledger queries. We usually respond to support tickets within 2 hours.</p>
-                </div>
-              </div>
-
-              {/* Right Column: Contact Message Form */}
-              <div className="p-5 sm:p-8 md:col-span-7 flex flex-col justify-center">
-                {contactSubmitted ? (
-                  <div className="text-center py-8 space-y-3 animate-fade-in">
-                    <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto">
-                      <Check className="w-6 h-6" />
-                    </div>
-                    <h4 className="text-sm font-bold text-slate-850">Message Sent Successfully!</h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">Thank you for reaching out. Our support team will get in touch with you shortly.</p>
-                    <button 
-                      type="button" 
-                      onClick={() => setContactSubmitted(false)}
-                      className="mt-4 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all"
-                    >
-                      Send Another Message
-                    </button>
-                  </div>
-                ) : (
-                  <form 
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      setContactLoading(true);
-                      await new Promise(r => setTimeout(r, 1000));
-                      setContactLoading(false);
-                      setContactSubmitted(true);
-                      setContactForm({ name: '', email: '', message: '' });
-                    }} 
-                    className="space-y-4"
-                  >
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-slate-455 mb-1">Your Name *</label>
-                      <input 
-                        type="text" 
-                        required 
-                        value={contactForm.name} 
-                        onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                        placeholder="e.g. John Doe"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-955 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-slate-455 mb-1">Email Address *</label>
-                      <input 
-                        type="email" 
-                        required 
-                        value={contactForm.email} 
-                        onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                        placeholder="you@company.com"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-955 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-slate-455 mb-1">Message *</label>
-                      <textarea 
-                        required 
-                        rows={4} 
-                        value={contactForm.message} 
-                        onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                        placeholder="Tell us how we can help you..."
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-955 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all resize-none"
-                      />
-                    </div>
-                    <button 
-                      type="submit" 
-                      disabled={contactLoading}
-                      className="w-full py-3 bg-sky-600 hover:bg-sky-500 disabled:bg-neutral-800 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-sky-600/15 cursor-pointer"
-                    >
-                      {contactLoading ? (
-                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <Mail className="w-3.5 h-3.5" />
-                          <span>Send Support Message</span>
-                        </>
-                      )}
-                    </button>
-                  </form>
-                )}
-              </div>
-
-            </div>
-          </div>
-        </div>
-
         {/* Footer info branding */}
         <footer className="mt-8 text-center text-xs text-slate-400 border-t border-slate-100 dark:border-neutral-800 pt-6">
           <p>© {new Date().getFullYear()} MakInvoices Corp. Local state automatically cached for safety. Encryption standards enabled.</p>
         </footer>
 
-        {/* Floating multilingual info badge */}
-        {langNotice && (
-          <div className={`fixed ${showScrollTop ? 'bottom-22' : 'bottom-6'} right-6 max-w-sm bg-slate-900/95 dark:bg-black/90 text-white p-3.5 rounded-2xl shadow-xl border border-slate-750 dark:border-neutral-800 z-55 animate-fade-in flex items-start gap-2.5 text-left transition-all duration-300`}>
-            <div className="p-1 rounded-xl bg-sky-500/20 text-sky-400">
-              <Globe className="w-4 h-4" />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-xs font-black text-white">Multilingual Blueprint</h4>
-              <p className="text-[10px] text-slate-350 font-medium leading-relaxed mt-0.5">{langNotice}</p>
-            </div>
-          </div>
-        )}
 
         {/* Scroll To Top Button */}
         {showScrollTop && (

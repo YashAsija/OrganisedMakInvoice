@@ -85,6 +85,8 @@ interface DashboardProps {
   onDeleteClient: (id: string) => void;
   onSaveExpense: (expense: Expense) => void;
   onDeleteExpense: (id: string) => void;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
 export default function Dashboard({
@@ -111,10 +113,14 @@ export default function Dashboard({
   onSaveClient,
   onDeleteClient,
   onSaveExpense,
-  onDeleteExpense
+  onDeleteExpense,
+  activeTab: propActiveTab,
+  onTabChange
 }: DashboardProps) {
   // Navigation tabs: 'dashboard' | 'profile' | 'learn' | 'invoices' | 'clients' | 'reports' | 'master_vendor' ...
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [localActiveTab, setLocalActiveTab] = useState<string>('dashboard');
+  const activeTab = propActiveTab !== undefined ? propActiveTab : localActiveTab;
+  const setActiveTab = onTabChange !== undefined ? onTabChange : setLocalActiveTab;
   
   // Custom scroll recovery behavior to guarantee the dashboard opens from the top instead of stays scrolled to the bottom on sign-in
   React.useEffect(() => {

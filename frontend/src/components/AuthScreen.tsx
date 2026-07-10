@@ -225,11 +225,11 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
 
   return (
     <div className={`min-h-screen w-full flex flex-col md:flex-row transition-all duration-300 font-sans ${
-      theme === 'dark' ? 'bg-[#0b0f19] text-slate-100' : 'bg-slate-50 text-slate-900'
+      theme === 'dark' ? 'bg-neutral-955 text-slate-105' : 'bg-slate-50 text-slate-900'
     }`}>
       
       {/* Left side: Premium Minimalist Marketing Panel */}
-      <div className="hidden md:flex md:w-[45%] bg-[#080c16] p-16 text-white flex-col justify-between relative overflow-hidden border-r border-slate-900/50">
+      <div className="hidden md:flex md:w-[45%] bg-[#080808] p-16 text-white flex-col justify-between relative overflow-hidden border-r border-neutral-900/60">
         {/* Soft Modern Mesh Glows */}
         <div className="absolute -top-[10%] -left-[10%] w-[500px] h-[500px] bg-sky-500/8 rounded-full blur-[130px] pointer-events-none" />
         <div className="absolute -bottom-[10%] -right-[10%] w-[500px] h-[500px] bg-indigo-500/8 rounded-full blur-[130px] pointer-events-none" />
@@ -259,7 +259,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
             Automate your estimates, track invoices in real-time, generate custom signatures, and export pixel-perfect PDF bills.
           </p>
 
-          <div className="space-y-4 pt-6 border-t border-slate-900">
+          <div className="space-y-4 pt-6 border-t border-neutral-900">
             <div className="flex items-start gap-3">
               <div className="w-7 h-7 rounded-lg bg-sky-500/5 flex items-center justify-center text-sky-400 shrink-0 border border-sky-500/10">
                 <ShieldCheck className="w-4 h-4" />
@@ -270,7 +270,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-lg bg-indigo-500/5 flex items-center justify-center text-indigo-400 shrink-0 border border-indigo-500/10">
+              <div className="w-7 h-7 rounded-lg bg-indigo-500/5 flex items-center justify-center text-indigo-400 shrink-0 border border-neutral-800/10">
                 <CheckCircle className="w-4 h-4" />
               </div>
               <div>
@@ -288,7 +288,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
       </div>
 
       {/* Right side: Auth Form Panel */}
-      <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-16 relative bg-slate-50 dark:bg-[#090d16] transition-colors duration-300">
+      <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-16 relative bg-slate-50 dark:bg-neutral-950 transition-colors duration-300">
         
         {/* Soft Background Mesh on mobile/light */}
         <div className="absolute top-[20%] right-[10%] w-80 h-80 bg-sky-500/5 rounded-full blur-[110px] pointer-events-none md:hidden" />
@@ -305,13 +305,12 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
         <div className="w-full max-w-sm z-10">
           <div className={`w-full rounded-2xl border transition-all duration-300 shadow-xl shadow-slate-200/5 dark:shadow-none ${
             theme === 'dark' 
-              ? 'bg-[#0f1422] border-slate-800/80' 
+              ? 'bg-neutral-900 border-neutral-800/80' 
               : 'bg-white border-slate-200/50'
           }`}>
             
-            {/* Header */}
-            <div className="text-center pt-8 pb-5 border-b border-slate-100 dark:border-slate-800/40">
-              <h2 className="text-base font-extrabold text-slate-800 dark:text-white uppercase tracking-wider">
+            {/* Header */}            <div className="text-center pt-8 pb-5 border-b border-slate-100 dark:border-neutral-800/40">
+              <h2 className="text-base font-extrabold text-slate-805 uppercase tracking-wider">
                 {authMode === 'signup' ? 'Create Workspace' : 'Welcome Back'}
               </h2>
               <p className="text-[9.5px] text-slate-600 dark:text-slate-500 mt-1 uppercase tracking-widest font-bold">
@@ -321,13 +320,13 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
 
             <div className="p-6 sm:p-8">
               {/* Form Toggle Bar */}
-              <div className="flex bg-slate-100/60 dark:bg-slate-900/55 p-1 rounded-xl mb-6 border border-slate-200/10">
+              <div className="flex bg-slate-100/60 dark:bg-neutral-900/55 p-1 rounded-xl mb-6 border border-slate-200/10">
                 <button
                   type="button"
                   onClick={() => { setAuthMode('signup'); setOtpSent(false); setSuccessMsg(''); }}
                   className={`flex-1 py-1.5 text-center text-[10.5px] font-extrabold uppercase tracking-wide rounded-lg transition-all cursor-pointer ${
                     authMode === 'signup' 
-                      ? 'bg-white dark:bg-[#141b2e] text-sky-600 dark:text-sky-400 shadow-xs' 
+                      ? 'bg-white dark:bg-neutral-800 text-sky-600 dark:text-sky-400 shadow-xs' 
                       : 'text-slate-500 dark:text-slate-450 hover:text-slate-800 dark:hover:text-slate-300'
                   }`}
                 >
@@ -338,7 +337,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                   onClick={() => { setAuthMode('login'); setOtpSent(false); setSuccessMsg(''); }}
                   className={`flex-1 py-1.5 text-center text-[10.5px] font-extrabold uppercase tracking-wide rounded-lg transition-all cursor-pointer ${
                     authMode === 'login' 
-                      ? 'bg-white dark:bg-[#141b2e] text-sky-600 dark:text-sky-400 shadow-xs' 
+                      ? 'bg-white dark:bg-neutral-800 text-sky-600 dark:text-sky-400 shadow-xs' 
                       : 'text-slate-500 dark:text-slate-450 hover:text-slate-800 dark:hover:text-slate-300'
                   }`}
                 >
@@ -354,7 +353,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                   className={`flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl border transition-all cursor-pointer font-bold ${
                     loginMethod === 'email' 
                       ? 'border-sky-500/50 bg-sky-500/5 text-sky-600 dark:text-sky-400 shadow-xs' 
-                      : 'border-slate-150 dark:border-slate-805 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/30'
+                      : 'border-slate-150 dark:border-neutral-800 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/30'
                   }`}
                 >
                   <Mail className="w-3.5 h-3.5" />
@@ -366,7 +365,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                   className={`flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl border transition-all cursor-pointer font-bold ${
                     loginMethod === 'phone_otp' 
                       ? 'border-sky-500/50 bg-sky-500/5 text-sky-600 dark:text-sky-400 shadow-xs' 
-                      : 'border-slate-150 dark:border-slate-805 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/30'
+                      : 'border-slate-150 dark:border-neutral-800 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/30'
                   }`}
                 >
                   <User className="w-3.5 h-3.5" />
@@ -378,13 +377,13 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                   className={`flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl border transition-all cursor-pointer font-bold ${
                     loginMethod === 'google' 
                       ? 'border-sky-500/50 bg-sky-500/5 text-sky-600 dark:text-sky-400 shadow-xs' 
-                      : 'border-slate-150 dark:border-slate-805 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/30'
+                      : 'border-slate-150 dark:border-neutral-800 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/30'
                   }`}
                 >
                   <LogIn className="w-3.5 h-3.5" />
                   <span className="text-[8px] uppercase tracking-widest font-black">Google</span>
                 </button>
-              </div>
+              </div>>
 
               {/* Toast Messages */}
               {successMsg && (
@@ -405,7 +404,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  className="w-full py-3 px-4 bg-white hover:bg-slate-55 dark:bg-slate-900 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-200 text-[11px] font-bold tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-2.5 border border-slate-200 dark:border-slate-800 shadow-xs cursor-pointer hover:scale-[1.01] active:scale-99"
+                  className="w-full py-3 px-4 bg-white hover:bg-slate-55 dark:bg-neutral-900 dark:hover:bg-neutral-850 text-slate-700 dark:text-slate-200 text-[11px] font-bold tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-2.5 border border-slate-200 dark:border-neutral-800 shadow-xs cursor-pointer hover:scale-[1.01] active:scale-99"
                 >
                   <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -427,7 +426,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                           placeholder="e.g. John Doe"
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-800 dark:text-white"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
                         />
                       </div>
                       <div>
@@ -438,7 +437,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                           value={formData.companyName}
                           onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                           placeholder="e.g. Acme Tech Solutions"
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-800 dark:text-white"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
                         />
                       </div>
                       <div>
@@ -449,7 +448,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                           value={formData.phone}
                           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                           placeholder="e.g. +91 98765 43210"
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-800 dark:text-white"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
                         />
                       </div>
                     </div>
@@ -463,7 +462,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="e.g. sales@yourcompany.com"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-800 dark:text-white"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
                     />
                   </div>
 
@@ -475,7 +474,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       placeholder="••••••••"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-800 dark:text-white"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
                     />
                     {authMode === 'signup' && formData.password && (
                       <div className="mt-2.5 space-y-1 bg-slate-50 dark:bg-slate-900/20 p-2.5 rounded-xl border border-slate-200/5">
@@ -518,7 +517,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="e.g. John Doe"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-800 dark:text-white"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
                     />
                   </div>
                   <div>
@@ -529,7 +528,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                       value={formData.companyName}
                       onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                       placeholder="e.g. Acme Corporation"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-800 dark:text-white"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
                     />
                   </div>
                   <div>
@@ -540,7 +539,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       placeholder="e.g. guest-session"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-800 dark:text-white"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
                     />
                   </div>
 
@@ -564,9 +563,9 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
               {/* Divider */}
               <div className="relative flex items-center justify-center my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-100 dark:border-slate-800/40" />
+                  <div className="w-full border-t border-slate-100 dark:border-neutral-800/40" />
                 </div>
-                <span className="relative px-2.5 text-[8px] font-black uppercase tracking-widest text-slate-450 bg-white dark:bg-[#0f1422] rounded-full">OR</span>
+                <span className="relative px-2.5 text-[8px] font-black uppercase tracking-widest text-slate-450 bg-white dark:bg-neutral-900 rounded-full">OR</span>
               </div>
 
               {/* Instant Sandbox Entry */}
