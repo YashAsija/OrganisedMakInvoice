@@ -383,7 +383,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                   <LogIn className="w-3.5 h-3.5" />
                   <span className="text-[8px] uppercase tracking-widest font-black">Google</span>
                 </button>
-              </div>>
+              </div>
 
               {/* Toast Messages */}
               {successMsg && (
