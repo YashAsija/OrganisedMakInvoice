@@ -30,7 +30,7 @@ const generateBaseTemplate = (id: string, name: string, category: InvoiceTemplat
   },
   config: {
     header: { showLogo: true, logoPosition: 'Left', logoWidth: 120, logoHeight: 60, titleAlignment: 'Right', invoiceTitle: 'TAX INVOICE' },
-    company: { fields: ['name', 'address', 'gstin', 'email', 'phone'] },
+    company: { fields: ['name', 'address', 'gstin', 'email', 'phone', 'pan'] },
     invoiceInfo: { fields: ['invoiceNumber', 'invoiceDate', 'dueDate'], customFields: [], position: 'Right' },
     client: { fields: ['name', 'address', 'gstin'] },
     shipping: { fields: ['name', 'address', 'gstin', 'phone', 'email', 'pan'], sameAsBilling: false },
@@ -243,7 +243,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
     config: {
       ...generateBaseTemplate('preset_gst', 'GST Exhaustive', 'GST').config,
       header: { showLogo: true, logoPosition: 'Left', logoWidth: 120, logoHeight: 60, titleAlignment: 'Right', invoiceTitle: 'TAX INVOICE' },
-      company: { fields: ['name', 'address', 'gstin', 'email', 'phone'] },
+      company: { fields: ['name', 'address', 'gstin', 'email', 'phone', 'pan'] },
       client: { fields: ['name', 'address', 'gstin'] },
       tax: { showTaxableAmount: true, showCgstSgst: true, showIgst: true, showCess: false, showDiscount: true, showRoundOff: true, showTotal: true, enableHsnSummary: true, enableGstSummary: true, enableTaxBreakdown: true }
     },
@@ -305,7 +305,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
     config: {
       ...generateBaseTemplate('preset_corporate', 'Corporate Professional', 'Default').config,
       header: { showLogo: true, logoPosition: 'Left', logoWidth: 120, logoHeight: 60, titleAlignment: 'Right', invoiceTitle: 'TAX INVOICE' },
-      company: { fields: ['name', 'address', 'gstin', 'email', 'phone'] },
+      company: { fields: ['name', 'address', 'gstin', 'email', 'phone', 'pan'] },
       client: { fields: ['name', 'address', 'gstin'] },
       tax: { showTaxableAmount: true, showCgstSgst: true, showIgst: true, showCess: false, showDiscount: true, showRoundOff: true, showTotal: true, enableHsnSummary: true, enableGstSummary: false, enableTaxBreakdown: true },
       table: {

@@ -23,6 +23,39 @@ interface InvoiceModalProps {
   onSave: (inv: Invoice) => void;
 }
 
+const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesList: Invoice[]) => {
+  const prefix = prefixInput ? String(prefixInput).trim() : 'INV';
+  const starting = startingInput !== undefined && startingInput !== null ? String(startingInput).trim() : '1';
+  
+  const currentYear = new Date().getFullYear();
+  const formatPrefix = `${prefix}-${currentYear}-`; // e.g. "INV-2026-"
+
+  // Extract digits from starting input suffix
+  const match = starting.match(/^(.*?)(\d+)$/);
+  const startNumStr = match ? match[2] : '1';
+  const startNum = parseInt(startNumStr, 10);
+  const padLength = startNumStr.length;
+
+  let maxNum = startNum - 1;
+  if (invoicesList && invoicesList.length > 0) {
+    invoicesList.forEach(inv => {
+      const invNum = inv.invoiceNumber || '';
+      if (invNum.startsWith(formatPrefix)) {
+        const suffix = invNum.substring(formatPrefix.length);
+        if (/^\d+$/.test(suffix)) {
+          const num = parseInt(suffix, 10);
+          if (num > maxNum) {
+            maxNum = num;
+          }
+        }
+      }
+    });
+  }
+  const nextNum = maxNum + 1;
+  const nextNumStr = String(nextNum).padStart(padLength, '0');
+  return `${formatPrefix}${nextNumStr}`;
+};
+
 export default function InvoiceModal({ 
   invoice, 
   presets, 
@@ -37,6 +70,21 @@ export default function InvoiceModal({
 }: InvoiceModalProps) {
   // GUI Preview and Form Edit State
   const [activeMode, setActiveMode] = useState<'edit' | 'preview' | 'editable'>('editable');
+  
+  // Master Registry Client Database loader
+  const [registryClients, setRegistryClients] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const cached = localStorage.getItem('makbills_masters_vendors');
+      if (cached) {
+        try {
+          setRegistryClients(JSON.parse(cached));
+        } catch (e) {}
+      }
+    }
+  }, [isOpen]);
+
   // Client details
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [date, setDate] = useState('');
@@ -311,7 +359,7 @@ export default function InvoiceModal({
       const now = new Date();
       const dateStr = now.toISOString().split('T')[0];
       const dueStr = new Date(now.setDate(now.getDate() + 14)).toISOString().split('T')[0];
-      const defaultNumber = `INV-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const defaultNumber = getNextInvoiceNumber(profile.invoicePrefix || '', profile.startingInvoiceNumber || '', invoices);
       
       setInvoiceNumber(defaultNumber);
       setDate(dateStr);
@@ -410,6 +458,16 @@ export default function InvoiceModal({
     setActiveProfile(profile);
   }, [profile]);
 
+  // Sync default invoice number for new invoices when starting settings load
+  useEffect(() => {
+    if (isOpen && !invoice) {
+      const targetPrefix = activeProfile.invoicePrefix || profile.invoicePrefix || 'INV';
+      const targetStart = activeProfile.startingInvoiceNumber || profile.startingInvoiceNumber || '1';
+      const defaultNumber = getNextInvoiceNumber(targetPrefix, targetStart, invoices);
+      setInvoiceNumber(defaultNumber);
+    }
+  }, [activeProfile.startingInvoiceNumber, profile.startingInvoiceNumber, activeProfile.invoicePrefix, profile.invoicePrefix, invoices, isOpen, invoice]);
+
   // Fetch fresh company settings from Supabase on modal mount/open
   useEffect(() => {
     if (isOpen) {
@@ -436,7 +494,9 @@ export default function InvoiceModal({
                 state: settings.state || prev.state,
                 country: settings.country || prev.country,
                 currencySymbol: settings.currency_symbol || prev.currencySymbol,
-                stateCode: settings.state_code || prev.stateCode
+                stateCode: settings.state_code || prev.stateCode,
+                startingInvoiceNumber: settings.starting_invoice_number || prev.startingInvoiceNumber,
+                invoicePrefix: settings.invoice_prefix || prev.invoicePrefix
               }));
               if (settings.state) setCompanyState(settings.state);
               if (settings.country) setCompanyCountry(settings.country);
@@ -744,12 +804,6 @@ export default function InvoiceModal({
 
   const buildTempInvoice = (silent = false): Invoice | null => {
     if (!silent) {
-      const isClientDetailsRequired = (activeTemplate.sections.billTo?.visible !== false) || (activeTemplate.sections.shipTo?.visible === true);
-      if (invoiceType !== 'estimate' && isClientDetailsRequired && !clientName.trim()) {
-        alert('Client Name is required to export PDF.');
-        return null;
-      }
-
       if (items.length === 0) {
         alert('Please add at least one line item to build the PDF.');
         return null;
@@ -769,14 +823,16 @@ export default function InvoiceModal({
       qrCodeTriggerUrl: qrCodeTriggerUrl.trim() || undefined,
       date,
       dueDate,
-      clientName: invoiceType === 'estimate' 
-        ? (clientName.trim() || 'Quote / Estimate') 
-        : (clientName.trim() || (() => {
-            const now = new Date();
-            const formattedDate = now.toISOString().replace(/T/, ' ').replace(/\..+/, '');
-            const guestId = `Guest-${Math.floor(1000 + Math.random() * 9000)}`;
-            return `${guestId} (${formattedDate})`;
-          })()),
+      clientName: silent 
+        ? clientName.trim()
+        : (invoiceType === 'estimate' 
+            ? (clientName.trim() || 'Quote / Estimate') 
+            : (clientName.trim() || (() => {
+                const now = new Date();
+                const formattedDate = now.toISOString().replace(/T/, ' ').replace(/\..+/, '');
+                const guestId = `Guest-${Math.floor(1000 + Math.random() * 9000)}`;
+                return `${guestId} (${formattedDate})`;
+              })())),
       clientEmail: invoiceType === 'estimate' ? '' : clientEmail.trim(),
       clientPhone: invoiceType === 'estimate' ? '' : clientPhone.trim(),
       clientAddress: invoiceType === 'estimate' ? '' : clientAddress.trim(),
@@ -911,15 +967,87 @@ export default function InvoiceModal({
   const handleSaveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const isClientDetailsRequired = (activeTemplate.sections.billTo?.visible !== false) || (activeTemplate.sections.shipTo?.visible === true);
-    if (invoiceType !== 'estimate' && isClientDetailsRequired && !clientName.trim()) {
-      alert('Client Name is required.');
-      return;
-    }
-
     if (items.length === 0) {
       alert('Please add at least one line item to build the bill.');
       return;
+    }
+
+    // Save/update to master registry client database (vendors)
+    if (clientName && clientName.trim() !== '') {
+      const currentRegistry = [...registryClients];
+      const nameLower = clientName.trim().toLowerCase();
+      const existingIdx = currentRegistry.findIndex(c => 
+        (c.name && c.name.toLowerCase() === nameLower) || 
+        (c.company && c.company.toLowerCase() === nameLower)
+      );
+
+      if (existingIdx > -1) {
+        currentRegistry[existingIdx] = {
+          ...currentRegistry[existingIdx],
+          address: clientAddress || currentRegistry[existingIdx].address || '',
+          email: clientEmail || currentRegistry[existingIdx].email || '',
+          phone: clientPhone || currentRegistry[existingIdx].phone || '',
+        };
+      } else {
+        currentRegistry.push({
+          id: `mat_${Math.random().toString(36).substr(2, 9)}`,
+          name: clientName.trim(),
+          company: clientName.trim(),
+          address: clientAddress || '',
+          email: clientEmail || '',
+          phone: clientPhone || '',
+          category: 'Auto-Added from Invoice'
+        });
+      }
+      localStorage.setItem('makbills_masters_vendors', JSON.stringify(currentRegistry));
+      window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
+    }
+
+    if (shippedToName && shippedToName.trim() !== '') {
+      const currentRegistry = JSON.parse(localStorage.getItem('makbills_masters_transports') || '[]');
+      const nameLower = shippedToName.trim().toLowerCase();
+      const existingIdx = currentRegistry.findIndex((t: any) => 
+        (t.name && t.name.toLowerCase() === nameLower)
+      );
+
+      const newTransportRecord = {
+        name: shippedToName.trim(),
+        address: shippedToAddress || '',
+        email: shippedToEmail || '',
+        phone: shippedToPhone || '',
+        gstin: shippedToGstin || '',
+        pan: shippedToPan || '',
+        state: shippedToState || '',
+        country: shippedToCountry || ''
+      };
+
+      if (existingIdx > -1) {
+        const existing = currentRegistry[existingIdx];
+        const isDifferent =
+          existing.address !== newTransportRecord.address ||
+          existing.email !== newTransportRecord.email ||
+          existing.phone !== newTransportRecord.phone ||
+          existing.gstin !== newTransportRecord.gstin ||
+          existing.pan !== newTransportRecord.pan ||
+          existing.state !== newTransportRecord.state ||
+          existing.country !== newTransportRecord.country;
+
+        if (isDifferent) {
+          currentRegistry[existingIdx] = {
+            ...existing,
+            ...newTransportRecord
+          };
+          localStorage.setItem('makbills_masters_transports', JSON.stringify(currentRegistry));
+          window.dispatchEvent(new CustomEvent('makbills_sync_transports'));
+        }
+      } else {
+        currentRegistry.push({
+          id: `trans_${Math.random().toString(36).substr(2, 9)}`,
+          ...newTransportRecord
+        });
+        localStorage.setItem('makbills_masters_transports', JSON.stringify(currentRegistry));
+        window.dispatchEvent(new CustomEvent('makbills_sync_transports'));
+      }
     }
 
     onSave({
@@ -1989,44 +2117,84 @@ export default function InvoiceModal({
           ) : activeMode === 'editable' ? (
             <div className="w-full overflow-x-auto bg-slate-100/50 dark:bg-slate-950/30 p-2 sm:p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
               <div className="w-[794px] mx-auto bg-white p-4 sm:p-8 relative min-h-[1123px] shadow-sm border border-slate-200 dark:border-slate-300" id="pdf-export-content-editable">
-               
-               <LivePreview 
-                 template={activeTemplate} 
-                 invoiceData={liveInvoiceData || invoice || {}} 
-                 businessProfile={activeProfile} 
-                 currencySymbol={currencySymbol} 
-                 isInteractive={true} 
-                 onUpdateField={(field, val) => {
-                    if(field==='invoiceNumber') setInvoiceNumber(val);
-                    if(field==='date') setDate(val);
-                    if(field==='dueDate') setDueDate(val);
-                    if(field==='clientName') setClientName(val);
-                    if(field==='clientEmail') setClientEmail(val);
-                    if(field==='clientPhone') setClientPhone(val);
-                    if(field==='clientAddress') setClientAddress(val);
-                    if(field==='clientGstin') setClientGstin(val);
-                    if(field==='clientState') setClientState(val);
-                    if(field==='clientCountry') setClientCountry(val);
-                    if(field==='shippedToName') setShippedToName(val);
-                    if(field==='shippedToPhone') setShippedToPhone(val);
-                    if(field==='shippedToEmail') setShippedToEmail(val);
-                    if(field==='shippedToPan') setShippedToPan(val);
-                    if(field==='shippedToAddress') setShippedToAddress(val);
-                    if(field==='shippedToGstin') setShippedToGstin(val);
-                    if(field==='shippedToState') setShippedToState(val);
-                    if(field==='shippedToCountry') setShippedToCountry(val);
-                    if(field==='placeOfSupply') setPlaceOfSupply(val);
-                    if(field==='grRrNo') setGrRrNo(val);
-                    if(field==='transport') setTransport(val);
-                    if(field==='vehicleNo') setVehicleNo(val);
-                    if(field==='driverMobile') setDriverMobile(val);
-                    if(field==='station') setStation(val);
-                    if(field==='ewayBillNo') setEwayBillNo(val);
-                    if(field==='invoiceTerms') setInvoiceTerms(val);
-                    if(field==='notes') setNotes(val);
-                    if(field==='poNumber') setPoNumber(val);
-                    if(field==='referenceNumber') setReferenceNumber(val);
-                 }}
+                      <LivePreview 
+                  template={activeTemplate} 
+                  invoiceData={liveInvoiceData || invoice || {}} 
+                  businessProfile={activeProfile} 
+                  currencySymbol={currencySymbol} 
+                  isInteractive={true} 
+                  clients={registryClients}
+                  onUpdateField={(field, val) => {
+                     if(field==='invoiceNumber') setInvoiceNumber(val);
+                     if(field==='date') setDate(val);
+                     if(field==='dueDate') setDueDate(val);
+                     if(field==='clientName') {
+                       setClientName(val);
+                       const matched = registryClients.find(c => c.name?.trim().toLowerCase() === val.trim().toLowerCase() || c.company?.trim().toLowerCase() === val.trim().toLowerCase() || c.companyName?.trim().toLowerCase() === val.trim().toLowerCase());
+                       if (matched) {
+                         if (matched.email) setClientEmail(matched.email);
+                         if (matched.phone) setClientPhone(matched.phone);
+                         if (matched.address) setClientAddress(matched.address);
+                         if ((matched as any).gstin || (matched as any).clientGstin) {
+                           setClientGstin((matched as any).gstin || (matched as any).clientGstin);
+                         }
+                         if ((matched as any).state || (matched as any).clientState) {
+                           setClientState((matched as any).state || (matched as any).clientState);
+                         }
+                         if ((matched as any).country || (matched as any).clientCountry) {
+                           setClientCountry((matched as any).country || (matched as any).clientCountry);
+                         }
+                         if ((matched as any).pan || (matched as any).clientPan) {
+                           setClientPan((matched as any).pan || (matched as any).clientPan);
+                         }
+                       }
+                     }
+                     if(field==='clientEmail') setClientEmail(val);
+                     if(field==='clientPhone') setClientPhone(val);
+                     if(field==='clientAddress') setClientAddress(val);
+                     if(field==='clientGstin') setClientGstin(val);
+                     if(field==='clientState') setClientState(val);
+                     if(field==='clientCountry') setClientCountry(val);
+                     if(field==='shippedToName') {
+                       setShippedToName(val);
+                       const matched = registryClients.find(c => c.name?.trim().toLowerCase() === val.trim().toLowerCase() || c.company?.trim().toLowerCase() === val.trim().toLowerCase() || c.companyName?.trim().toLowerCase() === val.trim().toLowerCase());
+                       if (matched) {
+                         if (matched.email) setShippedToEmail(matched.email);
+                         if (matched.phone) setShippedToPhone(matched.phone);
+                         if (matched.address) setShippedToAddress(matched.address);
+                         if ((matched as any).gstin || (matched as any).clientGstin) {
+                           setShippedToGstin((matched as any).gstin || (matched as any).clientGstin);
+                         }
+                         if ((matched as any).state || (matched as any).clientState) {
+                           setShippedToState((matched as any).state || (matched as any).clientState);
+                         }
+                         if ((matched as any).country || (matched as any).clientCountry) {
+                           setShippedToCountry((matched as any).country || (matched as any).clientCountry);
+                         }
+                         if ((matched as any).pan || (matched as any).clientPan) {
+                           setShippedToPan((matched as any).pan || (matched as any).clientPan);
+                         }
+                       }
+                     }
+                     if(field==='shippedToPhone') setShippedToPhone(val);
+                     if(field==='shippedToEmail') setShippedToEmail(val);
+                     if(field==='shippedToPan') setShippedToPan(val);
+                     if(field==='shippedToAddress') setShippedToAddress(val);
+                     if(field==='shippedToGstin') setShippedToGstin(val);
+                     if(field==='shippedToState') setShippedToState(val);
+                     if(field==='shippedToCountry') setShippedToCountry(val);
+                     if(field==='placeOfSupply') setPlaceOfSupply(val);
+                     if(field==='grRrNo') setGrRrNo(val);
+                     if(field==='transport') setTransport(val);
+                     if(field==='vehicleNo') setVehicleNo(val);
+                     if(field==='driverMobile') setDriverMobile(val);
+                     if(field==='station') setStation(val);
+                     if(field==='ewayBillNo') setEwayBillNo(val);
+                     if(field==='invoiceTerms') setInvoiceTerms(val);
+                     if(field==='notes') setNotes(val);
+                     if(field==='poNumber') setPoNumber(val);
+                     if(field==='referenceNumber') setReferenceNumber(val);
+                  }}
                  onInteractiveAddItem={handleAddItem}
                  onInteractiveRemoveItem={handleInteractiveRemoveItem}
                  onUpdateItemField={(itemId, field, val) => {

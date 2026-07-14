@@ -15,17 +15,17 @@ const loadFonts = () => {
   }
 };
 loadFonts();
-import { InvoiceTemplate, Invoice, BusinessProfile } from '../../types';
+import { InvoiceTemplate, Invoice, BusinessProfile, ClientProfile } from '../../types';
 import { numberToWords } from '../../lib/numberToWords';
 import { EditableField } from '../EditableField';
 import { Country, State } from 'country-state-city';
 import { ensureAllColumns } from '../../lib/templatePresets';
 
-const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, options = [], placeholder = '' }: any) => {
+const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, options = [], placeholder = '', list = '' }: any) => {
   const ref = React.useRef<HTMLSpanElement>(null);
 
   React.useEffect(() => {
-    if (type !== 'select' && ref.current && document.activeElement !== ref.current) {
+    if (type !== 'select' && type !== 'client-select' && ref.current && document.activeElement !== ref.current) {
       const strVal = value?.toString() || '';
       if (ref.current.innerText !== strVal) {
         ref.current.innerText = strVal;
@@ -34,7 +34,7 @@ const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, option
   }, [value, type]);
 
   const handleBlur = () => {
-    if (type !== 'select' && ref.current) {
+    if (type !== 'select' && type !== 'client-select' && ref.current) {
       let val: string | number = ref.current.innerText;
       if (isNumber) {
         val = Number(val.replace(/[^0-9.-]+/g, ""));
@@ -72,6 +72,22 @@ const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, option
     );
   }
 
+  if (type === 'client-select') {
+    return (
+      <div className="relative inline-block w-full bg-slate-50 outline-dashed outline-1 outline-sky-300/80 hover:bg-slate-200/50 hover:outline-sky-400 focus-within:bg-white focus-within:outline-solid focus-within:outline-2 focus-within:outline-sky-500 rounded px-1 cursor-pointer transition-all print:outline-none print:bg-transparent print:border-none">
+        <input
+          type="text"
+          value={value || ''}
+          onChange={(e) => onSave(e.target.value)}
+          placeholder={placeholder}
+          list={list}
+          className="w-full bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-inherit font-inherit"
+          style={{ fontSize: 'inherit', fontWeight: 'inherit', color: 'inherit', padding: 0, border: 'none' }}
+        />
+      </div>
+    );
+  }
+
   return (
     <span
       ref={ref}
@@ -103,6 +119,7 @@ export interface LivePreviewProps {
   hasTransport?: boolean;
   onUpdateHasTransport?: (val: boolean) => void;
   printPageChunks?: any[][];
+  clients?: ClientProfile[];
 }
 
 export const LivePreview: React.FC<LivePreviewProps> = ({
@@ -121,7 +138,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   onCopyBillingToShipping,
   hasTransport,
   onUpdateHasTransport,
-  printPageChunks
+  printPageChunks,
+  clients = []
 }) => {
   const { layout, config, styleConfig, sections } = template;
 
@@ -226,6 +244,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
   const renderInteractive = (value: string | number, fieldKey: string, type: 'text' | 'textarea' = 'text', placeholder = '') => {
     if (isInteractive && onUpdateField) {
+      if (fieldKey === 'clientName') {
+        return <InlineEditable value={value} onSave={(v: any) => onUpdateField(fieldKey, v)} type="client-select" list="billed-to-clients" placeholder={placeholder} />;
+      }
+      if (fieldKey === 'shippedToName') {
+        return <InlineEditable value={value} onSave={(v: any) => onUpdateField(fieldKey, v)} type="client-select" list="shipped-to-clients" placeholder={placeholder} />;
+      }
       return <InlineEditable value={value} onSave={(v: any) => onUpdateField(fieldKey, v)} type={type} placeholder={placeholder} />;
     }
     return value;
@@ -404,13 +428,14 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const invDate = invoiceData?.date || '';
   const dueDate = invoiceData?.dueDate || '';
 
-  const clientName = invoiceData?.clientName || (isInteractive ? '' : 'Sameer Enterprises');
-  const clientAddr = invoiceData?.clientAddress || (isInteractive ? '' : 'Plot No. 45, Phase 3, Okhla Industrial Area, New Delhi');
-  const clientGst = (invoiceData as any)?.clientGstin || (invoiceData as any)?.clientTaxId || (isInteractive ? '' : '07SM123456789A1');
-  const clientPhone = invoiceData?.clientPhone || (isInteractive ? '' : '+91 9999988888');
-  const clientEmail = invoiceData?.clientEmail || (isInteractive ? '' : 'sameer@enterprises.com');
-  const clientState = (invoiceData as any)?.clientState || (isInteractive ? '' : 'Delhi');
-  const clientCountry = (invoiceData as any)?.clientCountry || (isInteractive ? '' : 'India');
+  const isRealInvoice = invoiceData !== undefined && invoiceData !== null;
+  const clientName = invoiceData?.clientName || (isRealInvoice ? '' : 'Sameer Enterprises');
+  const clientAddr = invoiceData?.clientAddress || (isRealInvoice ? '' : 'Plot No. 45, Phase 3, Okhla Industrial Area, New Delhi');
+  const clientGst = (invoiceData as any)?.clientGstin || (invoiceData as any)?.clientTaxId || (isRealInvoice ? '' : '07SM123456789A1');
+  const clientPhone = invoiceData?.clientPhone || (isRealInvoice ? '' : '+91 9999988888');
+  const clientEmail = invoiceData?.clientEmail || (isRealInvoice ? '' : 'sameer@enterprises.com');
+  const clientState = (invoiceData as any)?.clientState || (isRealInvoice ? '' : 'Delhi');
+  const clientCountry = (invoiceData as any)?.clientCountry || (isRealInvoice ? '' : 'India');
 
   const items: any[] = invoiceData?.items || [];
 
@@ -447,12 +472,16 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   }
 
   const hasTaxCol = ensureAllColumns(config.table.columns).some(c => c.id === 'tax' && c.visible !== false);
-  const taxAmount = invoiceData?.taxTotal !== undefined
-    ? invoiceData.taxTotal
-    : (hasTaxCol ? (subTotal * taxRate) / 100 : 0);
-  const grandTotal = invoiceData?.grandTotal !== undefined
-    ? invoiceData.grandTotal
-    : subTotal + taxAmount;
+  const isTaxEngineVisible = sections?.taxEngine?.visible !== false;
+  const isTaxPresent = hasTaxCol && isTaxEngineVisible;
+
+  const taxAmount = isTaxPresent
+    ? (invoiceData?.taxTotal !== undefined ? invoiceData.taxTotal : (subTotal * taxRate) / 100)
+    : 0;
+
+  const grandTotal = isTaxPresent
+    ? (invoiceData?.grandTotal !== undefined ? invoiceData.grandTotal : subTotal + taxAmount)
+    : subTotal;
 
   const renderInvoiceContent = (
     currentItems?: any[],
@@ -766,14 +795,14 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           }
 
           if (section.id === 'shipTo') {
-            const shipName = (invoiceData as any)?.shippedToName || (isInteractive ? '' : 'Sameer Enterprises');
-            const shipPhone = (invoiceData as any)?.shippedToPhone || (isInteractive ? '' : '+91 9999988888');
-            const shipEmail = (invoiceData as any)?.shippedToEmail || (isInteractive ? '' : 'sameer@enterprises.com');
-            const shipPan = (invoiceData as any)?.shippedToPan || (isInteractive ? '' : 'PANSM1234E');
-            const shipCountry = (invoiceData as any)?.shippedToCountry || (isInteractive ? '' : 'India');
-            const shipState = (invoiceData as any)?.shippedToState || (isInteractive ? '' : 'Delhi');
-            const shipAddr = (invoiceData as any)?.shippedToAddress || (isInteractive ? '' : 'Plot No. 45, Phase 3, Okhla Industrial Area, New Delhi');
-            const shipGst = (invoiceData as any)?.shippedToGstin || (isInteractive ? '' : '07SM123456789A1');
+            const shipName = (invoiceData as any)?.shippedToName || (isRealInvoice ? '' : 'Sameer Enterprises');
+            const shipPhone = (invoiceData as any)?.shippedToPhone || (isRealInvoice ? '' : '+91 9999988888');
+            const shipEmail = (invoiceData as any)?.shippedToEmail || (isRealInvoice ? '' : 'sameer@enterprises.com');
+            const shipPan = (invoiceData as any)?.shippedToPan || (isRealInvoice ? '' : 'PANSM1234E');
+            const shipCountry = (invoiceData as any)?.shippedToCountry || (isRealInvoice ? '' : 'India');
+            const shipState = (invoiceData as any)?.shippedToState || (isRealInvoice ? '' : 'Delhi');
+            const shipAddr = (invoiceData as any)?.shippedToAddress || (isRealInvoice ? '' : 'Plot No. 45, Phase 3, Okhla Industrial Area, New Delhi');
+            const shipGst = (invoiceData as any)?.shippedToGstin || (isRealInvoice ? '' : '07SM123456789A1');
 
             if (layout.type === 'Modal Classic') {
 
@@ -1267,7 +1296,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           if (section.id === 'amountInWords') {
             if (layout.type === 'Modal Classic') {
               if (!config.amountInWords.enabled) return null;
-              const words = numberToWords((invoiceData?.grandTotal !== undefined ? invoiceData.grandTotal : grandTotal) || 0, config.amountInWords.format);
+              const words = numberToWords(grandTotal || 0, config.amountInWords.format);
               return (
                 <div key="amountInWords" style={getSectionStyle('amountInWords')}>
                   <div className="text-left pt-4">
@@ -1279,7 +1308,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
             }
             if (!config.amountInWords.enabled) return null;
-            const words = numberToWords((invoiceData?.grandTotal !== undefined ? invoiceData.grandTotal : grandTotal) || 0, config.amountInWords.format);
+            const words = numberToWords(grandTotal || 0, config.amountInWords.format);
             return (
               <div key="amountInWords" style={getSectionStyle('amountInWords')}>
                 <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>Amount in Words:</p>
@@ -1509,6 +1538,24 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   return (
     <div style={baseStyle} className="invoice-live-preview">
       {renderInvoiceContent(items, 0, true, true, 0, 1)}
+      {isInteractive && clients && clients.length > 0 && (
+        <>
+          <datalist id="billed-to-clients">
+            {clients.map((c) => (
+              <option key={`bill-${c.id}`} value={c.name}>
+                {c.companyName && c.companyName !== c.name ? `${c.companyName}` : ''}
+              </option>
+            ))}
+          </datalist>
+          <datalist id="shipped-to-clients">
+            {clients.map((c) => (
+              <option key={`ship-${c.id}`} value={c.name}>
+                {c.companyName && c.companyName !== c.name ? `${c.companyName}` : ''}
+              </option>
+            ))}
+          </datalist>
+        </>
+      )}
     </div>
   );
 };

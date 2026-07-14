@@ -12,7 +12,9 @@ import {
   UserPlus, 
   KeyRound, 
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { BusinessProfile } from '../types';
@@ -23,14 +25,15 @@ interface AuthScreenProps {
 
 export default function AuthScreen({ defaultMode }: AuthScreenProps) {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>(defaultMode);
-  const [loginMethod, setLoginMethod] = useState<'email' | 'phone_otp' | 'google'>('email');
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone' | 'google'>('email');
   
   const [formData, setFormData] = useState({
     name: '',
     companyName: '',
     email: '',
     phone: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -38,6 +41,8 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
   const [successMsg, setSuccessMsg] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpValue, setOtpValue] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   // Sync theme
@@ -76,6 +81,90 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
 
   const strength = getPasswordStrength(formData.password);
 
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormErrors({});
+    
+    if (!formData.phone.trim()) {
+      return setFormErrors({ phone: 'Please enter your Phone Number.' });
+    }
+    if (authMode === 'signup') {
+      if (!formData.name.trim()) return setFormErrors({ phone: 'Please enter your Name.' });
+      if (!formData.companyName.trim()) return setFormErrors({ phone: 'Please enter your Company Name.' });
+    }
+
+    setIsLoading(true);
+    setSuccessMsg('');
+
+    try {
+      if (!isSupabaseConfigured) {
+        throw new Error("Supabase is not configured. Service unavailable.");
+      }
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: formData.phone.trim(),
+      });
+      if (error) throw error;
+
+      setOtpSent(true);
+      setSuccessMsg(`Verification code sent to ${formData.phone}`);
+      setIsLoading(false);
+    } catch (err: any) {
+      setFormErrors({ phone: err.message || 'Failed to send OTP.' });
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormErrors({});
+
+    if (!otpValue.trim()) {
+      return setFormErrors({ otp: 'Please enter the verification code.' });
+    }
+
+    setIsLoading(true);
+    setSuccessMsg('');
+
+    try {
+      if (!isSupabaseConfigured) {
+        throw new Error("Supabase is not configured. Service unavailable.");
+      }
+      const { data: { session, user }, error } = await supabase.auth.verifyOtp({
+        phone: formData.phone.trim(),
+        token: otpValue.trim(),
+        type: 'sms',
+      });
+      if (error) throw error;
+
+      if (user) {
+        if (authMode === 'signup') {
+          const initProf: BusinessProfile = {
+            uid: user.id,
+            name: formData.companyName,
+            email: '',
+            phone: formData.phone,
+            ownerName: formData.name,
+            address: '',
+            taxId: '',
+            currency: 'INR',
+            defaultTaxRate: 18,
+            updatedAt: new Date().toISOString()
+          };
+          await supabase.from('users').upsert(initProf);
+          localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(initProf));
+        }
+        
+        setSuccessMsg('Successfully authenticated! Redirecting...');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1500);
+      }
+    } catch (err: any) {
+      setFormErrors({ otp: err.message || 'OTP verification failed.' });
+      setIsLoading(false);
+    }
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormErrors({});
@@ -89,48 +178,15 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) return setFormErrors({ email: 'Please enter a valid Email Address.' });
         if (!formData.password.trim()) return setFormErrors({ email: 'Please enter a Password.' });
         if (formData.password.length < 6) return setFormErrors({ email: 'Password must be at least 6 characters long.' });
+        if (formData.password !== formData.confirmPassword) return setFormErrors({ email: 'Passwords do not match.' });
       } else {
         if (!formData.email.trim()) return setFormErrors({ email: 'Please enter your Registered Email Address.' });
         if (!formData.password.trim()) return setFormErrors({ email: 'Please enter your Password.' });
       }
-    } else if (loginMethod === 'phone_otp') {
-      if (!formData.name.trim()) return setFormErrors({ email: 'Please fill out Your Name.' });
-      if (!formData.companyName.trim()) return setFormErrors({ email: 'Please fill out Your Company Name.' });
-      if (!formData.phone.trim()) return setFormErrors({ email: 'Please enter a local Workspace Key.' });
     }
 
     setIsLoading(true);
     setSuccessMsg('');
-
-    if (loginMethod === 'phone_otp') {
-      // Local/Offline Demo Guest fallback
-      const sanitizedKey = formData.phone.replace(/[^a-zA-Z0-9]/g, '');
-      const resolvedEmail = `${sanitizedKey}@makbills.local`;
-      localStorage.setItem('makbills_custom_email', resolvedEmail);
-      localStorage.setItem('makbills_custom_phone', formData.phone);
-      localStorage.setItem('makbills_custom_brand', formData.companyName);
-      localStorage.setItem('makbills_custom_owner', formData.name);
-      
-      const initProf: BusinessProfile = {
-        uid: resolvedEmail,
-        name: formData.companyName,
-        email: resolvedEmail,
-        phone: formData.phone,
-        ownerName: formData.name,
-        address: '',
-        taxId: '',
-        currency: 'INR',
-        defaultTaxRate: 18,
-        updatedAt: new Date().toISOString()
-      };
-      localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(initProf));
-      
-      setSuccessMsg('Guest session initialized! Redirecting...');
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 1000);
-      return;
-    }
 
     try {
       if (authMode === 'signup') {
@@ -215,13 +271,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
     }
   };
 
-  const handleGuestMode = () => {
-    localStorage.setItem('makbills_custom_email', 'guest@makinvoices.local');
-    localStorage.setItem('makbills_custom_brand', 'Acme Design Studio');
-    localStorage.setItem('makbills_custom_owner', 'Guest User');
-    localStorage.setItem('makbills_custom_phone', '+1 (555) 019-2834');
-    window.location.href = '/';
-  };
+
 
   return (
     <div className={`min-h-screen w-full flex flex-col md:flex-row transition-all duration-300 font-sans ${
@@ -361,15 +411,15 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setLoginMethod('phone_otp'); setOtpSent(false); setFormErrors({}); setSuccessMsg(''); }}
+                  onClick={() => { setLoginMethod('phone'); setOtpSent(false); setFormErrors({}); setSuccessMsg(''); }}
                   className={`flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl border transition-all cursor-pointer font-bold ${
-                    loginMethod === 'phone_otp' 
+                    loginMethod === 'phone' 
                       ? 'border-sky-500/50 bg-sky-500/5 text-sky-600 dark:text-sky-400 shadow-xs' 
                       : 'border-slate-150 dark:border-neutral-800 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/30'
                   }`}
                 >
-                  <User className="w-3.5 h-3.5" />
-                  <span className="text-[8px] uppercase tracking-widest font-black">Guest</span>
+                  <Phone className="w-3.5 h-3.5" />
+                  <span className="text-[8px] uppercase tracking-widest font-black">Phone</span>
                 </button>
                 <button
                   type="button"
@@ -393,9 +443,9 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                 </div>
               )}
 
-              {formErrors.email && (
+              {(formErrors.email || formErrors.phone || formErrors.otp) && (
                 <div className="mb-5 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-[11px] font-bold animate-in fade-in duration-200">
-                  {formErrors.email}
+                  {formErrors.email || formErrors.phone || formErrors.otp}
                 </div>
               )}
 
@@ -468,14 +518,27 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
 
                   <div>
                     <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Password</label>
-                    <input
-                      type="password"
-                      required
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="••••••••"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        placeholder="••••••••"
+                        className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 cursor-pointer transition-colors"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                     {authMode === 'signup' && formData.password && (
                       <div className="mt-2.5 space-y-1 bg-slate-50 dark:bg-slate-900/20 p-2.5 rounded-xl border border-slate-200/5">
                         <div className="flex justify-between text-[8px] font-bold text-slate-400 uppercase tracking-wider">
@@ -491,6 +554,33 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                       </div>
                     )}
                   </div>
+
+                  {authMode === 'signup' && (
+                    <div>
+                      <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Confirm Password</label>
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          required
+                          value={formData.confirmPassword}
+                          onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                          placeholder="••••••••"
+                          className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 cursor-pointer transition-colors"
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   <button
                     type="submit"
@@ -508,79 +598,92 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                   </button>
                 </form>
               ) : (
-                <form onSubmit={handleFormSubmit} className="space-y-4 animate-in fade-in duration-200">
-                  <div>
-                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Your Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="e.g. John Doe"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Company Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.companyName}
-                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                      placeholder="e.g. Acme Corporation"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Local Workspace Key</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="e.g. guest-session"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full py-3 px-4 mt-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 disabled:from-slate-400 disabled:to-slate-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-sky-500/10 hover:shadow-sky-500/20 hover:scale-[1.01] active:scale-99"
-                  >
-                    {isLoading ? (
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <User className="w-3.5 h-3.5" />
-                        <span>Enter Guest Workspace</span>
-                      </>
+                otpSent ? (
+                  <form onSubmit={handleVerifyOtp} className="space-y-4 animate-in fade-in duration-200">
+                    <div>
+                      <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Enter Verification Code (OTP)</label>
+                      <input
+                        type="text"
+                        required
+                        value={otpValue}
+                        onChange={(e) => setOtpValue(e.target.value)}
+                        placeholder="e.g. 123456"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full py-3 px-4 mt-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 disabled:from-slate-400 disabled:to-slate-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-sky-500/10 hover:shadow-sky-500/20 hover:scale-[1.01] active:scale-99"
+                    >
+                      {isLoading ? (
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <KeyRound className="w-3.5 h-3.5" />
+                          <span>Verify & Proceed</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleSendOtp} className="space-y-4 animate-in fade-in duration-200">
+                    {authMode === 'signup' && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Your Name</label>
+                          <input
+                            type="text"
+                            required
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            placeholder="e.g. John Doe"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Company Name</label>
+                          <input
+                            type="text"
+                            required
+                            value={formData.companyName}
+                            onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                            placeholder="e.g. Acme Tech Solutions"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
+                          />
+                        </div>
+                      </div>
                     )}
-                  </button>
-                </form>
+                    <div>
+                      <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Phone Number</label>
+                      <input
+                        type="tel"
+                        required
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="e.g. +919876543210"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full py-3 px-4 mt-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 disabled:from-slate-400 disabled:to-slate-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-sky-500/10 hover:shadow-sky-500/20 hover:scale-[1.01] active:scale-99"
+                    >
+                      {isLoading ? (
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Phone className="w-3.5 h-3.5" />
+                          <span>Send Verification OTP</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                )
               )}
 
-              {/* Divider */}
-              <div className="relative flex items-center justify-center my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-100 dark:border-neutral-800/40" />
-                </div>
-                <span className="relative px-2.5 text-[8px] font-black uppercase tracking-widest text-slate-450 bg-white dark:bg-neutral-900 rounded-full">OR</span>
-              </div>
 
-              {/* Instant Sandbox Entry */}
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={handleGuestMode}
-                  className="text-xs font-extrabold text-sky-600 dark:text-sky-400 hover:underline transition-all cursor-pointer"
-                >
-                  Try instantly as Guest (Local Offline Mode)
-                </button>
-                <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1 leading-normal max-w-[280px] mx-auto font-medium">
-                  Guest data is stored locally in your browser cache. No account credentials required.
-                </p>
-              </div>
 
             </div>
           </div>

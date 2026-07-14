@@ -110,7 +110,7 @@ export const generateTemplateFromQuickState = (state: QuickBuilderState): Invoic
         titleAlignment: state.branding.titleAlignment, 
         invoiceTitle: state.invoiceType.toUpperCase() 
       },
-      company: { fields: ['name', 'address', state.sections.gst ? 'gstin' : '', 'email', 'phone'].filter(Boolean) },
+      company: { fields: ['name', 'address', state.sections.gst ? 'gstin' : '', 'email', 'phone', 'pan'].filter(Boolean) },
       invoiceInfo: { fields: ['invoiceNumber', 'invoiceDate', 'dueDate'], customFields: [], position: 'Right' },
       client: { fields: ['name', 'address'] },
       shipping: { fields: ['name', 'address'], sameAsBilling: true },

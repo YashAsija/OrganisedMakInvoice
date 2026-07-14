@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Check, Trash2, Upload, CreditCard, ShieldCheck, Sparkles, Building2, Landmark, Sliders, Award, FileSpreadsheet, KeyRound, ArrowLeft, ArrowRight, Plus, AlertCircle } from 'lucide-react';
+import { X, Check, Trash2, Upload, CreditCard, ShieldCheck, Sparkles, Building2, Landmark, Sliders, Award, FileSpreadsheet, KeyRound, ArrowLeft, ArrowRight, Plus, AlertCircle, Lock, Banknote, SlidersHorizontal, Hash, FileText, HelpCircle } from 'lucide-react';
 import { BusinessProfile } from '../types';
 import { Country, State } from 'country-state-city';
 import { supabase } from '../lib/supabase';
@@ -28,6 +28,9 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const [subExpiresAt, setSubExpiresAt] = useState('June 30, 2029');
   const [subAuthorizedToken, setSubAuthorizedToken] = useState('');
 
+  // Custom Notifications State
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info'; title?: string } | null>(null);
+
   // Fields state holding actual values
   const [name, setName] = useState(() => isOnboarding ? '' : (profile.name || ''));
   const [displayName, setDisplayName] = useState(() => isOnboarding ? '' : (profile.displayName || ''));
@@ -35,6 +38,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const [phone, setPhone] = useState(() => isOnboarding ? '' : (profile.phone || ''));
   const [address, setAddress] = useState(() => isOnboarding ? '' : (profile.address || ''));
   const [taxId, setTaxId] = useState(() => isOnboarding ? '' : (profile.taxId || ''));
+  const [pan, setPan] = useState(() => isOnboarding ? '' : (profile.pan || ''));
   const [currency, setCurrency] = useState(() => isOnboarding ? '' : (profile.currency || 'USD'));
   const [defaultTaxRate, setDefaultTaxRate] = useState(() => isOnboarding ? 0 : (profile.defaultTaxRate || 0));
   const [logoUrl, setLogoUrl] = useState(() => isOnboarding ? '' : (profile.logoUrl || ''));
@@ -79,6 +83,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
   // Logo Crop/Adjust States
   const [logoToCrop, setLogoToCrop] = useState<string | null>(null);
+  const [showLogoOptions, setShowLogoOptions] = useState(false);
+  const [showLogoPreview, setShowLogoPreview] = useState(false);
   const [cropZoom, setCropZoom] = useState<number>(1);
   const [cropPanX, setCropPanX] = useState<number>(0);
   const [cropPanY, setCropPanY] = useState<number>(0);
@@ -118,13 +124,104 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
     return true;
   };
 
-  const handleTabChange = (targetTab: typeof activeTab) => {
-    if (isOnboarding && targetTab !== 'company') {
-      if (!validateCompanyProfile()) {
-        return;
+  const TABS_ORDER = ['company', 'banking', 'billing', 'tax', 'subscription'] as const;
+
+  const validateBankingDetails = (): boolean => {
+    setValidationError(null);
+    setShowErrors(false);
+    return true;
+  };
+
+  const validateBillingConfig = (): boolean => {
+    if (!invoicePrefix || !invoicePrefix.toString().trim()) {
+      setValidationError('Invoice Prefix is required.');
+      setShowErrors(true);
+      return false;
+    }
+    if (startingInvoiceNumber === undefined || startingInvoiceNumber === null || startingInvoiceNumber.toString().trim() === '') {
+      setValidationError('Starting Invoice Number is required.');
+      setShowErrors(true);
+      return false;
+    }
+    setValidationError(null);
+    setShowErrors(false);
+    return true;
+  };
+
+  const validateTaxConfig = (): boolean => {
+    if (country.toLowerCase() !== 'india') {
+      if (!customTaxName.trim()) {
+        setValidationError('Custom Tax Name is required.');
+        setShowErrors(true);
+        return false;
       }
     }
+    setValidationError(null);
+    setShowErrors(false);
+    return true;
+  };
+
+  const getTabOpacityClass = (tab: typeof activeTab): string => {
+    if (!isOnboarding) return 'opacity-100';
+    
+    const activeIdx = TABS_ORDER.indexOf(activeTab);
+    const targetIdx = TABS_ORDER.indexOf(tab);
+    
+    return targetIdx <= activeIdx ? 'opacity-100' : 'opacity-40';
+  };
+
+  const handleTabChange = async (targetTab: typeof activeTab) => {
+    if (isOnboarding) {
+      const activeIdx = TABS_ORDER.indexOf(activeTab);
+      const targetIdx = TABS_ORDER.indexOf(targetTab);
+      
+      if (targetIdx > activeIdx) {
+        // Enforce sequential progression
+        if (targetIdx > activeIdx + 1) {
+          setValidationError('Please complete the steps in order.');
+          setShowErrors(true);
+          return;
+        }
+        
+        // Validate active step before going to the next one
+        if (activeTab === 'company' && !validateCompanyProfile()) return;
+        if (activeTab === 'banking' && !validateBankingDetails()) return;
+        if (activeTab === 'billing' && !validateBillingConfig()) return;
+        if (activeTab === 'tax' && !validateTaxConfig()) return;
+
+        // Save current tab details to database so next steps have complete details
+        const success = await saveSettingsToDB();
+        if (!success) return; // Stop tab change if save failed
+      }
+    }
+    setValidationError(null);
+    setShowErrors(false);
     setActiveTab(targetTab);
+  };
+
+  const renderSidebarBadge = (tab: typeof activeTab, defaultIcon: React.ReactNode, index: number) => {
+    if (!isOnboarding) {
+      return (
+        <div className={`w-6.5 h-6.5 rounded-lg flex items-center justify-center transition-colors ${activeTab === tab ? 'bg-white/20 text-white' : 'bg-[#F4EBE1] dark:bg-zinc-800 text-[#88765C]'}`}>
+          {defaultIcon}
+        </div>
+      );
+    }
+
+    const activeIdx = TABS_ORDER.indexOf(activeTab);
+    const hasPassed = index < activeIdx;
+
+    return (
+      <div className={`w-6.5 h-6.5 rounded-full flex items-center justify-center font-extrabold text-[10px] transition-all border ${
+        activeTab === tab 
+          ? 'bg-white text-[#88765C] border-white shadow-sm'
+          : hasPassed
+            ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+            : 'bg-[#F4EBE1] dark:bg-zinc-850 text-[#88765C] border-[#EBDCC8] dark:border-zinc-800'
+      }`}>
+        {hasPassed ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : (index + 1)}
+      </div>
+    );
   };
 
   // Digital Signature Pad Canvas References
@@ -136,6 +233,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   // Load settings, tax_configs, and subscriptions on mount / open
   useEffect(() => {
     if (!isOpen) return;
+
+    setActiveTab('company');
 
     const loadData = async () => {
       try {
@@ -150,6 +249,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
             setPhone(profile.phone || '');
             setAddress(profile.address || '');
             setTaxId(profile.taxId || '');
+            setPan(profile.pan || '');
             setCurrency(profile.currency || 'USD');
             setDefaultTaxRate(profile.defaultTaxRate || 0);
             setLogoUrl(profile.logoUrl || '');
@@ -207,6 +307,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           setPhone(settings.phone || '');
           setAddress(settings.address || '');
           setTaxId(settings.gstin || '');
+          setPan(settings.pan || '');
           setCurrency(settings.currency || 'USD');
           setLogoUrl(settings.logo_url || '');
           setSignature(settings.signature_url || '');
@@ -243,6 +344,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           setPhone(profile.phone || '');
           setAddress(profile.address || '');
           setTaxId(profile.taxId || '');
+          setPan(profile.pan || '');
           setCurrency(profile.currency || 'USD');
           setDefaultTaxRate(profile.defaultTaxRate || 0);
           setLogoUrl(profile.logoUrl || '');
@@ -845,19 +947,46 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateCompanyProfile()) {
-      setActiveTab('company');
-      return;
+    if (isOnboarding) {
+      if (!validateCompanyProfile()) {
+        setActiveTab('company');
+        return;
+      }
+      if (!validateBankingDetails()) {
+        setActiveTab('banking');
+        return;
+      }
+      if (!validateBillingConfig()) {
+        setActiveTab('billing');
+        return;
+      }
+      if (!validateTaxConfig()) {
+        setActiveTab('tax');
+        return;
+      }
+    } else {
+      if (!validateCompanyProfile()) {
+        setActiveTab('company');
+        return;
+      }
     }
 
+    const success = await saveSettingsToDB();
+    if (success) {
+      setNotification({ message: 'Settings saved successfully!', type: 'success' });
+      onClose();
+    }
+  };
+
+  const saveSettingsToDB = async (): Promise<boolean> => {
     setIsSaving(true);
 
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
-        alert("Authentication error: Please log in again.");
+        setNotification({ message: "Authentication error: Please log in again.", type: 'error' });
         setIsSaving(false);
-        return;
+        return false;
       }
 
       // 1. Process and upload logo if base64
@@ -866,9 +995,9 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         try {
           const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
           if (!sessionData.session) {
-            alert("No active session found. Please log in again.");
+            setNotification({ message: "No active session found. Please log in again.", type: 'error' });
             setIsSaving(false);
-            return;
+            return false;
           }
 
           const blob = dataURLtoBlob(logoUrl);
@@ -905,9 +1034,9 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
             if (uploadError) {
               console.error("[SETTINGS] Logo upload error:", uploadError);
-              alert(`Failed to upload logo: ${uploadError.message}`);
+              setNotification({ message: `Failed to upload logo: ${uploadError.message}`, type: 'error' });
               setIsSaving(false);
-              return;
+              return false;
             }
 
             const { data: { publicUrl } } = supabase.storage
@@ -917,9 +1046,9 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           }
         } catch (uploadErr: any) {
           console.error("[SETTINGS] Logo convert/upload exception:", uploadErr);
-          alert(`Failed to process logo: ${uploadErr.message || uploadErr}`);
+          setNotification({ message: `Failed to process logo: ${uploadErr.message || uploadErr}`, type: 'error' });
           setIsSaving(false);
-          return;
+          return false;
         }
       }
 
@@ -928,12 +1057,10 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       if (signature && signature.startsWith('data:image/png;base64,')) {
         try {
           const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
-          console.log("[SETTINGS] Active session checked:", sessionData.session, "error:", sessionErr);
-          
           if (!sessionData.session) {
-            alert("No active session found. Please log in again.");
+            setNotification({ message: "No active session found. Please log in again.", type: 'error' });
             setIsSaving(false);
-            return;
+            return false;
           }
 
           const blob = dataURLtoBlob(signature);
@@ -946,9 +1073,9 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               });
             if (uploadError) {
               console.error("[SETTINGS] Signature upload error:", uploadError);
-              alert(`Failed to upload signature: ${uploadError.message}`);
+              setNotification({ message: `Failed to upload signature: ${uploadError.message}`, type: 'error' });
               setIsSaving(false);
-              return;
+              return false;
             }
             const { data: { publicUrl } } = supabase.storage
               .from('Signature')
@@ -957,9 +1084,9 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           }
         } catch (uploadErr: any) {
           console.error("[SETTINGS] Signature convert/upload exception:", uploadErr);
-          alert(`Failed to process signature: ${uploadErr.message || uploadErr}`);
+          setNotification({ message: `Failed to process signature: ${uploadErr.message || uploadErr}`, type: 'error' });
           setIsSaving(false);
-          return;
+          return false;
         }
       }
 
@@ -980,6 +1107,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         mobile,
         email,
         gstin: taxId,
+        pan: pan,
         logo_url: uploadedLogoUrl,
         signature_url: uploadedSignatureUrl,
         signature_type: signatureMode,
@@ -1002,8 +1130,6 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         settingData.company_code = companyCode.trim();
       }
 
-      console.log('Payload being sent:', settingData);
-
       // 4. Upsert company settings
       const { data: savedSetting, error: settingError } = await supabase
         .from('company_settings')
@@ -1014,12 +1140,12 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       if (settingError) {
         console.error("[SETTINGS] Error saving company settings:", settingError);
         if (settingError.code === '23505' || (settingError.message && settingError.message.toLowerCase().includes('unique'))) {
-          alert("This company code is already taken, please choose another.");
+          setNotification({ message: "This company code is already taken, please choose another.", type: 'error' });
         } else {
-          alert(`Failed to save settings: ${settingError.message}`);
+          setNotification({ message: `Failed to save settings: ${settingError.message}`, type: 'error' });
         }
         setIsSaving(false);
-        return;
+        return false;
       }
 
       const settingsRowId = savedSetting?.id;
@@ -1048,7 +1174,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
             is_default: false
           };
           if (!isTempId) {
-            row.id = tax.id; // Keep database uuid if it exists
+            row.id = tax.id;
           }
           return row;
         });
@@ -1059,7 +1185,6 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
         if (taxUpsertError) {
           console.error("[SETTINGS] Error upserting tax configs:", taxUpsertError);
-          alert(`Saved profile settings, but failed to save some tax configs: ${taxUpsertError.message}`);
         }
       }
 
@@ -1076,6 +1201,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         phone: fullPhone,
         address,
         taxId,
+        pan,
         currency,
         logoUrl: uploadedLogoUrl,
         signature: uploadedSignatureUrl,
@@ -1109,11 +1235,11 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         updatedAt: new Date().toISOString()
       });
 
-      alert("Settings successfully saved!");
-      onClose();
+      return true;
     } catch (err: any) {
-      console.error("[SETTINGS] Unexpected error during form submission:", err);
-      alert(`Unexpected error: ${err.message || err}`);
+      console.error("[SETTINGS] Unexpected error during saving settings:", err);
+      setNotification({ message: `Unexpected error: ${err.message || err}`, type: 'error' });
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -1125,7 +1251,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto">
       <div 
         id="profile-modal" 
-        className="relative w-full max-w-6xl bg-white dark:bg-slate-900 text-slate-805 dark:text-white rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col max-h-[95dvh] my-auto"
+        className="relative w-full max-w-6xl bg-[#FCFAF7] dark:bg-zinc-900 text-[#5C5043] dark:text-[#ebdcc8] rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-2xl border border-[#EBDCC8] dark:border-zinc-800 flex flex-col max-h-[95dvh] my-auto"
       >
         {/* Hidden File Picker reference */}
         <input 
@@ -1145,7 +1271,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         />
 
         {/* Modal Header */}
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950">
+        <div className="p-6 border-b border-[#EBDCC8] dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-950">
           <div className="flex items-center gap-2.5">
             {activeTab !== 'company' && (
               <button 
@@ -1155,23 +1281,23 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   else if (activeTab === 'billing') setActiveTab('banking');
                   else if (activeTab === 'banking') setActiveTab('company');
                 }}
-                className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shadow-sm border border-slate-200 dark:border-slate-700 hover:text-slate-805 dark:hover:text-white transition-all cursor-pointer hover:bg-slate-100"
+                className="w-10 h-10 rounded-2xl bg-white dark:bg-zinc-800 text-[#88765C] flex items-center justify-center shadow-sm border border-[#EBDCC8] dark:border-zinc-700 hover:bg-[#FCFAF7] transition-all cursor-pointer"
                 aria-label="Go back"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
             )}
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-600 to-indigo-600/50 text-white flex items-center justify-center shadow-md">
-              <Building2 className="w-5 h-5 text-sky-100" />
+            <div className="w-10 h-10 rounded-2xl bg-[#88765C] text-white flex items-center justify-center shadow-md">
+              <Building2 className="w-5 h-5 text-amber-100" />
             </div>
             <div>
-              <h2 className="text-xl font-medium tracking-tight text-slate-805 dark:text-white">Company Settings</h2>
-              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-450">Used as the seller details on every invoice.</p>
+              <h2 className="text-xl font-bold tracking-tight text-[#5C5043] dark:text-white">Company Settings</h2>
+              <p className="text-[11px] font-medium text-[#88765C]/70 dark:text-slate-400">Used as the seller details on every invoice.</p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-full text-[#88765C] hover:text-[#5C5043] dark:hover:text-white hover:bg-[#F4EBE1] dark:hover:bg-zinc-800 transition-colors cursor-pointer"
             aria-label="Close settings modal"
           >
             <X className="w-5 h-5" />
@@ -1180,508 +1306,530 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
         {/* Modal Form container with Sidebar */}
         <form onSubmit={handleFormSubmit} className="flex-1 overflow-hidden flex flex-col md:flex-row">
-          
-          {/* LEFT SIDEBAR (Tabs) */}
-          <div className="md:w-64 lg:w-72 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 flex flex-row md:flex-col p-4 md:p-6 gap-2 overflow-x-auto md:overflow-y-auto shrink-0 hide-scrollbar">
-            <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2 hidden md:block px-2">Settings Menu</div>
-            <button
-              type="button"
-              onClick={() => handleTabChange('company')}
-              className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
-                activeTab === 'company'
-                  ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
-                  : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
-              }`}
-            >
-              <Building2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Company Profile</span>
-              <span className="sm:hidden">Company</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTabChange('banking')}
-              className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
-                activeTab === 'banking'
-                  ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
-                  : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
-              }`}
-            >
-              <Landmark className="w-4 h-4" />
-              <span className="hidden sm:inline">Banking Details</span>
-              <span className="sm:hidden">Banking</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTabChange('billing')}
-              className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
-                activeTab === 'billing'
-                  ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
-                  : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
-              }`}
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span className="hidden sm:inline">Billing Config</span>
-              <span className="sm:hidden">Billing</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTabChange('tax')}
-              className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
-                activeTab === 'tax'
-                  ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
-                  : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
-              }`}
-            >
-              <Sliders className="w-4 h-4" />
-              <span className="hidden sm:inline">Tax Config</span>
-              <span className="sm:hidden">Tax</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTabChange('subscription')}
-              className={`flex-1 md:flex-none py-3 px-4 rounded-xl text-left text-xs font-medium tracking-wide transition-all cursor-pointer flex items-center gap-3 ${
-                activeTab === 'subscription'
-                  ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10'
-                  : 'text-slate-550 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:translate-x-1 duration-300'
-              }`}
-            >
-              <Award className="w-4 h-4" />
-              <span className="hidden sm:inline">Subscription</span>
-              <span className="sm:hidden">Sub</span>
-            </button>
+                {/* LEFT SIDEBAR (Tabs) */}
+          <div className="md:w-64 lg:w-72 border-b md:border-b-0 md:border-r border-[#EBDCC8] dark:border-zinc-800 bg-[#FCFAF7] dark:bg-zinc-955/30 flex flex-row md:flex-col p-4 md:p-6 gap-3 overflow-x-auto md:overflow-y-auto shrink-0 hide-scrollbar">
+            <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#88765C]/60 dark:text-zinc-500 mb-2 hidden md:block px-2">Settings Menu</div>
+            
+            <div className="relative flex flex-row md:flex-col gap-2 md:gap-3 flex-1 md:flex-none">
+              {/* Vertical stepper connector line behind icons */}
+              <div className="absolute left-[27px] top-6 bottom-6 w-[1.5px] bg-[#EBDCC8]/80 dark:bg-zinc-800 hidden md:block pointer-events-none" />
+
+              <button
+                type="button"
+                onClick={() => handleTabChange('company')}
+                className={`z-10 flex-1 md:flex-none py-2.5 px-4 rounded-xl text-left text-xs font-semibold tracking-wide transition-all duration-300 cursor-pointer flex items-center gap-3 ${getTabOpacityClass('company')} ${
+                  activeTab === 'company'
+                    ? 'bg-[#88765C] text-white shadow-sm'
+                    : 'text-[#88765C] dark:text-[#ebdcc8] hover:text-[#5C5043] hover:bg-[#F4EBE1]/50 dark:hover:bg-zinc-850'
+                }`}
+              >
+                {renderSidebarBadge('company', <Building2 className="w-3.5 h-3.5" />, 0)}
+                <span className="hidden sm:inline">Company Profile</span>
+                <span className="sm:hidden">Company</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTabChange('banking')}
+                className={`z-10 flex-1 md:flex-none py-2.5 px-4 rounded-xl text-left text-xs font-semibold tracking-wide transition-all duration-300 cursor-pointer flex items-center gap-3 ${getTabOpacityClass('banking')} ${
+                  activeTab === 'banking'
+                    ? 'bg-[#88765C] text-white shadow-sm'
+                    : 'text-[#88765C] dark:text-[#ebdcc8] hover:text-[#5C5043] hover:bg-[#F4EBE1]/50 dark:hover:bg-zinc-850'
+                }`}
+              >
+                {renderSidebarBadge('banking', <Landmark className="w-3.5 h-3.5" />, 1)}
+                <span className="hidden sm:inline">Banking Details</span>
+                <span className="sm:hidden">Banking</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTabChange('billing')}
+                className={`z-10 flex-1 md:flex-none py-2.5 px-4 rounded-xl text-left text-xs font-semibold tracking-wide transition-all duration-300 cursor-pointer flex items-center gap-3 ${getTabOpacityClass('billing')} ${
+                  activeTab === 'billing'
+                    ? 'bg-[#88765C] text-white shadow-sm'
+                    : 'text-[#88765C] dark:text-[#ebdcc8] hover:text-[#5C5043] hover:bg-[#F4EBE1]/50 dark:hover:bg-zinc-850'
+                }`}
+              >
+                {renderSidebarBadge('billing', <FileSpreadsheet className="w-3.5 h-3.5" />, 2)}
+                <span className="hidden sm:inline">Billing Config</span>
+                <span className="sm:hidden">Billing</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTabChange('tax')}
+                className={`z-10 flex-1 md:flex-none py-2.5 px-4 rounded-xl text-left text-xs font-semibold tracking-wide transition-all duration-300 cursor-pointer flex items-center gap-3 ${getTabOpacityClass('tax')} ${
+                  activeTab === 'tax'
+                    ? 'bg-[#88765C] text-white shadow-sm'
+                    : 'text-[#88765C] dark:text-[#ebdcc8] hover:text-[#5C5043] hover:bg-[#F4EBE1]/50 dark:hover:bg-zinc-850'
+                }`}
+              >
+                {renderSidebarBadge('tax', <Sliders className="w-3.5 h-3.5" />, 3)}
+                <span className="hidden sm:inline">Tax Config</span>
+                <span className="sm:hidden">Tax</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTabChange('subscription')}
+                className={`z-10 flex-1 md:flex-none py-2.5 px-4 rounded-xl text-left text-xs font-semibold tracking-wide transition-all duration-300 cursor-pointer flex items-center gap-3 ${getTabOpacityClass('subscription')} ${
+                  activeTab === 'subscription'
+                    ? 'bg-[#88765C] text-white shadow-sm'
+                    : 'text-[#88765C] dark:text-[#ebdcc8] hover:text-[#5C5043] hover:bg-[#F4EBE1]/50 dark:hover:bg-zinc-850'
+                }`}
+              >
+                {renderSidebarBadge('subscription', <Award className="w-3.5 h-3.5" />, 4)}
+                <span className="hidden sm:inline">Subscription</span>
+                <span className="sm:hidden">Sub</span>
+              </button>
+            </div>
           </div>
 
           {/* MAIN SCROLLABLE CONTENT */}
           <div className="flex-1 flex flex-col overflow-y-auto">
             <div className="p-6 md:p-8 space-y-8 flex-1">
-
           {/* TAB 1: COMPANY */}
           {activeTab === 'company' && (
-            <div className="space-y-6 animate-fade-in text-slate-805 dark:text-white">
+            <div className="space-y-6 animate-fade-in text-[#5C5043] dark:text-[#ebdcc8]">
               {validationError && (
                 <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-2xl text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-2.5 shadow-sm">
                   <AlertCircle className="w-5 h-5 shrink-0" />
                   <span>{validationError}</span>
                 </div>
               )}
-          {/* TOP SECTION: Logo picker and Brand Identity Indicator Card */}
-          <div className="grid md:grid-cols-12 gap-5 items-stretch">
-            
-            {/* Logo box */}
-            <div className="md:col-span-4 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/60 flex flex-col items-center justify-center space-y-3">
-              <div 
-                className="w-24 h-24 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40 relative overflow-hidden flex items-center justify-center group cursor-pointer transition-all hover:border-sky-500"
-                onClick={triggerLogoUpload}
-              >
-                {logoUrl ? (
-                  <img 
-                    src={logoUrl} 
-                    alt="Company logo preview" 
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <span className="text-xs font-medium text-slate-400 dark:text-slate-500 select-none uppercase tracking-wider">Logo</span>
-                )}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <PencilIcon className="w-4 h-4 text-white" />
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={triggerLogoUpload}
-                  className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-755 font-medium text-[10px] uppercase tracking-wide text-slate-650 dark:text-slate-300 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  {logoUrl ? 'Change' : 'Upload Logo'}
-                </button>
-                {logoUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setLogoUrl('')}
-                    className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-900 font-medium text-[10px] uppercase tracking-wide text-red-600 dark:text-red-400 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Remove
-                  </button>
-                )}
-              </div>
-            </div>
 
-            {/* Brand identity view card (gorgeous neon overlay representation) */}
-            <div className="md:col-span-8 p-6 rounded-3xl border border-slate-150 dark:border-slate-800 bg-gradient-to-br from-slate-50 via-slate-100/50 to-slate-50 dark:from-slate-950 dark:via-[#0a101d] dark:to-slate-950 flex flex-col justify-between relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/5 rounded-full blur-2xl pointer-events-none" />
-              
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-1.5">
-                  <div className="p-0.5 px-1.5 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded text-[9px] font-bold tracking-widest uppercase">
-                    YOUR COMPANY IDENTITY
+              {/* CARD 1: COMPANY IDENTITY */}
+              <div className="border border-[#EBDCC8] dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="bg-[#F4EBE1] dark:bg-zinc-800/50 border-b border-[#EBDCC8] dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#5C5043] dark:text-[#ebdcc8]">
+                  Company Identity
+                </div>
+                <div className="p-6 space-y-6">
+                  <div className="grid md:grid-cols-12 gap-6 items-stretch">
+                    {/* Logo upload (cols 5) */}
+                    <div className="md:col-span-5 p-5 rounded-2xl border-2 border-dashed border-[#EBDCC8] dark:border-zinc-800 bg-[#FCFAF7] dark:bg-zinc-955/30 flex flex-col items-center justify-center space-y-4">
+                      <div 
+                        className="w-32 h-32 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-900 relative overflow-hidden flex items-center justify-center group cursor-pointer transition-all hover:border-[#88765C]"
+                        onClick={() => logoUrl ? setShowLogoPreview(true) : triggerLogoUpload()}
+                      >
+                        {logoUrl ? (
+                          <img 
+                            src={logoUrl} 
+                            alt="Company logo preview" 
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-contain p-2"
+                          />
+                        ) : (
+                          <span className="text-[10px] font-bold text-[#88765C]/60 dark:text-zinc-500 uppercase tracking-widest">LOGO</span>
+                        )}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                          {logoUrl ? (
+                            <EyeIcon className="w-5 h-5 text-white" />
+                          ) : (
+                            <Upload className="w-5 h-5 text-white" />
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => logoUrl ? setShowLogoOptions(true) : triggerLogoUpload()}
+                          className="px-4 py-2 bg-[#F4EBE1] hover:bg-[#ebdcc8] border border-[#EBDCC8] font-extrabold text-[10px] uppercase tracking-wider text-[#5C5043] rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          {logoUrl ? 'Edit Logo' : 'Upload Logo'}
+                        </button>
+                        {logoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setLogoUrl('')}
+                            className="px-4 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 font-extrabold text-[10px] uppercase tracking-wider text-rose-600 dark:text-rose-400 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right side fields (cols 7) */}
+                    <div className="md:col-span-7 space-y-4">
+                      {/* System Company Code card */}
+                      <div className="p-4 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-[#FCFAF7] dark:bg-zinc-950/30 flex items-center justify-between">
+                        <div>
+                          <span className="block text-[8px] font-bold text-[#88765C]/70 dark:text-zinc-400 uppercase tracking-widest mb-1">System Company Code</span>
+                          <span className="text-xl sm:text-2xl font-extrabold font-mono text-[#5C5043] dark:text-[#ebdcc8] tracking-wider block">
+                            {companyCode || 'C0045'}
+                          </span>
+                          <span className="text-[9px] text-[#88765C]/60 dark:text-zinc-500 block mt-0.5">Immutable code linked to all system records.</span>
+                        </div>
+                        <span className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded text-[9px] font-extrabold uppercase tracking-wider">
+                          Active License
+                        </span>
+                      </div>
+
+                      {/* Business Name */}
+                      <div>
+                        <label htmlFor="company-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Business Name *</label>
+                        <input 
+                          id="company-name"
+                          type="text"
+                          required
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="e.g. Acme Corporation"
+                          className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none shadow-sm transition-all font-medium ${showErrors && !name.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[#EBDCC8] dark:border-zinc-800 focus:border-[#88765C] focus:ring-4 focus:ring-[#88765C]/10'}`}
+                        />
+                        {showErrors && !name.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Business Name is required</p>}
+                      </div>
+
+                      {/* Owner Name */}
+                      <div>
+                        <label htmlFor="company-display-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Owner Name *</label>
+                        <input 
+                          id="company-display-name"
+                          type="text"
+                          required
+                          value={displayName}
+                          onChange={(e) => setDisplayName(e.target.value)}
+                          placeholder="e.g. John Doe"
+                          className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none shadow-sm transition-all font-medium ${showErrors && !displayName.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[#EBDCC8] dark:border-zinc-800 focus:border-[#88765C] focus:ring-4 focus:ring-[#88765C]/10'}`}
+                        />
+                        {showErrors && !displayName.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Owner Name is required</p>}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                
-                <div className="flex items-baseline gap-2">
-                  <span className="text-slate-500 dark:text-slate-400 text-xs font-medium font-mono">Company Code :</span>
-                  <span className="text-sky-600 dark:text-sky-400 text-base sm:text-lg font-extrabold font-mono tracking-wider">
-                    {companyCode || 'C0045'}
-                  </span>
-                </div>
-                
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-normal max-w-md">
-                  This unique company code is linked to all invoices, customers, materials and reports.
-                </p>
               </div>
 
-              {/* Capsule Badges */}
-              <div className="flex flex-wrap gap-2 pt-4">
-                <span className="px-3 py-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
-                  {name || 'INTEZ'}
-                </span>
-                <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-bold tracking-wider flex items-center gap-1 animate-pulse">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" />
-                  Active License
-                </span>
-              </div>
-            </div>
-
-          </div>
-
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="company-name" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Business Name *</label>
-                  <input 
-                    id="company-name"
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. INTEZ Systems"
-                    className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none shadow-sm transition-all duration-300 font-medium ${showErrors && !name.trim() ? 'border-red-500 ring-4 ring-red-500/10 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 dark:border-slate-850 focus:border-sky-500 hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10'}`}
-                  />
-                  {showErrors && !name.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Business Name is required</p>}
+              {/* CARD 2: LOCATION DETAILS */}
+              <div className="border border-[#EBDCC8] dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="bg-[#F4EBE1] dark:bg-zinc-800/50 border-b border-[#EBDCC8] dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#5C5043] dark:text-[#ebdcc8]">
+                  Location Details
                 </div>
-                <div>
-                  <label htmlFor="company-display-name" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Owner Name *</label>
-                  <input 
-                    id="company-display-name"
-                    type="text"
-                    required
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="e.g. INTEZ"
-                    className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none shadow-sm transition-all duration-300 font-medium ${showErrors && !displayName.trim() ? 'border-red-500 ring-4 ring-red-500/10 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 dark:border-slate-850 focus:border-sky-500 hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10'}`}
-                  />
-                  {showErrors && !displayName.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Owner Name is required</p>}
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-6">
-                <div>
-                  <label htmlFor="company-country" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Country *</label>
-                  <select 
-                    id="company-country"
-                    required
-                    value={Country.getAllCountries().find(c => c.name === country)?.isoCode || ''}
-                    onChange={(e) => handleCountryChange(e.target.value)}
-                    className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none shadow-sm transition-all duration-300 font-medium cursor-pointer ${showErrors && !country.trim() ? 'border-red-500 ring-4 ring-red-500/10 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 dark:border-slate-850 focus:border-sky-500 hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10'}`}
-                  >
-                    <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-500">Select Country</option>
-                    {Country.getAllCountries().map((c) => (
-                      <option key={c.isoCode} value={c.isoCode} className="bg-white dark:bg-slate-900 text-slate-850 dark:text-white">{c.name}</option>
-                    ))}
-                  </select>
-                  {showErrors && !country.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Country is required</p>}
-                </div>
-                <div>
-                  <label htmlFor="company-state" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">State *</label>
-                  <select 
-                    id="company-state"
-                    value={(() => {
-                      const cCode = Country.getAllCountries().find(c => c.name === country)?.isoCode;
-                      if (!cCode) return '';
-                      return State.getStatesOfCountry(cCode).find(s => s.name === state)?.isoCode || '';
-                    })()}
-                    onChange={(e) => handleStateChange(e.target.value, country)}
-                    className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none shadow-sm transition-all duration-300 font-medium cursor-pointer ${showErrors && !state.trim() ? 'border-red-500 ring-4 ring-red-500/10 focus:border-red-500 focus:ring-red-505 focus:ring-red-500/10' : 'border-slate-200 dark:border-slate-850 focus:border-sky-500 hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10'}`}
-                    required
-                  >
-                    <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-500">Select State</option>
-                    {(() => {
-                      const cCode = Country.getAllCountries().find(c => c.name === country)?.isoCode;
-                      if (!cCode) return null;
-                      return State.getStatesOfCountry(cCode).map((st) => (
-                        <option key={st.isoCode} value={st.isoCode} className="bg-white dark:bg-slate-900 text-slate-850 dark:text-white">{st.name}</option>
-                      ));
-                    })()}
-                  </select>
-                  {showErrors && !state.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">State is required</p>}
-                </div>
-                <div>
-                  <label htmlFor="company-state-code" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">State Code</label>
-                  <input 
-                    id="company-state-code"
-                    type="number"
-                    value={stateCode}
-                    onChange={(e) => setStateCode(e.target.value)}
-                    placeholder="e.g. MH, 07"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-slate-50 dark:bg-slate-900/50 text-sm text-slate-805 dark:text-white focus:outline-none shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-mono font-medium"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="company-address" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Address</label>
-                <textarea 
-                  id="company-address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="abcd, Main Business Block, Silicon Valley"
-                  rows={2}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 resize-none"
-                />
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="company-currency-symbol" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Currency Symbol</label>
-                  <input 
-                    id="company-currency-symbol"
-                    type="text"
-                    value={currencySymbol}
-                    onChange={(e) => setCurrencySymbol(e.target.value)}
-                    placeholder="e.g. Rp, $, ₹..."
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="company-mobile" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Mobile *</label>
-                  <input 
-                    id="company-mobile"
-                    type="text"
-                    required
-                    value={mobile}
-                    onChange={(e) => setMobile(e.target.value.replace(/[^\d\s+]/g, ''))}
-                    placeholder="e.g. 9899728185"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
-                  />
-                  <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1">Mobile number is linked with login, orders and billing records.</p>
-                  {showErrors && !mobile.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Mobile Number is required</p>}
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-6">
-                <div>
-                  <label htmlFor="company-email" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Email *</label>
-                  <input 
-                    id="company-email"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. crixlayxd@gmail.com"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="company-gstin" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">GSTIN / Tax ID</label>
-                  <input 
-                    id="company-gstin"
-                    type="text"
-                    value={taxId}
-                    onChange={(e) => setTaxId(e.target.value)}
-                    placeholder="e.g. GSTIN99238"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-mono"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="company-code-editor" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Custom Company Code</label>
-                  <input 
-                    id="company-code-editor"
-                    type="text"
-                    value={companyCode}
-                    onChange={(e) => setCompanyCode(e.target.value)}
-                    placeholder="e.g. C0045"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-mono font-medium uppercase"
-                  />
-                </div>
-              </div>
-
-              {/* Pad/Signature inside Company configuration block */}
-              <div className="pt-2">
-                <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
-                  <label className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Client Signature Pad</label>
-                  
-                  {/* Signature Mode Switcher */}
-                  <div className="flex bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
-                    <button
-                      type="button"
-                      onClick={() => setSignatureMode('draw')}
-                      className={`px-3 py-1 text-[10px] font-medium rounded-md transition-all ${signatureMode === 'draw' ? 'bg-white dark:bg-slate-800 text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                    >
-                      Draw
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSignatureMode('type')}
-                      className={`px-3 py-1 text-[10px] font-medium rounded-md transition-all ${signatureMode === 'type' ? 'bg-white dark:bg-slate-800 text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                    >
-                      Type
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => signatureImageInputRef.current?.click()}
-                      className={`px-3 py-1 text-[10px] font-medium rounded-md transition-all flex items-center gap-1 ${signatureMode === 'upload' ? 'bg-white dark:bg-slate-800 text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                    >
-                      <Upload className="w-3 h-3" />
-                      Upload
-                    </button>
-                  </div>
-                </div>
-
-                {signatureMode === 'type' && (
-                  <div className="mb-3 flex gap-3">
-                    <div className="flex-1">
-                      <input
+                <div className="p-6 space-y-6">
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div>
+                      <label htmlFor="company-country" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Country *</label>
+                      <select 
+                        id="company-country"
+                        required
+                        value={Country.getAllCountries().find(c => c.name === country)?.isoCode || ''}
+                        onChange={(e) => handleCountryChange(e.target.value)}
+                        className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none shadow-sm transition-all font-medium cursor-pointer ${showErrors && !country.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[#EBDCC8] dark:border-zinc-800 focus:border-[#88765C] focus:ring-4 focus:ring-[#88765C]/10'}`}
+                      >
+                        <option value="" disabled className="bg-white dark:bg-zinc-900 text-[#5C5043] dark:text-white">Select Country</option>
+                        {Country.getAllCountries().map((c) => (
+                          <option key={c.isoCode} value={c.isoCode} className="bg-white dark:bg-zinc-900 text-[#5C5043] dark:text-white">{c.name}</option>
+                        ))}
+                      </select>
+                      {showErrors && !country.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Country is required</p>}
+                    </div>
+                    <div>
+                      <label htmlFor="company-state" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">State *</label>
+                      <select 
+                        id="company-state"
+                        value={(() => {
+                          const cCode = Country.getAllCountries().find(c => c.name === country)?.isoCode;
+                          if (!cCode) return '';
+                          return State.getStatesOfCountry(cCode).find(s => s.name === state)?.isoCode || '';
+                        })()}
+                        onChange={(e) => handleStateChange(e.target.value, country)}
+                        className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none shadow-sm transition-all font-medium cursor-pointer ${showErrors && !state.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[#EBDCC8] dark:border-zinc-800 focus:border-[#88765C] focus:ring-4 focus:ring-[#88765C]/10'}`}
+                        required
+                      >
+                        <option value="" disabled className="bg-white dark:bg-zinc-900 text-slate-500">Select State</option>
+                        {(() => {
+                          const cCode = Country.getAllCountries().find(c => c.name === country)?.isoCode;
+                          if (!cCode) return null;
+                          return State.getStatesOfCountry(cCode).map((st) => (
+                            <option key={st.isoCode} value={st.isoCode} className="bg-white dark:bg-zinc-900 text-[#5C5043] dark:text-white">{st.name}</option>
+                          ));
+                        })()}
+                      </select>
+                      {showErrors && !state.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">State is required</p>}
+                    </div>
+                    <div>
+                      <label htmlFor="company-state-code" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">State Code</label>
+                      <input 
+                        id="company-state-code"
                         type="text"
-                        value={signatureText}
-                        onChange={(e) => setSignatureText(e.target.value)}
-                        placeholder="Type your signature here..."
-                        className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium"
+                        value={stateCode}
+                        onChange={(e) => setStateCode(e.target.value)}
+                        placeholder="07"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm focus:ring-4 focus:ring-[#88765C]/10 transition-all font-mono font-medium"
                       />
                     </div>
-                    <div className="w-48">
-                      <select
-                        value={signatureFont}
-                        onChange={(e) => setSignatureFont(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium font-mono"
-                        style={{ fontFamily: signatureFont }}
-                      >
-                        <option value="Caveat" style={{ fontFamily: 'Caveat' }}>Caveat</option>
-                        <option value="Sacramento" style={{ fontFamily: 'Sacramento' }}>Sacramento</option>
-                        <option value="Dancing Script" style={{ fontFamily: 'Dancing Script' }}>Dancing Script</option>
-                        <option value="Great Vibes" style={{ fontFamily: 'Great Vibes' }}>Great Vibes</option>
-                        <option value="Alex Brush" style={{ fontFamily: 'Alex Brush' }}>Alex Brush</option>
-                        <option value="Parisienne" style={{ fontFamily: 'Parisienne' }}>Parisienne</option>
-                        <option value="Yellowtail" style={{ fontFamily: 'Yellowtail' }}>Yellowtail</option>
-                        <option value="Mrs Saint Delafield" style={{ fontFamily: 'Mrs Saint Delafield' }}>Mrs Saint Delafield</option>
-                        <option value="Reenie Beanie" style={{ fontFamily: 'Reenie Beanie' }}>Reenie Beanie</option>
-                        <option value="Herr Von Muellerhoff" style={{ fontFamily: 'Herr Von Muellerhoff' }}>Herr Von Muellerhoff</option>
-                        <option value="Monsieur La Doulaise" style={{ fontFamily: 'Monsieur La Doulaise' }}>Monsieur La Doulaise</option>
-                        <option value="Pinyon Script" style={{ fontFamily: 'Pinyon Script' }}>Pinyon Script</option>
-                        <option value="Zeyada" style={{ fontFamily: 'Zeyada' }}>Zeyada</option>
-                        <option value="Mr De Haviland" style={{ fontFamily: 'Mr De Haviland' }}>Mr De Haviland</option>
-                        <option value="La Belle Aurore" style={{ fontFamily: 'La Belle Aurore' }}>La Belle Aurore</option>
-                      </select>
-                    </div>
                   </div>
-                )}
 
-                {signatureMode === 'upload' && (
-                  <div className="mb-2 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 text-[10px] font-medium flex items-start gap-1.5">
-                    <span className="text-amber-500 mt-0.5 shrink-0">⚠️</span>
-                    <span>Upload a signature photo taken on a <strong>plain white or light background</strong>. The system will automatically extract your signature.</span>
-                  </div>
-                )}
-
-                <div className="relative rounded-2xl overflow-hidden border border-slate-205 dark:border-slate-800 bg-white flex flex-col">
-                  {signatureMode === 'draw' ? (
-                    <canvas 
-                      ref={canvasRef}
-                      width={800}
-                      height={256}
-                      onMouseDown={startDrawing}
-                      onMouseMove={draw}
-                      onMouseUp={stopDrawing}
-                      onMouseLeave={stopDrawing}
-                      onTouchStart={startDrawing}
-                      onTouchMove={draw}
-                      onTouchEnd={stopDrawing}
-                      className="w-full h-auto bg-white cursor-crosshair touch-none"
+                  <div>
+                    <label htmlFor="company-address" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Full Office Address</label>
+                    <textarea 
+                      id="company-address"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="e.g. 123 Business Rd, City Centre"
+                      rows={2}
+                      className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm focus:ring-4 focus:ring-[#88765C]/10 transition-all resize-none"
                     />
-                  ) : (
-                    <div className="w-full h-32 bg-white flex items-center justify-center p-4">
-                      {signature ? (
-                        <img 
-                          src={signature} 
-                          alt="Signature Preview" 
-                          className="max-w-full max-h-full object-contain" 
-                        />
-                      ) : (
-                        <span className="text-slate-400 text-xs">No signature entered yet</span>
-                      )}
-                      {/* Mount canvas hidden so text/upload crop drawing works in background */}
-                       <canvas 
-                         ref={canvasRef}
-                         width={800}
-                         height={256}
-                         style={{ position: 'absolute', left: '-9999px', top: '-9999px', visibility: 'hidden' }}
-                       />
-                    </div>
-                  )}
-                  
-                  {signature && (
-                    <button 
-                      type="button" 
-                      onClick={clearSignature}
-                      className="absolute top-2 right-2 p-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg transition-colors cursor-pointer shadow-sm border border-rose-200 dark:border-rose-500/20"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                  
-                  <div className="absolute bottom-2 left-3 flex items-center gap-1.5 pointer-events-none text-slate-400 dark:text-slate-500 text-[10px]">
-                    <span>{signatureMode === 'draw' ? 'Draw your signature above.' : signatureMode === 'type' ? 'Your typed signature preview.' : 'Extracted signature preview.'}</span>
                   </div>
                 </div>
+              </div>
 
-                {/* Signature Size Adjuster */}
-                <div className="mt-5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800/80">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Signature Display Size</span>
-                    <span className="text-xs font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-500/10 px-2.5 py-1 rounded-md">
-                      Size: {Math.max(1, Math.min(10, Math.round((signatureSize - 60) / 10) + 1))}
-                    </span>
-                  </div>
-                  
-                  {/* Range input */}
-                  <div className="space-y-2">
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      step="1"
-                      value={Math.max(1, Math.min(10, Math.round((signatureSize - 60) / 10) + 1))}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        setSignatureSize(60 + (val - 1) * 10);
-                      }}
-                      className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-500 focus:outline-none"
-                    />
-                    <div className="flex justify-between text-[9px] font-semibold text-slate-400 uppercase tracking-wider">
-                      <span>1 (Small)</span>
-                      <span>5 (Medium)</span>
-                      <span>10 (Large)</span>
+              {/* CARD 3: CONTACT & COMPLIANCE */}
+              <div className="border border-[#EBDCC8] dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="bg-[#F4EBE1] dark:bg-zinc-800/50 border-b border-[#EBDCC8] dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#5C5043] dark:text-[#ebdcc8]">
+                  Contact & Compliance
+                </div>
+                <div className="p-6 space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <label htmlFor="company-mobile" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Mobile *</label>
+                      <input 
+                        id="company-mobile"
+                        type="text"
+                        required
+                        value={mobile}
+                        onChange={(e) => setMobile(e.target.value.replace(/[^\d\s+]/g, ''))}
+                        placeholder="e.g. +1 555-0199"
+                        className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none shadow-sm transition-all font-medium ${showErrors && !mobile.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[#EBDCC8] dark:border-zinc-800 focus:border-[#88765C] focus:ring-4 focus:ring-[#88765C]/10'}`}
+                      />
+                      {showErrors && !mobile.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Mobile Number is required</p>}
+                    </div>
+                    <div>
+                      <label htmlFor="company-email" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Email *</label>
+                      <input 
+                        id="company-email"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="e.g. contact@acme.com"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm focus:ring-4 focus:ring-[#88765C]/10 transition-all font-medium"
+                      />
                     </div>
                   </div>
 
-                  {/* Preset Buttons */}
-                  <div className="flex gap-2 mt-4">
-                    {[
-                      { label: 'Small', value: 60 },
-                      { label: 'Medium', value: 100 },
-                      { label: 'Large', value: 150 },
-                    ].map((preset) => (
-                      <button
-                        key={preset.value}
-                        type="button"
-                        onClick={() => setSignatureSize(preset.value)}
-                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${signatureSize === preset.value ? 'bg-sky-500 text-white border-sky-500 shadow-sm' : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/60'}`}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div>
+                      <label htmlFor="company-currency-symbol" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Currency Symbol</label>
+                      <input 
+                        id="company-currency-symbol"
+                        type="text"
+                        value={currencySymbol}
+                        onChange={(e) => setCurrencySymbol(e.target.value)}
+                        placeholder="e.g. ₹"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm focus:ring-4 focus:ring-[#88765C]/10 transition-all font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="company-gstin" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">GSTIN / Tax ID</label>
+                      <input 
+                        id="company-gstin"
+                        type="text"
+                        value={taxId}
+                        onChange={(e) => setTaxId(e.target.value)}
+                        placeholder="e.g. GSTIN99238"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm focus:ring-4 focus:ring-[#88765C]/10 transition-all font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="company-pan" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">PAN Number</label>
+                      <input 
+                        id="company-pan"
+                        type="text"
+                        value={pan}
+                        onChange={(e) => setPan(e.target.value)}
+                        placeholder="e.g. ABCDE1234F"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm focus:ring-4 focus:ring-[#88765C]/10 transition-all font-mono uppercase"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* CARD 4: CLIENT SIGNATURE PAD */}
+              <div className="border border-[#EBDCC8] dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="bg-[#F4EBE1] dark:bg-zinc-800/50 border-b border-[#EBDCC8] dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#5C5043] dark:text-[#ebdcc8]">
+                  Client Signature Pad
+                </div>
+                <div className="p-6 space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400">Signature Configuration</label>
+                      
+                      {/* Signature Mode Switcher */}
+                      <div className="flex bg-[#FCFAF7] dark:bg-zinc-900 p-0.5 rounded-lg border border-[#EBDCC8] dark:border-zinc-800">
+                        <button
+                          type="button"
+                          onClick={() => setSignatureMode('draw')}
+                          className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all cursor-pointer ${signatureMode === 'draw' ? 'bg-[#88765C] text-white shadow-sm' : 'text-[#88765C]/70 hover:text-[#5C5043] dark:hover:text-zinc-300'}`}
+                        >
+                          Draw
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSignatureMode('type')}
+                          className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all cursor-pointer ${signatureMode === 'type' ? 'bg-[#88765C] text-white shadow-sm' : 'text-[#88765C]/70 hover:text-[#5C5043] dark:hover:text-zinc-300'}`}
+                        >
+                          Type
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => signatureImageInputRef.current?.click()}
+                          className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all flex items-center gap-1 cursor-pointer ${signatureMode === 'upload' ? 'bg-[#88765C] text-white shadow-sm' : 'text-[#88765C]/70 hover:text-[#5C5043] dark:hover:text-zinc-300'}`}
+                        >
+                          <Upload className="w-3 h-3" />
+                          Upload
+                        </button>
+                      </div>
+                    </div>
+
+                    {signatureMode === 'type' && (
+                      <div className="mb-4 flex gap-3">
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            value={signatureText}
+                            onChange={(e) => setSignatureText(e.target.value)}
+                            placeholder="Type your signature here..."
+                            className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] transition-all font-medium"
+                          />
+                        </div>
+                        <div className="w-48">
+                          <select
+                            value={signatureFont}
+                            onChange={(e) => setSignatureFont(e.target.value)}
+                            className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] transition-all font-medium cursor-pointer"
+                            style={{ fontFamily: signatureFont }}
+                          >
+                            <option value="Caveat" style={{ fontFamily: 'Caveat' }}>Caveat</option>
+                            <option value="Sacramento" style={{ fontFamily: 'Sacramento' }}>Sacramento</option>
+                            <option value="Dancing Script" style={{ fontFamily: 'Dancing Script' }}>Dancing Script</option>
+                            <option value="Great Vibes" style={{ fontFamily: 'Great Vibes' }}>Great Vibes</option>
+                            <option value="Alex Brush" style={{ fontFamily: 'Alex Brush' }}>Alex Brush</option>
+                            <option value="Parisienne" style={{ fontFamily: 'Parisienne' }}>Parisienne</option>
+                            <option value="Yellowtail" style={{ fontFamily: 'Yellowtail' }}>Yellowtail</option>
+                            <option value="Mrs Saint Delafield" style={{ fontFamily: 'Mrs Saint Delafield' }}>Mrs Saint Delafield</option>
+                            <option value="Reenie Beanie" style={{ fontFamily: 'Reenie Beanie' }}>Reenie Beanie</option>
+                            <option value="Herr Von Muellerhoff" style={{ fontFamily: 'Herr Von Muellerhoff' }}>Herr Von Muellerhoff</option>
+                            <option value="Monsieur La Doulaise" style={{ fontFamily: 'Monsieur La Doulaise' }}>Monsieur La Doulaise</option>
+                            <option value="Pinyon Script" style={{ fontFamily: 'Pinyon Script' }}>Pinyon Script</option>
+                            <option value="Zeyada" style={{ fontFamily: 'Zeyada' }}>Zeyada</option>
+                            <option value="Mr De Haviland" style={{ fontFamily: 'Mr De Haviland' }}>Mr De Haviland</option>
+                            <option value="La Belle Aurore" style={{ fontFamily: 'La Belle Aurore' }}>La Belle Aurore</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {signatureMode === 'upload' && (
+                      <div className="mb-3 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 text-[10px] font-semibold flex items-start gap-1.5">
+                        <span className="text-amber-500 mt-0.5 shrink-0">⚠️</span>
+                        <span>Upload a signature photo taken on a <strong>plain white or light background</strong>. The system will automatically extract your signature.</span>
+                      </div>
+                    )}
+
+                    <div className="relative rounded-2xl overflow-hidden border-2 border-dashed border-[#EBDCC8] dark:border-zinc-800 bg-[#FCFAF7] dark:bg-zinc-950 flex flex-col my-4">
+                      {signatureMode === 'draw' ? (
+                        <canvas 
+                          ref={canvasRef}
+                          width={800}
+                          height={256}
+                          onMouseDown={startDrawing}
+                          onMouseMove={draw}
+                          onMouseUp={stopDrawing}
+                          onMouseLeave={stopDrawing}
+                          onTouchStart={startDrawing}
+                          onTouchMove={draw}
+                          onTouchEnd={stopDrawing}
+                          className="w-full h-auto bg-transparent cursor-crosshair touch-none"
+                        />
+                      ) : (
+                        <div className="w-full h-32 bg-transparent flex items-center justify-center p-4">
+                          {signature ? (
+                            <img 
+                              src={signature} 
+                              alt="Signature Preview" 
+                              className="max-w-full max-h-full object-contain" 
+                            />
+                          ) : (
+                            <span className="text-[#88765C]/60 text-xs font-semibold uppercase tracking-wider">No signature entered yet</span>
+                          )}
+                          {/* Mount canvas hidden so text/upload crop drawing works in background */}
+                           <canvas 
+                             ref={canvasRef}
+                             width={800}
+                             height={256}
+                             style={{ position: 'absolute', left: '-9999px', top: '-9999px', visibility: 'hidden' }}
+                           />
+                        </div>
+                      )}
+                      
+                      {signature && (
+                        <button 
+                          type="button" 
+                          onClick={clearSignature}
+                          className="absolute top-2 right-2 p-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg transition-colors cursor-pointer shadow-sm border border-rose-200"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      
+                      <div className="absolute bottom-2 left-3 flex items-center gap-1.5 pointer-events-none text-[#88765C]/50 dark:text-zinc-500 text-[8px] font-bold uppercase tracking-wider">
+                        <span>{signatureMode === 'draw' ? 'Draw your signature above.' : signatureMode === 'type' ? 'Your typed signature preview.' : 'Extracted signature preview.'}</span>
+                      </div>
+                    </div>
+
+                    {/* Signature Size Adjuster */}
+                    <div className="mt-5 p-4 rounded-xl bg-[#FCFAF7] dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-800/80">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400">Signature Display Size</span>
+                        <span className="text-xs font-extrabold text-[#88765C] bg-white dark:bg-zinc-950 px-2.5 py-1 rounded-md border border-[#EBDCC8]">
+                          Size: {Math.max(1, Math.min(10, Math.round((signatureSize - 60) / 10) + 1))}
+                        </span>
+                      </div>
+                      
+                      {/* Range input */}
+                      <div className="space-y-2.5">
+                        <input
+                          type="range"
+                          min="1"
+                          max="10"
+                          step="1"
+                          value={Math.max(1, Math.min(10, Math.round((signatureSize - 60) / 10) + 1))}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            setSignatureSize(60 + (val - 1) * 10);
+                          }}
+                          className="w-full h-1.5 bg-[#EBDCC8] dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#88765C] focus:outline-none"
+                        />
+                        <div className="flex justify-between text-[8px] font-extrabold text-[#88765C]/60 uppercase tracking-widest">
+                          <span>1 (Small)</span>
+                          <span>5 (Medium)</span>
+                          <span>10 (Large)</span>
+                        </div>
+                      </div>
+
+                      {/* Preset Buttons */}
+                      <div className="flex gap-2 mt-4">
+                        {[
+                          { label: 'Small', value: 60 },
+                          { label: 'Medium', value: 100 },
+                          { label: 'Large', value: 150 },
+                        ].map((preset) => (
+                          <button
+                            key={preset.value}
+                            type="button"
+                            onClick={() => setSignatureSize(preset.value)}
+                            className={`flex-1 py-2 rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition-all border cursor-pointer ${signatureSize === preset.value ? 'bg-[#88765C] text-white border-[#88765C] shadow-sm' : 'bg-white dark:bg-zinc-950 text-[#88765C] border-[#EBDCC8] dark:border-zinc-800 hover:bg-[#FCFAF7]'}`}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1690,250 +1838,317 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
           {/* TAB 2: BANKING */}
           {activeTab === 'banking' && (
-            <div className="space-y-6 animate-fade-in text-slate-805 dark:text-white">
-              <div className="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Landmark className="w-5 h-5 text-sky-500" />
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white">Bank Account Details</h3>
+            <div className="space-y-6 animate-fade-in text-[#5C5043] dark:text-[#ebdcc8]">
+              {/* White background main Card with brown border */}
+              <div className="border border-[#EBDCC8] dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="bg-[#F4EBE1] dark:bg-zinc-800/50 border-b border-[#EBDCC8] dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#5C5043] dark:text-[#ebdcc8]">
+                  Primary Bank Account
                 </div>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="bank-name" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Bank Name</label>
-                  <input 
-                    id="bank-name"
-                    type="text"
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    placeholder="e.g. Axs"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="bank-account" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Account Number</label>
-                  <input 
-                    id="bank-account"
-                    type="text"
-                    value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value)}
-                    placeholder="e.g. 8612345678"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-mono font-medium"
-                  />
+                <div className="p-6 space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <label htmlFor="bank-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Bank Name *</label>
+                      <input 
+                        id="bank-name"
+                        type="text"
+                        value={bankName}
+                        onChange={(e) => setBankName(e.target.value)}
+                        placeholder="e.g. HDFC Bank"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="bank-account" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Account Number *</label>
+                      <input 
+                        id="bank-account"
+                        type="text"
+                        value={accountNumber}
+                        onChange={(e) => setAccountNumber(e.target.value)}
+                        placeholder="e.g. 50100234567890"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 font-mono font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <label htmlFor="bank-ifsc" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">IFSC Code *</label>
+                      <input 
+                        id="bank-ifsc"
+                        type="text"
+                        value={ifsc}
+                        onChange={(e) => setIfsc(e.target.value)}
+                        placeholder="e.g. HDFC0001234"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 font-mono uppercase font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="bank-upi" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">UPI ID</label>
+                      <input 
+                        id="bank-upi"
+                        type="text"
+                        value={upiId}
+                        onChange={(e) => setUpiId(e.target.value)}
+                        placeholder="e.g. upi@okaxis"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[#EBDCC8] dark:border-zinc-800 pt-6 flex items-center justify-start">
+                    <button
+                      type="submit"
+                      disabled={isSaving}
+                      className="px-6 py-2.5 bg-[#88765C] hover:bg-[#5C5043] text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-[#88765C]/20 cursor-pointer disabled:opacity-50"
+                    >
+                      <Check className="w-4 h-4" />
+                      {isSaving ? 'Saving...' : 'Save Bank Details'}
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="bank-ifsc" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">IFSC</label>
-                  <input 
-                    id="bank-ifsc"
-                    type="text"
-                    value={ifsc}
-                    onChange={(e) => setIfsc(e.target.value)}
-                    placeholder="e.g. FVER1213454"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-mono uppercase font-medium"
-                  />
+              {/* Three Beige Info Cards */}
+              <div className="grid md:grid-cols-3 gap-5">
+                <div className="p-5 rounded-2xl border border-[#EBDCC8] dark:border-zinc-800 bg-[#F4EBE1]/40 dark:bg-zinc-900/40 text-[#5C5043] dark:text-[#ebdcc8] space-y-2 flex flex-col justify-start">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-[#88765C]" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider">Secure Storage</span>
+                  </div>
+                  <p className="text-[10px] text-[#88765C]/80 dark:text-slate-400 leading-normal">
+                    Your banking data is encrypted and stored according to industry standards.
+                  </p>
                 </div>
-                <div>
-                  <label htmlFor="bank-upi" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">UPI ID</label>
-                  <input 
-                    id="bank-upi"
-                    type="text"
-                    value={upiId}
-                    onChange={(e) => setUpiId(e.target.value)}
-                    placeholder="e.g. uyt6543"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
-                  />
+                <div className="p-5 rounded-2xl border border-[#EBDCC8] dark:border-zinc-800 bg-[#F4EBE1]/40 dark:bg-zinc-900/40 text-[#5C5043] dark:text-[#ebdcc8] space-y-2 flex flex-col justify-start">
+                  <div className="flex items-center gap-2">
+                    <Banknote className="w-4 h-4 text-[#88765C]" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider">Automated Payouts</span>
+                  </div>
+                  <p className="text-[10px] text-[#88765C]/80 dark:text-slate-400 leading-normal">
+                    Ensure accuracy to prevent delays in processing your invoice settlements.
+                  </p>
+                </div>
+                <div className="p-5 rounded-2xl border border-[#EBDCC8] dark:border-zinc-800 bg-[#F4EBE1]/40 dark:bg-zinc-900/40 text-[#5C5043] dark:text-[#ebdcc8] space-y-2 flex flex-col justify-start">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-[#88765C]" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider">Verification</span>
+                  </div>
+                  <p className="text-[10px] text-[#88765C]/80 dark:text-slate-400 leading-normal">
+                    Changes to banking details may require a one-time verification step.
+                  </p>
                 </div>
               </div>
-
-              </div> {/* End Banking Card */}
-              {/* Inline layout trigger button as seen in reference Image 3 */}
-              {!isOnboarding && (
-                <div className="pt-4">
-                  <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer disabled:opacity-50"
-                  >
-                    <Check className="w-4 h-4" />
-                    {isSaving ? 'Saving...' : 'Save Company Details'}
-                  </button>
-                </div>
-              )}
             </div>
           )}
+
           {/* TAB 3: BILLING / CUSTOMIZATION */}
           {activeTab === 'billing' && (
-            <div className="space-y-8 animate-fade-in text-slate-805 dark:text-white">
+            <div className="space-y-6 animate-fade-in text-[#5C5043] dark:text-[#ebdcc8]">
               
-              {/* Card 1: Invoice Numbers */}
-              <div className="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 space-y-6 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-300">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Invoice Numbering</h3>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="billing-prefix" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Invoice Prefix</label>
-                  <input 
-                    id="billing-prefix"
-                    type="text"
-                    value={invoicePrefix}
-                    onChange={(e) => setInvoicePrefix(e.target.value)}
-                    placeholder="e.g. INV"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
-                  />
+              {/* Card 1: Invoice Numbering */}
+              <div className="border border-[#EBDCC8] dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="bg-[#F4EBE1] dark:bg-zinc-800/50 border-b border-[#EBDCC8] dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#5C5043] dark:text-[#ebdcc8]">
+                  Invoice Numbering
                 </div>
-                <div>
-                  <label htmlFor="billing-start-num" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Starting Invoice Number</label>
-                  <input 
-                    id="billing-start-num"
-                    type="number"
-                    value={startingInvoiceNumber}
-                    onChange={(e) => setStartingInvoiceNumber(e.target.value)}
-                    placeholder="1"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
-                  />
+                <div className="p-6 space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <label htmlFor="billing-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Invoice Prefix</label>
+                      <input 
+                        id="billing-prefix"
+                        type="text"
+                        value={invoicePrefix}
+                        onChange={(e) => setInvoicePrefix(e.target.value)}
+                        placeholder="e.g. INV"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 font-medium uppercase"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="billing-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Starting Invoice Number</label>
+                      <input 
+                        id="billing-start-num"
+                        type="number"
+                        value={startingInvoiceNumber}
+                        onChange={(e) => setStartingInvoiceNumber(e.target.value)}
+                        placeholder="1"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 font-medium"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
               {/* Card 2: Permissions & Features */}
-              <div className="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 space-y-6 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-300">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Permissions & Features</h3>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="billing-posted-edit" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Posted Invoice Edit</label>
-                  <select 
-                    id="billing-posted-edit"
-                    value={postedInvoiceEdit}
-                    onChange={(e) => setPostedInvoiceEdit(e.target.value as any)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium cursor-pointer"
-                  >
-                    <option value="Enabled" className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">Enabled</option>
-                    <option value="Disabled" className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">Disabled</option>
-                  </select>
+              <div className="border border-[#EBDCC8] dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="bg-[#F4EBE1] dark:bg-zinc-800/50 border-b border-[#EBDCC8] dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#5C5043] dark:text-[#ebdcc8]">
+                  Permissions & Features
                 </div>
-                <div>
-                  <label htmlFor="billing-rate-edit" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Material Rate Edit</label>
-                  <select 
-                    id="billing-rate-edit"
-                    value={materialRateEdit}
-                    onChange={(e) => setMaterialRateEdit(e.target.value as any)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium cursor-pointer"
-                  >
-                    <option value="Enabled" className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">Enabled</option>
-                    <option value="Disabled" className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">Disabled</option>
-                  </select>
+                <div className="p-6 space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <label htmlFor="billing-posted-edit" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Posted Invoice Edit</label>
+                      <select 
+                        id="billing-posted-edit"
+                        value={postedInvoiceEdit}
+                        onChange={(e) => setPostedInvoiceEdit(e.target.value as any)}
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 font-medium cursor-pointer"
+                      >
+                        <option value="Enabled" className="bg-white dark:bg-zinc-900 text-slate-805 dark:text-white">Enabled</option>
+                        <option value="Disabled" className="bg-white dark:bg-zinc-900 text-slate-805 dark:text-white">Disabled</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="billing-rate-edit" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Material Rate Edit</label>
+                      <select 
+                        id="billing-rate-edit"
+                        value={materialRateEdit}
+                        onChange={(e) => setMaterialRateEdit(e.target.value as any)}
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 font-medium cursor-pointer"
+                      >
+                        <option value="Enabled" className="bg-white dark:bg-zinc-900 text-slate-805 dark:text-white">Enabled</option>
+                        <option value="Disabled" className="bg-white dark:bg-zinc-900 text-slate-805 dark:text-white">Disabled</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <label htmlFor="billing-categ-edit" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Material Categorization</label>
+                      <select 
+                        id="billing-categ-edit"
+                        value={materialCategorization}
+                        onChange={(e) => setMaterialCategorization(e.target.value as any)}
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 font-medium cursor-pointer"
+                      >
+                        <option value="Optional" className="bg-white dark:bg-zinc-900 text-slate-805 dark:text-white">Optional</option>
+                        <option value="Required" className="bg-white dark:bg-zinc-900 text-slate-805 dark:text-white">Required</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="billing-categ-edit" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Material Categorization</label>
-                  <select 
-                    id="billing-categ-edit"
-                    value={materialCategorization}
-                    onChange={(e) => setMaterialCategorization(e.target.value as any)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium cursor-pointer"
-                  >
-                    <option value="Optional" className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">Optional</option>
-                    <option value="Required" className="bg-white dark:bg-slate-900 text-slate-805 dark:text-white">Required</option>
-                  </select>
-                </div>
-
-              </div>
-            </div>
 
               {/* Card 3: Default Text & Terms */}
-              <div className="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 space-y-6 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-300">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Default Text & Terms</h3>
-                <div className="space-y-6">
+              <div className="border border-[#EBDCC8] dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="bg-[#F4EBE1] dark:bg-zinc-800/50 border-b border-[#EBDCC8] dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#5C5043] dark:text-[#ebdcc8]">
+                  Default Text & Terms
+                </div>
+                <div className="p-6 space-y-6">
                   <div>
-                    <label htmlFor="billing-notes" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Default Notes</label>
-                <textarea 
-                  id="billing-notes"
-                  value={defaultNotes}
-                  onChange={(e) => setDefaultNotes(e.target.value)}
-                  placeholder="Thank you for your business."
-                  rows={2}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 resize-none"
-                />
-              </div>
+                    <label htmlFor="billing-notes" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Default Notes</label>
+                    <textarea 
+                      id="billing-notes"
+                      value={defaultNotes}
+                      onChange={(e) => setDefaultNotes(e.target.value)}
+                      placeholder="Thank you for your business."
+                      rows={2}
+                      className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 resize-none font-medium"
+                    />
+                  </div>
 
-              <div>
-                <label htmlFor="billing-terms" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Default Terms & Conditions</label>
-                <textarea 
-                  id="billing-terms"
-                  value={defaultTerms}
-                  onChange={(e) => setDefaultTerms(e.target.value)}
-                  placeholder="Goods once sold will not be taken back or exchanged."
-                  rows={2}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-805 bg-white dark:bg-slate-950 text-sm text-slate-805 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 resize-none"
-                />
-              </div>
-
+                  <div>
+                    <label htmlFor="billing-terms" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">Default Terms & Conditions</label>
+                    <textarea 
+                      id="billing-terms"
+                      value={defaultTerms}
+                      onChange={(e) => setDefaultTerms(e.target.value)}
+                      placeholder="Goods once sold will not be taken back or exchanged."
+                      rows={2}
+                      className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 resize-none font-medium"
+                    />
+                  </div>
                 </div>
               </div>
-              
+
+              {/* Lower Section (Configure Smarter & Need Assistance) */}
+              <div className="grid md:grid-cols-12 gap-5 pt-2">
+                <div className="md:col-span-8 p-6 rounded-2xl border border-[#EBDCC8] dark:border-zinc-800 bg-[#F4EBE1]/40 dark:bg-zinc-900/40 text-[#5C5043] dark:text-[#ebdcc8] relative overflow-hidden flex flex-col justify-center min-h-[120px]">
+                  <h4 className="text-sm font-extrabold text-[#88765C] dark:text-white mb-2">Configure Smarter</h4>
+                  <p className="text-[10px] text-[#88765C]/90 dark:text-slate-400 max-w-[80%] leading-relaxed">
+                    Changes made here will be reflected globally on all new generated invoices. Maintain consistency across your brand identity.
+                  </p>
+                  <FileSpreadsheet className="absolute -bottom-4 -right-4 w-28 h-28 text-[#88765C]/10 dark:text-white/5 pointer-events-none rotate-12" />
+                </div>
+
+                <div className="md:col-span-4 p-6 rounded-2xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-900 text-[#5C5043] dark:text-[#ebdcc8] flex flex-col justify-between min-h-[120px] shadow-sm">
+                  <div className="flex items-start gap-2.5">
+                    <HelpCircle className="w-5 h-5 text-[#88765C] shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-white mb-1.5">Need Assistance?</h4>
+                      <p className="text-[10px] text-[#88765C]/80 dark:text-slate-400 leading-normal">
+                        Review our Billing Documentation for detailed configuration guides.
+                      </p>
+                    </div>
+                  </div>
+                  <a href="#" className="text-[10px] font-extrabold text-[#88765C] hover:text-[#5C5043] flex items-center gap-1 mt-3 transition-colors uppercase tracking-wider">
+                    Learn More &rarr;
+                  </a>
+                </div>
+              </div>
 
             </div>
           )}
 
           {/* TAB 4: SUBSCRIPTION */}
           {activeTab === 'subscription' && (
-            <div className="space-y-4 animate-fade-in text-sans">
-              <div className="p-6 rounded-3xl border border-slate-200 dark:border-sky-950/40 bg-gradient-to-tr from-slate-50 via-slate-100/50 to-slate-50 dark:from-slate-950 dark:to-[#0e172a] relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-44 h-44 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
-                
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="p-1 px-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      Premium Service Stack Enabled
+            <div className="space-y-6 animate-fade-in text-[#5C5043] dark:text-[#ebdcc8]">
+              <div className="border border-[#EBDCC8] dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="bg-[#F4EBE1] dark:bg-zinc-800/50 border-b border-[#EBDCC8] dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#5C5043] dark:text-[#ebdcc8]">
+                  Subscription Details
+                </div>
+                <div className="p-6 space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="p-1 px-3 bg-[#F4EBE1] dark:bg-zinc-800 text-[#88765C] dark:text-[#ebdcc8] border border-[#EBDCC8] dark:border-zinc-700 rounded-full text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        Premium Service Stack Enabled
+                      </div>
+                      <span className="text-xs text-[#88765C] dark:text-zinc-400 font-mono font-extrabold uppercase tracking-wider">{subStatus}</span>
                     </div>
-                    <span className="text-xs text-sky-600 dark:text-sky-400 font-mono font-extrabold uppercase tracking-wider">{subStatus}</span>
-                  </div>
 
-                  <div className="space-y-1">
-                    <h3 className="text-xl sm:text-2xl font-extrabold text-slate-805 dark:text-white">{subPlanName}</h3>
-                    <p className="text-xs text-slate-550 dark:text-slate-400">The corporate grade cloud syncing environment. Bound strictly in military local encryptions.</p>
-                  </div>
+                    <div className="space-y-1">
+                      <h3 className="text-xl sm:text-2xl font-extrabold text-[#5C5043] dark:text-white">{subPlanName}</h3>
+                      <p className="text-xs text-[#88765C]/80 dark:text-slate-400">The corporate grade cloud syncing environment. Bound strictly in military local encryptions.</p>
+                    </div>
 
-                  <div className="border-t border-slate-200 dark:border-slate-850 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <span className="block text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Active Plan Type</span>
-                      <span className="text-sm font-bold text-slate-805 dark:text-white">{subPlanType}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Authorized Token Node</span>
-                      <span className="text-sm font-medium text-sky-600 dark:text-sky-400 font-mono tracking-wide">{subAuthorizedToken || companyCode || 'N/A'}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Expires / Renews</span>
-                      <span className="text-sm font-bold text-[#10b981] dark:text-[#34d399] flex items-center gap-1">
-                        {subExpiresAt}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Local Node Syncing State</span>
-                      <span className="text-xs font-medium text-slate-550 dark:text-slate-400 flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                        Authenticated
-                      </span>
+                    <div className="border-t border-[#EBDCC8] dark:border-zinc-850 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <span className="block text-[9px] font-extrabold text-[#88765C]/60 dark:text-slate-500 uppercase tracking-widest">Active Plan Type</span>
+                        <span className="text-sm font-bold text-[#5C5043] dark:text-white">{subPlanType}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] font-extrabold text-[#88765C]/60 dark:text-slate-500 uppercase tracking-widest">Authorized Token Node</span>
+                        <span className="text-sm font-medium text-[#88765C] dark:text-zinc-400 font-mono tracking-wide">{subAuthorizedToken || companyCode || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] font-extrabold text-[#88765C]/60 dark:text-slate-500 uppercase tracking-widest">Expires / Renews</span>
+                        <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          {subExpiresAt}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] font-extrabold text-[#88765C]/60 dark:text-slate-500 uppercase tracking-widest">Local Node Syncing State</span>
+                        <span className="text-xs font-medium text-[#5C5043] dark:text-slate-400 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                          Authenticated
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 bg-slate-50 dark:bg-[#0a101b]/60 rounded-2xl border border-slate-200 dark:border-slate-850 flex items-center justify-between gap-4">
-                <div className="space-y-0.5 col-span-1">
-                  <h4 className="text-xs font-bold text-slate-805 dark:text-white uppercase tracking-wider">Multi-User Collaboration & Audit System</h4>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Authorize secure cryptographic access keys to branch office ledgers instantly.</p>
+              <div className="p-4 bg-[#FCFAF7] dark:bg-zinc-955/30 rounded-2xl border border-[#EBDCC8] dark:border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-0.5">
+                  <h4 className="text-xs font-bold text-[#5C5043] dark:text-white uppercase tracking-wider">Multi-User Collaboration & Audit System</h4>
+                  <p className="text-[10px] text-[#88765C]/80 dark:text-slate-400">Authorize secure cryptographic access keys to branch office ledgers instantly.</p>
                 </div>
                 <button 
                   type="button"
-                  onClick={() => alert('Branch key sharing token successfully synchronized locally! Check console ledger key.')}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-250 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 text-[10px] uppercase font-extrabold tracking-widest rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                  onClick={() => setNotification({ message: 'Branch key sharing token successfully synchronized locally! Check console ledger key.', type: 'info', title: 'Branch Key Request' })}
+                  className="px-4 py-2 bg-[#88765C] hover:bg-[#5C5043] text-white text-[10px] uppercase font-extrabold tracking-widest rounded-xl transition-all cursor-pointer flex items-center gap-1.5 self-stretch sm:self-auto justify-center"
                 >
-                  <KeyRound className="w-3.5 h-3.5 text-sky-600 dark:text-sky-300" />
+                  <KeyRound className="w-3.5 h-3.5 text-white" />
                   Request Key
                 </button>
               </div>
@@ -1942,198 +2157,199 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
           {/* TAB 5: TAX CONFIG */}
           {activeTab === 'tax' && (
-            <div className="space-y-6 animate-fade-in text-slate-805 dark:text-white">
-              <div className="p-5 md:p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/60 space-y-5">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-extrabold text-slate-805 dark:text-white uppercase tracking-wider">Tax Configuration</h3>
-                  <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400">Configure default tax profiles for your invoices based on your operating country.</p>
+            <div className="space-y-6 animate-fade-in text-[#5C5043] dark:text-[#ebdcc8]">
+              <div className="border border-[#EBDCC8] dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="bg-[#F4EBE1] dark:bg-zinc-800/50 border-b border-[#EBDCC8] dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#5C5043] dark:text-[#ebdcc8]">
+                  Tax Configuration
                 </div>
-
-                {/* Country Detection */}
-                <div className="p-4 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                  <div>
-                    <span className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">Company Operating Country</span>
-                    <span className="text-sm font-bold text-slate-805 dark:text-white">{country || 'Not Selected (Please select in Profile tab)'}</span>
+                <div className="p-6 space-y-6">
+                  
+                  {/* Country Detection */}
+                  <div className="p-4 bg-[#FCFAF7] dark:bg-zinc-955/30 rounded-2xl border border-[#EBDCC8] dark:border-zinc-800 flex items-center justify-between">
+                    <div>
+                      <span className="block text-[10px] font-extrabold text-[#88765C]/60 dark:text-zinc-500 uppercase tracking-widest leading-none mb-1">Company Operating Country</span>
+                      <span className="text-sm font-extrabold text-[#5C5043] dark:text-white">{country || 'Not Selected (Please select in Profile tab)'}</span>
+                    </div>
+                    <span className="text-xl">
+                      {country && country.toLowerCase() === 'india' ? '🇮🇳' : '🌐'}
+                    </span>
                   </div>
-                  <span className="text-xl">
-                    {country && country.toLowerCase() === 'india' ? '🇮🇳' : '🌐'}
-                  </span>
-                </div>
 
-                {country && country.toLowerCase() === 'india' ? (
-                  // INDIA GST TAX ENGINE CONFIG
-                  <div className="space-y-5">
-                    <div className="p-4 bg-blue-500/5 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-800/40 rounded-2xl space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-blue-500 font-bold">ℹ️</span>
-                        <span className="text-xs font-bold text-blue-750 dark:text-blue-405 uppercase tracking-wider">GST Tax Split Mechanism Active</span>
-                      </div>
-                      <p className="text-[10px] text-blue-650 dark:text-blue-300 leading-relaxed font-medium">
-                        For invoices generated within India, taxes are dynamically split based on the state comparison:
-                        <br />• <strong>Intrastate (Same State)</strong>: The configured tax will split 50/50 into <strong>CGST</strong> and <strong>SGST</strong>.
-                        <br />• <strong>Interstate (Different State)</strong>: The full tax rate is applied as <strong>IGST</strong>.
-                      </p>
-                    </div>
-                    <div className="max-w-md">
-                      <label htmlFor="tax-rate-india" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                        Default GST Rate (%)
-                      </label>
-                      <select
-                        id="tax-rate-india"
-                        value={customTaxPercentage}
-                        onChange={(e) => {
-                          const rateVal = parseFloat(e.target.value);
-                          setCustomTaxPercentage(rateVal);
-                          setDefaultTaxRate(rateVal);
-                        }}
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm font-medium"
-                      >
-                        <option value={0}>0% (Nil/Exempt): Unprocessed food, healthcare or education services</option>
-                        <option value={5}>5% (Merit Rate): Packaged food, daily essentials</option>
-                        <option value={18}>18% (Standard Rate): Services, logistics, and hospitality</option>
-                        <option value={40}>40% (Luxury/Sin Goods): Luxury items</option>
-                        {![0, 5, 18, 40].includes(customTaxPercentage) && (
-                          <option value={customTaxPercentage}>{customTaxPercentage}% (Custom)</option>
-                        )}
-                      </select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 max-w-md pt-2 border-t border-slate-100 dark:border-slate-850">
-                      <div className="p-3 bg-slate-150/40 dark:bg-slate-900 rounded-xl">
-                        <span className="block text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500">CGST + SGST Split</span>
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{(customTaxPercentage / 2).toFixed(1)}% + {(customTaxPercentage / 2).toFixed(1)}%</span>
-                      </div>
-                      <div className="p-3 bg-slate-150/40 dark:bg-slate-900 rounded-xl">
-                        <span className="block text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500">IGST Rate</span>
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{customTaxPercentage}%</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  // GENERIC COUNTRIES CUSTOM TAX ENGINE CONFIG
-                  <div className="space-y-5 animate-fade-in">
-                    <div className="space-y-4">
-                      <div className="grid sm:grid-cols-12 gap-4 items-end">
-                        <div className="sm:col-span-6">
-                          <label htmlFor="custom-tax-name" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                            Custom Tax Label / Name
-                          </label>
-                          <input
-                            id="custom-tax-name"
-                            type="text"
-                            value={customTaxName}
-                            onChange={(e) => {
-                              setCustomTaxName(e.target.value);
-                              setCustomTaxCols([e.target.value]);
-                            }}
-                            placeholder="e.g. VAT, Sales Tax, GST"
-                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-855 bg-white dark:bg-slate-950 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm font-medium"
-                          />
+                  {country && country.toLowerCase() === 'india' ? (
+                    // INDIA GST TAX ENGINE CONFIG
+                    <div className="space-y-5">
+                      <div className="p-4 bg-[#F4EBE1]/40 dark:bg-zinc-900/40 border border-[#EBDCC8] dark:border-zinc-800 rounded-2xl space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#88765C] font-bold">ℹ️</span>
+                          <span className="text-[10px] font-extrabold text-[#88765C] uppercase tracking-wider">GST Tax Split Mechanism Active</span>
                         </div>
+                        <p className="text-[10px] text-[#88765C]/90 dark:text-slate-300 leading-relaxed font-medium">
+                          For invoices generated within India, taxes are dynamically split based on the state comparison:
+                          <br />• <strong>Intrastate (Same State)</strong>: The configured tax will split 50/50 into <strong>CGST</strong> and <strong>SGST</strong>.
+                          <br />• <strong>Interstate (Different State)</strong>: The full tax rate is applied as <strong>IGST</strong>.
+                        </p>
+                      </div>
+                      <div className="max-w-md">
+                        <label htmlFor="tax-rate-india" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">
+                          Default GST Rate (%)
+                        </label>
+                        <select
+                          id="tax-rate-india"
+                          value={customTaxPercentage}
+                          onChange={(e) => {
+                            const rateVal = parseFloat(e.target.value);
+                            setCustomTaxPercentage(rateVal);
+                            setDefaultTaxRate(rateVal);
+                          }}
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm font-medium"
+                        >
+                          <option value={0}>0% (Nil/Exempt): Unprocessed food, healthcare or education services</option>
+                          <option value={5}>5% (Merit Rate): Packaged food, daily essentials</option>
+                          <option value={18}>18% (Standard Rate): Services, logistics, and hospitality</option>
+                          <option value={40}>40% (Luxury/Sin Goods): Luxury items</option>
+                          {![0, 5, 18, 40].includes(customTaxPercentage) && (
+                            <option value={customTaxPercentage}>{customTaxPercentage}% (Custom)</option>
+                          )}
+                        </select>
+                      </div>
 
-                        <div className="sm:col-span-5">
-                          <label htmlFor="custom-tax-rate" className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                            Tax Percentage Rate (%)
-                          </label>
-                          <input
-                            id="custom-tax-rate"
-                            type="number"
-                            min={0}
-                            max={100}
-                            step="0.01"
-                            value={customTaxPercentage}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value) || 0;
-                              setCustomTaxPercentage(val);
-                              setDefaultTaxRate(val);
-                            }}
-                            placeholder="0"
-                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-855 bg-white dark:bg-slate-955 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm font-mono font-medium"
-                          />
+                      <div className="grid grid-cols-2 gap-4 max-w-md pt-2 border-t border-[#EBDCC8] dark:border-zinc-800">
+                        <div className="p-3 bg-[#FCFAF7] dark:bg-zinc-955/30 border border-[#EBDCC8] dark:border-zinc-800 rounded-xl">
+                          <span className="block text-[9px] uppercase font-bold text-[#88765C]/60 dark:text-zinc-500">CGST + SGST Split</span>
+                          <span className="text-xs font-bold text-[#5C5043] dark:text-white">{(customTaxPercentage / 2).toFixed(1)}% + {(customTaxPercentage / 2).toFixed(1)}%</span>
                         </div>
-                        
-                        <div className="sm:col-span-1 h-10 flex items-center justify-center">
-                          {/* Spacing alignment */}
+                        <div className="p-3 bg-[#FCFAF7] dark:bg-zinc-955/30 border border-[#EBDCC8] dark:border-zinc-800 rounded-xl">
+                          <span className="block text-[9px] uppercase font-bold text-[#88765C]/60 dark:text-zinc-500">IGST Rate</span>
+                          <span className="text-xs font-bold text-[#5C5043] dark:text-white">{customTaxPercentage}%</span>
                         </div>
                       </div>
-
-                      {/* List of Additional Taxes */}
-                      {additionalTaxes.map((tax, index) => (
-                        <div key={tax.id} className="grid sm:grid-cols-12 gap-4 items-end animate-fade-in">
+                    </div>
+                  ) : (
+                    // GENERIC COUNTRIES CUSTOM TAX ENGINE CONFIG
+                    <div className="space-y-5 animate-fade-in">
+                      <div className="space-y-4">
+                        <div className="grid sm:grid-cols-12 gap-4 items-end">
                           <div className="sm:col-span-6">
-                            <label className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                              Additional Tax {index + 1} Name
+                            <label htmlFor="custom-tax-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">
+                              Custom Tax Label / Name
                             </label>
                             <input
+                              id="custom-tax-name"
                               type="text"
-                              value={tax.name}
+                              value={customTaxName}
                               onChange={(e) => {
-                                setAdditionalTaxes(additionalTaxes.map((t) => t.id === tax.id ? { ...t, name: e.target.value } : t));
+                                setCustomTaxName(e.target.value);
+                                setCustomTaxCols([e.target.value]);
                               }}
-                              placeholder="e.g. Local Cess, Service Levy"
-                              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-855 bg-white dark:bg-slate-950 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm font-medium"
+                              placeholder="e.g. VAT, Sales Tax, GST"
+                              className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 font-medium"
                             />
                           </div>
 
                           <div className="sm:col-span-5">
-                            <label className="block text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                            <label htmlFor="custom-tax-rate" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">
                               Tax Percentage Rate (%)
                             </label>
                             <input
+                              id="custom-tax-rate"
                               type="number"
                               min={0}
                               max={100}
                               step="0.01"
-                              value={tax.rate}
+                              value={customTaxPercentage}
                               onChange={(e) => {
                                 const val = parseFloat(e.target.value) || 0;
-                                setAdditionalTaxes(additionalTaxes.map((t) => t.id === tax.id ? { ...t, rate: val } : t));
+                                setCustomTaxPercentage(val);
+                                setDefaultTaxRate(val);
                               }}
                               placeholder="0"
-                              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-855 bg-white dark:bg-slate-955 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm font-mono font-medium"
+                              className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 font-mono font-medium"
                             />
                           </div>
-
-                          <div className="sm:col-span-1 h-[42px] flex items-center justify-center">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (!tax.id.startsWith('tax_')) {
-                                  setDeletedTaxIds([...deletedTaxIds, tax.id]);
-                                }
-                                setAdditionalTaxes(additionalTaxes.filter((t) => t.id !== tax.id));
-                              }}
-                              className="w-9 h-9 bg-rose-50 hover:bg-rose-100 dark:bg-rose-955/20 dark:hover:bg-rose-955/40 text-rose-600 dark:text-rose-400 border border-transparent dark:border-rose-900/35 rounded-xl flex items-center justify-center cursor-pointer transition-all active:scale-95"
-                              title="Remove Tax"
-                            >
-                              <Trash2 className="w-4.5 h-4.5" />
-                            </button>
+                          
+                          <div className="sm:col-span-1 h-10 flex items-center justify-center">
+                            {/* Spacing alignment */}
                           </div>
                         </div>
-                      ))}
 
-                      {/* Plus button to add more taxes */}
-                      <div className="pt-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAdditionalTaxes([...additionalTaxes, { id: `tax_${Date.now()}`, name: '', rate: 0 }]);
-                          }}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl transition-all cursor-pointer shadow-3xs"
-                        >
-                          <Plus className="w-4 h-4 text-sky-655" />
-                          <span>Add Another Tax</span>
-                        </button>
+                        {/* List of Additional Taxes */}
+                        {additionalTaxes.map((tax, index) => (
+                          <div key={tax.id} className="grid sm:grid-cols-12 gap-4 items-end animate-fade-in">
+                            <div className="sm:col-span-6">
+                              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">
+                                Additional Tax {index + 1} Name
+                              </label>
+                              <input
+                                type="text"
+                                value={tax.name}
+                                onChange={(e) => {
+                                  setAdditionalTaxes(additionalTaxes.map((t) => t.id === tax.id ? { ...t, name: e.target.value } : t));
+                                }}
+                                placeholder="e.g. Local Cess, Service Levy"
+                                className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 font-medium"
+                              />
+                            </div>
+
+                            <div className="sm:col-span-5">
+                              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-zinc-400 mb-1.5">
+                                Tax Percentage Rate (%)
+                              </label>
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                step="0.01"
+                                value={tax.rate}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  setAdditionalTaxes(additionalTaxes.map((t) => t.id === tax.id ? { ...t, rate: val } : t));
+                                }}
+                                placeholder="0"
+                                className="w-full px-3 py-2.5 rounded-xl border border-[#EBDCC8] dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-[#5C5043] dark:text-white focus:outline-none focus:border-[#88765C] shadow-sm hover:border-[#ebdcc8] focus:ring-4 focus:ring-[#88765C]/10 transition-all duration-300 font-mono font-medium"
+                              />
+                            </div>
+
+                            <div className="sm:col-span-1 h-[42px] flex items-center justify-center">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!tax.id.startsWith('tax_')) {
+                                    setDeletedTaxIds([...deletedTaxIds, tax.id]);
+                                  }
+                                  setAdditionalTaxes(additionalTaxes.filter((t) => t.id !== tax.id));
+                                }}
+                                className="w-9 h-9 bg-rose-50 hover:bg-rose-100 dark:bg-rose-955/20 dark:hover:bg-rose-955/40 text-rose-600 dark:text-rose-400 border border-transparent dark:border-rose-900/35 rounded-xl flex items-center justify-center cursor-pointer transition-all active:scale-95"
+                                title="Remove Tax"
+                              >
+                                <Trash2 className="w-4.5 h-4.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Plus button to add more taxes */}
+                        <div className="pt-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAdditionalTaxes([...additionalTaxes, { id: `tax_${Date.now()}`, name: '', rate: 0 }]);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-zinc-950 text-[#88765C] border border-[#EBDCC8] dark:border-zinc-800 hover:bg-[#FCFAF7] font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm"
+                          >
+                            <Plus className="w-4 h-4 text-[#88765C]" />
+                            <span>Add Another Tax</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-[#F4EBE1]/40 dark:bg-zinc-900/40 border border-[#EBDCC8] dark:border-zinc-800 rounded-2xl">
+                        <p className="text-[10px] text-[#88765C]/90 dark:text-emerald-305 leading-relaxed font-medium">
+                          Custom tax profile is active. On newly created bills, item pricing will automatically pre-fill with <strong>{customTaxName || 'Tax'}</strong> at <strong>{customTaxPercentage}%</strong>.
+                        </p>
                       </div>
                     </div>
-
-                    <div className="p-4 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-200/50 dark:border-emerald-800/40 rounded-2xl">
-                      <p className="text-[10px] text-emerald-650 dark:text-emerald-305 leading-relaxed font-medium">
-                        Custom tax profile is active. On newly created bills, item pricing will automatically pre-fill with <strong>{customTaxName || 'Tax'}</strong> at <strong>{customTaxPercentage}%</strong>.
-                      </p>
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -2148,14 +2364,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   type="button"
                   onClick={onClose}
                   disabled={isSaving}
-                  className="px-5 py-2.5 rounded-xl text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-805 dark:hover:text-white transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900 disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider text-[#88765C] hover:text-[#5C5043] transition-all cursor-pointer hover:bg-[#F4EBE1] disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer disabled:opacity-50"
+                  className="px-6 py-2.5 bg-[#88765C] hover:bg-[#5C5043] text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-[#88765C]/20 cursor-pointer disabled:opacity-50"
                 >
                   <Check className="w-4.5 h-4.5" />
                   {isSaving ? 'Saving...' : 'Save Settings'}
@@ -2167,7 +2383,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   <button
                     type="button"
                     onClick={() => handleTabChange('banking')}
-                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                    className="px-6 py-2.5 bg-[#88765C] hover:bg-[#5C5043] text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-[#88765C]/20 cursor-pointer"
                   >
                     <span>Next: Banking Details</span>
                     <ArrowRight className="w-4 h-4" />
@@ -2177,7 +2393,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   <button
                     type="button"
                     onClick={() => handleTabChange('billing')}
-                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                    className="px-6 py-2.5 bg-[#88765C] hover:bg-[#5C5043] text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-[#88765C]/20 cursor-pointer"
                   >
                     <span>Next: Billing Config</span>
                     <ArrowRight className="w-4 h-4" />
@@ -2187,7 +2403,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   <button
                     type="button"
                     onClick={() => handleTabChange('tax')}
-                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                    className="px-6 py-2.5 bg-[#88765C] hover:bg-[#5C5043] text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-[#88765C]/20 cursor-pointer"
                   >
                     <span>Next: Tax Config</span>
                     <ArrowRight className="w-4 h-4" />
@@ -2195,23 +2411,22 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 )}
                 {activeTab === 'tax' && (
                   <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer disabled:opacity-50"
+                    type="button"
+                    onClick={() => handleTabChange('subscription')}
+                    className="px-6 py-2.5 bg-[#88765C] hover:bg-[#5C5043] text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-[#88765C]/20 cursor-pointer"
                   >
-                    <Check className="w-4.5 h-4.5" />
-                    <span>{isSaving ? 'Saving...' : 'Save Details'}</span>
+                    <span>Next: Subscription Details</span>
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 )}
-                {/* Subscription tab fallback just in case */}
                 {activeTab === 'subscription' && (
                   <button
-                    type="button"
-                    onClick={() => handleTabChange('tax')}
-                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                    type="submit"
+                    disabled={isSaving}
+                    className="px-6 py-2.5 bg-[#88765C] hover:bg-[#5C5043] text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-[#88765C]/20 cursor-pointer disabled:opacity-50"
                   >
-                    <span>Next: Tax Config</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <Check className="w-4.5 h-4.5" />
+                    <span>{isSaving ? 'Saving...' : 'Save & Finish Onboarding'}</span>
                   </button>
                 )}
               </>
@@ -2219,6 +2434,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
             </div>
           </div>
         </form>
+      </div>
       {/* Logo Cropping and Adjustment Modal */}
       {logoToCrop && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center z-[999] p-4">
@@ -2311,7 +2527,135 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           </div>
         </div>
       )}
-      </div>
+
+      {notification && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-[#5C5043]/40 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-[320px] rounded-2xl border border-[#EBDCC8] bg-[#FCFAF7] dark:bg-zinc-900 p-6 shadow-xl animate-scale-in text-center flex flex-col items-center">
+            <div className="mb-4">
+              {notification.type === 'success' ? (
+                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center text-emerald-500 border border-emerald-200 dark:border-emerald-800">
+                  <Check className="w-6 h-6 stroke-[2]" />
+                </div>
+              ) : notification.type === 'error' ? (
+                <div className="w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-950 flex items-center justify-center text-rose-500 border border-rose-200 dark:border-rose-800">
+                  <AlertCircle className="w-6 h-6 stroke-[2]" />
+                </div>
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-[#F4EBE1] dark:bg-zinc-800 flex items-center justify-center text-[#88765C] border border-[#EBDCC8] dark:border-zinc-700">
+                  <HelpCircle className="w-6 h-6 stroke-[2]" />
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-1 mb-5">
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#5C5043] dark:text-white">
+                {notification.title || (notification.type === 'success' ? 'Success' : notification.type === 'error' ? 'Error' : 'Notification')}
+              </h3>
+              <p className="text-xs text-[#88765C]/90 dark:text-zinc-400 font-medium font-sans">
+                {notification.message}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const isSuccess = notification.type === 'success';
+                setNotification(null);
+                if (isSuccess) {
+                  onClose();
+                }
+              }}
+              className="px-8 py-2 bg-[#88765C] hover:bg-[#5C5043] dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white font-extrabold text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 shadow-sm cursor-pointer hover:shadow"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+      {showLogoOptions && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-[#5C5043]/40 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-[320px] rounded-2xl border border-[#EBDCC8] bg-[#FCFAF7] dark:bg-zinc-900 p-6 shadow-xl animate-scale-in text-center flex flex-col items-center">
+            
+            <div className="flex justify-between w-full items-center mb-4">
+              <h3 className="text-xs font-extrabold uppercase tracking-widest text-[#5C5043] dark:text-white">
+                Edit Logo Options
+              </h3>
+              <button 
+                type="button" 
+                onClick={() => setShowLogoOptions(false)}
+                className="p-1 rounded-full text-[#88765C] hover:text-[#5C5043] dark:hover:text-white hover:bg-[#F4EBE1] dark:hover:bg-zinc-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="w-full space-y-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLogoOptions(false);
+                  triggerLogoUpload();
+                }}
+                className="w-full py-3 px-4 bg-white dark:bg-zinc-800 border border-[#EBDCC8] dark:border-zinc-700 hover:bg-[#FCFAF7] dark:hover:bg-zinc-750 text-[#88765C] dark:text-[#ebdcc8] font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Upload className="w-4 h-4" />
+                Add New Logo
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLogoOptions(false);
+                  setLogoToCrop(logoUrl);
+                }}
+                className="w-full py-3 px-4 bg-[#88765C] hover:bg-[#5C5043] text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <PencilIcon className="w-4 h-4 text-white" />
+                Edit Existing Logo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showLogoPreview && (
+        <div 
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-[#5C5043]/30 backdrop-blur-xs animate-fade-in"
+          onClick={() => setShowLogoPreview(false)}
+        >
+          <div 
+            className="bg-[#FCFAF7] dark:bg-zinc-900 rounded-2xl border border-[#EBDCC8] dark:border-zinc-850 p-5 shadow-xl animate-scale-in w-full max-w-[280px] flex flex-col space-y-3 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Elegant Header Line */}
+            <div className="flex justify-between items-center w-full pb-1.5 border-b border-[#EBDCC8]/40 dark:border-zinc-800">
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#88765C]">
+                Logo Preview
+              </span>
+              <button 
+                type="button" 
+                onClick={() => setShowLogoPreview(false)}
+                className="p-1 rounded-full text-[#88765C]/75 hover:text-[#5C5043] dark:hover:text-white hover:bg-[#F4EBE1] dark:hover:bg-zinc-800 transition-all cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Premium Showcase Image Box */}
+            <div className="bg-white dark:bg-zinc-800 rounded-xl border border-[#EBDCC8]/50 dark:border-zinc-750 shadow-inner flex items-center justify-center aspect-square w-full p-0 overflow-hidden relative">
+              {logoUrl ? (
+                <img 
+                  src={logoUrl} 
+                  alt="Company Logo Preview" 
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain transition-transform duration-300 hover:scale-102"
+                />
+              ) : (
+                <span className="text-[#88765C]/50 text-[10px] font-extrabold uppercase tracking-wider">No Logo</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2321,6 +2665,15 @@ function PencilIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+    </svg>
+  );
+}
+
+function EyeIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
     </svg>
   );
 }

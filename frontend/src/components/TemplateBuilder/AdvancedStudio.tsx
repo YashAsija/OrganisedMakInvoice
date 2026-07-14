@@ -50,7 +50,7 @@ const defaultTemplate: InvoiceTemplate = {
   },
   config: {
     header: { showLogo: true, logoPosition: 'Left', logoWidth: 120, logoHeight: 60, titleAlignment: 'Right', invoiceTitle: 'TAX INVOICE' },
-    company: { fields: ['name', 'address', 'gstin', 'email', 'phone'] },
+    company: { fields: ['name', 'address', 'gstin', 'email', 'phone', 'pan'] },
     invoiceInfo: { fields: ['invoiceNumber', 'invoiceDate', 'dueDate'], customFields: [], position: 'Right' },
     client: { fields: ['name', 'address', 'gstin'] },
     shipping: { fields: ['name', 'address'], sameAsBilling: true },

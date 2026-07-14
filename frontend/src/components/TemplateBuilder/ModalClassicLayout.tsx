@@ -36,6 +36,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
   const compEmail = businessProfile?.email || "";
   const compPhone = businessProfile?.phone || (businessProfile as any)?.mobile || "";
   const compGst = businessProfile?.taxId || (businessProfile as any)?.gstin || "";
+  const compPan = businessProfile?.pan || "";
   const ownerName = businessProfile?.displayName || businessProfile?.ownerName || "";
   const compState = (businessProfile as any)?.state || "";
   const compStateCode = (businessProfile as any)?.stateCode || "";
@@ -70,8 +71,6 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
   const items = invoiceData?.items && invoiceData.items.length > 0 ? invoiceData.items : [];
 
   const subTotal = invoiceData?.subtotal || 0;
-  const taxTotal = invoiceData?.taxTotal || 0;
-  const grandTotal = invoiceData?.grandTotal || 0;
 
   // Compute the same dynamic tax header as LivePreview — determines CGST+SGST vs IGST
   const taxMode = invoiceData?.taxMode || (businessProfile as any)?.taxMode || 'dynamic';
@@ -81,7 +80,18 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
   const taxRate = taxMode === 'custom'
     ? ((invoiceData as any)?.customTaxPercentage !== undefined ? (invoiceData as any).customTaxPercentage : ((businessProfile as any)?.customTaxPercentage !== undefined ? (businessProfile as any).customTaxPercentage : 18))
     : ((invoiceData as any)?.taxRate !== undefined ? (invoiceData as any).taxRate : ((businessProfile as any)?.defaultTaxRate !== undefined ? (businessProfile as any).defaultTaxRate : 18));
-  const taxAmount = (subTotal * taxRate) / 100;
+  
+  const hasTaxCol = (config.table.columns || []).some((c: any) => c.id === 'tax' && c.visible !== false);
+  const isTaxEngineVisible = sections.taxEngine?.visible !== false;
+  const isTaxPresent = hasTaxCol && isTaxEngineVisible;
+
+  const taxAmount = isTaxPresent
+    ? (invoiceData?.taxTotal !== undefined ? invoiceData.taxTotal : (subTotal * taxRate) / 100)
+    : 0;
+
+  const grandTotal = isTaxPresent
+    ? (invoiceData?.grandTotal !== undefined ? invoiceData.grandTotal : subTotal + taxAmount)
+    : subTotal;
 
   const shipStateForTax = ((invoiceData as any)?.shippedToState || invoiceData?.clientState || '').trim().toLowerCase();
   const compCountryForTax = ((businessProfile as any)?.country || 'india').trim().toLowerCase();
@@ -136,6 +146,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
                   {compState.trim() !== '' && <div>State: {compState}{compStateCode.trim() !== '' ? ` (${compStateCode})` : ''}</div>}
                   {compCountry.trim() !== '' && <div>Country: {compCountry}</div>}
                   {config.company.fields.includes('gstin') && compGst && compGst.trim() !== '' && <div>GSTIN: {compGst}</div>}
+                  {config.company.fields.includes('pan') && compPan && compPan.trim() !== '' && <div>PAN: {compPan}</div>}
                 </div>
               </>
             )}
@@ -300,12 +311,12 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
               ) : isIgst ? (
                 <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
                   <span>IGST ({taxRate}%)</span>
-                  <span>{taxTotal.toFixed(2)}</span>
+                  <span>{taxAmount.toFixed(2)}</span>
                 </div>
               ) : (
                 <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
                   <span>{dynamicTaxHeader}</span>
-                  <span>{taxTotal.toFixed(2)}</span>
+                  <span>{taxAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between text-gray-900 font-bold text-[14px] pt-1">

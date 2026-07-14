@@ -402,17 +402,17 @@ export default function Homepage({
   return (
     <div className={`min-h-dvh w-full max-w-full overflow-x-hidden text-sans transition-colors duration-250 ${
       theme === 'dark' 
-        ? 'bg-neutral-950 text-neutral-100' 
+        ? 'bg-neutral-955 text-neutral-100' 
         : 'bg-slate-50 text-slate-800'
     }`}>
       
       {/* Embedded Navigation Bar (Desktop) */}
-      <nav className="fixed top-0 left-0 right-0 z-50 hidden sm:flex border-b border-slate-200/40 dark:border-neutral-800/35 bg-white/70 dark:bg-neutral-955/75 backdrop-blur-md transition-all duration-300 w-full">
-        <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4 w-full">
+      <nav className="fixed top-0 left-0 right-0 z-50 hidden sm:flex border-b border-slate-200/40 dark:border-neutral-800/40 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md transition-all duration-300 w-full">
+        <div className="max-w-[1550px] mx-auto px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4 w-full">
           
           {/* Logo Brand */}
-          <div className="flex items-center gap-2 cursor-pointer select-none group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-650 flex items-center justify-center text-white font-black text-lg shadow-md shadow-sky-500/25 group-hover:scale-105 transition-transform duration-300">
+          <div className="flex items-center gap-2.5 cursor-pointer select-none group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-650 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-sky-500/20 group-hover:scale-105 transition-all duration-300">
               MI
             </div>
             <div>
@@ -424,49 +424,49 @@ export default function Homepage({
           </div>
 
           {/* Navigation Links */}
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-1.5">
             <button
               type="button"
               onClick={() => handleNavScroll('features-section')}
-              className="text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3 py-2 rounded-xl hover:bg-slate-100/50 dark:hover:bg-neutral-900 flex items-center gap-1.5"
+              className="text-slate-655 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3.5 py-2 rounded-xl hover:bg-slate-100/60 dark:hover:bg-neutral-900/60 flex items-center gap-1.5 active:scale-95 duration-200"
             >
-              <Layers className="w-3.5 h-3.5 text-slate-400" />
+              <Layers className="w-3.5 h-3.5 opacity-70" />
               Features
             </button>
 
             <button
               type="button"
               onClick={() => onNavigate('/guide')}
-              className="text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3 py-2 rounded-xl hover:bg-slate-100/50 dark:hover:bg-neutral-900 flex items-center gap-1.5"
+              className="text-slate-655 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3.5 py-2 rounded-xl hover:bg-slate-100/60 dark:hover:bg-neutral-900/60 flex items-center gap-1.5 active:scale-95 duration-200"
             >
-              <BookOpen className="w-3.5 h-3.5 text-slate-400" />
+              <BookOpen className="w-3.5 h-3.5 opacity-70" />
               Guide
             </button>
 
             <button
               type="button"
               onClick={() => onNavigate('/pricing')}
-              className="text-slate-600 dark:text-slate-305 hover:text-sky-550 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3 py-2 rounded-xl hover:bg-slate-100/50 dark:hover:bg-neutral-900 flex items-center gap-1.5"
+              className="text-slate-655 dark:text-slate-305 hover:text-sky-655 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3.5 py-2 rounded-xl hover:bg-slate-100/60 dark:hover:bg-neutral-900/60 flex items-center gap-1.5 active:scale-95 duration-200"
             >
-              <CreditCard className="w-3.5 h-3.5 text-slate-400" />
+              <CreditCard className="w-3.5 h-3.5 opacity-70" />
               Pricing
             </button>
 
             <button
               type="button"
               onClick={() => handleNavScroll('faq-section')}
-              className="text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3 py-2 rounded-xl hover:bg-slate-100/50 dark:hover:bg-neutral-900 flex items-center gap-1.5"
+              className="text-slate-655 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3.5 py-2 rounded-xl hover:bg-slate-100/60 dark:hover:bg-neutral-900/60 flex items-center gap-1.5 active:scale-95 duration-200"
             >
-              <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+              <HelpCircle className="w-3.5 h-3.5 opacity-70" />
               FAQ
             </button>
 
             <button
               type="button"
               onClick={() => onNavigate('/contact')}
-              className="text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3 py-2 rounded-xl hover:bg-slate-100/50 dark:hover:bg-neutral-900 flex items-center gap-1.5"
+              className="text-slate-655 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 font-extrabold text-xs tracking-wide cursor-pointer transition-all px-3.5 py-2 rounded-xl hover:bg-slate-100/60 dark:hover:bg-neutral-900/60 flex items-center gap-1.5 active:scale-95 duration-200"
             >
-              <Mail className="w-3.5 h-3.5 text-slate-400" />
+              <Mail className="w-3.5 h-3.5 opacity-70" />
               Contact
             </button>
           </div>
@@ -535,11 +535,11 @@ export default function Homepage({
       </nav>
 
       {/* Embedded Navigation Bar (Mobile) */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex sm:hidden border-b border-slate-200/40 dark:border-neutral-800/35 bg-white/75 dark:bg-neutral-950/85 backdrop-blur-md transition-all duration-300 w-full">
-        <div className="max-w-[1550px] mx-auto px-4 py-4 flex items-center justify-between w-full">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex sm:hidden border-b border-slate-200/40 dark:border-neutral-800/40 bg-white/80 dark:bg-neutral-955/80 backdrop-blur-md transition-all duration-300 w-full">
+        <div className="max-w-[1550px] mx-auto px-4 py-3.5 flex items-center justify-between w-full">
           {/* Logo Brand */}
-          <div className="flex items-center gap-1.5 cursor-pointer select-none" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md">
+          <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-600 to-indigo-650 flex items-center justify-center text-white font-black text-sm shadow-md">
               MI
             </div>
             <span className="text-sm font-black tracking-tight text-slate-805">
@@ -551,7 +551,7 @@ export default function Homepage({
           <button
             type="button"
             onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
-            className="p-2 text-slate-600 dark:text-slate-350 hover:text-sky-505 dark:hover:text-sky-400 cursor-pointer rounded-xl hover:bg-slate-100/50 dark:hover:bg-neutral-900 border border-slate-250/20 dark:border-neutral-800/60"
+            className="p-2 text-slate-655 dark:text-slate-350 hover:text-sky-600 dark:hover:text-sky-400 cursor-pointer rounded-xl hover:bg-slate-105 dark:hover:bg-neutral-900 border border-slate-200/60 dark:border-neutral-800/60"
           >
             {isMobileNavOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
@@ -572,10 +572,10 @@ export default function Homepage({
                   animate={{ x: 0 }}
                   exit={{ x: '100%' }}
                   transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-                  className="fixed inset-y-4 right-4 z-[70] w-64 bg-white dark:bg-neutral-955 border border-slate-200/50 dark:border-neutral-800/80 shadow-2xl rounded-2xl p-5 flex flex-col justify-between"
+                  className="fixed inset-y-4 right-4 z-[70] w-64 bg-white dark:bg-neutral-900 border border-slate-200/50 dark:border-neutral-800/80 shadow-2xl rounded-2xl p-5 flex flex-col justify-between"
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-100 dark:border-neutral-850">
+                    <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-100 dark:border-neutral-800">
                       <span className="text-xs font-black uppercase tracking-wider text-slate-400">Navigation</span>
                       <button type="button" onClick={() => setIsMobileNavOpen(false)} className="p-1 text-slate-400 hover:text-rose-500 transition-colors">
                         <X className="w-4 h-4" />
@@ -586,7 +586,7 @@ export default function Homepage({
                       <button
                         type="button"
                         onClick={() => { handleNavScroll('features-section'); setIsMobileNavOpen(false); }}
-                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900 transition-all text-left w-full"
+                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900/60 transition-all text-left w-full cursor-pointer"
                       >
                         <Layers className="w-4 h-4 text-sky-500" />
                         <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Features</span>
@@ -594,7 +594,7 @@ export default function Homepage({
                       <button
                         type="button"
                         onClick={() => { onNavigate('/guide'); setIsMobileNavOpen(false); }}
-                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900 transition-all text-left w-full"
+                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900/60 transition-all text-left w-full cursor-pointer"
                       >
                         <BookOpen className="w-4 h-4 text-indigo-500" />
                         <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Guide</span>
@@ -602,7 +602,7 @@ export default function Homepage({
                       <button
                         type="button"
                         onClick={() => { onNavigate('/pricing'); setIsMobileNavOpen(false); }}
-                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900 transition-all text-left w-full"
+                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900/60 transition-all text-left w-full cursor-pointer"
                       >
                         <CreditCard className="w-4 h-4 text-emerald-500" />
                         <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Pricing</span>
@@ -610,15 +610,15 @@ export default function Homepage({
                       <button
                         type="button"
                         onClick={() => { handleNavScroll('faq-section'); setIsMobileNavOpen(false); }}
-                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900 transition-all text-left w-full"
+                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900/60 transition-all text-left w-full cursor-pointer"
                       >
-                        <HelpCircle className="w-4 h-4 text-amber-500" />
+                        <HelpCircle className="w-4 h-4 text-amber-505" />
                         <span className="text-xs font-bold text-slate-700 dark:text-slate-300">FAQ</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => { onNavigate('/contact'); setIsMobileNavOpen(false); }}
-                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900 transition-all text-left w-full"
+                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-neutral-900/60 transition-all text-left w-full cursor-pointer"
                       >
                         <Mail className="w-4 h-4 text-rose-500" />
                         <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Contact</span>
@@ -630,14 +630,14 @@ export default function Homepage({
                     <button
                       type="button"
                       onClick={() => { window.location.href = '/login'; setIsMobileNavOpen(false); }}
-                      className="w-full py-2.5 text-center text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-neutral-900 border border-slate-200/50 dark:border-neutral-800/80 rounded-xl"
+                      className="w-full py-2.5 text-center text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-neutral-900 border border-slate-200/50 dark:border-neutral-800/80 rounded-xl cursor-pointer"
                     >
                       Log In
                     </button>
                     <button
                       type="button"
                       onClick={() => { window.location.href = '/signup'; setIsMobileNavOpen(false); }}
-                      className="w-full py-2.5 text-center text-xs font-bold text-white bg-sky-600 rounded-xl shadow-md"
+                      className="w-full py-2.5 text-center text-xs font-bold text-white bg-sky-600 rounded-xl shadow-md cursor-pointer"
                     >
                       Sign Up
                     </button>
@@ -650,24 +650,29 @@ export default function Homepage({
       </nav>
 
       {/* Main Container */}
-      <div className="max-w-[1550px] mx-auto px-3 sm:px-6 lg:px-8 pt-20 pb-4 lg:pt-24 relative">
+      <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8 lg:pt-28 relative">
+        
+        {/* Glow effect behind the hero */}
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-gradient-to-tr from-sky-400/10 to-indigo-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
 
         {/* Hero Grid Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center overflow-hidden">
           
           {/* Left: Headline & Key Details */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:col-span-6 space-y-6 order-1"
+            className="lg:col-span-6 space-y-6 order-1 text-left"
           >
 
-
             {/* Modern Developer-style 'Newly launched' Label */}
-            <div className="flex items-center gap-1.5 text-[10px] font-mono tracking-wider select-none w-fit">
-              <span className="text-sky-500 font-black">//</span>
-              <span className="text-slate-800 dark:text-slate-200 font-black uppercase">Newly Launched</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/20 bg-sky-500/5 text-[10px] font-mono tracking-wide text-sky-600 dark:text-sky-400 select-none backdrop-blur-md animate-fade-in w-fit">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-sky-500"></span>
+              </span>
+              <span className="font-extrabold uppercase">Newly Launched</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-slate-805">
@@ -685,50 +690,50 @@ export default function Homepage({
             </p>
 
             {/* Feature Highlights Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 text-sm max-w-2xl">
-              <div className="flex items-start gap-2.5">
-                <div className="mt-0.5 p-1 bg-emerald-500/10 text-emerald-500 rounded-lg shrink-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2 text-sm max-w-2xl">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 p-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-405 rounded-xl shrink-0 border border-emerald-500/10">
                   <CheckCircle className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-200 block">Offline-First Safety</span>
-                  <span className="text-slate-500 dark:text-slate-400 text-xs">Work seamlessly without internet; your data is encrypted & cached locally.</span>
+                  <span className="font-extrabold text-slate-800 dark:text-slate-205 block">Offline-First Safety</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-xs leading-normal">Work seamlessly without internet; your data is encrypted & cached locally.</span>
                 </div>
               </div>
-              <div className="flex items-start gap-2.5">
-                <div className="mt-0.5 p-1 bg-indigo-500/10 text-indigo-500 rounded-lg shrink-0">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 p-1.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-405 rounded-xl shrink-0 border border-indigo-500/10">
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-200 block">AI Smart Billing</span>
-                  <span className="text-slate-500 dark:text-slate-400 text-xs">Describe your bill in simple English and let our AI compile the invoice.</span>
+                  <span className="font-extrabold text-slate-800 dark:text-slate-205 block">AI Smart Billing</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-xs leading-normal">Describe your bill in simple English and let our AI compile the invoice.</span>
                 </div>
               </div>
-              <div className="flex items-start gap-2.5">
-                <div className="mt-0.5 p-1 bg-sky-500/10 text-sky-500 rounded-lg shrink-0">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 p-1.5 bg-sky-500/10 text-sky-650 dark:text-sky-405 rounded-xl shrink-0 border border-sky-500/10">
                   <CheckCircle className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-200 block">GST Compliance Split</span>
-                  <span className="text-slate-500 dark:text-slate-400 text-xs">Auto-calculates CGST, SGST, & IGST splits based on client registry states.</span>
+                  <span className="font-extrabold text-slate-800 dark:text-slate-205 block">GST Compliance Split</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-xs leading-normal">Auto-calculates CGST, SGST, & IGST splits based on client registry states.</span>
                 </div>
               </div>
-              <div className="flex items-start gap-2.5">
-                <div className="mt-0.5 p-1 bg-purple-500/10 text-purple-500 rounded-lg shrink-0">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 p-1.5 bg-purple-500/10 text-purple-650 dark:text-purple-405 rounded-xl shrink-0 border border-purple-500/10">
                   <CheckCircle className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-200 block">Bespoke Design Studio</span>
-                  <span className="text-slate-500 dark:text-slate-400 text-xs">Custom branding themes, margins, watermarks, and drawn stylus signatures.</span>
+                  <span className="font-extrabold text-slate-800 dark:text-slate-205 block">Bespoke Design Studio</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-xs leading-normal">Custom branding themes, margins, watermarks, and drawn stylus signatures.</span>
                 </div>
               </div>
             </div>
 
-            <div className="pt-3">
+            <div className="pt-4">
               <button
                 type="button"
                 onClick={() => window.location.href = '/signup'}
-                className="group px-8 py-4 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 active:scale-95 text-white font-extrabold text-base rounded-2xl shadow-xl shadow-sky-500/20 hover:shadow-sky-500/35 transition-all duration-300 transform hover:-translate-y-1 cursor-pointer flex items-center gap-3 w-full sm:w-auto justify-center"
+                className="group px-8 py-4 bg-gradient-to-r from-sky-600 to-indigo-650 hover:from-sky-550 hover:to-indigo-600 active:scale-95 text-white font-extrabold text-base rounded-2xl shadow-lg shadow-sky-600/25 hover:shadow-sky-500/35 transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer flex items-center gap-3 w-full sm:w-auto justify-center"
               >
                 <span>Get Started for Free</span>
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform duration-300 ease-out" />
@@ -744,62 +749,62 @@ export default function Homepage({
             className="lg:col-span-6 flex flex-col items-center justify-start lg:mt-0 mt-8 relative order-2"
           >
             {/* Live Interactive Control Panel */}
-            <div className="w-full max-w-[500px] mb-4 bg-white/75 dark:bg-neutral-900/80 backdrop-blur-md rounded-2xl p-3 border border-slate-200/60 dark:border-neutral-800/85 shadow-md relative z-30 transition-all text-xs">
-              <div className="flex flex-col gap-2">
+            <div className="w-full max-w-[500px] mb-5 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md rounded-2xl p-4 border border-slate-200/50 dark:border-neutral-800/80 shadow-lg relative z-30 transition-all text-xs">
+              <div className="flex flex-col gap-3">
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-1.5 mb-1">
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-450 dark:text-neutral-500 flex items-center gap-1">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-450 dark:text-neutral-500 flex items-center gap-1.5">
                     <Sparkles className="w-3 h-3 text-sky-500 animate-pulse" />
                     Interactive Live Preview
                   </span>
                   <span className="text-[9px] px-1.5 py-0.5 bg-sky-500/10 dark:bg-sky-505/15 text-sky-500 rounded-md font-mono font-bold animate-pulse">Try clicking options!</span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3.5 text-[10px]">
+                <div className="grid grid-cols-3 gap-4 text-[10px]">
                   {/* Select Theme Accent */}
-                  <div className="space-y-1">
-                    <span className="block text-[8px] font-bold uppercase text-slate-400 dark:text-slate-500">Color Palette</span>
+                  <div className="space-y-1.5">
+                    <span className="block text-[8px] font-bold uppercase text-slate-400 dark:text-slate-500 tracking-wider">Color Palette</span>
                     <div className="flex items-center gap-2 pt-0.5">
                       <button 
                         type="button"
                         onClick={() => setDemoAccent('sky')} 
-                        className={`w-4 h-4 rounded-full bg-sky-500 border transition-all cursor-pointer ${demoAccent === 'sky' ? 'ring-2 ring-sky-400 scale-110 border-white' : 'border-transparent opacity-85 hover:opacity-100'}`}
+                        className={`w-5 h-5 rounded-full bg-sky-500 border-2 transition-all cursor-pointer ${demoAccent === 'sky' ? 'ring-2 ring-sky-500/50 scale-110 border-white dark:border-neutral-900' : 'border-transparent opacity-85 hover:opacity-100'}`}
                         title="Sky Blue"
                       />
                       <button 
                         type="button"
                         onClick={() => setDemoAccent('emerald')} 
-                        className={`w-4 h-4 rounded-full bg-emerald-500 border transition-all cursor-pointer ${demoAccent === 'emerald' ? 'ring-2 ring-emerald-400 scale-110 border-white' : 'border-transparent opacity-85 hover:opacity-100'}`}
+                        className={`w-5 h-5 rounded-full bg-emerald-500 border-2 transition-all cursor-pointer ${demoAccent === 'emerald' ? 'ring-2 ring-emerald-500/50 scale-110 border-white dark:border-neutral-900' : 'border-transparent opacity-85 hover:opacity-100'}`}
                         title="Emerald Green"
                       />
                       <button 
                         type="button"
                         onClick={() => setDemoAccent('indigo')} 
-                        className={`w-4 h-4 rounded-full bg-indigo-500 border transition-all cursor-pointer ${demoAccent === 'indigo' ? 'ring-2 ring-indigo-400 scale-110 border-white' : 'border-transparent opacity-85 hover:opacity-100'}`}
+                        className={`w-5 h-5 rounded-full bg-indigo-500 border-2 transition-all cursor-pointer ${demoAccent === 'indigo' ? 'ring-2 ring-indigo-500/50 scale-110 border-white dark:border-neutral-900' : 'border-transparent opacity-85 hover:opacity-100'}`}
                         title="Indigo Creative"
                       />
                       <button 
                         type="button"
                         onClick={() => setDemoAccent('rose')} 
-                        className={`w-4 h-4 rounded-full bg-rose-500 border transition-all cursor-pointer ${demoAccent === 'rose' ? 'ring-2 ring-rose-300 scale-110 border-white' : 'border-transparent opacity-85 hover:opacity-100'}`}
+                        className={`w-5 h-5 rounded-full bg-rose-500 border-2 transition-all cursor-pointer ${demoAccent === 'rose' ? 'ring-2 ring-rose-500/50 scale-110 border-white dark:border-neutral-900' : 'border-transparent opacity-85 hover:opacity-100'}`}
                         title="Rose Premium"
                       />
                     </div>
                   </div>
 
                   {/* Select Layout Presets */}
-                  <div className="space-y-1">
-                    <span className="block text-[8px] font-bold uppercase text-slate-400 dark:text-slate-500">Invoice Layout</span>
+                  <div className="space-y-1.5">
+                    <span className="block text-[8px] font-bold uppercase text-slate-400 dark:text-slate-500 tracking-wider">Invoice Layout</span>
                     <div className="flex gap-1 pt-0.5">
                       {(['modern', 'minimal', 'agency'] as const).map((l) => (
                         <button 
                           key={l}
                           type="button"
                           onClick={() => setDemoLayout(l)} 
-                          className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase transition-all cursor-pointer ${
+                          className={`px-2 py-1 rounded-lg text-[8px] font-extrabold uppercase transition-all cursor-pointer ${
                             demoLayout === l 
                               ? 'bg-sky-600 text-white shadow-sm' 
-                              : 'bg-slate-100 dark:bg-neutral-800 text-slate-500 dark:text-slate-450 hover:bg-slate-200'
+                              : 'bg-slate-100 dark:bg-neutral-800 text-slate-505 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-neutral-750'
                           }`}
                         >
                           {l}
@@ -809,22 +814,22 @@ export default function Homepage({
                   </div>
 
                   {/* Select Status */}
-                  <div className="space-y-1">
-                    <span className="block text-[8px] font-bold uppercase text-slate-400 dark:text-slate-505">Invoice Status</span>
+                  <div className="space-y-1.5">
+                    <span className="block text-[8px] font-bold uppercase text-slate-400 dark:text-slate-500 tracking-wider">Invoice Status</span>
                     <div className="flex gap-1 pt-0.5">
                       {(['PAID', 'PENDING', 'OVERDUE'] as const).map((s) => (
                         <button 
                           key={s}
                           type="button"
                           onClick={() => setDemoStatus(s)} 
-                          className={`px-1 py-0.5 rounded text-[8px] font-extrabold uppercase transition-all cursor-pointer ${
+                          className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase transition-all cursor-pointer ${
                             demoStatus === s 
                               ? s === 'PAID' 
-                                ? 'bg-emerald-500 text-white' 
+                                ? 'bg-emerald-500 text-white shadow-sm' 
                                 : s === 'PENDING'
-                                  ? 'bg-amber-500 text-white'
-                                  : 'bg-rose-500 text-white'
-                              : 'bg-slate-100 dark:bg-neutral-800 text-slate-500 dark:text-slate-450 hover:bg-slate-200'
+                                  ? 'bg-amber-500 text-white shadow-sm'
+                                  : 'bg-rose-505 text-white shadow-sm'
+                              : 'bg-slate-100 dark:bg-neutral-800 text-slate-505 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-neutral-750'
                           }`}
                         >
                           {s === 'PENDING' ? 'Pend' : s === 'OVERDUE' ? 'Ovr' : 'Paid'}
@@ -1096,38 +1101,38 @@ export default function Homepage({
           </div>
 
           {/* Showcase 1: Bespoke Invoicing & Logistics Hub */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Text Description */}
-            <div className="lg:col-span-6 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center shadow-inner">
+            <div className="lg:col-span-6 space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-655 dark:text-sky-400 flex items-center justify-center border border-sky-500/10">
                   <FileText className="w-5 h-5" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-805 uppercase tracking-tight">Billing & Logistics Hub</h3>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl">
+              <p className="text-sm text-slate-655 dark:text-slate-400 leading-relaxed max-w-xl">
                 Generate pro-forma estimates, client quotes, and formal invoices. Track Purchase Orders (PO), reference codes, custom payment terms, and client state registries instantly.
               </p>
               
-              <div className="border-l-2 border-sky-500 pl-4 py-1 space-y-3 text-xs max-w-xl">
+              <div className="border-l-2 border-sky-500 pl-4 py-1.5 space-y-3.5 text-xs max-w-xl">
                 <p className="leading-relaxed text-slate-600 dark:text-slate-350">
-                  <strong className="text-slate-800 dark:text-slate-200">E-Way Bills & Logistics Fields:</strong> Capture transporter names, delivery routes, vehicle codes, driver mobile contacts, and GR/RR logs inside a dynamic panel.
+                  <strong className="text-slate-800 dark:text-slate-205">E-Way Bills & Logistics Fields:</strong> Capture transporter names, delivery routes, vehicle codes, driver mobile contacts, and GR/RR logs inside a dynamic panel.
                 </p>
                 <p className="leading-relaxed text-slate-600 dark:text-slate-350">
-                  <strong className="text-slate-800 dark:text-slate-200">Shipped-To Coordinates:</strong> Override billing addresses to document separate delivery destinations (Name, Phone, State, and unique GSTIN).
+                  <strong className="text-slate-800 dark:text-slate-205">Shipped-To Coordinates:</strong> Override billing addresses to document separate delivery destinations (Name, Phone, State, and unique GSTIN).
                 </p>
               </div>
             </div>
 
             {/* Interactive Mockup */}
             <div className="lg:col-span-6">
-              <div className={`p-5 sm:p-6 rounded-3xl border transition-all ${
-                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800 shadow-2xl shadow-sky-550/5' : 'bg-white border-slate-150 shadow-xl'
+              <div className={`p-6 rounded-3xl border transition-all duration-300 ${
+                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800/80 shadow-2xl shadow-sky-950/10' : 'bg-white border-slate-200/60 shadow-lg hover:shadow-xl'
               }`}>
-                <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-3 mb-4">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-3.5 mb-4 text-[10px]">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-ping" />
-                    <span className="text-[10px] font-black uppercase text-slate-405 dark:text-slate-500 tracking-wider">Logistics & PO Control</span>
+                    <span className="text-[10px] font-black uppercase text-slate-450 dark:text-slate-500 tracking-wider">Logistics & PO Control</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[9px] font-extrabold text-slate-400">Prefix:</span>
@@ -1135,52 +1140,54 @@ export default function Homepage({
                       type="text" 
                       value={prefix} 
                       onChange={(e) => setPrefix(e.target.value.toUpperCase())}
-                      className="w-12 px-1 py-0.5 rounded border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-[10px] font-black text-center text-slate-800 dark:text-white focus:outline-none"
+                      className="w-12 px-1.5 py-0.5 rounded-lg border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-[10px] font-black text-center text-slate-805 dark:text-white focus:outline-none focus:ring-1 focus:ring-sky-500/50"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3 text-[10px]">
+                  <div className="grid grid-cols-2 gap-3.5 text-[10px]">
                     <div className="space-y-1">
                       <span className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Invoice Number</span>
-                      <div className="p-2 rounded-xl bg-slate-50 dark:bg-neutral-955 border border-slate-100 dark:border-neutral-900 font-mono font-bold">
+                      <div className="p-2 rounded-xl bg-slate-50/50 dark:bg-neutral-950/40 border border-slate-100 dark:border-neutral-800/60 font-mono font-bold text-slate-705 dark:text-slate-200">
                         {prefix}-2026-0045
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <span className="block text-[8px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wide">PO Reference</span>
-                      <div className="p-2 rounded-xl bg-slate-50 dark:bg-neutral-955 border border-slate-105 dark:border-neutral-900 font-mono font-bold">
+                      <span className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide">PO Reference</span>
+                      <div className="p-2 rounded-xl bg-slate-50/50 dark:bg-neutral-950/40 border border-slate-100 dark:border-neutral-800/60 font-mono font-bold text-slate-705 dark:text-slate-200">
                         PO-77890-X
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-3 bg-slate-50/50 dark:bg-neutral-950/40 rounded-2xl border border-slate-100/50 dark:border-neutral-900 space-y-3">
+                  <div className="p-4 bg-slate-50/50 dark:bg-neutral-950/40 rounded-2xl border border-slate-100 dark:border-neutral-800/60 space-y-3.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-extrabold text-slate-705 dark:text-slate-300">Enable Logistics E-Way Bill Fields</span>
+                      <span className="text-[10px] font-extrabold text-slate-705 dark:text-slate-200">Enable Logistics E-Way Bill Fields</span>
                       <button 
                         type="button" 
                         onClick={() => setShowLogistics(!showLogistics)}
-                        className="w-8 h-4.5 rounded-full bg-slate-200 dark:bg-neutral-800 p-0.5 transition-colors relative cursor-pointer flex items-center"
+                        className={`w-8 h-4.5 rounded-full p-0.5 transition-colors relative cursor-pointer flex items-center ${
+                          showLogistics ? 'bg-sky-600' : 'bg-slate-200 dark:bg-neutral-800'
+                        }`}
                       >
-                        <div className={`w-3.5 h-3.5 rounded-full bg-sky-600 dark:bg-sky-500 shadow transition-transform transform ${showLogistics ? 'translate-x-3.5' : 'translate-x-0'}`} />
+                        <div className={`w-3.5 h-3.5 rounded-full bg-white shadow transition-transform transform ${showLogistics ? 'translate-x-3.5' : 'translate-x-0'}`} />
                       </button>
                     </div>
 
                     {showLogistics && (
-                      <div className="grid grid-cols-2 gap-3 text-[9px] animate-fade-in border-t border-slate-100 dark:border-neutral-900 pt-3">
-                        <div className="space-y-1">
-                          <span className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase">Vehicle Registration</span>
-                          <span className="block font-mono font-bold text-slate-700 dark:text-slate-350">DL-1GA-9988</span>
+                      <div className="grid grid-cols-2 gap-3.5 text-[9px] animate-fade-in border-t border-slate-100 dark:border-neutral-800/80 pt-3.5">
+                        <div className="space-y-1 bg-slate-150/40 dark:bg-neutral-900/40 p-2 rounded-xl border border-slate-200/30 dark:border-neutral-800/30">
+                          <span className="block text-[7px] font-bold text-slate-400 dark:text-slate-500 uppercase">Vehicle Registration</span>
+                          <span className="block font-mono font-bold text-slate-705 dark:text-slate-200">DL-1GA-9988</span>
                         </div>
-                        <div className="space-y-1">
-                          <span className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase">E-Way Bill ID</span>
-                          <span className="block font-mono font-bold text-slate-700 dark:text-slate-350">171299878891</span>
+                        <div className="space-y-1 bg-slate-150/40 dark:bg-neutral-900/40 p-2 rounded-xl border border-slate-200/30 dark:border-neutral-800/30">
+                          <span className="block text-[7px] font-bold text-slate-400 dark:text-slate-500 uppercase">E-Way Bill ID</span>
+                          <span className="block font-mono font-bold text-slate-705 dark:text-slate-200">171299878891</span>
                         </div>
-                        <div className="space-y-1 col-span-2">
-                          <span className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase">Shipped To Override</span>
-                          <span className="block font-bold text-slate-705 dark:text-slate-350">Alex Morgan - GSTIN 07AAAAA0000A1Z5</span>
+                        <div className="space-y-1 col-span-2 bg-slate-150/40 dark:bg-neutral-900/40 p-2.5 rounded-xl border border-slate-200/30 dark:border-neutral-800/30">
+                          <span className="block text-[7px] font-bold text-slate-400 dark:text-slate-500 uppercase">Shipped To Override</span>
+                          <span className="block font-bold text-slate-705 dark:text-slate-200">Alex Morgan - GSTIN 07AAAAA0000A1Z5</span>
                         </div>
                       </div>
                     )}
@@ -1189,22 +1196,21 @@ export default function Homepage({
               </div>
             </div>
           </div>
-
-          {/* Showcase 2: Personalised Template Studio & Vector Signatures */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+                  {/* Showcase 2: Personalised Template Studio & Vector Signatures */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Interactive Mockup (Order 2 on mobile, 1 on desktop) */}
             <div className="lg:col-span-6 lg:order-1 order-2">
-              <div className={`p-5 sm:p-6 rounded-3xl border transition-all ${
-                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800 shadow-2xl shadow-purple-550/5' : 'bg-white border-slate-150 shadow-xl'
+              <div className={`p-6 rounded-3xl border transition-all duration-300 ${
+                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800/80 shadow-2xl shadow-purple-950/10' : 'bg-white border-slate-200/60 shadow-lg hover:shadow-xl'
               }`}>
-                <div className="flex items-center justify-between border-b border-slate-105 dark:border-neutral-800 pb-3 mb-4 text-[10px]">
-                  <span className="font-black uppercase text-slate-405 dark:text-slate-500 tracking-wider">Visual Customizer Studio</span>
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-3.5 mb-4 text-[10px]">
+                  <span className="font-black uppercase text-slate-450 dark:text-slate-500 tracking-wider">Visual Customizer Studio</span>
                   <div className="flex items-center gap-1.5">
                     <span className="font-extrabold text-slate-400">Layout:</span>
                     <select
                       value={demoTemplateLayout}
                       onChange={(e) => setDemoTemplateLayout(e.target.value as any)}
-                      className="px-2 py-0.5 rounded border border-slate-205 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-955 text-[10px] font-black text-slate-805 dark:text-white focus:outline-none"
+                      className="px-2 py-0.5 rounded-lg border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 text-[10px] font-black text-slate-805 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     >
                       <option value="Classic">Classic GST</option>
                       <option value="Modern">Modern Tech</option>
@@ -1217,7 +1223,7 @@ export default function Homepage({
                 <div className="space-y-4">
                   {/* Miniature Invoice A4 Canvas Simulation */}
                   <div className={`p-3 rounded-2xl border transition-all relative ${
-                    theme === 'dark' ? 'bg-neutral-955 border-neutral-800' : 'bg-slate-50 border-slate-100'
+                    theme === 'dark' ? 'bg-neutral-955/40 border-neutral-800/60' : 'bg-slate-50 border-slate-100'
                   } ${
                     demoTemplateLayout === 'Minimal' ? 'border-t-4 border-t-slate-800 dark:border-t-neutral-200' :
                     demoTemplateLayout === 'Modern' ? 'border-t-4 border-t-purple-600' :
@@ -1241,7 +1247,7 @@ export default function Homepage({
                       <div className="border-t pt-1.5 flex justify-between items-center text-[10px]">
                         <div className="space-y-0.5">
                           <span className="block text-[6px] font-bold text-slate-400 uppercase">Drawn Sign</span>
-                          <div className="w-12 h-4 border border-dashed rounded flex items-center justify-center bg-white dark:bg-neutral-900">
+                          <div className="w-12 h-5 border border-dashed rounded flex items-center justify-center bg-white dark:bg-neutral-900">
                             {points.length > 0 ? (
                               <svg className="w-full h-full" viewBox="0 0 100 30" fill="none">
                                 <path d={`M 10 15 ` + points.slice(1, 10).map(p => `L ${p.x/2} ${p.y/4}`).join(' ')} stroke="#4f46e5" strokeWidth="1.5" />
@@ -1261,10 +1267,10 @@ export default function Homepage({
                   {/* Draw Signature Sketchpad */}
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-[8px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wide">Stylus Ink Signature sketchpad</span>
-                      <button type="button" onClick={() => setPoints([])} className="text-[8px] font-bold text-purple-600 hover:underline">Clear</button>
+                      <span className="text-[8px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">Stylus Ink Signature sketchpad</span>
+                      <button type="button" onClick={() => setPoints([])} className="text-[8px] font-extrabold text-purple-650 dark:text-purple-400 hover:text-purple-500 hover:underline cursor-pointer">Clear</button>
                     </div>
-                    <div className="border border-dashed rounded-xl overflow-hidden bg-slate-50 dark:bg-neutral-955">
+                    <div className="border border-dashed rounded-xl overflow-hidden bg-slate-50/50 dark:bg-neutral-950/40 hover:border-purple-500/40 transition-colors">
                       <svg 
                         className="w-full h-16 cursor-crosshair"
                         onMouseDown={handleSignatureMouseDown}
@@ -1295,18 +1301,18 @@ export default function Homepage({
             </div>
 
             {/* Text Description (Order 1 on mobile, 2 on desktop) */}
-            <div className="lg:col-span-6 lg:order-2 order-1 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center shadow-inner">
+            <div className="lg:col-span-6 lg:order-2 order-1 space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-650 dark:text-purple-400 flex items-center justify-center border border-purple-500/10">
                   <Lock className="w-5 h-5" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-805 uppercase tracking-tight">Personalised Template Studio</h3>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl">
+              <p className="text-sm text-slate-655 dark:text-slate-400 leading-relaxed max-w-xl">
                 Design custom invoice layouts that fit your brand guidelines. Control font families, border styles, margin layouts, watermarks, page orientation (portrait/landscape), and PDF page sizing (A4/Letter).
               </p>
               
-              <div className="border-l-2 border-purple-500 pl-4 py-1 space-y-3 text-xs max-w-xl">
+              <div className="border-l-2 border-purple-500 pl-4 py-1.5 space-y-3.5 text-xs max-w-xl">
                 <p className="leading-relaxed text-slate-600 dark:text-slate-350">
                   <strong className="text-slate-800 dark:text-slate-205">Custom Layout Creator:</strong> Design self-styled templates. Configure colors, watermark rotation, opacity, and drag sections to re-order.
                 </p>
@@ -1318,20 +1324,20 @@ export default function Homepage({
           </div>
 
           {/* Showcase 3: Compliance State Tax splits & Bulk Imports */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Text Description */}
-            <div className="lg:col-span-6 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shadow-inner">
+            <div className="lg:col-span-6 space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-650 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/10">
                   <Database className="w-5 h-5" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-805 uppercase tracking-tight">Compliance & Bulk Import</h3>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl">
+              <p className="text-sm text-slate-655 dark:text-slate-400 leading-relaxed max-w-xl">
                 Eliminate computational errors. Automatically calculate regional splits, register items to General Ledger codes, and import complete catalogs in seconds.
               </p>
               
-              <div className="border-l-2 border-indigo-500 pl-4 py-1 space-y-3 text-xs max-w-xl">
+              <div className="border-l-2 border-indigo-500 pl-4 py-1.5 space-y-3.5 text-xs max-w-xl">
                 <p className="leading-relaxed text-slate-600 dark:text-slate-350">
                   <strong className="text-slate-800 dark:text-slate-205">Auto State splits (CGST/SGST/IGST):</strong> Maps business state codes (e.g. Delhi-07) to auto-split taxes for intra-state transactions or apply IGST for inter-state supply.
                 </p>
@@ -1343,21 +1349,21 @@ export default function Homepage({
 
             {/* Interactive Mockup */}
             <div className="lg:col-span-6">
-              <div className={`p-5 sm:p-6 rounded-3xl border transition-all ${
-                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800 shadow-2xl shadow-indigo-550/5' : 'bg-white border-slate-150 shadow-xl'
+              <div className={`p-6 rounded-3xl border transition-all duration-300 ${
+                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800/80 shadow-2xl shadow-indigo-950/10' : 'bg-white border-slate-200/60 shadow-lg hover:shadow-xl'
               }`}>
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-3 mb-4 text-[10px]">
-                  <span className="font-black uppercase text-slate-405 dark:text-slate-505 tracking-wider">Spreadsheet Bulk Import Vault</span>
+                  <span className="font-black uppercase text-slate-450 dark:text-slate-500 tracking-wider">Spreadsheet Bulk Import Vault</span>
                   <div className="flex gap-1">
                     {(['products', 'clients'] as const).map((type) => (
                       <button 
                         key={type}
                         type="button" 
                         onClick={() => { setBulkDataType(type); setBulkFileUploaded(false); }}
-                        className={`px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all cursor-pointer ${
+                        className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase transition-all cursor-pointer ${
                           bulkDataType === type 
-                            ? 'bg-indigo-600 text-white' 
-                            : 'bg-slate-105 dark:bg-neutral-950 text-slate-550 dark:text-slate-400 hover:bg-slate-200'
+                            ? 'bg-indigo-600 text-white shadow-sm' 
+                            : 'bg-slate-100 dark:bg-neutral-800 text-slate-505 dark:text-slate-400 hover:bg-slate-200'
                         }`}
                       >
                         {type === 'products' ? 'Products' : 'Clients'}
@@ -1370,7 +1376,7 @@ export default function Homepage({
                   {/* Dropzone mockup */}
                   <div 
                     onClick={() => setBulkFileUploaded(true)}
-                    className="border-2 border-dashed border-indigo-500/30 rounded-2xl p-5 text-center cursor-pointer hover:bg-indigo-500/5 dark:hover:bg-indigo-500/10 transition-all space-y-2"
+                    className="border-2 border-dashed border-indigo-500/30 rounded-2xl p-6 text-center cursor-pointer hover:bg-indigo-500/5 dark:hover:bg-indigo-505/10 transition-all space-y-2"
                   >
                     <Upload className="w-7 h-7 text-indigo-500 mx-auto animate-bounce" />
                     <div>
@@ -1382,12 +1388,12 @@ export default function Homepage({
                   </div>
 
                   {bulkFileUploaded && (
-                    <div className="p-3 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-1 animate-fade-in text-[9px]">
-                      <div className="flex justify-between items-center text-indigo-600 dark:text-indigo-400 font-bold">
+                    <div className="p-3.5 bg-indigo-500/5 dark:bg-indigo-505/10 border border-indigo-500/20 rounded-xl space-y-1.5 animate-fade-in text-[9px]">
+                      <div className="flex justify-between items-center text-indigo-650 dark:text-indigo-400 font-bold">
                         <span>Status: Validated</span>
                         <span>[24 rows parsed]</span>
                       </div>
-                      <div className="space-y-0.5 font-mono text-[8px] text-slate-500 dark:text-slate-405">
+                      <div className="space-y-1 font-mono text-[8px] text-slate-500 dark:text-slate-405">
                         <p>1. {bulkDataType === 'products' ? 'Development consulting service - $120.00' : 'Alex Morgan - San Francisco'}</p>
                         <p>2. {bulkDataType === 'products' ? 'Aluminum Casting rods inventory - $45.00' : 'Intez B2B Systems - Delhi'}</p>
                       </div>
@@ -1399,32 +1405,32 @@ export default function Homepage({
           </div>
 
           {/* Showcase 4: General Ledger & Cash Flow Books */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Interactive Mockup (Order 2 on mobile, 1 on desktop) */}
             <div className="lg:col-span-6 lg:order-1 order-2">
-              <div className={`p-5 sm:p-6 rounded-3xl border transition-all ${
-                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800 shadow-2xl shadow-amber-550/5' : 'bg-white border-slate-150 shadow-xl'
+              <div className={`p-6 rounded-3xl border transition-all duration-300 ${
+                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800/80 shadow-2xl shadow-amber-950/10' : 'bg-white border-slate-200/60 shadow-lg hover:shadow-xl'
               }`}>
-                <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-3 mb-4 text-[10px]">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-3.5 mb-4 text-[10px]">
                   <span className="font-black uppercase text-slate-450 dark:text-slate-500 tracking-wider">GL Mapping & Inventory Ledger</span>
                   <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest bg-amber-500/10 px-2 py-0.5 rounded">BOOKKEEPING LOGS</span>
                 </div>
 
                 <div className="space-y-4 text-[10px]">
                   {/* Item catalog selection */}
-                  <div className="p-3 bg-slate-50/50 dark:bg-neutral-955/40 border border-slate-100 dark:border-neutral-900 rounded-2xl space-y-3">
+                  <div className="p-3.5 bg-slate-50/50 dark:bg-neutral-950/40 border border-slate-100 dark:border-neutral-805/30 rounded-2xl space-y-3.5">
                     <div className="flex justify-between items-center text-slate-705 dark:text-slate-350">
                       <span className="font-bold">Catalog Item:</span>
                       <span className="font-mono font-bold">INV-ITEM-0045 (Aluminium Rods)</span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3.5">
                       <div className="space-y-1">
                         <span className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase">Unit of Measure (UOM)</span>
                         <select 
                           value={demoUom}
                           onChange={(e) => setDemoUom(e.target.value as any)}
-                          className="w-full px-2 py-1 rounded border border-slate-205 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-slate-805 dark:text-white text-[10px] focus:outline-none"
+                          className="w-full px-2.5 py-1 rounded-lg border border-slate-200 dark:border-neutral-800 bg-white dark:bg-neutral-955 text-slate-805 dark:text-white text-[10px] focus:outline-none focus:ring-1 focus:ring-amber-500/50"
                         >
                           <option value="pcs">Pieces (pcs)</option>
                           <option value="bags">Bags (bags)</option>
@@ -1438,7 +1444,7 @@ export default function Homepage({
                         <select 
                           value={selectedGlAccount}
                           onChange={(e) => setSelectedGlAccount(e.target.value as any)}
-                          className="w-full px-2 py-1 rounded border border-slate-205 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-slate-805 dark:text-white text-[10px] focus:outline-none"
+                          className="w-full px-2.5 py-1 rounded-lg border border-slate-200 dark:border-neutral-800 bg-white dark:bg-neutral-955 text-slate-805 dark:text-white text-[10px] focus:outline-none focus:ring-1 focus:ring-amber-500/50"
                         >
                           <option value="4001">4001 - Revenue Account</option>
                           <option value="5002">5002 - Operating Cost</option>
@@ -1449,12 +1455,12 @@ export default function Homepage({
                   </div>
 
                   {/* Mapping Output Simulation */}
-                  <div className="p-3 bg-amber-500/5 border border-amber-500/10 rounded-2xl text-[9px] font-mono space-y-1">
+                  <div className="p-3.5 bg-amber-500/5 border border-amber-500/10 rounded-2xl text-[9px] font-mono space-y-1.5">
                     <div className="flex justify-between items-center font-bold text-amber-600 dark:text-amber-400">
                       <span>Ledger State Mapping:</span>
                       <span>ACTIVE</span>
                     </div>
-                    <p className="text-slate-500 dark:text-slate-405">
+                    <p className="text-slate-550 dark:text-slate-405 leading-relaxed">
                       Item stock unit set to <strong className="text-slate-700 dark:text-slate-200">[{demoUom}]</strong>. All item invoice records will auto-route transactions to <strong className="text-slate-700 dark:text-slate-200">[GL Account #{selectedGlAccount}]</strong>.
                     </p>
                   </div>
@@ -1463,69 +1469,69 @@ export default function Homepage({
             </div>
 
             {/* Text Description (Order 1 on mobile, 2 on desktop) */}
-            <div className="lg:col-span-6 lg:order-2 order-1 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shadow-inner">
+            <div className="lg:col-span-6 lg:order-2 order-1 space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-650 dark:text-amber-400 flex items-center justify-center border border-amber-500/10">
                   <Settings className="w-5 h-5" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-805 uppercase tracking-tight">General Ledger Books</h3>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl">
+              <p className="text-sm text-slate-655 dark:text-slate-400 leading-relaxed max-w-xl">
                 Connect your physical operations with formal accounting databases. Map invoice items to specific ledger codes and maintain audit records of operational costs.
               </p>
               
-              <div className="border-l-2 border-amber-500 pl-4 py-1 space-y-3 text-xs max-w-xl">
+              <div className="border-l-2 border-amber-500 pl-4 py-1.5 space-y-3.5 text-xs max-w-xl">
                 <p className="leading-relaxed text-slate-600 dark:text-slate-350">
-                  <strong className="text-slate-800 dark:text-slate-202">Flexible Units of Measure (UOM):</strong> Track inventory, services, raw materials, or hardware catalogs using custom units (bags, boxes, kg, meters, pieces, hours).
+                  <strong className="text-slate-800 dark:text-slate-205">Flexible Units of Measure (UOM):</strong> Track inventory, services, raw materials, or hardware catalogs using custom units (bags, boxes, kg, meters, pieces, hours).
                 </p>
-                <p className="leading-relaxed text-slate-600 dark:text-slate-355">
-                  <strong className="text-slate-800 dark:text-slate-202">Bookkeeping Registry:</strong> Route business revenue and operational overhead costs automatically to designated accounts for quick ledger balance audits.
+                <p className="leading-relaxed text-slate-605 dark:text-slate-350">
+                  <strong className="text-slate-800 dark:text-slate-205">Bookkeeping Registry:</strong> Route business revenue and operational overhead costs automatically to designated accounts for quick ledger balance audits.
                 </p>
               </div>
             </div>
           </div>
 
           {/* Showcase 5: Billing Analytics & Cash Flow Reports */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Text Description */}
-            <div className="lg:col-span-6 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shadow-inner">
+            <div className="lg:col-span-6 space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-650 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/10">
                   <TrendingUp className="w-5 h-5" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-805 uppercase tracking-tight">Billing Analytics</h3>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl">
+              <p className="text-sm text-slate-655 dark:text-slate-400 leading-relaxed max-w-xl">
                 Evaluate business health at a glance. Access instant cash flow summaries, profit margin reviews, collection ratios, and outstanding receivables tracking.
               </p>
               
-              <div className="border-l-2 border-emerald-500 pl-4 py-1 space-y-3 text-xs max-w-xl">
+              <div className="border-l-2 border-emerald-500 pl-4 py-1.5 space-y-3.5 text-xs max-w-xl">
                 <p className="leading-relaxed text-slate-600 dark:text-slate-350">
-                  <strong className="text-slate-800 dark:text-slate-202">Cash Flow Reporting Filters:</strong> Group collections and pending balances dynamically by Month, Quarter, or Year to evaluate growth cycles.
+                  <strong className="text-slate-800 dark:text-slate-205">Cash Flow Reporting Filters:</strong> Group collections and pending balances dynamically by Month, Quarter, or Year to evaluate growth cycles.
                 </p>
                 <p className="leading-relaxed text-slate-600 dark:text-slate-350">
-                  <strong className="text-slate-800 dark:text-slate-202">Spreadsheet Compilation:</strong> Compile overhead summaries, client registries, and invoicing details to formatted XLSX files for tax reporting.
+                  <strong className="text-slate-800 dark:text-slate-205">Spreadsheet Compilation:</strong> Compile overhead summaries, client registries, and invoicing details to formatted XLSX files for tax reporting.
                 </p>
               </div>
             </div>
 
             {/* Interactive Mockup */}
             <div className="lg:col-span-6">
-              <div className={`p-5 sm:p-6 rounded-3xl border transition-all ${
-                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800 shadow-2xl shadow-emerald-550/5' : 'bg-white border-slate-150 shadow-xl'
+              <div className={`p-6 rounded-3xl border transition-all duration-300 ${
+                theme === 'dark' ? 'bg-neutral-900/80 border-neutral-800/80 shadow-2xl shadow-emerald-950/10' : 'bg-white border-slate-200/60 shadow-lg hover:shadow-xl'
               }`}>
-                <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-3 mb-4 text-[10px]">
-                  <span className="font-black uppercase text-slate-405 dark:text-slate-500 tracking-wider">Reports & Reporting Studio</span>
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-3.5 mb-4 text-[10px]">
+                  <span className="font-black uppercase text-slate-450 dark:text-slate-500 tracking-wider">Reports & Reporting Studio</span>
                   <div className="flex gap-1">
                     {(['month', 'quarter', 'year'] as const).map((period) => (
                       <button 
                         key={period}
                         type="button" 
                         onClick={() => setAnalyticsPeriod(period)}
-                        className={`px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all cursor-pointer ${
+                        className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase transition-all cursor-pointer ${
                           analyticsPeriod === period 
-                            ? 'bg-emerald-600 text-white' 
-                            : 'bg-slate-100 dark:bg-neutral-950 text-slate-550 dark:text-slate-400 hover:bg-slate-200'
+                            ? 'bg-emerald-600 text-white shadow-sm' 
+                            : 'bg-slate-100 dark:bg-neutral-800 text-slate-505 dark:text-slate-400 hover:bg-slate-200'
                         }`}
                       >
                         {period === 'month' ? 'Monthly' : period === 'quarter' ? 'Quarterly' : 'Yearly'}
@@ -1536,20 +1542,20 @@ export default function Homepage({
 
                 <div className="space-y-4 text-[10px]">
                   {/* Reports Stats Panel */}
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="p-2.5 rounded-xl bg-slate-50/50 dark:bg-neutral-950/40 border border-slate-100 dark:border-neutral-900 text-center">
+                  <div className="grid grid-cols-3 gap-3.5">
+                    <div className="p-2.5 rounded-xl bg-slate-50/50 dark:bg-neutral-955/40 border border-slate-100 dark:border-neutral-800/60 text-center">
                       <span className="block text-[7px] font-bold text-slate-400 uppercase">Total Collected</span>
-                      <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                      <span className="font-mono font-bold text-slate-705 dark:text-slate-200">
                         {analyticsPeriod === 'month' ? '$9,500' : analyticsPeriod === 'quarter' ? '$28,500' : '$114,000'}
                       </span>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-slate-50/50 dark:bg-neutral-955/40 border border-slate-100 dark:border-neutral-900 text-center">
+                    <div className="p-2.5 rounded-xl bg-slate-50/50 dark:bg-neutral-955/40 border border-slate-100 dark:border-neutral-800/60 text-center">
                       <span className="block text-[7px] font-bold text-slate-400 uppercase">Outstanding</span>
-                      <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                      <span className="font-mono font-bold text-slate-705 dark:text-slate-200">
                         {analyticsPeriod === 'month' ? '$1,310' : analyticsPeriod === 'quarter' ? '$4,120' : '$12,400'}
                       </span>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-slate-50/50 dark:bg-neutral-950/40 border border-slate-100 dark:border-neutral-900 text-center">
+                    <div className="p-2.5 rounded-xl bg-slate-50/50 dark:bg-neutral-955/40 border border-slate-100 dark:border-neutral-800/60 text-center">
                       <span className="block text-[7px] font-bold text-slate-400 uppercase">Net Margin</span>
                       <span className="font-mono font-bold text-emerald-500">
                         {analyticsPeriod === 'month' ? '84%' : analyticsPeriod === 'quarter' ? '81%' : '78%'}
@@ -1558,7 +1564,7 @@ export default function Homepage({
                   </div>
 
                   {/* Profit Curve Bar Simulation */}
-                  <div className="p-3 bg-slate-50/50 dark:bg-neutral-955/40 border border-slate-100 dark:border-neutral-900 rounded-2xl space-y-2">
+                  <div className="p-3.5 bg-slate-50/50 dark:bg-neutral-950/40 border border-slate-100 dark:border-neutral-805/30 rounded-2xl space-y-2">
                     <span className="block text-[8px] font-bold text-slate-400 uppercase">Growth Revenue Stream</span>
                     <div className="flex items-end gap-2.5 h-12 pt-3">
                       <div className="w-full bg-slate-200 dark:bg-neutral-800 rounded-t h-4 transition-all" />
@@ -1574,38 +1580,37 @@ export default function Homepage({
         </div>
 
         {/* Premium Accordion-Style Help & FAQ Section */}
-        <div id="faq-section" className="mt-10 sm:mt-12 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-300 scroll-mt-24 px-4 sm:px-6 mb-10 text-center">
+        <div id="faq-section" className="mt-14 sm:mt-16 max-w-5xl mx-auto space-y-8 scroll-mt-24 px-4 sm:px-6 mb-14 text-center">
           <div className="space-y-2 max-w-2xl mx-auto">
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 uppercase">
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-808 dark:text-slate-100 uppercase">
               Frequently Asked Questions
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Got questions about billing, offline-mode security, or customization? Find
-              quick answers below.
+              Got questions about billing, offline-mode security, or customization? Find quick answers below.
             </p>
           </div>
 
-          <div className="space-y-1 text-left">
+          <div className="space-y-3.5 text-left">
             {faqItems.map((faq, index) => {
               const isOpen = openFaqIndex === index;
               return (
                 <div 
                   key={index} 
-                  className={`border-b transition-colors duration-300 ${
-                    theme === 'dark' 
-                      ? 'border-neutral-800/80 hover:border-neutral-700' 
-                      : 'border-slate-200 hover:border-slate-300'
+                  className={`border border-slate-200/60 dark:border-neutral-800/80 rounded-2xl px-5 mb-3 transition-all duration-300 bg-white/40 dark:bg-neutral-900/30 backdrop-blur-sm ${
+                    isOpen 
+                      ? 'border-sky-500/40 shadow-md shadow-sky-500/5' 
+                      : 'hover:border-slate-300 dark:hover:border-neutral-700'
                   }`}
                 >
                   <button
                     type="button"
                     onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                    className="w-full py-5 flex items-center justify-between text-left cursor-pointer focus:outline-none select-none group"
+                    className="w-full py-4.5 flex items-center justify-between text-left cursor-pointer focus:outline-none select-none group"
                   >
                     <span className={`text-[15px] font-semibold leading-snug transition-colors duration-200 pr-6 ${
                       isOpen 
                         ? theme === 'dark' ? 'text-sky-400' : 'text-sky-600'
-                        : theme === 'dark' ? 'text-slate-300 group-hover:text-white' : 'text-slate-800 group-hover:text-sky-600'
+                        : theme === 'dark' ? 'text-slate-300 group-hover:text-white' : 'text-slate-800 group-hover:text-sky-605'
                     }`}>
                       {faq.question}
                     </span>
@@ -1615,13 +1620,13 @@ export default function Homepage({
                       <ChevronDown className={`w-4.5 h-4.5 transition-colors duration-200 ${
                         isOpen 
                           ? theme === 'dark' ? 'text-sky-400' : 'text-sky-600'
-                          : theme === 'dark' ? 'text-slate-500 group-hover:text-slate-300' : 'text-slate-400 group-hover:text-sky-600'
+                          : theme === 'dark' ? 'text-slate-505 group-hover:text-slate-300' : 'text-slate-400 group-hover:text-sky-605'
                       }`} />
                     </span>
                   </button>
 
                   <div className={`transition-all duration-300 ease-in-out ${
-                    isOpen ? 'max-h-64 opacity-100 pb-6' : 'max-h-0 opacity-0 pointer-events-none'
+                    isOpen ? 'max-h-64 opacity-100 pb-5' : 'max-h-0 opacity-0 pointer-events-none'
                   } overflow-hidden`}>
                     <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} leading-relaxed pr-8`}>
                       {faq.answer}
@@ -1634,10 +1639,9 @@ export default function Homepage({
         </div>
 
         {/* Footer info branding */}
-        <footer className="mt-8 text-center text-xs text-slate-400 border-t border-slate-100 dark:border-neutral-800 pt-6">
+        <footer className="mt-14 text-center text-xs text-slate-400 border-t border-slate-200/50 dark:border-neutral-800/60 pt-8 pb-10">
           <p>© {new Date().getFullYear()} MakInvoices Corp. Local state automatically cached for safety. Encryption standards enabled.</p>
         </footer>
-
 
         {/* Scroll To Top Button */}
         {showScrollTop && (

@@ -168,6 +168,14 @@ export default function Dashboard({
     ];
   });
 
+  const [transports, setTransports] = useState<any[]>(() => {
+    const cached = localStorage.getItem('makbills_masters_transports');
+    if (cached) return JSON.parse(cached);
+    return [
+      { id: 't_1', name: 'Safe Express Logistics', phone: '9888877777', email: 'info@safeexpress.com', address: 'Okhla Phase 1, New Delhi', gstin: '07AAAAS0000A1Z1', pan: 'AAAAS0000A', state: 'Delhi', country: 'India' }
+    ];
+  });
+
   // Catalog Master database seed
   const [materials, setMaterials] = useState<MasterMaterial[]>(() => {
     const cached = localStorage.getItem('makbills_masters_materials');
@@ -229,6 +237,43 @@ export default function Dashboard({
       { id: 'mu_5', code: 'KGS', name: 'Kilograms weight' }
     ];
   });
+
+  // Sync Master Registry Client Database (vendors) with other views
+  useEffect(() => {
+    const handleSync = () => {
+      const cached = localStorage.getItem('makbills_masters_vendors');
+      if (cached) {
+        try {
+          setVendors(JSON.parse(cached));
+        } catch (e) {}
+      }
+    };
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('makbills_sync_vendors', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('makbills_sync_vendors', handleSync);
+    };
+  }, []);
+
+  // Sync Transport Database with other views
+  useEffect(() => {
+    const handleSync = () => {
+      const cached = localStorage.getItem('makbills_masters_transports');
+      if (cached) {
+        try {
+          setTransports(JSON.parse(cached));
+        } catch (e) {}
+      }
+    };
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('makbills_sync_transports', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('makbills_sync_transports', handleSync);
+    };
+  }, []);
+
   // --- Auto-sync items from invoices into material catalog ---
   useEffect(() => {
     if (!invoices || invoices.length === 0) return;
@@ -275,6 +320,11 @@ export default function Dashboard({
         list = vendors;
         key = 'makbills_masters_vendors';
         setter = setVendors;
+        break;
+      case 'master_transport':
+        list = transports;
+        key = 'makbills_masters_transports';
+        setter = setTransports;
         break;
       case 'master_hsn':
         list = hsnCodes;
@@ -342,6 +392,11 @@ export default function Dashboard({
         list = vendors;
         key = 'makbills_masters_vendors';
         setter = setVendors;
+        break;
+      case 'master_transport':
+        list = transports;
+        key = 'makbills_masters_transports';
+        setter = setTransports;
         break;
       case 'master_hsn':
         list = hsnCodes;
@@ -494,7 +549,7 @@ export default function Dashboard({
           >
             <div className="flex items-center gap-2.5">
               <Notebook className="w-4 h-4" />
-              <span>Clients Database</span>
+              <span>Billed Clients</span>
             </div>
             <span className={`text-[9.5px] px-1.5 py-0.5 rounded-full font-medium ${activeTab === 'clients' ? 'bg-sky-705 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
               {clients.length}
@@ -544,6 +599,14 @@ export default function Dashboard({
                 }`}
               >
                 🔢 HSN Registry
+              </button>
+              <button
+                onClick={() => handleTabClick('master_transport')}
+                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
+                  activeTab === 'master_transport' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                }`}
+              >
+                🚚 Transport Database
               </button>
             </div>
           )}
@@ -637,6 +700,28 @@ export default function Dashboard({
           { label: 'Email Address', key: 'email', type: 'email' },
           { label: 'Phone Number', key: 'phone', type: 'text' },
           { label: 'Billing Address', key: 'address', type: 'text' }
+        ];
+        break;
+      case 'master_transport':
+        title = 'Transport Database';
+        description = 'Registry of transport companies, shipping client profiles, and cargo carriers';
+        list = transports;
+        columns = [
+          { header: 'Carrier Name', key: 'name' },
+          { header: 'GSTIN / UIN', key: 'gstin' },
+          { header: 'Phone Number', key: 'phone' },
+          { header: 'State', key: 'state' },
+          { header: 'Address', key: 'address' }
+        ];
+        fields = [
+          { label: 'Carrier / Shipper Name', key: 'name', type: 'text' },
+          { label: 'GSTIN / UIN', key: 'gstin', type: 'text' },
+          { label: 'PAN', key: 'pan', type: 'text' },
+          { label: 'Contact Phone', key: 'phone', type: 'text' },
+          { label: 'Contact Email', key: 'email', type: 'email' },
+          { label: 'State', key: 'state', type: 'text' },
+          { label: 'Country', key: 'country', type: 'text' },
+          { label: 'Address Details', key: 'address', type: 'text' }
         ];
         break;
       case 'master_hsn':
@@ -784,7 +869,7 @@ export default function Dashboard({
               <Plus className="w-3.5 h-3.5" />
               <span>Add Registry Record</span>
             </button>
-            {(activeTab === 'master_vendor' || activeTab === 'master_hsn' || activeTab === 'catalog_material' || activeTab === 'catalog_category') && (
+            {(activeTab === 'master_vendor' || activeTab === 'master_transport' || activeTab === 'master_hsn' || activeTab === 'catalog_material' || activeTab === 'catalog_category') && (
               <>
                 <button
                   onClick={() => {
@@ -796,6 +881,10 @@ export default function Dashboard({
                       headers = ['Client Name', 'Company Name', 'Category / Tag', 'Email Address', 'Phone Number', 'Billing Address'];
                       sampleRow = ['John Doe', 'Acme Corp', 'VIP Client', 'john@acme.com', '+1 555-0199', '123 Business Rd, New York'];
                       filename = 'client_database_template.csv';
+                    } else if (activeTab === 'master_transport') {
+                      headers = ['Carrier Name', 'GSTIN / UIN', 'PAN', 'Phone Number', 'Email Address', 'State', 'Country', 'Address Details'];
+                      sampleRow = ['Safe Express Logistics', '07AAAAS0000A1Z1', 'AAAAS0000A', '+91 9888877777', 'info@safeexpress.com', 'Delhi', 'India', 'Okhla Phase 1, New Delhi'];
+                      filename = 'transport_database_template.csv';
                     } else if (activeTab === 'master_hsn') {
                       headers = ['HSN/SAC Code', 'Description', 'Tax Rate (%)'];
                       sampleRow = ['998311', 'Management Consulting Services', '18'];
@@ -875,6 +964,18 @@ export default function Dashboard({
                                 phone: rowData.phone || rowData['Phone Number'] || rowData['phone'] || '',
                                 address: rowData.address || rowData['Billing Address'] || rowData['address'] || ''
                               };
+                            } else if (activeTab === 'master_transport') {
+                              return {
+                                id,
+                                name: rowData.name || rowData['Carrier Name'] || rowData['name'] || 'Unnamed Carrier',
+                                gstin: rowData.gstin || rowData['GSTIN / UIN'] || rowData['gstin'] || '',
+                                pan: rowData.pan || rowData['PAN'] || rowData['pan'] || '',
+                                phone: rowData.phone || rowData['Phone Number'] || rowData['phone'] || '',
+                                email: rowData.email || rowData['Email Address'] || rowData['email'] || '',
+                                state: rowData.state || rowData['State'] || rowData['state'] || '',
+                                country: rowData.country || rowData['Country'] || rowData['country'] || '',
+                                address: rowData.address || rowData['Address Details'] || rowData['address'] || ''
+                              };
                             } else if (activeTab === 'master_hsn') {
                               return {
                                 id,
@@ -914,6 +1015,10 @@ export default function Dashboard({
                             currentList = vendors;
                             storageKey = 'makbills_masters_vendors';
                             setterFn = setVendors;
+                          } else if (activeTab === 'master_transport') {
+                            currentList = transports;
+                            storageKey = 'makbills_masters_transports';
+                            setterFn = setTransports;
                           } else if (activeTab === 'master_hsn') {
                             currentList = hsnCodes;
                             storageKey = 'makbills_masters_hsn';
@@ -1778,8 +1883,8 @@ export default function Dashboard({
           <div>
             <h1 className="text-xs font-extrabold text-slate-805 dark:text-white leading-tight max-w-[130px] sm:max-w-[180px] truncate">{profile.name || 'My Invoice Studio'}</h1>
             <span className="text-[9px] text-slate-400 font-medium tracking-wide flex items-center gap-1 mt-0.5">
-              <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
-              {isOnline ? 'Cloud Active' : 'On-Device Cache'}
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Cloud Active
             </span>
           </div>
         </div>
@@ -1839,16 +1944,7 @@ export default function Dashboard({
         {/* RIGHT CENTRAL WORKSPACE PANEL */}
         <div className="flex-1 min-w-0 w-full m-0 p-0 h-[calc(100vh-110px)] overflow-y-auto pr-1">
 
-          {/* Connection Offline notifications banner */}
-          {!isOnline && (
-            <div className="p-3 mb-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-600 dark:text-amber-400 flex items-start gap-2.5 text-xs">
-              <WifiOff className="w-4.5 h-4.5 text-amber-500 flex-shrink-0 mt-0.5 font-medium" />
-              <div>
-                <span className="font-bold block">You&apos;re Offline (Safe Sandbox Active)</span>
-                You can still create, edit, print, and check your accounts! All operations will update caches instantly and sync to device cloud once network triggers back.
-              </div>
-            </div>
-          )}
+
 
           {/* Connections / sync triggers */}
 
@@ -2231,7 +2327,7 @@ export default function Dashboard({
           <div className="space-y-4">
             <div className="flex items-center justify-between bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 p-5 rounded-3xl shadow-sm">
               <div>
-                <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Clients Ledger Book</h2>
+                <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Billed Clients Ledger Book</h2>
                 <span className="text-[10px] text-slate-400 font-medium tracking-wide">Add clients for rapid billing auto-fill list populate</span>
               </div>
               <button
@@ -2248,7 +2344,7 @@ export default function Dashboard({
               {clients.length === 0 ? (
                 <div className="p-8 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-2.5xl text-center text-slate-400 text-xs">
                   <Notebook className="w-8 h-8 mx-auto mb-2 text-slate-350" />
-                  Your clients ledger is currently empty. Add profiles to automatically inject contacts on invoice selection.
+                  Your Billed Clients Ledger is currently empty. Add profiles to automatically inject contacts on invoice selection.
                 </div>
               ) : (
                 clients.map(c => (

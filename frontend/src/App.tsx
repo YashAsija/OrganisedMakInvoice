@@ -3,7 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import { supabase, handleSupabaseError, OperationType, isSupabaseConfigured } from './lib/supabase';
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from './types';
 import { getSampleInvoice, BUSINESS_TEMPLATES } from './lib/presets';
-import { getSecuritySettings, saveSecuritySettings, SecuritySettings, hashPin } from './lib/biometrics';
+import { getSecuritySettings, saveSecuritySettings, SecuritySettings, hashPin, hashPinPBKDF2, generateSalt } from './lib/biometrics';
 
 // Global error and rejection handlers to suppress development error overlays for network blocks (adblockers/extensions)
 if (typeof window !== 'undefined') {
@@ -199,24 +199,82 @@ export default function App() {
 
     const enable = !current.isPinLockEnabled;
     let pinVal = '';
+    let salt: string | undefined;
     if (enable) {
-      const rawPin = prompt("Enter a new 4-digit security PIN passcode:");
+      if (!isOnline) {
+        alert("You must be online to set or enable a PIN lock.");
+        return;
+      }
+      const rawPin = prompt("Enter a new 4-digit screen-lock PIN:");
       if (!rawPin || rawPin.length !== 4 || isNaN(Number(rawPin))) {
         alert("Invalid PIN. It must be exactly 4 digits. Setup cancelled.");
         return;
       }
-      pinVal = await hashPin(rawPin);
-      alert(`Passcode set successfully! You will be prompted on next app refresh.`);
+      // Use PBKDF2 with random salt (new users and PIN changes)
+      salt = await generateSalt();
+      pinVal = await hashPinPBKDF2(rawPin, salt);
+
+      // Sync to backend when online + logged in (server-side bcrypt)
+      if (user) {
+        const BACKEND_URL =
+          (import.meta as unknown as { env: Record<string, string> }).env?.VITE_BACKEND_URL ||
+          (typeof process !== 'undefined' ? process.env?.NEXT_PUBLIC_BACKEND_URL : '') || '';
+        if (BACKEND_URL) {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.access_token) {
+              const res = await fetch(`${BACKEND_URL}/api/auth/pin/set`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ pin: rawPin }),
+              });
+              if (!res.ok) {
+                throw new Error("Failed to sync PIN to backend");
+              }
+            }
+          } catch {
+            alert('Could not sync PIN to server. Screen lock setup failed.');
+            return;
+          }
+        }
+      }
+      alert(`Screen lock PIN set. You will be prompted on next app open.`);
+    } else {
+      // Disabling PIN — clear server hash too
+      if (isOnline && user) {
+        const BACKEND_URL =
+          (import.meta as unknown as { env: Record<string, string> }).env?.VITE_BACKEND_URL ||
+          (typeof process !== 'undefined' ? process.env?.NEXT_PUBLIC_BACKEND_URL : '') || '';
+        if (BACKEND_URL) {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.access_token) {
+              await fetch(`${BACKEND_URL}/api/auth/pin/clear`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${session.access_token}` },
+              });
+            }
+          } catch {
+            console.warn('[PIN] Could not clear PIN on server.');
+          }
+        }
+      }
     }
+
     const updated: SecuritySettings = {
       ...current,
       isPinLockEnabled: enable,
-      hashedPin: pinVal
+      hashedPin: pinVal,
+      ...(salt ? { salt } : {}),
     };
 
     setSecuritySettings(updated);
     saveSecuritySettings(updated);
   };
+
 
   // --- LOCAL CACHING LOAD MECHANISM (OFFLINE CAPABILITIES) ---
   const loadLocalData = (emailParam?: string | null) => {
@@ -308,6 +366,12 @@ export default function App() {
 
   // --- CONNECT SUPABASE LISTENERS OR DEGRADE GRACEFULLY (CLOUD SYNCING) ---
   useEffect(() => {
+    // PIN gate: don't load any data until the user has unlocked the screen.
+    // This is the critical fix — previously loadLocalData() and the Supabase auth
+    // listener fired unconditionally at mount, loading all data into React state
+    // before the lock screen even rendered (Bypass #2 from the security audit).
+    if (!isUnlocked) return;
+
     // Load local storage fallback immediately so the app shows data instantly before network resolves (and works fully offline)
     loadLocalData();
 
@@ -335,7 +399,7 @@ export default function App() {
 
         if (currentUser) {
           setUser(currentUser);
-          const activeEmail = currentUser.email ?? null;
+          const activeEmail = currentUser.email ?? currentUser.phone ?? null;
           setUserEmail(activeEmail);
           const suffix = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
 
@@ -372,6 +436,7 @@ export default function App() {
                   mobile: companySettings.mobile || '',
                   address: companySettings.address || cloudProf.address || '',
                   taxId: companySettings.gstin || cloudProf.taxId || '',
+                  pan: companySettings.pan || cloudProf.pan || '',
                   logoUrl: companySettings.logo_url || cloudProf.logoUrl || '',
                   signature: companySettings.signature_url || cloudProf.signature || '',
                   country: companySettings.country || cloudProf.country || '',
@@ -399,14 +464,15 @@ export default function App() {
                 // Creating initial business profile for new users in Supabase
                 const initProf: BusinessProfile = {
                   uid,
-                  name: companySettings?.business_name || profile.name || currentUser.user_metadata?.full_name || '',
-                  displayName: companySettings?.owner_name || profile.displayName || '',
-                  ownerName: companySettings?.owner_name || profile.ownerName || '',
+                  name: companySettings?.business_name || (typeof window !== 'undefined' ? localStorage.getItem('makbills_custom_brand') : null) || profile.name || '',
+                  displayName: companySettings?.owner_name || (typeof window !== 'undefined' ? localStorage.getItem('makbills_custom_owner') : null) || profile.displayName || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '',
+                  ownerName: companySettings?.owner_name || (typeof window !== 'undefined' ? localStorage.getItem('makbills_custom_owner') : null) || profile.ownerName || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '',
                   email: companySettings?.email || profile.email || currentUser.email || '',
                   phone: companySettings?.mobile || profile.phone || '',
                   mobile: companySettings?.mobile || '',
                   address: companySettings?.address || profile.address || '',
                   taxId: companySettings?.gstin || profile.taxId || '',
+                  pan: companySettings?.pan || profile.pan || '',
                   country: companySettings?.country || profile.country || '',
                   state: companySettings?.state || profile.state || '',
                   stateCode: companySettings?.state_code || profile.stateCode || '',
@@ -423,6 +489,11 @@ export default function App() {
                 await supabase.from('users').upsert(initProf);
                 setProfile(initProf);
                 localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(initProf));
+              }
+
+              if (!companySettings || !companySettings.business_name || !companySettings.owner_name) {
+                setIsOnboarding(true);
+                setIsProfileOpen(true);
               }
             } catch (err) {
               console.warn('Error fetching/setting cloud profile:', String(err));
@@ -582,8 +653,6 @@ export default function App() {
         } else {
           setUser(null);
           setUserEmail(null);
-          // Fall back to offline local storage data
-          loadLocalData();
         }
         } catch (globalAuthErr) {
           console.warn("Unhandled error in auth state change listener:", String(globalAuthErr));
@@ -595,52 +664,9 @@ export default function App() {
       authSubscription.unsubscribe();
       cleanupActiveListeners();
     };
-  }, [isOnline]);
+  }, [isOnline, isUnlocked]);
 
-  // --- Retroactive Sync of Clients from Existing Invoices ---
-  useEffect(() => {
-    if (invoices.length === 0) return;
-    
-    let clientsChanged = false;
-    const updatedClients = [...clients];
 
-    invoices.forEach(inv => {
-      if (inv.clientName && inv.clientName.trim() !== '') {
-        const nameLower = inv.clientName.trim().toLowerCase();
-        const exists = updatedClients.some(c => 
-          c.name.toLowerCase() === nameLower || 
-          c.companyName.toLowerCase() === nameLower
-        );
-        
-        if (!exists) {
-          clientsChanged = true;
-          updatedClients.push({
-            id: crypto.randomUUID(),
-            userId: user ? user.id : '',
-            name: inv.clientName.trim(),
-            companyName: inv.clientName.trim(),
-            address: inv.clientAddress || '',
-            email: inv.clientEmail || '',
-            phone: inv.clientPhone || '',
-            createdAt: inv.createdAt || new Date().toISOString(),
-            updatedAt: inv.createdAt || new Date().toISOString()
-          });
-        }
-      }
-    });
-
-    if (clientsChanged) {
-      setClients(updatedClients);
-      localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(updatedClients));
-      
-      if (isOnline && user) {
-        const clientsWithUser = updatedClients.map(c => ({ ...c, userId: user.id }));
-        supabase.from('clients').upsert(clientsWithUser).then(null, (e: unknown) => {
-          console.error('Failed to retroactively sync clients to cloud:', e);
-        });
-      }
-    }
-  }, [invoices, clients, isOnline, user]);
 
   // --- ACTIONS SYSTEM ---
 
@@ -841,35 +867,116 @@ export default function App() {
 
   // 3. Save / Update Invoice
   const handleSaveInvoice = async (invoice: Invoice) => {
-    // Automatically create or update client database based on invoice
+    const clientsToUpsert: ClientProfile[] = [];
+    let updatedClients = [...clients];
+
+    // 1. Process clientName (Bill To)
     if (invoice.clientName && invoice.clientName.trim() !== '') {
       const clientNameLower = invoice.clientName.trim().toLowerCase();
-      const existingClient = clients.find(c => 
-        c.name.toLowerCase() === clientNameLower || 
-        c.companyName.toLowerCase() === clientNameLower
+      const existingClient = updatedClients.find(c => 
+        c.name.trim().toLowerCase() === clientNameLower || 
+        c.companyName?.trim().toLowerCase() === clientNameLower
       );
 
-      const clientToSave: ClientProfile = existingClient ? {
-        ...existingClient,
-        // Update with latest details from invoice if present
-        address: invoice.clientAddress || existingClient.address,
-        email: invoice.clientEmail || existingClient.email,
-        phone: invoice.clientPhone || existingClient.phone,
-        updatedAt: new Date().toISOString()
-      } : {
-        id: crypto.randomUUID(),
-        userId: user ? user.id : '',
-        name: invoice.clientName.trim(),
-        companyName: invoice.clientName.trim(),
-        address: invoice.clientAddress || '',
-        email: invoice.clientEmail || '',
-        phone: invoice.clientPhone || '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      const newAddress = invoice.clientAddress || '';
+      const newEmail = invoice.clientEmail || '';
+      const newPhone = invoice.clientPhone || '';
 
-      await handleSaveClient(clientToSave);
+      if (existingClient) {
+        const isDifferent = 
+          (existingClient.address || '') !== newAddress ||
+          (existingClient.email || '') !== newEmail ||
+          (existingClient.phone || '') !== newPhone;
+
+        if (isDifferent) {
+          const clientToSave: ClientProfile = {
+            ...existingClient,
+            address: newAddress,
+            email: newEmail,
+            phone: newPhone,
+            updatedAt: new Date().toISOString()
+          };
+          clientsToUpsert.push(clientToSave);
+          updatedClients = updatedClients.map(c => c.id === clientToSave.id ? clientToSave : c);
+        }
+      } else {
+        const clientToSave: ClientProfile = {
+          id: crypto.randomUUID(),
+          userId: user ? user.id : '',
+          name: invoice.clientName.trim(),
+          companyName: invoice.clientName.trim(),
+          address: newAddress,
+          email: newEmail,
+          phone: newPhone,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        clientsToUpsert.push(clientToSave);
+        updatedClients = [clientToSave, ...updatedClients];
+      }
     }
+
+    // 2. Process shippedToName (Ship To)
+    if (invoice.shippedToName && invoice.shippedToName.trim() !== '' && invoice.shippedToName.trim().toLowerCase() !== invoice.clientName?.trim().toLowerCase()) {
+      const clientNameLower = invoice.shippedToName.trim().toLowerCase();
+      const existingClient = updatedClients.find(c => 
+        c.name.trim().toLowerCase() === clientNameLower || 
+        c.companyName?.trim().toLowerCase() === clientNameLower
+      );
+
+      const newAddress = invoice.shippedToAddress || '';
+      const newEmail = invoice.shippedToEmail || '';
+      const newPhone = invoice.shippedToPhone || '';
+
+      if (existingClient) {
+        const isDifferent = 
+          (existingClient.address || '') !== newAddress ||
+          (existingClient.email || '') !== newEmail ||
+          (existingClient.phone || '') !== newPhone;
+
+        if (isDifferent) {
+          const clientToSave: ClientProfile = {
+            ...existingClient,
+            address: newAddress,
+            email: newEmail,
+            phone: newPhone,
+            updatedAt: new Date().toISOString()
+          };
+          clientsToUpsert.push(clientToSave);
+          updatedClients = updatedClients.map(c => c.id === clientToSave.id ? clientToSave : c);
+        }
+      } else {
+        const clientToSave: ClientProfile = {
+          id: crypto.randomUUID(),
+          userId: user ? user.id : '',
+          name: invoice.shippedToName.trim(),
+          companyName: invoice.shippedToName.trim(),
+          address: newAddress,
+          email: newEmail,
+          phone: newPhone,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        clientsToUpsert.push(clientToSave);
+        updatedClients = [clientToSave, ...updatedClients];
+      }
+    }
+
+    // Commit all client state updates and sync to database at once
+    if (clientsToUpsert.length > 0) {
+      setClients(updatedClients);
+      localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(updatedClients));
+
+      if (isOnline && user) {
+        try {
+          const clientsWithUser = clientsToUpsert.map(c => ({ ...c, userId: user.id }));
+          await supabase.from('clients').upsert(clientsWithUser);
+        } catch (err) {
+          console.error('Failed to sync client profiles:', err);
+        }
+      }
+    }
+
 
     const updatedInvoices = invoices.map(inv => inv.id === invoice.id ? invoice : inv);
     
@@ -1149,13 +1256,20 @@ export default function App() {
     const confirmed = window.confirm('Are you sure you want to delete this client profile?');
     if (!confirmed) return;
 
-    const remaining = clients.filter(c => c.id !== clientId);
+    const clientToDelete = clients.find(c => c.id === clientId);
+    if (!clientToDelete) return;
+
+    const nameLower = clientToDelete.name.trim().toLowerCase();
+
+    // Filter out all duplicates by name from local state
+    const remaining = clients.filter(c => c.name.trim().toLowerCase() !== nameLower);
     setClients(remaining);
     localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(remaining));
 
     if (isOnline && user) {
       try {
-        await supabase.from('clients').delete().eq('id', clientId).eq('userId', user.id);
+        // Delete all duplicate rows by name matching case-insensitively in Supabase
+        await supabase.from('clients').delete().eq('userId', user.id).ilike('name', clientToDelete.name.trim());
       } catch (err) {
         console.error('Failed to delete client profile:', err);
       }
@@ -1197,6 +1311,12 @@ export default function App() {
   };
 
   // --- RECURRING BILL SCHEDULER ALGORITHM ---
+  //
+  // MUST STAY IN SYNC WITH backend/app/services/scheduler.py
+  //   - get_next_scheduled_date() mirrors getNextScheduledDate() below
+  //   - child ID format mirrors _make_child_id() in scheduler.py
+  //   - the while(iterations < 10) backfill loop is identical in both
+  // If you change date arithmetic or ID format here, update the backend too.
   const getNextScheduledDate = (currentDateStr: string, interval: 'weekly' | 'bi-weekly' | 'monthly' | 'yearly'): string => {
     const date = new Date(currentDateStr);
     if (isNaN(date.getTime())) {
@@ -1252,11 +1372,16 @@ export default function App() {
           break;
         }
 
-        // Spawn a brand-new actual repeating invoice bill matching the template
+        // Idempotency guard #2: deterministic child ID.
+        // Format: inv_rec_{parentId}_{YYYYMMDD} — must stay in sync with
+        // backend/app/services/scheduler.py _make_child_id().
+        // Using a stable ID means if the server scheduler runs on the same day,
+        // its DB insert hits ON CONFLICT (parentInvoiceId, date) and is ignored.
+        const safeDate = nextDate.replace(/-/g, '');
         const spawnNumber = `${parent.invoiceNumber}-R${Math.floor(100 + Math.random() * 900)}`;
         const spawnInvoice: Invoice = {
           ...parent,
-          id: `inv_rec_${Math.random().toString(36).substr(2, 9)}`,
+          id: `inv_rec_${parent.id}_${safeDate}`,
           invoiceNumber: spawnNumber,
           date: nextDate,
           dueDate: new Date(new Date(nextDate).setDate(new Date(nextDate).getDate() + 14)).toISOString().split('T')[0],
