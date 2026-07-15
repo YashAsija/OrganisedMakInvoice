@@ -142,6 +142,19 @@ export default function Dashboard({
   const [isDesktopSidebarExpanded, setIsDesktopSidebarExpanded] = useState(true);
   const [isMasterExpanded, setIsMasterExpanded] = useState(true);
   const [isCatalogExpanded, setIsCatalogExpanded] = useState(true);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isProfileDropdownOpen) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('#profile-dropdown-container') && !target.closest('#profile-dropdown-container-other')) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, [isProfileDropdownOpen]);
 
   // Reusable Master & Catalog form builders state
   const [editingMasterItem, setEditingMasterItem] = useState<MasterItemType | null>(null);
@@ -604,30 +617,6 @@ export default function Dashboard({
               <span>Material Catalog</span>
             </div>
           </button>
-
-          {userEmail ? (
-            <button
-              onClick={() => {
-                onLogout();
-                if (isMobileView) setIsMobileDrawerOpen(false);
-              }}
-              className="w-full px-3 py-2 bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-955 text-rose-600 dark:text-rose-450 text-[10px] font-extrabold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer border border-transparent dark:border-rose-900/30"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Log out</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                onLogin();
-                if (isMobileView) setIsMobileDrawerOpen(false);
-              }}
-              className="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-            >
-              <LogIn className="w-4 h-4" />
-              <span>Log In</span>
-            </button>
-          )}
         </div>
       </div>
     );
@@ -1856,12 +1845,64 @@ export default function Dashboard({
                 <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-rose-500" />
               </button>
               
-              <button 
-                onClick={() => setActiveTab('profile')}
-                className="w-8 h-8 rounded-full bg-[#5C5043] text-white flex items-center justify-center text-xs font-black tracking-wider shadow-sm cursor-pointer"
-              >
-                {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'MK'}
-              </button>
+              <div className="relative" id="profile-dropdown-container">
+                <button 
+                  onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                  className="w-8 h-8 rounded-full bg-[#5C5043] text-white flex items-center justify-center text-xs font-black tracking-wider shadow-sm cursor-pointer transition-all hover:scale-105"
+                >
+                  {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'MK'}
+                </button>
+
+                {isProfileDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-[#FCFAF7] dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-805 shadow-xl py-2 z-50 text-sans animate-in fade-in slide-in-from-top-2 duration-200">
+                    <button 
+                      onClick={() => {
+                        setActiveTab('profile');
+                        setIsProfileDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#5C5043] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <User className="w-3.5 h-3.5 text-[#88765C]" />
+                      <span>Profile</span>
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        onOpenProfile();
+                        setIsProfileDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#5C5043] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <Layout className="w-3.5 h-3.5 text-[#88765C]" />
+                      <span>Settings</span>
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        setActiveTab('learn');
+                        setIsProfileDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#5C5043] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <Info className="w-3.5 h-3.5 text-[#88765C]" />
+                      <span>Support</span>
+                    </button>
+
+                    <div className="my-1 border-t border-[#EBDCC8]/50 dark:border-zinc-800" />
+
+                    <button 
+                      onClick={() => {
+                        onLogout();
+                        setIsProfileDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-rose-600 dark:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                )}
+              </div>
 
               <button 
                 onClick={toggleTheme}
@@ -1905,24 +1946,76 @@ export default function Dashboard({
             </div>
 
             <div className="flex items-center gap-3">
-              <button 
-                onClick={() => setActiveTab('profile')}
-                title="Switch destination to Business & Creator Profile settings"
-                aria-label="Open business customization settings profile dashboard"
-                className={`w-9.5 h-8.5 rounded-full flex items-center justify-center transition-all cursor-pointer overflow-hidden border ${
-                  activeTab === 'profile' 
-                    ? 'ring-2 ring-sky-500 border-sky-500 shadow-sm' 
-                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 bg-slate-50 dark:bg-slate-900 shadow-3xs'
-                }`}
-              >
-                {profile.logoUrl ? (
-                  <img src={profile.logoUrl} referrerPolicy="no-referrer" alt={profile.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-[10px] font-extrabold text-slate-700 dark:text-slate-300 font-mono">
-                    {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'IN'}
-                  </span>
+              <div className="relative" id="profile-dropdown-container-other">
+                <button 
+                  onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                  title="Switch destination to Business & Creator Profile settings"
+                  aria-label="Open business customization settings profile dashboard"
+                  className={`w-9.5 h-8.5 rounded-full flex items-center justify-center transition-all cursor-pointer overflow-hidden border ${
+                    activeTab === 'profile' 
+                      ? 'ring-2 ring-sky-500 border-sky-500 shadow-sm' 
+                      : 'border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 bg-slate-50 dark:bg-slate-900 shadow-3xs'
+                  }`}
+                >
+                  {profile.logoUrl ? (
+                    <img src={profile.logoUrl} referrerPolicy="no-referrer" alt={profile.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] font-extrabold text-slate-700 dark:text-slate-300 font-mono">
+                      {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'IN'}
+                    </span>
+                  )}
+                </button>
+
+                {isProfileDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-[#FCFAF7] dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-805 shadow-xl py-2 z-50 text-sans animate-in fade-in slide-in-from-top-2 duration-200">
+                    <button 
+                      onClick={() => {
+                        setActiveTab('profile');
+                        setIsProfileDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#5C5043] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <User className="w-3.5 h-3.5 text-[#88765C]" />
+                      <span>Profile</span>
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        onOpenProfile();
+                        setIsProfileDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#5C5043] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <Layout className="w-3.5 h-3.5 text-[#88765C]" />
+                      <span>Settings</span>
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        setActiveTab('learn');
+                        setIsProfileDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#5C5043] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <Info className="w-3.5 h-3.5 text-[#88765C]" />
+                      <span>Support</span>
+                    </button>
+
+                    <div className="my-1 border-t border-[#EBDCC8]/50 dark:border-zinc-800" />
+
+                    <button 
+                      onClick={() => {
+                        onLogout();
+                        setIsProfileDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-rose-600 dark:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
                 )}
-              </button>
+              </div>
 
               <button 
                 onClick={toggleTheme}
