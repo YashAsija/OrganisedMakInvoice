@@ -479,17 +479,6 @@ export default function Dashboard({
     return (
       <div className="flex flex-col h-full space-y-6 text-sans select-none">
         
-        {/* User Card info */}
-        <div className="flex items-center gap-3 pb-4 border-b border-[#EBDCC8]/65 dark:border-zinc-800">
-          <div className="w-10 h-10 rounded-xl bg-[#5C5043] text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm">
-            {profile.name ? profile.name.charAt(0).toUpperCase() : 'M'}
-          </div>
-          <div className="min-w-0">
-            <h4 className="text-[11px] font-black text-[#5C5043] dark:text-white uppercase leading-tight truncate">{profile.name || 'MAKINVOICE'}</h4>
-            <span className="text-[9.5px] text-[#88765C]/85 dark:text-zinc-400 font-mono tracking-wide mt-0.5 block truncate">{profile.mobile || profile.phone || '9899728185'}</span>
-          </div>
-        </div>
-
         {/* SETTINGS MENU */}
         <div className="space-y-1">
           <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#88765C]/60 dark:text-zinc-500 block px-2 pb-1">Settings Menu</span>
@@ -2844,8 +2833,15 @@ export default function Dashboard({
             <div className="space-y-6 text-sans animate-in fade-in duration-300">
               {/* Main Topbar Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#EBDCC8]/60 dark:border-zinc-800">
-                <div>
-                  <span className="text-[10px] font-bold text-[#88765C]/80 uppercase tracking-widest">Financial Hub / Dashboard</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#5C5043] text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm">
+                    {profile.name ? profile.name.charAt(0).toUpperCase() : 'M'}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-[11px] font-black text-[#5C5043] dark:text-white uppercase leading-tight truncate">{profile.name || 'MAKINVOICE'}</h4>
+                    <span className="text-[9.5px] text-[#88765C]/85 dark:text-zinc-400 font-mono tracking-wide mt-0.5 block truncate">{profile.mobile || profile.phone || '9899728185'}</span>
+                  </div>
+                  <span className="text-[9px] font-black text-[#88765C]/50 uppercase tracking-widest pl-2 border-l border-[#EBDCC8]/40 hidden sm:inline ml-1">Financial Hub / Dashboard</span>
                 </div>
                 <div className="flex items-center gap-4 self-end sm:self-auto">
                   <div className="relative w-full max-w-[280px]">
