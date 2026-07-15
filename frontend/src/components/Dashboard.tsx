@@ -3381,54 +3381,54 @@ export default function Dashboard({
         {/* ------------------ TAB 6: BRAND NEW 'profile' BRAND VIEW ------------------ */}
         {activeTab === 'profile' && (
           <div className="space-y-6 text-sans animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/80 p-6 rounded-3xl shadow-xs text-center relative overflow-hidden">
-              <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-sky-500 via-indigo-500 to-emerald-500" />
+            <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 p-6 sm:p-8 rounded-3xl shadow-xs text-center relative overflow-hidden max-w-2xl mx-auto">
+              <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-[#EBDCC8] via-[#C6A87D] to-[#88765C]" />
               
-              <div className="w-16 h-16 rounded-2xl bg-sky-50 dark:bg-sky-950/45 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto mb-3 shadow-md mt-2">
+              <div className="w-20 h-20 rounded-2xl bg-[#F4EBE1] dark:bg-zinc-800 text-[#88765C] dark:text-[#EADFCF] flex items-center justify-center mx-auto mb-4 shadow-md mt-4 border border-[#EBDCC8]/80 dark:border-zinc-700">
                 {profile.logoUrl ? (
                   <img src={profile.logoUrl} referrerPolicy="no-referrer" alt={profile.name} className="w-full h-full object-cover rounded-2xl" />
                 ) : (
-                  <User className="w-8 h-8" />
+                  <User className="w-10 h-10" />
                 )}
               </div>
 
-              <h2 className="text-base font-extrabold text-slate-805 uppercase tracking-tight">{profile.name || 'My Invoice Studio'}</h2>
-              <p className="text-[10px] text-slate-400 font-mono mt-0.5">{profile.email || 'No email established'}</p>
+              <h2 className="text-lg font-black text-[#6E6050] dark:text-white uppercase tracking-tight">{profile.name || 'My Invoice Studio'}</h2>
+              <p className="text-[11px] text-[#88765C]/80 font-mono mt-0.5">{profile.email || 'No email established'}</p>
 
-              <div className="mt-6 grid grid-cols-2 gap-3 text-left">
-                <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-850">
-                  <span className="text-[8px] uppercase font-extrabold text-slate-400 block">LLC Brand Registry</span>
-                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-205 mt-1 block truncate">{profile.name || 'Sole Proprietorship'}</span>
+              <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+                <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-2xl border border-[#EBDCC8]/50 dark:border-zinc-800/80">
+                  <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-400 block">LLC Brand Registry</span>
+                  <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block truncate">{profile.name || 'Sole Proprietorship'}</span>
                 </div>
-                <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-850">
-                  <span className="text-[8px] uppercase font-extrabold text-slate-400 block">Tax Registry (GSTIN)</span>
-                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-205 mt-1 block truncate font-mono">{profile.taxId || 'Not Configured'}</span>
+                <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-2xl border border-[#EBDCC8]/50 dark:border-zinc-800/80">
+                  <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-400 block">Tax Registry (GSTIN)</span>
+                  <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block truncate font-mono">{profile.taxId || 'Not Configured'}</span>
                 </div>
-                <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-850">
-                  <span className="text-[8px] uppercase font-extrabold text-slate-400 block">Primary currency</span>
-                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-205 mt-1 block">{profile.currency || 'INR'} ({currencySymbol})</span>
+                <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-2xl border border-[#EBDCC8]/50 dark:border-zinc-800/80">
+                  <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-400 block">Primary currency</span>
+                  <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block">{profile.currency || 'INR'} ({currencySymbol})</span>
                 </div>
-                <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-850">
-                  <span className="text-[8px] uppercase font-extrabold text-slate-400 block">Mobile Number</span>
-                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-205 mt-1 block truncate">{profile.mobile || profile.phone || 'N/A'}</span>
+                <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-2xl border border-[#EBDCC8]/50 dark:border-zinc-800/80">
+                  <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-400 block">Mobile Number</span>
+                  <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block truncate">{profile.mobile || profile.phone || 'N/A'}</span>
                 </div>
               </div>
 
               {/* Security Controls */}
-              <div className="mt-6 border-t border-slate-50 dark:border-slate-850 pt-6 text-left">
-                <h3 className="text-xs font-black text-slate-805 uppercase tracking-widest mb-3">Security Locks & Access Control</h3>
-                <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 flex items-center justify-between">
+              <div className="mt-8 border-t border-[#EBDCC8]/50 dark:border-zinc-800/80 pt-6 text-left">
+                <h3 className="text-xs font-black text-[#6E6050] dark:text-white uppercase tracking-widest mb-3">Security Locks & Access Control</h3>
+                <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-5 rounded-2xl border border-[#EBDCC8]/50 dark:border-zinc-800/80 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] uppercase font-extrabold text-slate-500 block">PIN Passcode Lock</span>
-                    <span className="text-[11px] text-slate-405 mt-0.5 block">Requires a secure 4-digit PIN code on app refresh</span>
+                    <span className="text-[10px] uppercase font-extrabold text-[#88765C] block">PIN Passcode Lock</span>
+                    <span className="text-xs text-[#6E6050]/80 dark:text-zinc-400 mt-0.5 block">Requires a secure 4-digit PIN code on app refresh</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => onToggleSecurity('pin')}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-xs ${
                       isPinLockEnabled 
-                        ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-sm' 
-                        : 'bg-slate-205 dark:bg-slate-800 text-slate-700 dark:text-slate-350 hover:bg-slate-300 dark:hover:bg-slate-700'
+                        ? 'bg-rose-500 hover:bg-rose-600 text-white' 
+                        : 'bg-[#EADFCF] hover:bg-[#ebdcc8] text-[#6E6050]'
                     }`}
                   >
                     {isPinLockEnabled ? 'Disable PIN' : 'Enable PIN'}
@@ -3436,12 +3436,12 @@ export default function Dashboard({
                 </div>
               </div>
 
-              <div className="pt-6 border-t border-slate-50 dark:border-slate-850 mt-6">
+              <div className="pt-6 border-t border-[#EBDCC8]/50 dark:border-zinc-800/80 mt-6">
                 <button
                   onClick={onOpenProfile}
-                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-[10.5px] font-bold rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  className="px-6 py-3 bg-[#88765C] hover:bg-[#6E6050] text-[#FCFAF7] text-[10.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs hover:shadow-md"
                 >
-                  <PenTool className="w-3.5 h-3.5 text-slate-450" />
+                  <PenTool className="w-3.5 h-3.5 text-white/80" />
                   <span>Customize Brand Details</span>
                 </button>
               </div>
