@@ -1895,7 +1895,7 @@ export default function Dashboard({
         
         {/* DESKTOP BRANDING & CONTROL SIDEBAR - Visible only on md screens and larger */}
         <div className="hidden md:block relative shrink-0">
-          <aside className={`flex flex-col bg-[#FCFAF7] dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-800 rounded-3xl shadow-xs h-[calc(100vh-110px)] overflow-y-auto overflow-x-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
+          <aside className={`flex flex-col bg-[#FCFAF7] dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-800 rounded-3xl shadow-xs ${activeTab === 'dashboard' ? 'h-[calc(100vh-48px)]' : 'h-[calc(100vh-110px)]'} overflow-y-auto overflow-x-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
             <div className="w-full h-full">
               {renderNavMenuContent(false)}
             </div>
@@ -1911,7 +1911,7 @@ export default function Dashboard({
         </div>
 
         {/* RIGHT CENTRAL WORKSPACE PANEL */}
-        <div className="flex-1 min-w-0 w-full m-0 p-0 h-[calc(100vh-110px)] overflow-y-auto pr-1">
+        <div className={`flex-1 min-w-0 w-full m-0 p-0 ${activeTab === 'dashboard' ? 'h-[calc(100vh-48px)]' : 'h-[calc(100vh-110px)]'} overflow-y-auto pr-1`}>
 
 
 
