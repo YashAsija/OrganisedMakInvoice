@@ -1816,67 +1816,124 @@ export default function Dashboard({
     <div className="h-dvh w-full max-w-full overflow-hidden bg-[#FCFAF7] dark:bg-zinc-950 text-slate-800 dark:text-slate-100 transition-colors duration-200 text-sans">
       
       {/* Dynamic Main App Bar Header */}
-      <header className={`sticky top-0 z-20 w-full bg-white/95 dark:bg-slate-905/95 backdrop-blur-md border-b border-slate-150 dark:border-slate-800/80 px-4 py-3 flex items-center justify-between shadow-xs ${activeTab === 'dashboard' ? 'md:hidden' : ''}`}>
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={() => setIsMobileDrawerOpen(true)}
-            aria-label="Toggle structural sidebar menu drawer"
-            className="md:hidden p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-xl transition-all cursor-pointer border border-slate-100 dark:border-slate-800"
-          >
-            <Menu className="w-4 h-4" />
-          </button>
+      <header className="sticky top-0 z-20 w-full bg-[#FCFAF7]/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-[#EBDCC8]/60 dark:border-zinc-805 px-4 py-3 flex items-center justify-between shadow-xs">
+        {activeTab === 'dashboard' ? (
+          <>
+            {/* Left Side: Mobile Menu Trigger + Company Info + Breadcrumbs */}
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => setIsMobileDrawerOpen(true)}
+                aria-label="Toggle structural sidebar menu drawer"
+                className="md:hidden p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-xl transition-all cursor-pointer border border-slate-100 dark:border-slate-800"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
 
-          <button 
-            onClick={onOpenProfile}
-            aria-label="Open Business Settings profile configuration"
-            className="w-9 h-9 rounded-xl bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 hover:ring-2 hover:ring-sky-500/10 flex items-center justify-center transition-all cursor-pointer relative overflow-hidden"
-          >
-            {profile.logoUrl ? (
-              <img src={profile.logoUrl} referrerPolicy="no-referrer" alt={profile.name} className="w-full h-full object-cover" />
-            ) : (
-              <User className="w-4.5 h-4.5 flex-shrink-0" />
-            )}
-          </button>
-          
-          <div>
-            <h1 className="text-xs font-extrabold text-slate-805 dark:text-white leading-tight max-w-[130px] sm:max-w-[180px] truncate">{profile.name || 'My Invoice Studio'}</h1>
-            <span className="text-[9px] text-slate-400 font-medium tracking-wide flex items-center gap-1 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Cloud Active
-            </span>
-          </div>
-        </div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#5C5043] text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm">
+                  {profile.name ? profile.name.charAt(0).toUpperCase() : 'M'}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-[11px] font-black text-[#5C5043] dark:text-white uppercase leading-tight truncate">{profile.name || 'MAKINVOICE'}</h4>
+                  <span className="text-[9.5px] text-[#88765C]/85 dark:text-zinc-400 font-mono tracking-wide mt-0.5 block truncate">{profile.mobile || profile.phone || '9899728185'}</span>
+                </div>
+                <span className="text-[9px] font-black text-[#88765C]/50 uppercase tracking-widest pl-2 border-l border-[#EBDCC8]/40 hidden sm:inline ml-1">Financial Hub / Dashboard</span>
+              </div>
+            </div>
 
-        {/* Configurations Panel items */}
-        <div className="flex items-center gap-3">
-          {/* Circular My Profile User Icon inside Top Bar */}
-          <button 
-            onClick={() => setActiveTab('profile')}
-            title="Switch destination to Business & Creator Profile settings"
-            aria-label="Open business customization settings profile dashboard"
-            className={`w-9.5 h-8.5 rounded-full flex items-center justify-center transition-all cursor-pointer overflow-hidden border ${
-              activeTab === 'profile' 
-                ? 'ring-2 ring-sky-500 border-sky-500 shadow-sm' 
-                : 'border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 bg-slate-50 dark:bg-slate-900 shadow-3xs'
-            }`}
-          >
-            {profile.logoUrl ? (
-              <img src={profile.logoUrl} referrerPolicy="no-referrer" alt={profile.name} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-[10px] font-extrabold text-slate-700 dark:text-slate-300 font-mono">
-                {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'IN'}
-              </span>
-            )}
-          </button>
+            {/* Right Side: Search + Notifications + Profile Avatar + Theme Toggle */}
+            <div className="flex items-center gap-3">
+              <div className="relative w-full max-w-[180px] sm:max-w-[240px] hidden md:block">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#88765C]/70" />
+                <input 
+                  type="text" 
+                  placeholder="Search insights..." 
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-full border border-[#EBDCC8] dark:border-zinc-800 bg-[#FCFAF7]/80 dark:bg-zinc-950 focus:outline-hidden text-[#5C5043] dark:text-white placeholder-[#88765C]/50"
+                />
+              </div>
+              <button className="p-1.5 bg-white dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-800 text-[#88765C] hover:text-[#5C5043] rounded-full transition-colors relative cursor-pointer hidden md:block">
+                <Bell className="w-3.5 h-3.5" />
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-rose-500" />
+              </button>
+              
+              <button 
+                onClick={() => setActiveTab('profile')}
+                className="w-8 h-8 rounded-full bg-[#5C5043] text-white flex items-center justify-center text-xs font-black tracking-wider shadow-sm cursor-pointer"
+              >
+                {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'MK'}
+              </button>
 
-          <button 
-            onClick={toggleTheme}
-            aria-label="Toggle App brightness color modes"
-            className="p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-xl transition-colors cursor-pointer border border-slate-200/85 dark:border-slate-800 shadow-3xs"
-          >
-            {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-          </button>
-        </div>
+              <button 
+                onClick={toggleTheme}
+                aria-label="Toggle App brightness color modes"
+                className="p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-xl transition-colors cursor-pointer border border-slate-200/85 dark:border-slate-800 shadow-3xs"
+              >
+                {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => setIsMobileDrawerOpen(true)}
+                aria-label="Toggle structural sidebar menu drawer"
+                className="md:hidden p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-xl transition-all cursor-pointer border border-slate-100 dark:border-slate-800"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
+
+              <button 
+                onClick={onOpenProfile}
+                aria-label="Open Business Settings profile configuration"
+                className="w-9 h-9 rounded-xl bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 hover:ring-2 hover:ring-sky-500/10 flex items-center justify-center transition-all cursor-pointer relative overflow-hidden"
+              >
+                {profile.logoUrl ? (
+                  <img src={profile.logoUrl} referrerPolicy="no-referrer" alt={profile.name} className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-4.5 h-4.5 flex-shrink-0" />
+                )}
+              </button>
+              
+              <div>
+                <h1 className="text-xs font-extrabold text-slate-805 dark:text-white leading-tight max-w-[130px] sm:max-w-[180px] truncate">{profile.name || 'My Invoice Studio'}</h1>
+                <span className="text-[9px] text-slate-400 font-medium tracking-wide flex items-center gap-1 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Cloud Active
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setActiveTab('profile')}
+                title="Switch destination to Business & Creator Profile settings"
+                aria-label="Open business customization settings profile dashboard"
+                className={`w-9.5 h-8.5 rounded-full flex items-center justify-center transition-all cursor-pointer overflow-hidden border ${
+                  activeTab === 'profile' 
+                    ? 'ring-2 ring-sky-500 border-sky-500 shadow-sm' 
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 bg-slate-50 dark:bg-slate-900 shadow-3xs'
+                }`}
+              >
+                {profile.logoUrl ? (
+                  <img src={profile.logoUrl} referrerPolicy="no-referrer" alt={profile.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[10px] font-extrabold text-slate-700 dark:text-slate-300 font-mono">
+                    {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'IN'}
+                  </span>
+                )}
+              </button>
+
+              <button 
+                onClick={toggleTheme}
+                aria-label="Toggle App brightness color modes"
+                className="p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-xl transition-colors cursor-pointer border border-slate-200/85 dark:border-slate-800 shadow-3xs"
+              >
+                {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              </button>
+            </div>
+          </>
+        )}
       </header>
 
       {/* Dynamic Main Responsive Workspace - Grid layout turns dual-column on desktop */}
@@ -1884,7 +1941,7 @@ export default function Dashboard({
         
         {/* DESKTOP BRANDING & CONTROL SIDEBAR - Visible only on md screens and larger */}
         <div className="hidden md:block relative shrink-0">
-          <aside className={`flex flex-col bg-[#FCFAF7] dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-800 rounded-3xl shadow-xs ${activeTab === 'dashboard' ? 'h-[calc(100vh-48px)]' : 'h-[calc(100vh-110px)]'} overflow-y-auto overflow-x-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
+          <aside className={`flex flex-col bg-[#FCFAF7] dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-800 rounded-3xl shadow-xs h-[calc(100vh-110px)] overflow-y-auto overflow-x-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
             <div className="w-full h-full">
               {renderNavMenuContent(false)}
             </div>
@@ -1900,7 +1957,7 @@ export default function Dashboard({
         </div>
 
         {/* RIGHT CENTRAL WORKSPACE PANEL */}
-        <div className={`flex-1 min-w-0 w-full m-0 p-0 ${activeTab === 'dashboard' ? 'h-[calc(100vh-48px)]' : 'h-[calc(100vh-110px)]'} overflow-y-auto pr-1`}>
+        <div className="flex-1 min-w-0 w-full m-0 p-0 h-[calc(100vh-110px)] overflow-y-auto pr-1">
 
 
 
@@ -2831,39 +2888,6 @@ export default function Dashboard({
 
           return (
             <div className="space-y-6 text-sans animate-in fade-in duration-300">
-              {/* Main Topbar Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#EBDCC8]/60 dark:border-zinc-800">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#5C5043] text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm">
-                    {profile.name ? profile.name.charAt(0).toUpperCase() : 'M'}
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="text-[11px] font-black text-[#5C5043] dark:text-white uppercase leading-tight truncate">{profile.name || 'MAKINVOICE'}</h4>
-                    <span className="text-[9.5px] text-[#88765C]/85 dark:text-zinc-400 font-mono tracking-wide mt-0.5 block truncate">{profile.mobile || profile.phone || '9899728185'}</span>
-                  </div>
-                  <span className="text-[9px] font-black text-[#88765C]/50 uppercase tracking-widest pl-2 border-l border-[#EBDCC8]/40 hidden sm:inline ml-1">Financial Hub / Dashboard</span>
-                </div>
-                <div className="flex items-center gap-4 self-end sm:self-auto">
-                  <div className="relative w-full max-w-[280px]">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#88765C]/70" />
-                    <input 
-                      type="text" 
-                      placeholder="Search insights..." 
-                      className="w-full pl-9 pr-4 py-2 text-xs rounded-full border border-[#EBDCC8] dark:border-zinc-800 bg-[#FCFAF7]/80 dark:bg-zinc-950 focus:outline-hidden text-[#5C5043] dark:text-white placeholder-[#88765C]/50"
-                    />
-                  </div>
-                  <button className="p-2 bg-white dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-800 text-[#88765C] hover:text-[#5C5043] rounded-full transition-colors relative cursor-pointer">
-                    <Bell className="w-4 h-4" />
-                    <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-rose-500" />
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('profile')}
-                    className="w-9 h-9 rounded-full bg-[#5C5043] text-white flex items-center justify-center text-xs font-black tracking-wider shadow-sm cursor-pointer"
-                  >
-                    {initials}
-                  </button>
-                </div>
-              </div>
 
               {/* KPI Cards Row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
