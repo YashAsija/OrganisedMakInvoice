@@ -3294,70 +3294,106 @@ export default function Dashboard({
 
         {/* ------------------ TAB 6: BRAND NEW 'profile' BRAND VIEW ------------------ */}
         {activeTab === 'profile' && (
-          <div className="space-y-6 text-sans animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 p-6 sm:p-8 rounded-3xl shadow-xs text-center relative overflow-hidden max-w-2xl mx-auto">
-              <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-[#EBDCC8] via-[#C6A87D] to-[#88765C]" />
+          <div className="space-y-6 text-sans animate-in fade-in duration-200 w-full">
+            {/* 2-Column Bento Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
-              <div className="w-20 h-20 rounded-2xl bg-[#F4EBE1] dark:bg-zinc-800 text-[#88765C] dark:text-[#EADFCF] flex items-center justify-center mx-auto mb-4 shadow-md mt-4 border border-[#EBDCC8]/80 dark:border-zinc-700">
-                {profile.logoUrl ? (
-                  <img src={profile.logoUrl} referrerPolicy="no-referrer" alt={profile.name} className="w-full h-full object-cover rounded-2xl" />
-                ) : (
-                  <User className="w-10 h-10" />
-                )}
-              </div>
+              {/* Left Column: Creator Identity card */}
+              <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 p-6 sm:p-8 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#EBDCC8] via-[#C6A87D] to-[#88765C]" />
+                
+                <div>
+                  <div className="flex items-center gap-5 mb-6">
+                    <div className="w-16 h-16 rounded-2xl bg-[#F4EBE1] dark:bg-zinc-800 text-[#88765C] dark:text-[#EADFCF] flex items-center justify-center shadow-sm border border-[#EBDCC8]/80 dark:border-zinc-700 overflow-hidden flex-shrink-0">
+                      {profile.logoUrl ? (
+                        <img src={profile.logoUrl} referrerPolicy="no-referrer" alt={profile.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-8 h-8" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-base font-black text-[#6E6050] dark:text-white uppercase tracking-tight">{profile.name || 'My Invoice Studio'}</h2>
+                      <span className="text-[10px] text-[#88765C] font-mono block mt-0.5">{profile.email || 'No email established'}</span>
+                    </div>
+                  </div>
 
-              <h2 className="text-lg font-black text-[#6E6050] dark:text-white uppercase tracking-tight">{profile.name || 'My Invoice Studio'}</h2>
-              <p className="text-[11px] text-[#88765C]/80 font-mono mt-0.5">{profile.email || 'No email established'}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80">
+                      <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-500 block">LLC Brand Registry</span>
+                      <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block truncate">{profile.name || 'Sole Proprietorship'}</span>
+                    </div>
+                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80">
+                      <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-500 block">Tax Registry (GSTIN)</span>
+                      <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block truncate font-mono">{profile.taxId || 'Not Configured'}</span>
+                    </div>
+                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80">
+                      <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-500 block">Primary currency</span>
+                      <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block">{profile.currency || 'INR'} ({currencySymbol})</span>
+                    </div>
+                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80">
+                      <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-500 block">Mobile Number</span>
+                      <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block truncate">{profile.mobile || profile.phone || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
 
-              <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-                <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-2xl border border-[#EBDCC8]/50 dark:border-zinc-800/80">
-                  <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-400 block">LLC Brand Registry</span>
-                  <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block truncate">{profile.name || 'Sole Proprietorship'}</span>
-                </div>
-                <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-2xl border border-[#EBDCC8]/50 dark:border-zinc-800/80">
-                  <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-400 block">Tax Registry (GSTIN)</span>
-                  <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block truncate font-mono">{profile.taxId || 'Not Configured'}</span>
-                </div>
-                <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-2xl border border-[#EBDCC8]/50 dark:border-zinc-800/80">
-                  <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-400 block">Primary currency</span>
-                  <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block">{profile.currency || 'INR'} ({currencySymbol})</span>
-                </div>
-                <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-2xl border border-[#EBDCC8]/50 dark:border-zinc-800/80">
-                  <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-400 block">Mobile Number</span>
-                  <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block truncate">{profile.mobile || profile.phone || 'N/A'}</span>
-                </div>
-              </div>
-
-              {/* Security Controls */}
-              <div className="mt-8 border-t border-[#EBDCC8]/50 dark:border-zinc-800/80 pt-6 text-left">
-                <h3 className="text-xs font-black text-[#6E6050] dark:text-white uppercase tracking-widest mb-3">Security Locks & Access Control</h3>
-                <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-5 rounded-2xl border border-[#EBDCC8]/50 dark:border-zinc-800/80 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] uppercase font-extrabold text-[#88765C] block">PIN Passcode Lock</span>
-                    <span className="text-xs text-[#6E6050]/80 dark:text-zinc-400 mt-0.5 block">Requires a secure 4-digit PIN code on app refresh</span>
+                <div className="mt-8 pt-6 border-t border-[#EBDCC8]/30 dark:border-zinc-800 flex items-center justify-between">
+                  <div className="text-left">
+                    <span className="text-[10px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-500 block">Creator Settings</span>
+                    <p className="text-[10px] text-[#6E6050]/80 dark:text-zinc-400 mt-0.5 font-medium leading-normal">Customize your brand names, billing information, signature sketchpad, and bank details.</p>
                   </div>
                   <button
-                    type="button"
-                    onClick={() => onToggleSecurity('pin')}
-                    className={`px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-xs ${
-                      isPinLockEnabled 
-                        ? 'bg-rose-500 hover:bg-rose-600 text-white' 
-                        : 'bg-[#EADFCF] hover:bg-[#ebdcc8] text-[#6E6050]'
-                    }`}
+                    onClick={onOpenProfile}
+                    className="px-5 py-2.5 bg-[#88765C] hover:bg-[#6E6050] text-[#FCFAF7] text-[10.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs hover:shadow-sm flex-shrink-0"
                   >
-                    {isPinLockEnabled ? 'Disable PIN' : 'Enable PIN'}
+                    <PenTool className="w-3.5 h-3.5 text-white/80" />
+                    <span>Customize Details</span>
                   </button>
                 </div>
               </div>
 
-              <div className="pt-6 border-t border-[#EBDCC8]/50 dark:border-zinc-800/80 mt-6">
-                <button
-                  onClick={onOpenProfile}
-                  className="px-6 py-3 bg-[#88765C] hover:bg-[#6E6050] text-[#FCFAF7] text-[10.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs hover:shadow-md"
-                >
-                  <PenTool className="w-3.5 h-3.5 text-white/80" />
-                  <span>Customize Brand Details</span>
-                </button>
+              {/* Right Column: Security and Session details */}
+              <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#C6A87D] to-[#88765C]" />
+                
+                <div>
+                  <h3 className="text-xs font-black text-[#6E6050] dark:text-white uppercase tracking-widest mb-4">Access Control & PIN</h3>
+                  
+                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80 mb-4">
+                    <span className="text-[9px] uppercase font-extrabold text-[#88765C] block">PIN Passcode Lock</span>
+                    <p className="text-[10px] text-[#6E6050]/85 dark:text-zinc-400 mt-1 leading-normal font-medium">Requires a secure 4-digit PIN code on app refresh to prevent unauthorized local database access.</p>
+                    
+                    <button
+                      type="button"
+                      onClick={() => onToggleSecurity('pin')}
+                      className={`mt-4 w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-3xs ${
+                        isPinLockEnabled 
+                          ? 'bg-rose-500 hover:bg-rose-600 text-white' 
+                          : 'bg-[#EADFCF] hover:bg-[#ebdcc8] text-[#6E6050]'
+                      }`}
+                    >
+                      {isPinLockEnabled ? 'Disable PIN Lock' : 'Enable PIN Lock'}
+                    </button>
+                  </div>
+
+                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80">
+                    <span className="text-[9px] uppercase font-extrabold text-[#88765C] block">Database Status</span>
+                    <div className="mt-2 space-y-1.5">
+                      <div className="flex justify-between items-center text-[10px]">
+                        <span className="text-[#6E6050] dark:text-zinc-400 font-medium">Local Ledger</span>
+                        <span className="font-mono font-bold text-emerald-500">Active</span>
+                      </div>
+                      <div className="flex justify-between items-center text-[10px]">
+                        <span className="text-[#6E6050] dark:text-zinc-400 font-medium">Cloud Synchronizer</span>
+                        <span className="font-mono font-bold text-emerald-500">Synced</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-[#EBDCC8]/30 dark:border-zinc-800 text-[9.5px] text-[#88765C]/80 dark:text-zinc-450 text-center font-mono">
+                  Invoice Studio Pro v1.2.0
+                </div>
               </div>
             </div>
           </div>
