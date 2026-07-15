@@ -484,8 +484,8 @@ export default function Dashboard({
       const isActive = activeTab === tab;
       return `w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all duration-300 flex items-center justify-between cursor-pointer ${
         isActive
-          ? 'bg-[#EADFCF] text-[#5C5043] dark:bg-zinc-800 dark:text-white border-r-[3px] border-[#88765C] font-black'
-          : 'text-[#88765C]/90 hover:text-[#5C5043] dark:text-zinc-400 hover:bg-[#F4EBE1]/60 dark:hover:bg-zinc-800/40'
+          ? 'bg-[#EADFCF] text-[#6E6050] dark:bg-zinc-800 dark:text-white border-r-[3px] border-[#88765C] font-black'
+          : 'text-[#88765C]/90 hover:text-[#6E6050] dark:text-zinc-400 hover:bg-[#F4EBE1]/60 dark:hover:bg-zinc-800/40'
       }`;
     };
 
@@ -602,7 +602,7 @@ export default function Dashboard({
               onOpenInvoiceEditor(null);
               if (isMobileView) setIsMobileDrawerOpen(false);
             }}
-            className="w-full py-2.5 bg-[#88765C] hover:bg-[#5C5043] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-xs hover:shadow-md transition-all duration-300"
+            className="w-full py-2.5 bg-[#88765C] hover:bg-[#6E6050] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-xs hover:shadow-md transition-all duration-300"
           >
             <Zap className="w-4 h-4 fill-white" />
             <span>Quick Bill</span>
@@ -1819,11 +1819,11 @@ export default function Dashboard({
               </button>
 
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#5C5043] text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-[#6E6050] text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm">
                   {profile.name ? profile.name.charAt(0).toUpperCase() : 'M'}
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-[11px] font-black text-[#5C5043] dark:text-white uppercase leading-tight truncate">{profile.name || 'MAKINVOICE'}</h4>
+                  <h4 className="text-[11px] font-black text-[#6E6050] dark:text-white uppercase leading-tight truncate">{profile.name || 'MAKINVOICE'}</h4>
                   <span className="text-[9.5px] text-[#88765C]/85 dark:text-zinc-400 font-mono tracking-wide mt-0.5 block truncate">{profile.mobile || profile.phone || '9899728185'}</span>
                 </div>
                 <span className="text-[9px] font-black text-[#88765C]/50 uppercase tracking-widest pl-2 border-l border-[#EBDCC8]/40 hidden sm:inline ml-1">Financial Hub / Dashboard</span>
@@ -1837,10 +1837,10 @@ export default function Dashboard({
                 <input 
                   type="text" 
                   placeholder="Search insights..." 
-                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-full border border-[#EBDCC8] dark:border-zinc-800 bg-[#FCFAF7]/80 dark:bg-zinc-950 focus:outline-hidden text-[#5C5043] dark:text-white placeholder-[#88765C]/50"
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-full border border-[#EBDCC8] dark:border-zinc-800 bg-[#FCFAF7]/80 dark:bg-zinc-950 focus:outline-hidden text-[#6E6050] dark:text-white placeholder-[#88765C]/50"
                 />
               </div>
-              <button className="p-1.5 bg-white dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-800 text-[#88765C] hover:text-[#5C5043] rounded-full transition-colors relative cursor-pointer hidden md:block">
+              <button className="p-1.5 bg-white dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-800 text-[#88765C] hover:text-[#6E6050] rounded-full transition-colors relative cursor-pointer hidden md:block">
                 <Bell className="w-3.5 h-3.5" />
                 <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-rose-500" />
               </button>
@@ -1848,7 +1848,7 @@ export default function Dashboard({
               <div className="relative" id="profile-dropdown-container">
                 <button 
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                  className="w-8 h-8 rounded-full bg-[#5C5043] text-white flex items-center justify-center text-xs font-black tracking-wider shadow-sm cursor-pointer transition-all hover:scale-105"
+                  className="w-8 h-8 rounded-full bg-[#6E6050] text-white flex items-center justify-center text-xs font-black tracking-wider shadow-sm cursor-pointer transition-all hover:scale-105"
                 >
                   {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'MK'}
                 </button>
@@ -1860,7 +1860,7 @@ export default function Dashboard({
                         setActiveTab('profile');
                         setIsProfileDropdownOpen(false);
                       }}
-                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#5C5043] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#6E6050] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
                     >
                       <User className="w-3.5 h-3.5 text-[#88765C]" />
                       <span>Profile</span>
@@ -1871,7 +1871,7 @@ export default function Dashboard({
                         onOpenProfile();
                         setIsProfileDropdownOpen(false);
                       }}
-                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#5C5043] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#6E6050] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
                     >
                       <Layout className="w-3.5 h-3.5 text-[#88765C]" />
                       <span>Settings</span>
@@ -1882,7 +1882,7 @@ export default function Dashboard({
                         setActiveTab('learn');
                         setIsProfileDropdownOpen(false);
                       }}
-                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#5C5043] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#6E6050] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
                     >
                       <Info className="w-3.5 h-3.5 text-[#88765C]" />
                       <span>Support</span>
@@ -1973,7 +1973,7 @@ export default function Dashboard({
                         setActiveTab('profile');
                         setIsProfileDropdownOpen(false);
                       }}
-                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#5C5043] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#6E6050] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
                     >
                       <User className="w-3.5 h-3.5 text-[#88765C]" />
                       <span>Profile</span>
@@ -1984,7 +1984,7 @@ export default function Dashboard({
                         onOpenProfile();
                         setIsProfileDropdownOpen(false);
                       }}
-                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#5C5043] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#6E6050] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
                     >
                       <Layout className="w-3.5 h-3.5 text-[#88765C]" />
                       <span>Settings</span>
@@ -1995,7 +1995,7 @@ export default function Dashboard({
                         setActiveTab('learn');
                         setIsProfileDropdownOpen(false);
                       }}
-                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#5C5043] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-[#6E6050] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
                     >
                       <Info className="w-3.5 h-3.5 text-[#88765C]" />
                       <span>Support</span>
@@ -2996,7 +2996,7 @@ export default function Dashboard({
                   </div>
                   <div className="mt-3">
                     <span className="text-[9px] uppercase font-black tracking-wider text-[#88765C]/80 block">Settled Earnings</span>
-                    <span className="text-xl font-black text-[#5C5043] dark:text-white mt-1 block">
+                    <span className="text-xl font-black text-[#6E6050] dark:text-white mt-1 block">
                       {currencySymbol}{totalBilled.toLocaleString()}
                     </span>
                   </div>
@@ -3022,7 +3022,7 @@ export default function Dashboard({
                   </div>
                   <div className="mt-3">
                     <span className="text-[9px] uppercase font-black tracking-wider text-[#88765C]/80 block">Pending Receivables</span>
-                    <span className="text-xl font-black text-[#5C5043] dark:text-white mt-1 block">
+                    <span className="text-xl font-black text-[#6E6050] dark:text-white mt-1 block">
                       {currencySymbol}{totalOutstanding.toLocaleString()}
                     </span>
                   </div>
@@ -3048,7 +3048,7 @@ export default function Dashboard({
                   </div>
                   <div className="mt-3">
                     <span className="text-[9px] uppercase font-black tracking-wider text-[#88765C]/80 block">Operating Expenses</span>
-                    <span className="text-xl font-black text-[#5C5043] dark:text-white mt-1 block">
+                    <span className="text-xl font-black text-[#6E6050] dark:text-white mt-1 block">
                       {currencySymbol}{totalReportedExpenses.toLocaleString()}
                     </span>
                   </div>
@@ -3069,12 +3069,12 @@ export default function Dashboard({
                 <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
                   <div className="flex justify-between items-start pb-4">
                     <div>
-                      <h3 className="text-sm font-black text-[#5C5043] dark:text-white uppercase tracking-tight">Revenue Intelligence</h3>
+                      <h3 className="text-sm font-black text-[#6E6050] dark:text-white uppercase tracking-tight">Revenue Intelligence</h3>
                       <span className="text-[10px] text-[#88765C]/80 dark:text-zinc-400 block mt-0.5">Comparative analysis of cash flow vs projections</span>
                     </div>
                     <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#88765C]/80 dark:text-zinc-400">
                       <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-0.5 bg-[#5C5043]" /> ACTUAL
+                        <span className="w-2.5 h-0.5 bg-[#6E6050]" /> ACTUAL
                       </span>
                       <span className="flex items-center gap-1.5">
                         <span className="w-2.5 h-0.5 border-t border-dashed border-[#C6A87D]" /> PROJECTED
@@ -3099,12 +3099,12 @@ export default function Dashboard({
                       })}
 
                       {/* Line paths */}
-                      <path d={pathActual} fill="none" stroke="#5C5043" strokeWidth="2" strokeLinecap="round" />
+                      <path d={pathActual} fill="none" stroke="#6E6050" strokeWidth="2" strokeLinecap="round" />
                       <path d={pathProjected} fill="none" stroke="#C6A87D" strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
 
                       {/* Dot indicators */}
                       {pointsActual.map((pts, i) => (
-                        <circle key={`act-dot-${i}`} cx={pts.x} cy={pts.y} r="3" fill="#5C5043" stroke="#fff" strokeWidth="1" />
+                        <circle key={`act-dot-${i}`} cx={pts.x} cy={pts.y} r="3" fill="#6E6050" stroke="#fff" strokeWidth="1" />
                       ))}
 
                       {/* Bottom months labels */}
@@ -3121,7 +3121,7 @@ export default function Dashboard({
                 {/* Donut Chart: Revenue Segments */}
                 <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
                   <div>
-                    <h3 className="text-sm font-black text-[#5C5043] dark:text-white uppercase tracking-tight">Revenue Segments</h3>
+                    <h3 className="text-sm font-black text-[#6E6050] dark:text-white uppercase tracking-tight">Revenue Segments</h3>
                   </div>
 
                   <div className="flex flex-col items-center justify-center py-4 relative">
@@ -3135,7 +3135,7 @@ export default function Dashboard({
                         cy="100" 
                         r="70" 
                         fill="none" 
-                        stroke="#5c5043" 
+                        stroke="#6E6050" 
                         strokeWidth="18" 
                         strokeDasharray="299 440" 
                         strokeDashoffset="0" 
@@ -3172,7 +3172,7 @@ export default function Dashboard({
                       />
 
                       {/* Total inside circle */}
-                      <text x="100" y="98" textAnchor="middle" className="text-xl font-black fill-[#5C5043] dark:fill-white">
+                      <text x="100" y="98" textAnchor="middle" className="text-xl font-black fill-[#6E6050] dark:fill-white">
                         ₹ {(((totalBilled + totalOutstanding) || 640000) / 100000).toFixed(1)}L
                       </text>
                       <text x="100" y="116" textAnchor="middle" className="text-[9px] font-black uppercase tracking-wider fill-[#88765C]/80">
@@ -3185,21 +3185,21 @@ export default function Dashboard({
                   <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-[#88765C]/90 dark:text-zinc-400 mt-2 px-2">
                     <div className="flex items-center justify-between gap-1.5">
                       <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#5c5043]" /> Corporate Sales
+                        <span className="w-2 h-2 rounded-full bg-[#6E6050]" /> Corporate Sales
                       </span>
-                      <span className="font-extrabold text-[#5C5043] dark:text-white">68%</span>
+                      <span className="font-extrabold text-[#6E6050] dark:text-white">68%</span>
                     </div>
                     <div className="flex items-center justify-between gap-1.5">
                       <span className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-[#c6a87d]" /> Direct Retail
                       </span>
-                      <span className="font-extrabold text-[#5C5043] dark:text-white">12%</span>
+                      <span className="font-extrabold text-[#6E6050] dark:text-white">12%</span>
                     </div>
                     <div className="flex items-center justify-between gap-1.5 col-span-2 border-t border-[#EBDCC8]/40 pt-1.5">
                       <span className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-[#d1c7bd]" /> Consultancy
                       </span>
-                      <span className="font-extrabold text-[#5C5043] dark:text-white">20%</span>
+                      <span className="font-extrabold text-[#6E6050] dark:text-white">20%</span>
                     </div>
                   </div>
                 </div>
@@ -3210,10 +3210,10 @@ export default function Dashboard({
                 {/* Recent Billing Table */}
                 <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
                   <div className="flex justify-between items-center pb-4 border-b border-[#EBDCC8]/45 dark:border-zinc-800">
-                    <h3 className="text-sm font-black text-[#5C5043] dark:text-white uppercase tracking-tight">Recent Billing Records</h3>
+                    <h3 className="text-sm font-black text-[#6E6050] dark:text-white uppercase tracking-tight">Recent Billing Records</h3>
                     <button 
                       onClick={() => setActiveTab('invoices')}
-                      className="text-[10px] font-black text-[#88765C] hover:text-[#5C5043] uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                      className="text-[10px] font-black text-[#88765C] hover:text-[#6E6050] uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                     >
                       View All Records →
                     </button>
@@ -3239,10 +3239,10 @@ export default function Dashboard({
                         <tbody>
                           {invoices.slice(0, 3).map(inv => (
                             <tr key={inv.id} className="border-b border-[#EBDCC8]/20 hover:bg-[#FAF8F5]/50 dark:hover:bg-zinc-850/40">
-                              <td className="py-3 font-extrabold text-[#5C5043] dark:text-white">{inv.invoiceNumber}</td>
+                              <td className="py-3 font-extrabold text-[#6E6050] dark:text-white">{inv.invoiceNumber}</td>
                               <td className="py-3 font-bold text-[#88765C] dark:text-zinc-300 truncate max-w-[120px]">{inv.clientName}</td>
                               <td className="py-3 font-medium text-[#88765C]/80 dark:text-zinc-400 font-sans">{inv.dueDate || inv.date}</td>
-                              <td className="py-3 font-extrabold font-mono text-[#5C5043] dark:text-white">{currencySymbol}{inv.grandTotal.toLocaleString()}</td>
+                              <td className="py-3 font-extrabold font-mono text-[#6E6050] dark:text-white">{currencySymbol}{inv.grandTotal.toLocaleString()}</td>
                               <td className="py-3">
                                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
                                   {inv.status}
@@ -3251,7 +3251,7 @@ export default function Dashboard({
                               <td className="py-3 text-right">
                                 <button 
                                   onClick={() => setActivePreviewInvoice(inv)}
-                                  className="text-[#88765C] hover:text-[#5C5043] p-1 cursor-pointer"
+                                  className="text-[#88765C] hover:text-[#6E6050] p-1 cursor-pointer"
                                 >
                                   <MoreVertical className="w-4 h-4" />
                                 </button>
