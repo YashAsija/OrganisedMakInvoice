@@ -51,6 +51,7 @@ const tabToPath: Record<string, string> = {
   invoices: '/invoices',
   clients: '/clients',
   reports: '/reports',
+  profile: '/profile',
   master_vendor: '/master-vendor',
   master_hsn: '/master-hsn',
   catalog_material: '/catalog-material',
