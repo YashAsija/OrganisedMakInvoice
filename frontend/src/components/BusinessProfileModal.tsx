@@ -974,7 +974,6 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
     const success = await saveSettingsToDB();
     if (success) {
       setNotification({ message: 'Settings saved successfully!', type: 'success' });
-      onClose();
     }
   };
 
