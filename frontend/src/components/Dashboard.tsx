@@ -3396,6 +3396,110 @@ export default function Dashboard({
                 </div>
               </div>
             </div>
+
+            {/* Row 2: Banking, Presets, and Address Details */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* Bank Settlement & Signature Details */}
+              <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+                <div className="absolute top-0 inset-x-0 h-1.5 bg-[#C6A87D]" />
+                
+                <div>
+                  <h3 className="text-xs font-black text-[#6E6050] dark:text-white uppercase tracking-widest mb-4">Bank Settlement & Signature</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Bank Details */}
+                    <div className="space-y-3 bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80">
+                      <span className="text-[9px] uppercase font-extrabold text-[#88765C] block">Direct Transfer Account</span>
+                      
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-[#88765C]/80">Bank</span>
+                          <span className="font-bold text-[#6E6050] dark:text-zinc-200">{profile.bankName || 'Not Set'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[#88765C]/80">Account No.</span>
+                          <span className="font-mono font-bold text-[#6E6050] dark:text-zinc-200">{profile.accountNumber || 'Not Set'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[#88765C]/80">IFSC Code</span>
+                          <span className="font-mono font-bold text-[#6E6050] dark:text-zinc-200">{profile.ifsc || 'Not Set'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[#88765C]/80">UPI Address</span>
+                          <span className="font-mono font-bold text-[#6E6050] dark:text-zinc-200">{profile.upiId || 'Not Set'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Signature Preview */}
+                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80 flex flex-col justify-between min-h-[140px]">
+                      <div>
+                        <span className="text-[9px] uppercase font-extrabold text-[#88765C] block">Authorized Signature</span>
+                        <p className="text-[10px] text-[#6E6050]/80 dark:text-zinc-400 mt-1 leading-normal font-medium">Applied automatically to newly generated billing sheets.</p>
+                      </div>
+                      
+                      <div className="mt-3 flex items-center justify-center bg-white dark:bg-zinc-900 border border-[#EBDCC8]/30 dark:border-zinc-800 rounded-lg p-2 h-16 relative overflow-hidden">
+                        {profile.signature ? (
+                          <img src={profile.signature} alt="Signature Preview" className="max-h-full max-w-full object-contain" />
+                        ) : (
+                          <span className="text-[10px] text-[#88765C]/50 uppercase tracking-wider font-bold">No Signature Configured</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-[#EBDCC8]/30 dark:border-zinc-800 flex justify-between items-center text-[10px]">
+                  <span className="text-[#88765C]/80">Legal Entity Status</span>
+                  <span className="font-bold text-[#6E6050] dark:text-zinc-200">{profile.pan ? `PAN: ${profile.pan}` : 'PAN Not Registered'}</span>
+                </div>
+              </div>
+
+              {/* Physical Location details */}
+              <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+                <div className="absolute top-0 inset-x-0 h-1.5 bg-[#88765C]" />
+                
+                <div>
+                  <h3 className="text-xs font-black text-[#6E6050] dark:text-white uppercase tracking-widest mb-4">Location & Presets</h3>
+                  
+                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80 mb-4">
+                    <span className="text-[9px] uppercase font-extrabold text-[#88765C] block">Registered Address</span>
+                    <p className="text-xs text-[#6E6050] dark:text-zinc-300 font-medium leading-relaxed mt-2 whitespace-pre-line">
+                      {profile.address || 'No registered business address set.'}
+                    </p>
+                    {profile.state && (
+                      <div className="mt-2 pt-2 border-t border-[#EBDCC8]/20 dark:border-zinc-800 flex justify-between text-[10px]">
+                        <span className="text-[#88765C]/80">State / Region</span>
+                        <span className="font-bold text-[#6E6050] dark:text-zinc-200">{profile.state} ({profile.stateCode || 'N/A'})</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80">
+                    <span className="text-[9px] uppercase font-extrabold text-[#88765C] block">Billing Preferences</span>
+                    <div className="mt-2 space-y-1.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-[#88765C]/80">Invoice Prefix</span>
+                        <span className="font-mono font-bold text-[#6E6050] dark:text-zinc-200">{profile.invoicePrefix || 'Not Set'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#88765C]/80">Starting Number</span>
+                        <span className="font-mono font-bold text-[#6E6050] dark:text-zinc-200">{profile.startingInvoiceNumber || '0001'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-[#EBDCC8]/30 dark:border-zinc-800 text-[10px] flex justify-between">
+                  <span className="text-[#88765C]/80">Website</span>
+                  <a href={profile.website ? (profile.website.startsWith('http') ? profile.website : `https://${profile.website}`) : '#'} target="_blank" rel="noreferrer" className="font-bold text-[#88765C] hover:underline truncate max-w-[150px]">
+                    {profile.website || 'Not Configured'}
+                  </a>
+                </div>
+              </div>
+
+            </div>
           </div>
         )}
 
