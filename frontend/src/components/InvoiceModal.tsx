@@ -1127,43 +1127,51 @@ export default function InvoiceModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4 bg-slate-900/65 backdrop-blur-sm overflow-y-auto overflow-x-hidden">
-      <div 
-        id="invoice-editor" 
-        className="w-full h-full md:h-auto md:max-h-[92dvh] max-w-full md:max-w-4xl lg:max-w-5xl bg-white dark:bg-slate-900 rounded-none md:rounded-3xl overflow-hidden shadow-2xl flex flex-col border-none md:border md:border-slate-100 dark:md:border-slate-800 transition-all duration-300 md:my-auto"
-      >
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4 bg-slate-900/65 backdrop-blur-sm overflow-hidden">
+        <div 
+          id="invoice-editor" 
+          className="w-full h-full md:h-auto md:max-h-[96dvh] max-w-full md:max-w-4xl lg:max-w-5xl xl:max-w-[95vw] 2xl:max-w-[1700px] bg-white dark:bg-slate-900 rounded-none md:rounded-3xl overflow-hidden shadow-2xl flex flex-col border-none md:border md:border-slate-100 dark:md:border-slate-800 transition-all duration-300 md:my-auto"
+        >
         
         {/* Header */}
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <ShoppingBag className="w-4 h-4" />
+        <div className="px-5 py-4 md:px-6 border-b border-slate-200/70 dark:border-slate-800/80 flex items-center justify-between bg-white dark:bg-zinc-950 relative overflow-hidden">
+          {/* Subtle background glow effect */}
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-sky-400 via-sky-300 to-transparent opacity-70"></div>
+          
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-b from-white to-slate-50 dark:from-zinc-800 dark:to-zinc-900 text-slate-700 dark:text-slate-300 flex items-center justify-center shadow-sm border border-slate-200/80 dark:border-zinc-700/80 relative overflow-hidden">
+              <ShoppingBag className="w-4.5 h-4.5 relative z-10" strokeWidth={2.5} />
             </div>
-            <div>
-              <h2 className="text-sm font-medium text-slate-805">
+            <div className="flex flex-col">
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight leading-tight">
                 {invoice ? 'Edit Invoice' : 'Create Invoice'}
               </h2>
-              <span className="text-[10px] text-slate-400 font-mono block">#{invoiceNumber}</span>
+              <div className="flex items-center mt-0.5">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-mono font-medium bg-slate-100 dark:bg-zinc-800/80 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-zinc-700/80 shadow-xs">
+                  <span className="opacity-60 mr-[1px]">#</span>{invoiceNumber}
+                </span>
+              </div>
             </div>
           </div>
+          
           <button 
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            aria-label="Close invoice editor"
+            className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-zinc-700"
+            title="Close"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4.5 h-4.5" strokeWidth={2.5} />
           </button>
         </div>
 
-        {/* Toggle Mode Tab + Template Switcher */}
-        <div className="flex border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/45 px-3 py-2 gap-2 select-none items-center flex-wrap">
+          {/* Toggle Mode Tab + Template Switcher */}
+          <div className="flex xl:hidden border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950 px-4 py-3 gap-2 select-none items-center justify-center flex-wrap shadow-xs z-10 relative">
           {/* Primary tab: Interactive Layout */}
           <button
             type="button"
             onClick={() => setActiveMode('editable')}
-            className={`px-4 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-5 py-2 rounded-lg text-[13px] font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeMode === 'editable'
-                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-extrabold'
+                ? 'bg-sky-600 text-white shadow-sm ring-1 ring-slate-900/5'
                 : 'text-slate-650 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800/60'
             }`}
           >
@@ -1174,58 +1182,50 @@ export default function InvoiceModal({
           <button
             type="button"
             onClick={() => setActiveMode('edit')}
-            className={`px-4 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-5 py-2 rounded-lg text-[13px] font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeMode === 'edit'
-                ? 'bg-slate-700 text-white shadow-md shadow-slate-950/10 font-extrabold'
+                ? 'bg-slate-700 text-white shadow-sm ring-1 ring-slate-900/5'
                 : 'text-slate-650 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800/60'
             }`}
           >
             <span>⚙️ Advanced Settings</span>
           </button>
-
-
         </div>
 
-        {/* Scrollable Contents */}
-        <form onSubmit={handleSaveSubmit} className="flex-1 overflow-y-auto p-4 md:p-6 text-sans text-sm pb-8">
-          
-          {activeMode === 'edit' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+
+                 {/* Scrollable Contents */}
+          <form onSubmit={handleSaveSubmit} className="flex-1 overflow-hidden p-4 md:p-6 text-sans text-sm pb-8 flex flex-col">
+            
+            {/* Wrapper for the two panes */}
+            <div className="flex-1 overflow-y-auto xl:overflow-hidden xl:flex xl:flex-row-reverse xl:gap-6">
+            
+            {/* Advanced Settings Column */}
+            <div className={`xl:w-[45%] xl:block xl:overflow-y-auto xl:pl-2 xl:pr-4 ${activeMode === 'edit' ? 'block' : 'hidden'}`}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             
             {/* COLUMN 1: Setup & Client Metadata */}
             <div className="space-y-4">
 
           {/* General Metadata */}
           <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-900 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="inv-type" className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Document Type</label>
-                <select
-                  id="inv-type"
-                  value={invoiceType}
-                  onChange={(e) => setInvoiceType(e.target.value as 'invoice' | 'estimate')}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-medium text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
-                >
-                  <option value="invoice">Invoice / Bill</option>
-                  <option value="estimate">Estimate / Quote</option>
-                </select>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label htmlFor="inv-num" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">ID Number</label>
+                  <input 
+                    id="inv-num"
+                    type="text" 
+                    required
+                    value={invoiceNumber}
+                    onChange={(e) => setInvoiceNumber(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-medium font-mono text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
               </div>
-              <div>
-                <label htmlFor="inv-num" className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">ID Number</label>
-                <input 
-                  id="inv-num"
-                  type="text" 
-                  required
-                  value={invoiceNumber}
-                  onChange={(e) => setInvoiceNumber(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-medium font-mono text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
-                />
-              </div>
-            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
-              <div>
-                <label htmlFor="inv-ref" className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Ref Number (Optional)</label>
+              { activeTemplate.config.invoiceInfo?.fields.includes('referenceNumber') && (
+<div>
+                <label htmlFor="inv-ref" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Ref Number (Optional)</label>
                 <input 
                   id="inv-ref"
                   type="text" 
@@ -1235,8 +1235,9 @@ export default function InvoiceModal({
                   className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-mono text-xs focus:outline-none"
                 />
               </div>
+) }
               <div>
-                <label htmlFor="inv-po" className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">P.O. Number (Optional)</label>
+                <label htmlFor="inv-po" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">P.O. Number (Optional)</label>
                 <input 
                   id="inv-po"
                   type="text" 
@@ -1249,8 +1250,9 @@ export default function InvoiceModal({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
-              <div>
-                <label htmlFor="inv-date" className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Issue Date</label>
+              { activeTemplate.config.invoiceInfo?.fields.includes('invoiceDate') && (
+<div>
+                <label htmlFor="inv-date" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Issue Date</label>
                 <input 
                   id="inv-date"
                   type="date" 
@@ -1260,8 +1262,9 @@ export default function InvoiceModal({
                   className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white focus:outline-none"
                 />
               </div>
+) }
               <div>
-                <label htmlFor="inv-duedate" className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Due Date</label>
+                <label htmlFor="inv-duedate" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Due Date</label>
                 <input 
                   id="inv-duedate"
                   type="date" 
@@ -1274,20 +1277,35 @@ export default function InvoiceModal({
             </div>
 
             <div className="border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
-              <label htmlFor="inv-status" className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Status</label>
+              <label htmlFor="inv-status" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Status</label>
               <select 
                 id="inv-status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as InvoiceStatus)}
-                className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-medium text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white font-medium text-[13px] text-slate-800 focus:ring-1 focus:ring-sky-500 focus:outline-none"
               >
                 <option value="pending">Unpaid</option>
                 <option value="paid">Paid</option>
               </select>
             </div>
 
+            <div className="border-t border-slate-150 dark:border-slate-900/50 pt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              { activeTemplate.config.invoiceInfo?.fields?.includes('placeOfSupply') && (
+                <div>
+                  <label htmlFor="inv-pos" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Place of Supply</label>
+                  <input id="inv-pos" type="text" value={placeOfSupply} onChange={e => setPlaceOfSupply(e.target.value)} placeholder="Place of Supply" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white focus:outline-none" />
+                </div>
+              ) }
+              { activeTemplate.config.invoiceInfo?.fields?.includes('grRrNo') && (
+                <div>
+                  <label htmlFor="inv-gr" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">GR/RR No.</label>
+                  <input id="inv-gr" type="text" value={grRrNo} onChange={e => setGrRrNo(e.target.value)} placeholder="GR/RR No." className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white focus:outline-none" />
+                </div>
+              ) }
+            </div>
+
             <div className="border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
-              <label htmlFor="inv-qr" className="block text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Payment link URL (UPI/Venmo/Stripe/PayPal)</label>
+              <label htmlFor="inv-qr" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Payment link URL (UPI/Venmo/Stripe/PayPal)</label>
               <input 
                 id="inv-qr"
                 type="text" 
@@ -1347,12 +1365,13 @@ export default function InvoiceModal({
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="Client Name *"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none focus:border-sky-500"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none focus:border-sky-500"
               />
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
+              { activeTemplate.config.client?.fields.includes('email') && (
+<div>
                 <label htmlFor="col-client-email" className="sr-only">Client Email</label>
                 <input 
                   id="col-client-email"
@@ -1360,10 +1379,12 @@ export default function InvoiceModal({
                   value={clientEmail}
                   onChange={(e) => setClientEmail(e.target.value)}
                   placeholder="Client Email"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none"
                 />
               </div>
-              <div>
+) }
+              { activeTemplate.config.client?.fields.includes('phone') && (
+<div>
                 <label htmlFor="col-client-phone" className="sr-only">Client Phone</label>
                 <input 
                   id="col-client-phone"
@@ -1371,12 +1392,14 @@ export default function InvoiceModal({
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
                   placeholder="Client Phone"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none"
                 />
               </div>
+) }
             </div>
 
-            <div>
+            { activeTemplate.config.client?.fields.includes('address') && (
+<div>
               <label htmlFor="col-client-address" className="sr-only">Client Address</label>
               <textarea 
                 id="col-client-address"
@@ -1384,12 +1407,72 @@ export default function InvoiceModal({
                 onChange={(e) => setClientAddress(e.target.value)}
                 placeholder="Client Physical Billing Address"
                 rows={1}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none resize-none"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none resize-none"
               />
             </div>
+) }
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
+              { activeTemplate.config.client?.fields.includes('country') && (
+<div>
+                <label htmlFor="client-country" className="sr-only">Client Country</label>
+                <select
+                  id="client-country"
+                  value={Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode || ''}
+                  onChange={(e) => {
+                    const selectedCountry = Country.getCountryByCode(e.target.value);
+                    if (selectedCountry) {
+                      setClientCountry(selectedCountry.name);
+                      setClientState(''); // Reset state when country changes
+                    }
+                  }}
+                  className={`w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white font-medium text-[13px] focus:outline-none cursor-pointer ${!clientCountry ? 'text-slate-400' : 'text-slate-800 dark:text-white'}`}
+                >
+                  <option value="" disabled>Client Country</option>
+                  {Country.getAllCountries().map((c) => (
+                    <option key={c.isoCode} value={c.isoCode}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+) }
+              { activeTemplate.config.client?.fields.includes('state') && (
+<div>
+                <label htmlFor="client-state" className="sr-only">Client State</label>
+                <select
+                  id="client-state"
+                  value={(() => {
+                    const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode;
+                    if (!cCode) return '';
+                    return State.getStatesOfCountry(cCode).find(s => s.name === clientState)?.isoCode || '';
+                  })()}
+                  onChange={(e) => {
+                    const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode;
+                    if (cCode) {
+                      const selectedState = State.getStateByCodeAndCountry(e.target.value, cCode);
+                      if (selectedState) {
+                        setClientState(selectedState.name);
+                      }
+                    }
+                  }}
+                  disabled={!clientCountry}
+                  className={`w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white font-medium text-[13px] focus:outline-none cursor-pointer disabled:opacity-50 ${!clientState ? 'text-slate-400' : 'text-slate-800 dark:text-white'}`}
+                >
+                  <option value="" disabled>Client State</option>
+                  {(() => {
+                    const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode;
+                    if (!cCode) return null;
+                    return State.getStatesOfCountry(cCode).map((st) => (
+                      <option key={st.isoCode} value={st.isoCode}>{st.name}</option>
+                    ));
+                  })()}
+                </select>
+              </div>
+) }
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              { activeTemplate.config.client?.fields.includes('gstin') && (
+<div>
                 <label htmlFor="col-client-gstin" className="sr-only">Client GSTIN / UIN</label>
                 <input 
                   id="col-client-gstin"
@@ -1397,10 +1480,12 @@ export default function InvoiceModal({
                   value={clientGstin}
                   onChange={(e) => setClientGstin(e.target.value)}
                   placeholder="Client GSTIN / UIN"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none"
                 />
               </div>
-              <div>
+) }
+              { activeTemplate.config.client?.fields.includes('pan') && (
+<div>
                 <label htmlFor="col-client-pan" className="sr-only">Client PAN</label>
                 <input 
                   id="col-client-pan"
@@ -1408,9 +1493,10 @@ export default function InvoiceModal({
                   value={clientPan}
                   onChange={(e) => setClientPan(e.target.value)}
                   placeholder="Client PAN"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none"
                 />
               </div>
+) }
             </div>
 
             <div className="flex items-center justify-between pt-2">
@@ -1418,11 +1504,34 @@ export default function InvoiceModal({
 
             {activeTemplate.sections.shipTo?.visible !== false && (
               <div className="space-y-3 pt-3 border-t border-slate-150 dark:border-slate-800">
-                <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
-                  Shipped To Details
-                </h3>
-                <input type="text" value={shippedToName} onChange={e => setShippedToName(e.target.value)} placeholder="Name" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+                    Shipped To Details
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShippedToName(clientName);
+                      setShippedToEmail(clientEmail);
+                      setShippedToPhone(clientPhone);
+                      setShippedToAddress(clientAddress);
+                      setShippedToGstin(clientGstin);
+                      setShippedToPan(clientPan);
+                      setShippedToCountry(clientCountry);
+                      setShippedToState(clientState);
+                    }}
+                    className="text-[9px] font-medium text-sky-500 hover:text-sky-600 font-mono flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
+                    title="Copy all details from Client/Bill To section"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
+                    Same as Client
+                  </button>
+                </div>
+                { activeTemplate.config.shipping?.fields.includes('name') && (
+                  <input type="text" value={shippedToName} onChange={e => setShippedToName(e.target.value)} placeholder="Name" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                ) }
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  { activeTemplate.config.shipping?.fields.includes('country') && (
                   <select
                     value={Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode || ''}
                     onChange={(e) => {
@@ -1432,13 +1541,15 @@ export default function InvoiceModal({
                         setShippedToState(''); // Reset state when country changes
                       }
                     }}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none"
                   >
                     <option value="" disabled>Country</option>
                     {Country.getAllCountries().map((c) => (
                       <option key={c.isoCode} value={c.isoCode}>{c.name}</option>
                     ))}
                   </select>
+                ) }
+                  { activeTemplate.config.shipping?.fields.includes('state') && (
                   <select
                     value={(() => {
                       const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode;
@@ -1455,7 +1566,7 @@ export default function InvoiceModal({
                       }
                     }}
                     disabled={!shippedToCountry}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none disabled:opacity-50"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none disabled:opacity-50"
                   >
                     <option value="" disabled>State</option>
                     {(() => {
@@ -1466,14 +1577,25 @@ export default function InvoiceModal({
                       ));
                     })()}
                   </select>
+                ) }
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <input type="text" value={shippedToPhone} onChange={e => setShippedToPhone(e.target.value)} placeholder="Phone" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
-                  <input type="email" value={shippedToEmail} onChange={e => setShippedToEmail(e.target.value)} placeholder="Email" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
-                  <input type="text" value={shippedToPan} onChange={e => setShippedToPan(e.target.value)} placeholder="PAN" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
-                  <input type="text" value={shippedToGstin} onChange={e => setShippedToGstin(e.target.value)} placeholder="GSTIN / UIN" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
+                  { activeTemplate.config.shipping?.fields.includes('phone') && (
+                  <input type="text" value={shippedToPhone} onChange={e => setShippedToPhone(e.target.value)} placeholder="Phone" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                ) }
+                  { activeTemplate.config.shipping?.fields.includes('email') && (
+                  <input type="email" value={shippedToEmail} onChange={e => setShippedToEmail(e.target.value)} placeholder="Email" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                ) }
+                  { activeTemplate.config.shipping?.fields.includes('pan') && (
+                  <input type="text" value={shippedToPan} onChange={e => setShippedToPan(e.target.value)} placeholder="PAN" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                ) }
+                  { activeTemplate.config.shipping?.fields.includes('gstin') && (
+                    <input type="text" value={shippedToGstin} onChange={e => setShippedToGstin(e.target.value)} placeholder="GSTIN / UIN" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                  ) }
                 </div>
-                <textarea value={shippedToAddress} onChange={e => setShippedToAddress(e.target.value)} placeholder="Shipping Address" rows={1} className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none resize-none" />
+                { activeTemplate.config.shipping?.fields.includes('address') && (
+                  <textarea value={shippedToAddress} onChange={e => setShippedToAddress(e.target.value)} placeholder="Shipping Address" rows={1} className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none resize-none" />
+                ) }
               </div>
             )}
             </div>
@@ -1481,218 +1603,44 @@ export default function InvoiceModal({
 
           {/* Transport Details */}
           {activeTemplate.sections.transport?.visible !== false && (
-            <div className="space-y-3 pt-4 border-t border-slate-150 dark:border-slate-800">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1">
-              <h3 className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                Transport Details
-              </h3>
-            </div>
+            <div className="space-y-3 pt-4 pb-3 border-t border-slate-150 dark:border-slate-800">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1">
+                <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+                  Transport Details
+                </h3>
+                <label className="relative inline-flex items-center cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={hasTransport}
+                    onChange={(e) => setHasTransport(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-gray-600 peer-checked:bg-sky-500"></div>
+                </label>
+              </div>
             
             {hasTransport && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input type="text" value={placeOfSupply} onChange={e => setPlaceOfSupply(e.target.value)} placeholder="Place of Supply" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
-                <input type="text" value={transport} onChange={e => setTransport(e.target.value)} placeholder="Transport" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
-                <input type="text" value={grRrNo} onChange={e => setGrRrNo(e.target.value)} placeholder="GR/RR No." className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
-                <input type="text" value={vehicleNo} onChange={e => setVehicleNo(e.target.value)} placeholder="Vehicle No." className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
-                <input type="text" value={driverMobile} onChange={e => setDriverMobile(e.target.value)} placeholder="Driver Mobile" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
-                <input type="text" value={station} onChange={e => setStation(e.target.value)} placeholder="Station" className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
-                <input type="text" value={ewayBillNo} onChange={e => setEwayBillNo(e.target.value)} placeholder="E-Way Bill No." className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-white focus:outline-none" />
+                { activeTemplate.config.transport?.fields?.includes('transportName') && (
+                  <input type="text" value={transport} onChange={e => setTransport(e.target.value)} placeholder="Transport" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                ) }
+                { activeTemplate.config.transport?.fields?.includes('vehicleNo') && (
+                  <input type="text" value={vehicleNo} onChange={e => setVehicleNo(e.target.value)} placeholder="Vehicle No." className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                ) }
+                { activeTemplate.config.transport?.fields?.includes('driverMobile') && (
+                  <input type="text" value={driverMobile} onChange={e => setDriverMobile(e.target.value)} placeholder="Driver Mobile" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                ) }
+                { activeTemplate.config.transport?.fields?.includes('station') && (
+                  <input type="text" value={station} onChange={e => setStation(e.target.value)} placeholder="Station" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                ) }
+                { activeTemplate.config.transport?.fields?.some(f => f.toLowerCase() === 'ewaybillno') && (
+                  <input type="text" value={ewayBillNo} onChange={e => setEwayBillNo(e.target.value)} placeholder="E-Way Bill No." className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                ) }
               </div>
             )}
           </div>
           )}
-          {/* GEOGRAPHIC TAX ENGINE CONTROLLER */}
-          <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100/70 dark:border-slate-900 space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-150 dark:border-slate-900/50 pb-2">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 bg-emerald-600 rounded-full animate-ping"></span>
-                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                  Tax Compliance & Policies
-                </span>
-              </div>
-              <span className="text-[10px] font-medium text-sky-600 bg-sky-50 dark:bg-sky-950/50 px-2 py-0.5 rounded-md uppercase">
-                {taxClassification.name}
-              </span>
-            </div>
 
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              {taxClassification.desc}
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-
-              <div>
-                <label htmlFor="tax-cl-country" className="block text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-1">Client Country</label>
-                <select
-                  id="tax-cl-country"
-                  value={Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode || ''}
-                  onChange={(e) => {
-                    const selectedCountry = Country.getCountryByCode(e.target.value);
-                    if (selectedCountry) {
-                      setClientCountry(selectedCountry.name);
-                      setClientState(''); // Reset state when country changes
-                    }
-                  }}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-medium text-xs focus:outline-none focus:border-sky-500 cursor-pointer"
-                >
-                  <option value="" disabled>Select Country</option>
-                  {Country.getAllCountries().map((c) => (
-                    <option key={c.isoCode} value={c.isoCode}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="tax-cl-state" className="block text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-1">Client State</label>
-                <select
-                  id="tax-cl-state"
-                  value={(() => {
-                    const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode;
-                    if (!cCode) return '';
-                    return State.getStatesOfCountry(cCode).find(s => s.name === clientState)?.isoCode || '';
-                  })()}
-                  onChange={(e) => {
-                    const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode;
-                    if (cCode) {
-                      const selectedState = State.getStateByCodeAndCountry(e.target.value, cCode);
-                      if (selectedState) {
-                        setClientState(selectedState.name);
-                      }
-                    }
-                  }}
-                  disabled={!clientCountry}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-medium text-xs focus:outline-none focus:border-sky-500 cursor-pointer disabled:opacity-50"
-                >
-                  <option value="" disabled>Select State</option>
-                  {(() => {
-                    const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode;
-                    if (!cCode) return null;
-                    return State.getStatesOfCountry(cCode).map((st) => (
-                      <option key={st.isoCode} value={st.isoCode}>{st.name}</option>
-                    ));
-                  })()}
-                </select>
-              </div>
-            </div>
-
-            <div className="pt-2.5 border-t border-slate-150 dark:border-slate-800 space-y-2">
-              <label className="block text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Tax Application Mode</label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
-                  <input
-                    type="radio"
-                    name="tax-mode-toggle"
-                    checked={taxMode === 'dynamic'}
-                    onChange={() => setTaxMode('dynamic')}
-                    className="text-sky-600 focus:ring-sky-500"
-                  />
-                  Auto Regional Tax
-                </label>
-                <label className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
-                  <input
-                    type="radio"
-                    name="tax-mode-toggle"
-                    checked={taxMode === 'custom'}
-                    onChange={() => setTaxMode('custom')}
-                    className="text-sky-600 focus:ring-sky-500"
-                  />
-                  Custom Tax Override
-                </label>
-              </div>
-
-              {taxMode === 'custom' && (
-                <div className="space-y-3 pt-1.5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="custom-tax-name" className="block text-[9px] font-medium text-slate-400 dark:text-slate-550 uppercase">Tax Label/Name</label>
-                      <input
-                        id="custom-tax-name"
-                        type="text"
-                        value={customTaxName}
-                        onChange={(e) => {
-                          setCustomTaxName(e.target.value);
-                          if (customTaxCols.length === 1) {
-                            setCustomTaxCols([e.target.value || 'Tax']);
-                          }
-                        }}
-                        placeholder="e.g. VAT"
-                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs rounded-lg dark:text-white focus:outline-none focus:border-sky-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="custom-tax-rate-val" className="block text-[9px] font-medium text-slate-400 dark:text-slate-550 uppercase">Override Rate (%)</label>
-                      <input
-                        id="custom-tax-rate-val"
-                        type="number"
-                        value={customTaxPercentage}
-                        onChange={(e) => setCustomTaxPercentage(parseFloat(e.target.value) || 0)}
-                        placeholder="e.g. 15"
-                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono rounded-lg dark:text-white focus:outline-none focus:border-sky-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <button
-                      type="button"
-                      className="w-full py-2 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 text-[11px] font-medium text-slate-500 hover:text-sky-600 hover:border-sky-500 hover:bg-sky-50 dark:hover:bg-sky-950/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                      onClick={() => setAdditionalTaxes([...additionalTaxes, { id: Date.now().toString(), name: 'Additional Tax', rate: 0 }])}
-                    >
-                      <Plus size={14} strokeWidth={3} /> Add more taxes
-                    </button>
-                    {additionalTaxes.length > 0 && (
-                      <div className="space-y-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/50">
-                        {additionalTaxes.map((tax, index) => (
-                          <div key={tax.id} className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end relative group">
-                            <div>
-                              <label className="block text-[9px] font-medium text-slate-400 dark:text-slate-550 uppercase mb-1">Additional Tax Name</label>
-                              <input
-                                type="text"
-                                value={tax.name}
-                                onChange={(e) => {
-                                  const newTaxes = [...additionalTaxes];
-                                  newTaxes[index].name = e.target.value;
-                                  setAdditionalTaxes(newTaxes);
-                                }}
-                                className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs rounded-lg dark:text-white focus:outline-none focus:border-sky-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[9px] font-medium text-slate-400 dark:text-slate-550 uppercase mb-1">Rate (%)</label>
-                              <div className="relative">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.1"
-                                  value={tax.rate}
-                                  onChange={(e) => {
-                                    const newTaxes = [...additionalTaxes];
-                                    newTaxes[index].rate = parseFloat(e.target.value) || 0;
-                                    setAdditionalTaxes(newTaxes);
-                                  }}
-                                  className="w-full px-2 py-1.5 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs rounded-lg dark:text-white focus:outline-none focus:border-sky-500"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const newTaxes = [...additionalTaxes];
-                                    newTaxes.splice(index, 1);
-                                    setAdditionalTaxes(newTaxes);
-                                  }}
-                                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-opacity"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
 
             </div>
 
@@ -1816,7 +1764,8 @@ export default function InvoiceModal({
               </div>
 
               {/* SAC & Product Size */}
-              <div>
+              { activeTemplate.config.table.columns.some(c => c.id === 'hsn' && c.visible !== false) && (
+                <div>
                 <label htmlFor="custom-item-hsn" className="block text-[10px] text-slate-500 font-medium uppercase mb-1">HSN Code</label>
                 <input 
                   id="custom-item-hsn"
@@ -1827,7 +1776,9 @@ export default function InvoiceModal({
                   className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 dark:text-white text-xs focus:outline-none focus:border-sky-500"
                 />
               </div>
-              <div>
+              ) }
+              { activeTemplate.config.table.columns.some(c => c.id === 'size' && c.visible !== false) && (
+                <div>
                 <label htmlFor="custom-item-size" className="block text-[10px] text-slate-500 font-medium uppercase mb-1">Size (Optional)</label>
                 <input 
                   id="custom-item-size"
@@ -1844,6 +1795,7 @@ export default function InvoiceModal({
                   ))}
                 </datalist>
               </div>
+              ) }
 
               {/* Price / Rate (Required) */}
               <div>
@@ -1888,7 +1840,8 @@ export default function InvoiceModal({
 
 
               {/* Particular Product Terms */}
-              <div className="col-span-2">
+              { activeTemplate.config.table.columns.some(c => c.id === 'terms' && c.visible !== false) && (
+                <div className="col-span-2">
                 <label htmlFor="custom-item-terms" className="block text-[10px] text-slate-500 font-medium uppercase mb-1">Product Terms (Optional)</label>
                 <input 
                   id="custom-item-terms"
@@ -1899,6 +1852,7 @@ export default function InvoiceModal({
                   className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 dark:text-white text-xs focus:outline-none focus:border-sky-500"
                 />
               </div>
+              ) }
 
               {/* Description */}
               <div className="col-span-2">
@@ -2083,6 +2037,144 @@ export default function InvoiceModal({
             />
           </div>
 
+          {/* GEOGRAPHIC TAX ENGINE CONTROLLER */}
+          <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100/70 dark:border-slate-900 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-150 dark:border-slate-900/50 pb-2">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-emerald-600 rounded-full animate-ping"></span>
+                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  Tax Compliance & Policies
+                </span>
+              </div>
+              <span className="text-[10px] font-medium text-sky-600 bg-sky-50 dark:bg-sky-950/50 px-2 py-0.5 rounded-md uppercase">
+                {taxClassification.name}
+              </span>
+            </div>
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              {taxClassification.desc}
+            </p>
+
+            <div className="pt-2.5 border-t border-slate-150 dark:border-slate-800 space-y-2">
+              <label className="block text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Tax Application Mode</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
+                  <input
+                    type="radio"
+                    name="tax-mode-toggle"
+                    checked={taxMode === 'dynamic'}
+                    onChange={() => setTaxMode('dynamic')}
+                    className="text-sky-600 focus:ring-sky-500"
+                  />
+                  Auto Regional Tax
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
+                  <input
+                    type="radio"
+                    name="tax-mode-toggle"
+                    checked={taxMode === 'custom'}
+                    onChange={() => setTaxMode('custom')}
+                    className="text-sky-600 focus:ring-sky-500"
+                  />
+                  Custom Tax Override
+                </label>
+              </div>
+
+              {taxMode === 'custom' && (
+                <div className="space-y-3 pt-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="custom-tax-name" className="block text-[9px] font-medium text-slate-400 dark:text-slate-550 uppercase">Tax Label/Name</label>
+                      <input
+                        id="custom-tax-name"
+                        type="text"
+                        value={customTaxName}
+                        onChange={(e) => {
+                          setCustomTaxName(e.target.value);
+                          if (customTaxCols.length === 1) {
+                            setCustomTaxCols([e.target.value || 'Tax']);
+                          }
+                        }}
+                        placeholder="e.g. VAT"
+                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs rounded-lg dark:text-white focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="custom-tax-rate-val" className="block text-[9px] font-medium text-slate-400 dark:text-slate-550 uppercase">Override Rate (%)</label>
+                      <input
+                        id="custom-tax-rate-val"
+                        type="number"
+                        value={customTaxPercentage}
+                        onChange={(e) => setCustomTaxPercentage(parseFloat(e.target.value) || 0)}
+                        placeholder="e.g. 15"
+                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono rounded-lg dark:text-white focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <button
+                      type="button"
+                      className="w-full py-2 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 text-[11px] font-medium text-slate-500 hover:text-sky-600 hover:border-sky-500 hover:bg-sky-50 dark:hover:bg-sky-950/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                      onClick={() => setAdditionalTaxes([...additionalTaxes, { id: Date.now().toString(), name: 'Additional Tax', rate: 0 }])}
+                    >
+                      <Plus size={14} strokeWidth={3} /> Add more taxes
+                    </button>
+                    {additionalTaxes.length > 0 && (
+                      <div className="space-y-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/50">
+                        {additionalTaxes.map((tax, index) => (
+                          <div key={tax.id} className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end relative group">
+                            <div>
+                              <label className="block text-[9px] font-medium text-slate-400 dark:text-slate-550 uppercase mb-1">Additional Tax Name</label>
+                              <input
+                                type="text"
+                                value={tax.name}
+                                onChange={(e) => {
+                                  const newTaxes = [...additionalTaxes];
+                                  newTaxes[index].name = e.target.value;
+                                  setAdditionalTaxes(newTaxes);
+                                }}
+                                className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs rounded-lg dark:text-white focus:outline-none focus:border-sky-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-medium text-slate-400 dark:text-slate-550 uppercase mb-1">Rate (%)</label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.1"
+                                  value={tax.rate}
+                                  onChange={(e) => {
+                                    const newTaxes = [...additionalTaxes];
+                                    newTaxes[index].rate = parseFloat(e.target.value) || 0;
+                                    setAdditionalTaxes(newTaxes);
+                                  }}
+                                  className="w-full px-2 py-1.5 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs rounded-lg dark:text-white focus:outline-none focus:border-sky-500"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newTaxes = [...additionalTaxes];
+                                    newTaxes.splice(index, 1);
+                                    setAdditionalTaxes(newTaxes);
+                                  }}
+                                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-opacity"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* TAX CALCULATOR OUTPUT DISPLAY */}
           <div className="p-4 bg-sky-50/50 dark:bg-slate-950 text-slate-805 rounded-3xl border border-sky-100/35 dark:border-slate-900 space-y-2.5">
             <span className="block text-xs font-medium uppercase tracking-wider text-sky-700 dark:text-sky-400">Tax Calculator Calculations</span>
@@ -2112,11 +2204,14 @@ export default function InvoiceModal({
             </div>
           </div>
 
+              </div>
             </div>
-          </div>
-          ) : activeMode === 'editable' ? (
-            <div className="w-full overflow-x-auto bg-slate-100/50 dark:bg-slate-950/30 p-2 sm:p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <div className="w-[794px] mx-auto bg-white p-4 sm:p-8 relative min-h-[1123px] shadow-sm border border-slate-200 dark:border-slate-300" id="pdf-export-content-editable">
+            </div>
+
+            {/* Invoice Layout Column */}
+            <div className={`xl:w-[55%] xl:block xl:overflow-y-auto ${activeMode === 'editable' ? 'block' : 'hidden'}`}>
+              <div className="w-full overflow-x-auto bg-slate-100/50 dark:bg-slate-950/30 p-2 sm:p-6 rounded-2xl border border-slate-100 dark:border-slate-800 xl:flex xl:flex-col xl:items-center">
+                <div className="w-[794px] mx-auto xl:mx-0 xl:scale-[0.88] xl:origin-top bg-white p-4 sm:p-8 xl:p-5 relative min-h-[1123px] shadow-sm border border-slate-200 dark:border-slate-300 xl:-mb-[135px]" id="pdf-export-content-editable">
                       <LivePreview 
                   template={activeTemplate} 
                   invoiceData={liveInvoiceData || invoice || {}} 
@@ -2215,10 +2310,12 @@ export default function InvoiceModal({
                />
               </div>
             </div>
-          ) : null}
+            </div>
+            
+            </div> {/* End Wrapper */}
 
           {/* Triggers */}
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3.5 bg-white dark:bg-slate-900 hide-on-print">
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3.5 bg-white dark:bg-slate-900 hide-on-print w-full shrink-0">
             <button
               type="button"
               onClick={onClose}

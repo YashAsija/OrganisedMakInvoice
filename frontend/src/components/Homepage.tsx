@@ -412,9 +412,7 @@ export default function Homepage({
           
           {/* Logo Brand */}
           <div className="flex items-center gap-2.5 cursor-pointer select-none group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-650 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-sky-500/20 group-hover:scale-105 transition-all duration-300">
-              MI
-            </div>
+            <img src="/logo.svg" alt="MakInvoices Logo" className="w-10 h-10 object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300 shrink-0" />
             <div>
               <span className="text-base font-black tracking-tight text-slate-805 block leading-none">
                 Mak<span className="text-sky-500">Invoices</span>
@@ -539,9 +537,7 @@ export default function Homepage({
         <div className="max-w-[1550px] mx-auto px-4 py-3.5 flex items-center justify-between w-full">
           {/* Logo Brand */}
           <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-600 to-indigo-650 flex items-center justify-center text-white font-black text-sm shadow-md">
-              MI
-            </div>
+            <img src="/logo.svg" alt="MakInvoices Logo" className="w-8 h-8 object-contain drop-shadow-sm shrink-0" />
             <span className="text-sm font-black tracking-tight text-slate-805">
               Mak<span className="text-sky-500">Invoices</span>
             </span>

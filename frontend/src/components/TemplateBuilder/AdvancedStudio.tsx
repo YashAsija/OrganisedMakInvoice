@@ -8,11 +8,6 @@ import { Undo2, Redo2 } from 'lucide-react';
 import { StepControls } from './StepControls';
 import { StepCanvas } from './StepCanvas';
 
-// Steps placeholder imports (to be implemented)
-// import StepLayout from './Steps/StepLayout';
-// import StepHeader from './Steps/StepHeader';
-// import StepCompany from './Steps/StepCompany';
-
 interface TemplateBuilderProps {
   initialTemplate?: InvoiceTemplate | null;
   businessProfile?: BusinessProfile;
@@ -72,8 +67,8 @@ const defaultTemplate: InvoiceTemplate = {
     footer: { message: 'Thank you for your business!', thankYouNote: '', supportContact: '', website: '', showPageNumbers: true, showGeneratedBy: true, customText: '' }
   },
   styleConfig: {
-    primaryColor: '#4f46e5',
-    secondaryColor: '#f1f5f9',
+    primaryColor: '#0f172a',
+    secondaryColor: '#FCFAF7',
     accentColor: '#10b981',
     fontFamily: 'Inter',
     spacing: 'Normal',
@@ -81,7 +76,7 @@ const defaultTemplate: InvoiceTemplate = {
     roundedCorners: true,
     sectionBackgroundColors: {},
     alternatingRowColors: true,
-    tableHeaderBackground: '#4f46e5',
+    tableHeaderBackground: '#0f172a',
     tableHeaderTextColor: '#ffffff'
   }
 };
@@ -109,9 +104,9 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
   const { template, updateTemplate, undo, redo, canUndo, canRedo } = useTemplateHistory(initialTemplate || defaultTemplate);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [previewScale, setPreviewScale] = useState(0.7);const previewContainerRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(0.7);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
 
-  
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [startY, setStartY] = useState(0);
@@ -119,9 +114,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
   const [scrollTop, setScrollTop] = useState(0);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Don't pan if clicking on zoom controls
     if ((e.target as HTMLElement).closest('.z-\\[60\\]')) return;
-    
     if (!previewContainerRef.current) return;
     setIsDragging(true);
     setStartX(e.pageX - previewContainerRef.current.offsetLeft);
@@ -150,8 +143,8 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
       if (previewContainerRef.current) {
         const containerWidth = previewContainerRef.current.clientWidth;
         const containerHeight = previewContainerRef.current.clientHeight;
-        const paddingWidth = 32; // 16px on each side
-        const paddingHeight = 32; // 16px top and bottom
+        const paddingWidth = 32;
+        const paddingHeight = 32;
         const availableWidth = containerWidth - paddingWidth;
         const availableHeight = containerHeight - paddingHeight;
         
@@ -171,8 +164,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
     return () => window.removeEventListener('resize', handleResize);
   }, [template.layout.pageSize]);
 
-
-    const updateConfig = (section: keyof InvoiceTemplate['config'], data: any) => {
+  const updateConfig = (section: keyof InvoiceTemplate['config'], data: any) => {
     updateTemplate({
       ...template,
       config: { ...template.config, [section]: { ...template.config[section], ...data } }
@@ -189,97 +181,134 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
   const currentStep = STEPS[currentStepIndex];
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-100px)] bg-gradient-to-br from-slate-50 to-slate-100/80 overflow-hidden rounded-2xl border border-white/50 shadow-2xl shadow-slate-200/50 backdrop-blur-xl ring-1 ring-slate-900/5">
-            {/* Mobile Backdrop */}
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200 w-full relative">
+      
+      {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 z-40 lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />
+        <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />
       )}
 
       {/* Sidebar Navigation */}
-            <div className={`fixed inset-y-0 left-0 z-50 w-64 shrink-0 bg-white/80 backdrop-blur-md border-r border-slate-200/60 flex-col h-full overflow-y-auto custom-scrollbar transition-transform duration-300 lg:relative lg:translate-x-0 lg:flex ${isMobileMenuOpen ? 'translate-x-0 flex' : '-translate-x-full flex'}`}>
-        <div className="p-4 border-b border-slate-100 bg-white/95 backdrop-blur-sm sticky top-0 z-10 flex items-center justify-between">
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 shrink-0 bg-white dark:bg-zinc-900 border-r border-[#e2e8f0]/40 dark:border-zinc-800 flex-col h-full overflow-y-auto custom-scrollbar transition-transform duration-300 lg:relative lg:translate-x-0 lg:flex ${isMobileMenuOpen ? 'translate-x-0 flex' : '-translate-x-full flex'}`}>
+        
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-[#e2e8f0]/30 dark:border-zinc-800 bg-[#FCFAF7]/50 dark:bg-zinc-950/20 sticky top-0 z-10 flex items-center justify-between">
           <div>
-            <h2 className="font-bold text-slate-800 text-sm">Advanced Studio</h2>
-            <p className="text-[10px] text-slate-500">Full Control Editor</p>
+            <h2 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+              <span className="bg-gradient-to-r from-amber-600 via-[#64748b] to-rose-500 bg-clip-text text-transparent dark:from-amber-400 dark:via-white dark:to-rose-400">Advanced Studio</span>
+            </h2>
+            <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-500 mt-0.5">Fine Layout Customizer</p>
           </div>
-          <div className="flex gap-1">
-            <button onClick={undo} disabled={!canUndo} className={`p-1.5 rounded-lg ${canUndo ? 'text-slate-700 hover:bg-slate-200 cursor-pointer' : 'text-slate-300 cursor-not-allowed'}`} title="Undo">
-              <Undo2 className="w-4 h-4" />
+          <div className="flex gap-1.5">
+            <button onClick={undo} disabled={!canUndo} className={`p-1.5 rounded-lg border transition-all ${canUndo ? 'border-[#e2e8f0] dark:border-zinc-700 text-[#0f172a] dark:text-zinc-300 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 cursor-pointer' : 'border-zinc-150 dark:border-zinc-850 text-zinc-300 dark:text-zinc-700 cursor-not-allowed'}`} title="Undo">
+              <Undo2 className="w-3.5 h-3.5" />
             </button>
-            <button onClick={redo} disabled={!canRedo} className={`p-1.5 rounded-lg ${canRedo ? 'text-slate-700 hover:bg-slate-200 cursor-pointer' : 'text-slate-300 cursor-not-allowed'}`} title="Redo">
-              <Redo2 className="w-4 h-4" />
+            <button onClick={redo} disabled={!canRedo} className={`p-1.5 rounded-lg border transition-all ${canRedo ? 'border-[#e2e8f0] dark:border-zinc-700 text-[#0f172a] dark:text-zinc-300 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 cursor-pointer' : 'border-zinc-150 dark:border-zinc-850 text-zinc-300 dark:text-zinc-700 cursor-not-allowed'}`} title="Redo">
+              <Redo2 className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        <div className="flex-1 py-2 custom-scrollbar">
+        {/* Steps List */}
+        <div className="flex-1 py-3 custom-scrollbar space-y-4">
           {Object.entries({
             'General & Layout': ['start', 'layout'],
             'Data Sections': ['header', 'company', 'invoiceInfo', 'client', 'shipping', 'transport'],
             'Financials': ['table', 'tax', 'payment', 'amountInWords'],
             'Footer': ['terms', 'signature', 'footer'],
             'Advanced Design': ['design', 'canvas']
-          }).map(([groupName, stepIds]) => (
-            <div key={groupName} className="mb-4">
-              <div className="px-4 py-1 text-[10px] font-bold text-indigo-400/80 uppercase tracking-widest">{groupName}</div>
-              {stepIds.map(id => {
-                const step = STEPS.find(s => s.id === id);
-                if (!step) return null;
-                const idx = STEPS.indexOf(step);
-                const isActive = currentStepIndex === idx;
-                const Icon = step.icon;
-                return (
-                  <button
-                    key={step.id}
-                    onClick={() => { setCurrentStepIndex(idx); setIsMobileMenuOpen(false); }}
-                    className={`group w-full text-left px-4 py-2 text-xs flex items-center gap-3 transition-colors ${isActive ? 'bg-gradient-to-r from-sky-50 to-transparent text-sky-700 font-bold border-r-4 border-sky-600 shadow-[inset_2px_0_10px_rgba(14,165,233,0.05)]' : 'text-slate-600 hover:bg-slate-100 hover:text-indigo-700'}`}
-                  >
-                    <div className={`w-6 h-6 rounded-md flex items-center justify-center ${isActive ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
-                      <Icon className="w-3.5 h-3.5" />
-                    </div>
-                    {step.title}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+          }).map(([groupName, stepIds]) => {
+            const groupColors: Record<string, string> = {
+              'General & Layout': 'text-amber-500 bg-amber-50 dark:bg-amber-950/20 border-r-amber-500',
+              'Data Sections': 'text-sky-500 bg-sky-50 dark:bg-sky-950/20 border-r-sky-500',
+              'Financials': 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 border-r-emerald-500',
+              'Footer': 'text-rose-500 bg-rose-50 dark:bg-rose-950/20 border-r-rose-500',
+              'Advanced Design': 'text-violet-500 bg-violet-50 dark:bg-violet-950/20 border-r-violet-500'
+            };
+            return (
+              <div key={groupName}>
+                <div className="px-4 py-1 text-[9px] font-black text-[#64748b]/80 dark:text-zinc-500 uppercase tracking-widest">{groupName}</div>
+                <div className="mt-1 space-y-0.5">
+                  {stepIds.map(id => {
+                    const step = STEPS.find(s => s.id === id);
+                    if (!step) return null;
+                    const idx = STEPS.indexOf(step);
+                    const isActive = currentStepIndex === idx;
+                    const Icon = step.icon;
+                    return (
+                      <button
+                        key={step.id}
+                        type="button"
+                        onClick={() => { setCurrentStepIndex(idx); setIsMobileMenuOpen(false); }}
+                        className={`group w-full text-left px-4 py-1.5 text-[11px] font-bold flex items-center gap-3 transition-all cursor-pointer ${
+                          isActive 
+                            ? `bg-[#FCFAF7] dark:bg-zinc-950/60 text-[#0f172a] dark:text-white border-r-4 ${groupColors[groupName]?.split(' ').find(c => c.startsWith('border-r-')) || 'border-r-[#64748b]'}` 
+                            : 'text-[#64748b] hover:bg-[#FCFAF7]/30 hover:text-[#0f172a] dark:hover:text-zinc-200'
+                        }`}
+                      >
+                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center border transition-all ${
+                          isActive 
+                            ? `${groupColors[groupName]?.split(' ').filter(c => !c.startsWith('border-r-')).join(' ')} border-transparent shadow-2xs` 
+                            : 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-800 text-[#64748b]/60 group-hover:bg-[#FCFAF7] dark:group-hover:bg-zinc-800'
+                        }`}>
+                          <Icon className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="truncate">{step.title}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        <div className="p-4 border-t border-slate-100 bg-white/95 backdrop-blur-sm sticky bottom-0 z-10">
-          <button onClick={() => onSave(template)} className="w-full py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors mb-2">
-            Save Template
+        {/* Sidebar Footer */}
+        <div className="p-4 border-t border-[#e2e8f0]/30 dark:border-zinc-800 bg-[#FCFAF7]/50 dark:bg-zinc-950/20 sticky bottom-0 z-10 space-y-2">
+          <button 
+            onClick={() => onSave(template)} 
+            className="w-full py-2 bg-[#0f172a] hover:bg-[#5C5043] text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            <CheckCircle className="w-3.5 h-3.5" /> Save Template
           </button>
-          <button onClick={onCancel} className="w-full py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors">
+          <button 
+            onClick={onCancel} 
+            className="w-full py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 text-[#0f172a] dark:text-zinc-300 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-[#FCFAF7] transition-colors cursor-pointer"
+          >
             Cancel
           </button>
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full">
-        {/* Topbar */}
-        <div className="h-14 border-b border-slate-200/60 bg-white/60 backdrop-blur-md flex items-center justify-between px-4 md:px-6 shrink-0">
-          <div className="flex items-center gap-2 md:gap-4">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FCFAF7]/10 dark:bg-zinc-950/10">
+        
+        {/* Topbar header */}
+        <div className="h-14 border-b border-[#e2e8f0]/40 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md flex items-center justify-between px-4 md:px-6 shrink-0 z-10">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 -ml-2 text-[#64748b] hover:bg-[#FCFAF7] rounded-lg cursor-pointer">
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="font-bold text-slate-800 flex items-center gap-2 text-sm md:text-base">
+            <h1 className="font-black text-[#0f172a] dark:text-white uppercase tracking-wider text-xs md:text-sm flex items-center gap-2">
               {currentStep.title}
-              <span className="hidden sm:inline-block text-xs font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">Step {currentStepIndex + 1} of {STEPS.length}</span>
+              <span className="hidden sm:inline-block text-[9px] font-black text-[#64748b] bg-[#f8fafc] dark:bg-zinc-800 px-2 py-0.5 rounded-full">
+                Step {currentStepIndex + 1} of {STEPS.length}
+              </span>
             </h1>
           </div>
+
           <div className="flex items-center gap-2 lg:hidden">
             <button 
               onClick={() => setCurrentStepIndex(Math.max(0, currentStepIndex - 1))}
               disabled={currentStepIndex === 0}
-              className={`p-1.5 rounded-lg border flex items-center justify-center transition-colors ${currentStepIndex === 0 ? 'border-slate-100 text-slate-300 cursor-not-allowed' : 'border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'}`}
+              className={`p-1.5 rounded-lg border flex items-center justify-center transition-colors ${currentStepIndex === 0 ? 'border-zinc-100 dark:border-zinc-850 text-zinc-300 dark:text-zinc-700 cursor-not-allowed' : 'border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] hover:bg-[#FCFAF7] cursor-pointer'}`}
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button 
               onClick={() => setCurrentStepIndex(Math.min(STEPS.length - 1, currentStepIndex + 1))}
               disabled={currentStepIndex === STEPS.length - 1}
-              className={`p-1.5 rounded-lg border flex items-center justify-center transition-colors ${currentStepIndex === STEPS.length - 1 ? 'border-slate-100 text-slate-300 cursor-not-allowed' : 'border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'}`}
+              className={`p-1.5 rounded-lg border flex items-center justify-center transition-colors ${currentStepIndex === STEPS.length - 1 ? 'border-zinc-100 dark:border-zinc-850 text-zinc-300 dark:text-zinc-700 cursor-not-allowed' : 'border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] hover:bg-[#FCFAF7] cursor-pointer'}`}
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -288,61 +317,63 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
 
         {/* Builder Content & Preview Split */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+          
           {/* Controls Panel */}
-          <div className="w-full md:max-w-sm shrink-0 border-b md:border-b-0 md:border-r border-slate-200 bg-white/90 backdrop-blur-sm overflow-y-auto p-6 custom-scrollbar h-[40vh] md:h-full">
+          <div className="w-full md:max-w-sm shrink-0 border-b md:border-b-0 md:border-r border-[#e2e8f0]/40 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 overflow-y-auto p-5 custom-scrollbar h-[40vh] md:h-full">
             {currentStep.id === 'start' && (
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-700 mb-1 block">Template Name</label>
-                  <input type="text" value={template.name} onChange={e => updateTemplate({...template, name: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
+                  <label className="text-[10px] font-black uppercase tracking-wider text-[#64748b] mb-1.5 block">Template Name</label>
+                  <input type="text" value={template.name} onChange={e => updateTemplate({...template, name: e.target.value})} className="w-full p-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none focus:border-[#64748b]" />
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-700 mb-1 block">Document Type</label>
-                  <select 
-                    value={
-                      template.config?.header?.invoiceTitle?.toUpperCase().includes('CREDIT') ? 'Credit Note' :
-                      template.config?.header?.invoiceTitle?.toUpperCase().includes('DEBIT') ? 'Debit Note' :
-                      template.config?.header?.invoiceTitle?.toUpperCase().includes('QUOTATION') || template.config?.header?.invoiceTitle?.toUpperCase().includes('ESTIMATE') ? 'Quotation / Estimate' :
-                      'Invoice'
-                    }
-                    onChange={e => {
-                      const type = e.target.value;
-                      let newTitle = template.config?.header?.invoiceTitle || 'TAX INVOICE';
-                      if (type === 'Invoice') newTitle = 'TAX INVOICE';
-                      if (type === 'Credit Note') newTitle = 'CREDIT NOTE';
-                      if (type === 'Debit Note') newTitle = 'DEBIT NOTE';
-                      if (type === 'Quotation / Estimate') newTitle = 'QUOTATION / ESTIMATE';
-                      
-                      updateTemplate({
-                        ...template, 
-                        config: { 
-                          ...template.config, 
-                          header: { 
-                            ...template.config?.header, 
-                            invoiceTitle: newTitle 
+                  <label className="text-[10px] font-black uppercase tracking-wider text-[#64748b] mb-1.5 block">Document Type</label>
+                  <div className="relative">
+                    <select 
+                      value={
+                        template.config?.header?.invoiceTitle?.toUpperCase().includes('CREDIT') ? 'Credit Note' :
+                        template.config?.header?.invoiceTitle?.toUpperCase().includes('DEBIT') ? 'Debit Note' :
+                        template.config?.header?.invoiceTitle?.toUpperCase().includes('QUOTATION') || template.config?.header?.invoiceTitle?.toUpperCase().includes('ESTIMATE') ? 'Quotation / Estimate' :
+                        'Invoice'
+                      }
+                      onChange={e => {
+                        const type = e.target.value;
+                        let newTitle = template.config?.header?.invoiceTitle || 'TAX INVOICE';
+                        if (type === 'Invoice') newTitle = 'TAX INVOICE';
+                        if (type === 'Credit Note') newTitle = 'CREDIT NOTE';
+                        if (type === 'Debit Note') newTitle = 'DEBIT NOTE';
+                        if (type === 'Quotation / Estimate') newTitle = 'QUOTATION / ESTIMATE';
+                        
+                        updateTemplate({
+                          ...template, 
+                          config: { 
+                            ...template.config, 
+                            header: { 
+                              ...template.config?.header, 
+                              invoiceTitle: newTitle 
+                            } 
                           } 
-                        } 
-                      });
-                    }}
-                    className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-indigo-500"
-                  >
-                    <option value="Invoice">Invoice</option>
-                    <option value="Credit Note">Credit Note</option>
-                    <option value="Debit Note">Debit Note</option>
-                    <option value="Quotation / Estimate">Quotation / Estimate</option>
-                  </select>
-                  <p className="text-[10px] text-slate-500 mt-1">Changes the main title shown on the document.</p>
+                        });
+                      }}
+                      className="w-full p-2.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b] cursor-pointer"
+                    >
+                      <option value="Invoice">Invoice</option>
+                      <option value="Credit Note">Credit Note</option>
+                      <option value="Debit Note">Debit Note</option>
+                      <option value="Quotation / Estimate">Quotation / Estimate</option>
+                    </select>
+                  </div>
+                  <p className="text-[10px] text-[#64748b]/80 mt-1">Updates the main header title on generated PDF bills.</p>
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-700 mb-1 block">Description</label>
-                  <textarea value={template.description} onChange={e => updateTemplate({...template, description: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg text-sm h-24" />
+                  <label className="text-[10px] font-black uppercase tracking-wider text-[#64748b] mb-1.5 block">Description</label>
+                  <textarea value={template.description} onChange={e => updateTemplate({...template, description: e.target.value})} className="w-full p-2.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white h-24 focus:outline-none focus:border-[#64748b] resize-none" />
                 </div>
               </div>
             )}
             
-            {/* TODO: Add specific control forms for layout, header, company, etc. */}
             {currentStep.id !== 'start' && currentStep.id !== 'canvas' && currentStep.id !== 'preview' && (
               <StepControls 
                  stepId={currentStep.id} 
@@ -360,11 +391,20 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
             )}
           </div>
 
-          <div className="flex-1 relative flex flex-col h-full overflow-hidden">
-            <div ref={previewContainerRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUpOrLeave} onMouseLeave={handleMouseUpOrLeave} style={{ cursor: isDragging ? "grabbing" : "grab" }} className="w-full h-full bg-slate-100/30 p-2 md:p-8 inset-[box-shadow] overflow-auto custom-scrollbar relative">
+          {/* Right Live Preview Canvas */}
+          <div className="flex-1 relative flex flex-col h-full overflow-hidden bg-[#FCFAF7]/40 dark:bg-zinc-950/20">
+            <div 
+              ref={previewContainerRef} 
+              onMouseDown={handleMouseDown} 
+              onMouseMove={handleMouseMove} 
+              onMouseUp={handleMouseUpOrLeave} 
+              onMouseLeave={handleMouseUpOrLeave} 
+              style={{ cursor: isDragging ? "grabbing" : "grab" }} 
+              className="w-full h-full p-2 md:p-6 overflow-auto custom-scrollbar relative flex items-center justify-center"
+            >
               <div style={{ width: 794 * previewScale, height: 1123 * previewScale, transition: 'all 0.2s ease' }} className="shrink-0 mx-auto relative">
                 <div 
-                  className="shadow-xl bg-white origin-top-left absolute top-0 left-0" 
+                  className="shadow-md bg-white origin-top-left absolute top-0 left-0" 
                   style={{ 
                     width: '794px',
                     minHeight: '1123px',
@@ -376,20 +416,24 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
                 </div>
               </div>
             </div>
-            <div className="absolute bottom-6 right-6 flex items-center bg-white shadow-lg rounded-lg border border-slate-200 overflow-hidden z-[60]">
-              <button onClick={() => setPreviewScale(s => Math.max(0.3, s - 0.1))} className="p-2 hover:bg-slate-100 text-slate-600 transition-colors">
-                <ZoomOut className="w-4 h-4" />
+
+            {/* Zoom Controls */}
+            <div className="absolute bottom-4 right-4 flex items-center bg-white dark:bg-zinc-900 shadow-md rounded-xl border border-[#e2e8f0]/60 dark:border-zinc-800 overflow-hidden z-[60]">
+              <button onClick={() => setPreviewScale(s => Math.max(0.3, s - 0.1))} className="p-2 hover:bg-[#FCFAF7] dark:hover:bg-zinc-800 text-[#64748b] transition-colors cursor-pointer">
+                <ZoomOut className="w-3.5 h-3.5" />
               </button>
-              <div className="px-3 py-2 text-xs font-bold text-slate-700 border-x border-slate-200 min-w-[60px] text-center">
+              <div className="px-3 py-1.5 text-[10px] font-black text-[#0f172a] dark:text-zinc-300 border-x border-[#e2e8f0]/40 dark:border-zinc-800 min-w-[50px] text-center font-mono">
                 {Math.round(previewScale * 100)}%
               </div>
-              <button onClick={() => setPreviewScale(s => Math.min(2, s + 0.1))} className="p-2 hover:bg-slate-100 text-slate-600 transition-colors">
-                <ZoomIn className="w-4 h-4" />
+              <button onClick={() => setPreviewScale(s => Math.min(2, s + 0.1))} className="p-2 hover:bg-[#FCFAF7] dark:hover:bg-zinc-800 text-[#64748b] transition-colors cursor-pointer">
+                <ZoomIn className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
+
         </div>
       </div>
+
     </div>
   );
 }

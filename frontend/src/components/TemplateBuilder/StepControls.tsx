@@ -33,7 +33,7 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
                    newTemplate.layout = JSON.parse(JSON.stringify(preset.layout));
                }
                updateFullTemplate(newTemplate);
-            }} className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-indigo-50 border-indigo-100 text-indigo-900 focus:ring-indigo-500">
+            }} className="w-full p-2.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]">
               <option value="User">User Custom</option>
               <option value="GST">GST Standard</option>
               <option value="Service">Service</option>
@@ -60,7 +60,7 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
                newTemplate.styleConfig.borderStyle = 'Light';
                newTemplate.styleConfig.roundedCorners = true;
                newTemplate.styleConfig.fontFamily = 'Inter';
-               newTemplate.styleConfig.tableHeaderBackground = newTemplate.styleConfig.primaryColor || '#4f46e5';
+               newTemplate.styleConfig.tableHeaderBackground = newTemplate.styleConfig.primaryColor || '#0f172a';
                newTemplate.styleConfig.tableHeaderTextColor = '#ffffff';
                newTemplate.styleConfig.sectionBackgroundColors = {};
 
@@ -76,7 +76,7 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
                   newTemplate.styleConfig.tableHeaderTextColor = '#0f172a';
                } else if (newType === 'Modern') {
                   newTemplate.styleConfig.fontFamily = 'Outfit';
-                  newTemplate.styleConfig.sectionBackgroundColors = { header: newTemplate.styleConfig.primaryColor || '#4f46e5' };
+                  newTemplate.styleConfig.sectionBackgroundColors = { header: newTemplate.styleConfig.primaryColor || '#0f172a' };
                } else if (newType === 'Retail') {
                   newTemplate.styleConfig.spacing = 'Compact';
                   newTemplate.styleConfig.borderStyle = 'None';
@@ -86,14 +86,14 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
                }
                
                updateFullTemplate(newTemplate);
-            }} className="w-full p-2 border border-slate-200 rounded-lg text-sm">
+            }} className="w-full p-2.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]">
               {['Classic', 'Modern', 'Minimal', 'Corporate', 'GST Standard', 'Retail', 'Modal Classic', 'Fully Custom'].map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
         )}
         <div>
           <label className="text-xs font-bold text-slate-700 mb-1 block">Page Size</label>
-          <select value={layout.pageSize} onChange={e => updateLayout({ pageSize: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm">
+          <select value={layout.pageSize} onChange={e => updateLayout({ pageSize: e.target.value })} className="w-full p-2.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]">
             <option value="A4">A4</option>
             <option value="Letter">Letter</option>
           </select>
@@ -105,8 +105,8 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
            </label>
            {layout.watermark.enabled && (
               <div className="pl-6 mt-2 space-y-2">
-                 <input type="text" value={layout.watermark.text} onChange={e => updateLayout({ watermark: { ...layout.watermark, text: e.target.value } })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" placeholder="Watermark Text" />
-                 <input type="number" min="0" max="1" step="0.1" value={layout.watermark.opacity} onChange={e => updateLayout({ watermark: { ...layout.watermark, opacity: parseFloat(e.target.value) } })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" placeholder="Opacity (0.1 to 1)" />
+                 <input type="text" value={layout.watermark.text} onChange={e => updateLayout({ watermark: { ...layout.watermark, text: e.target.value } })} className="w-full p-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none focus:border-[#64748b]" placeholder="Watermark Text" />
+                 <input type="number" min="0" max="1" step="0.1" value={layout.watermark.opacity} onChange={e => updateLayout({ watermark: { ...layout.watermark, opacity: parseFloat(e.target.value) } })} className="w-full p-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none focus:border-[#64748b]" placeholder="Opacity (0.1 to 1)" />
               </div>
            )}
         </div>
@@ -131,21 +131,21 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
             if (newPos === 'Left') titleAlign = 'Right';
             if (newPos === 'Right') titleAlign = 'Left';
             updateConfig('header', { logoPosition: newPos, titleAlignment: titleAlign });
-          }} className="w-full p-2 border border-slate-200 rounded-lg text-sm">
+          }} className="w-full p-2.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]">
             {['Left', 'Center', 'Right'].map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
         <div>
           <label className="text-xs font-bold text-slate-700 mb-1 block">Logo Width (px)</label>
-          <input type="number" value={config.header.logoWidth} onChange={e => updateConfig('header', { logoWidth: parseInt(e.target.value) || 120 })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
+          <input type="number" value={config.header.logoWidth} onChange={e => updateConfig('header', { logoWidth: parseInt(e.target.value) || 120 })} className="w-full p-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none focus:border-[#64748b]" />
         </div>
         <div>
-          <label className="text-xs font-bold text-slate-700 mb-1 block">Invoice Title</label>
-          <input type="text" value={config.header.invoiceTitle} onChange={e => updateConfig('header', { invoiceTitle: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
+          <label className="text-[10px] font-black uppercase tracking-wider text-[#64748b] mb-1.5 block">Invoice Title</label>
+          <input type="text" value={config.header.invoiceTitle} onChange={e => updateConfig('header', { invoiceTitle: e.target.value })} className="w-full p-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none focus:border-[#64748b]" />
         </div>
         <div>
-          <label className="text-xs font-bold text-slate-700 mb-1 block">Title Alignment</label>
-          <select value={config.header.titleAlignment} onChange={e => updateConfig('header', { titleAlignment: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm">
+          <label className="text-[10px] font-black uppercase tracking-wider text-[#64748b] mb-1.5 block">Title Alignment</label>
+          <select value={config.header.titleAlignment} onChange={e => updateConfig('header', { titleAlignment: e.target.value })} className="w-full p-2.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]">
             {['Left', 'Center', 'Right'].map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>

@@ -54,8 +54,11 @@ const tabToPath: Record<string, string> = {
   profile: '/profile',
   master_vendor: '/master-vendor',
   master_hsn: '/master-hsn',
+  master_transport: '/master-transport',
   catalog_material: '/catalog-material',
   catalog_category: '/catalog-category',
+  settings: '/settings',
+  support: '/support',
 };
 
 const pathToTab: Record<string, string> = Object.entries(tabToPath).reduce(
@@ -871,97 +874,43 @@ export default function App() {
     const clientsToUpsert: ClientProfile[] = [];
     let updatedClients = [...clients];
 
-    // 1. Process clientName (Bill To)
-    if (invoice.clientName && invoice.clientName.trim() !== '') {
-      const clientNameLower = invoice.clientName.trim().toLowerCase();
-      const existingClient = updatedClients.find(c => 
-        c.name.trim().toLowerCase() === clientNameLower || 
-        c.companyName?.trim().toLowerCase() === clientNameLower
+    const processClientDetails = (name?: string, email?: string, phone?: string, address?: string) => {
+      if (!name || name.trim() === '') return;
+      const n = name.trim();
+      const e = (email || '').trim();
+      const p = (phone || '').trim();
+      const a = (address || '').trim();
+
+      // Check if EXACT match exists in updatedClients
+      const isClientExact = updatedClients.some((c) => 
+        (c.name.trim().toLowerCase() === n.toLowerCase() || c.companyName?.trim().toLowerCase() === n.toLowerCase()) &&
+        (c.email || '').trim() === e &&
+        (c.phone || '').trim() === p &&
+        (c.address || '').trim() === a
       );
+      if (isClientExact) return;
 
-      const newAddress = invoice.clientAddress || '';
-      const newEmail = invoice.clientEmail || '';
-      const newPhone = invoice.clientPhone || '';
+      // Create new independent client record
+      const clientToSave: ClientProfile = {
+        id: crypto.randomUUID(),
+        userId: user ? user.id : '',
+        name: n,
+        companyName: n,
+        address: a,
+        email: e,
+        phone: p,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      clientsToUpsert.push(clientToSave);
+      updatedClients = [clientToSave, ...updatedClients];
+    };
 
-      if (existingClient) {
-        const isDifferent = 
-          (existingClient.address || '') !== newAddress ||
-          (existingClient.email || '') !== newEmail ||
-          (existingClient.phone || '') !== newPhone;
+    // 1. Process Bill To
+    processClientDetails(invoice.clientName, invoice.clientEmail, invoice.clientPhone, invoice.clientAddress);
 
-        if (isDifferent) {
-          const clientToSave: ClientProfile = {
-            ...existingClient,
-            address: newAddress,
-            email: newEmail,
-            phone: newPhone,
-            updatedAt: new Date().toISOString()
-          };
-          clientsToUpsert.push(clientToSave);
-          updatedClients = updatedClients.map(c => c.id === clientToSave.id ? clientToSave : c);
-        }
-      } else {
-        const clientToSave: ClientProfile = {
-          id: crypto.randomUUID(),
-          userId: user ? user.id : '',
-          name: invoice.clientName.trim(),
-          companyName: invoice.clientName.trim(),
-          address: newAddress,
-          email: newEmail,
-          phone: newPhone,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        clientsToUpsert.push(clientToSave);
-        updatedClients = [clientToSave, ...updatedClients];
-      }
-    }
-
-    // 2. Process shippedToName (Ship To)
-    if (invoice.shippedToName && invoice.shippedToName.trim() !== '' && invoice.shippedToName.trim().toLowerCase() !== invoice.clientName?.trim().toLowerCase()) {
-      const clientNameLower = invoice.shippedToName.trim().toLowerCase();
-      const existingClient = updatedClients.find(c => 
-        c.name.trim().toLowerCase() === clientNameLower || 
-        c.companyName?.trim().toLowerCase() === clientNameLower
-      );
-
-      const newAddress = invoice.shippedToAddress || '';
-      const newEmail = invoice.shippedToEmail || '';
-      const newPhone = invoice.shippedToPhone || '';
-
-      if (existingClient) {
-        const isDifferent = 
-          (existingClient.address || '') !== newAddress ||
-          (existingClient.email || '') !== newEmail ||
-          (existingClient.phone || '') !== newPhone;
-
-        if (isDifferent) {
-          const clientToSave: ClientProfile = {
-            ...existingClient,
-            address: newAddress,
-            email: newEmail,
-            phone: newPhone,
-            updatedAt: new Date().toISOString()
-          };
-          clientsToUpsert.push(clientToSave);
-          updatedClients = updatedClients.map(c => c.id === clientToSave.id ? clientToSave : c);
-        }
-      } else {
-        const clientToSave: ClientProfile = {
-          id: crypto.randomUUID(),
-          userId: user ? user.id : '',
-          name: invoice.shippedToName.trim(),
-          companyName: invoice.shippedToName.trim(),
-          address: newAddress,
-          email: newEmail,
-          phone: newPhone,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        clientsToUpsert.push(clientToSave);
-        updatedClients = [clientToSave, ...updatedClients];
-      }
-    }
+    // 2. Process Ship To
+    processClientDetails(invoice.shippedToName, invoice.shippedToEmail, invoice.shippedToPhone, invoice.shippedToAddress);
 
     // Commit all client state updates and sync to database at once
     if (clientsToUpsert.length > 0) {

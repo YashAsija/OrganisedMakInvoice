@@ -34,6 +34,7 @@ import {
   Mail,
   Printer,
   ChevronRight,
+  ChevronDown,
   X,
   Printer as PrintIcon,
   Smartphone,
@@ -51,7 +52,9 @@ import {
   Wrench,
   MoreVertical,
   Info,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Percent,
+  MapPin
 } from 'lucide-react';
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from '../types';
 import { BUSINESS_TEMPLATES } from '../lib/presets';
@@ -59,6 +62,8 @@ import { exportInvoicePDFAsync, exportCollectiveReportPDF } from '../lib/pdfExpo
 import TemplateManager from './TemplateManager';
 import { TEMPLATE_PRESETS } from '../lib/templatePresets';
 import { LivePreview } from './TemplateBuilder/LivePreview';
+import SettingsPage from './SettingsPage';
+import SupportPage from './SupportPage';
 
 export interface MasterVendor { id: string; name?: string; company?: string; email?: string; phone?: string; address?: string; category?: string; [key: string]: any; }
 export interface MasterHsnCode { id: string; code?: string; description?: string; gstRate?: number; [key: string]: any; }
@@ -143,7 +148,12 @@ export default function Dashboard({
   const [isMasterExpanded, setIsMasterExpanded] = useState(true);
   const [isCatalogExpanded, setIsCatalogExpanded] = useState(true);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-
+  const [hoveredDashboardChartIndex, setHoveredDashboardChartIndex] = useState<number | null>(null);
+  const [hoveredReportsChartIndex1, setHoveredReportsChartIndex1] = useState<number | null>(null);
+  const [hoveredReportsChartIndex2, setHoveredReportsChartIndex2] = useState<number | null>(null);
+  const [dashboardChartRange, setDashboardChartRange] = useState<'7d' | '1m' | '3m' | '6m' | '1y' | 'all'>('6m');
+  const [reportsChartRange, setReportsChartRange] = useState<'7d' | '1m' | '3m' | '6m' | '1y' | 'all'>('6m');
+  const [showAllExpenses, setShowAllExpenses] = useState(false);
   useEffect(() => {
     if (!isProfileDropdownOpen) return;
     const handleOutsideClick = (e: MouseEvent) => {
@@ -482,69 +492,87 @@ export default function Dashboard({
 
     const navItemClass = (tab: string) => {
       const isActive = activeTab === tab;
-      return `w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all duration-300 flex items-center justify-between cursor-pointer ${
+      return `w-full px-3 py-2 rounded-xl text-left text-xs font-bold transition-all duration-300 flex items-center justify-between cursor-pointer group ${
         isActive
-          ? 'bg-[#EADFCF] text-[#6E6050] dark:bg-zinc-800 dark:text-white border-r-[3px] border-[#88765C] font-black'
-          : 'text-[#88765C]/90 hover:text-[#6E6050] dark:text-zinc-400 hover:bg-[#F4EBE1]/60 dark:hover:bg-zinc-800/40'
+          ? 'bg-white text-[#4A3C2F] dark:bg-zinc-900/90 dark:text-white shadow-[0_2px_12px_rgba(136,118,92,0.06)] border border-[#e2e8f0]/60 dark:border-zinc-800/80 font-black relative overflow-hidden'
+          : 'text-[#0f172a] hover:text-[#4A3C2F] dark:text-zinc-300 hover:bg-white/50 dark:hover:bg-zinc-800/40 border border-transparent'
       }`;
     };
 
+    const iconWrapper = (isActive: boolean, colorClass: string) => 
+      `flex items-center justify-center w-7 h-7 rounded-lg transition-colors ${
+        isActive 
+          ? `${colorClass} shadow-sm ring-1 ring-black/5 dark:ring-white/5` 
+          : 'bg-transparent text-[#0f172a] group-hover:bg-white/80 dark:group-hover:bg-zinc-800 group-hover:text-[#4A3C2F]'
+      }`;
+
     return (
-      <div className="flex flex-col h-full space-y-6 text-sans select-none">
+      <div className="flex flex-col h-full space-y-3 text-sans select-none">
         
+        {/* QUICK BILL ACTIONS */}
+        <div className="px-1">
+          <button
+            onClick={() => {
+              onOpenInvoiceEditor(null);
+              if (isMobileView) setIsMobileDrawerOpen(false);
+            }}
+            className="group relative w-full flex items-center justify-start gap-3 px-2 py-2 bg-[#059669] hover:bg-[#047857] text-white rounded-[14px] font-bold text-[13px] shadow-[0_4px_12px_rgba(5,150,105,0.25)] hover:shadow-[0_6px_16px_rgba(5,150,105,0.4)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] transition-all duration-200 border border-[#047857]/50"
+          >
+            <div className="w-8 h-8 rounded-[10px] bg-white/20 flex items-center justify-center shrink-0 group-hover:bg-white/30 group-hover:scale-105 transition-all duration-300 shadow-sm">
+              <Zap className="w-4 h-4 fill-white drop-shadow-sm" />
+            </div>
+            <span className="tracking-wide pr-2 text-center flex-1 -ml-6">Quick Bill</span>
+          </button>
+        </div>
+
         {/* SETTINGS MENU */}
         <div className="space-y-1">
-          <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#88765C]/60 dark:text-zinc-500 block px-2 pb-1">Settings Menu</span>
+          <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1">Settings Menu</span>
           
-          <button
-            onClick={() => handleTabClick('dashboard')}
-            className={navItemClass('dashboard')}
-          >
+          <button onClick={() => handleTabClick('dashboard')} className={navItemClass('dashboard')}>
             <div className="flex items-center gap-2.5">
-              <BarChart3 className="w-4 h-4" />
+              <div className={iconWrapper(activeTab === 'dashboard', 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400')}><BarChart3 className="w-3.5 h-3.5" /></div>
               <span>Billing Dashboard</span>
             </div>
           </button>
 
-          <button
-            onClick={() => handleTabClick('learn')}
-            className={navItemClass('learn')}
-          >
+          <button onClick={() => handleTabClick('learn')} className={navItemClass('learn')}>
             <div className="flex items-center gap-2.5">
-              <BookOpen className="w-4 h-4" />
+              <div className={iconWrapper(activeTab === 'learn', 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400')}><BookOpen className="w-3.5 h-3.5" /></div>
               <span>Learn MakInvoices</span>
             </div>
           </button>
 
-          <button
-            onClick={() => handleTabClick('invoice_templates')}
-            className={navItemClass('invoice_templates')}
-          >
+          <button onClick={() => handleTabClick('invoice_templates')} className={navItemClass('invoice_templates')}>
             <div className="flex items-center gap-2.5">
-              <Layout className="w-4 h-4" />
+              <div className={iconWrapper(activeTab === 'invoice_templates', 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400')}><Layout className="w-3.5 h-3.5" /></div>
               <span>Invoice Template</span>
             </div>
           </button>
 
-          <button
-            onClick={() => handleTabClick('invoices')}
-            className={navItemClass('invoices')}
-          >
+          <button onClick={() => handleTabClick('invoices')} className={navItemClass('invoices')}>
             <div className="flex items-center gap-2.5">
-              <FileText className="w-4 h-4" />
+              <div className={iconWrapper(activeTab === 'invoices', 'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400')}><FileText className="w-3.5 h-3.5" /></div>
               <span>Invoices Ledger</span>
             </div>
-            <span className={`text-[9.5px] px-1.5 py-0.5 rounded-full font-medium ${activeTab === 'invoices' ? 'bg-[#88765C] text-white' : 'bg-[#F4EBE1] text-[#88765C]'}`}>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'invoices' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
               {invoices.length}
             </span>
           </button>
 
-          <button
-            onClick={() => handleTabClick('reports')}
-            className={navItemClass('reports')}
-          >
+          <button onClick={() => handleTabClick('clients')} className={navItemClass('clients')}>
             <div className="flex items-center gap-2.5">
-              <TrendingUp className="w-4 h-4" />
+              <div className={iconWrapper(activeTab === 'clients', 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400')}><Users2 className="w-3.5 h-3.5" /></div>
+              <span>Billed Clients</span>
+            </div>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'clients' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
+              {clients.length}
+            </span>
+          </button>
+
+          <button onClick={() => handleTabClick('reports')} className={navItemClass('reports')}>
+            <div className="flex items-center gap-2.5">
+              <div className={iconWrapper(activeTab === 'reports', 'bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400')}><TrendingUp className="w-3.5 h-3.5" /></div>
               <span>Accounting Summary</span>
             </div>
           </button>
@@ -552,74 +580,63 @@ export default function Dashboard({
 
         {/* MASTER REGISTRY */}
         <div className="space-y-1">
-          <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#88765C]/60 dark:text-zinc-500 block px-2 pb-1">Master Registry</span>
+          <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1 mt-2">Master Registry</span>
 
-          <button
-            onClick={() => handleTabClick('master_vendor')}
-            className={navItemClass('master_vendor')}
-          >
+          <button onClick={() => handleTabClick('master_vendor')} className={navItemClass('master_vendor')}>
             <div className="flex items-center gap-2.5">
-              <Users2 className="w-4 h-4" />
+              <div className={iconWrapper(activeTab === 'master_vendor', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Users2 className="w-3.5 h-3.5" /></div>
               <span>Client Database</span>
             </div>
           </button>
 
-          <button
-            onClick={() => handleTabClick('master_hsn')}
-            className={navItemClass('master_hsn')}
-          >
+          <button onClick={() => handleTabClick('master_hsn')} className={navItemClass('master_hsn')}>
             <div className="flex items-center gap-2.5">
-              <FileSpreadsheet className="w-4 h-4" />
+              <div className={iconWrapper(activeTab === 'master_hsn', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><FileSpreadsheet className="w-3.5 h-3.5" /></div>
               <span>HSN Registry</span>
             </div>
           </button>
 
-          <button
-            onClick={() => handleTabClick('master_transport')}
-            className={navItemClass('master_transport')}
-          >
+          <button onClick={() => handleTabClick('master_transport')} className={navItemClass('master_transport')}>
             <div className="flex items-center gap-2.5">
-              <Truck className="w-4 h-4" />
+              <div className={iconWrapper(activeTab === 'master_transport', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Truck className="w-3.5 h-3.5" /></div>
               <span>Transport Database</span>
             </div>
           </button>
 
-          <button
-            onClick={() => handleTabClick('catalog_category')}
-            className={navItemClass('catalog_category')}
-          >
+          <button onClick={() => handleTabClick('catalog_category')} className={navItemClass('catalog_category')}>
             <div className="flex items-center gap-2.5">
-              <Tag className="w-4 h-4" />
+              <div className={iconWrapper(activeTab === 'catalog_category', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Tag className="w-3.5 h-3.5" /></div>
               <span>Product Category</span>
             </div>
           </button>
-        </div>
 
-        {/* BOTTOM QUICK BILL & MATERIAL CATALOG */}
-        <div className="pt-4 border-t border-[#EBDCC8]/65 dark:border-zinc-800 mt-auto space-y-2">
-          <button
-            onClick={() => {
-              onOpenInvoiceEditor(null);
-              if (isMobileView) setIsMobileDrawerOpen(false);
-            }}
-            className="w-full py-2.5 bg-[#88765C] hover:bg-[#6E6050] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-xs hover:shadow-md transition-all duration-300"
-          >
-            <Zap className="w-4 h-4 fill-white" />
-            <span>Quick Bill</span>
-          </button>
-
-          <button
-            onClick={() => handleTabClick('catalog_material')}
-            className={navItemClass('catalog_material')}
-          >
+          <button onClick={() => handleTabClick('catalog_material')} className={`${navItemClass('catalog_material')} mb-4`}>
             <div className="flex items-center gap-2.5">
-              <Wrench className="w-4 h-4" />
+              <div className={iconWrapper(activeTab === 'catalog_material', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Wrench className="w-3.5 h-3.5" /></div>
               <span>Material Catalog</span>
             </div>
           </button>
         </div>
       </div>
     );
+  };
+
+  const getCategoryBadgeStyle = (category?: string) => {
+    if (!category) return 'bg-[#FAF8F5] dark:bg-zinc-950 text-[#64748b] border border-[#e2e8f0]/30 dark:border-zinc-800';
+    const val = category.toLowerCase().trim();
+    if (val.includes('vip') || val.includes('premium')) {
+      return 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-900/30';
+    }
+    if (val.includes('regular') || val.includes('standard') || val.includes('active')) {
+      return 'bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200/50 dark:border-sky-900/30';
+    }
+    if (val.includes('distributor') || val.includes('partner') || val.includes('wholesale')) {
+      return 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-900/30';
+    }
+    if (val.includes('retail') || val.includes('new') || val.includes('prospect')) {
+      return 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/30';
+    }
+    return 'bg-[#FCFAF7] dark:bg-zinc-950 text-[#64748b] border border-[#e2e8f0]/60 dark:border-zinc-800';
   };
 
   const renderMasterTableSection = () => {
@@ -633,12 +650,27 @@ export default function Dashboard({
       case 'master_vendor':
         title = 'Client Database';
         description = 'Pre-saved client profiles, company settings, and billing contact information';
-        list = vendors;
+        const vendorSignatures = new Set(vendors.map(v => 
+          `${v.name?.trim().toLowerCase()}|${(v.email||'').trim().toLowerCase()}|${(v.phone||'').trim()}|${(v.address||'').trim()}`
+        ));
+        const additionalClients = clients
+          .filter(c => !vendorSignatures.has(`${c.name.trim().toLowerCase()}|${(c.email||'').trim().toLowerCase()}|${(c.phone||'').trim()}|${(c.address||'').trim()}`))
+          .map(c => ({
+            id: c.id,
+            name: c.name,
+            company: c.companyName,
+            email: c.email,
+            phone: c.phone,
+            address: c.address,
+            category: 'Billed Client'
+          }));
+        list = [...vendors, ...additionalClients];
         columns = [
           { header: 'Client Name', key: 'name' },
           { header: 'Company Name', key: 'company' },
           { header: 'Email Address', key: 'email' },
-          { header: 'Phone Number', key: 'phone' }
+          { header: 'Phone Number', key: 'phone' },
+          { header: 'Category / Tag', key: 'category' }
         ];
         fields = [
           { label: 'Client Name', key: 'name', type: 'text' },
@@ -651,24 +683,23 @@ export default function Dashboard({
         break;
       case 'master_transport':
         title = 'Transport Database';
-        description = 'Registry of transport companies, shipping client profiles, and cargo carriers';
+        description = 'Registry of transport companies and logistics details captured from invoices';
         list = transports;
         columns = [
-          { header: 'Carrier Name', key: 'name' },
-          { header: 'GSTIN / UIN', key: 'gstin' },
-          { header: 'Phone Number', key: 'phone' },
-          { header: 'State', key: 'state' },
-          { header: 'Address', key: 'address' }
+          { header: 'Vehicle No', key: 'vehicleNo' },
+          { header: 'Driver Mobile', key: 'phone' },
+          { header: 'E-Way Bill No', key: 'ewayBillNo' },
+          { header: 'Transport Name', key: 'name' },
+          { header: 'Station', key: 'station' },
+          { header: 'GR/RR No.', key: 'grRrNo' }
         ];
         fields = [
-          { label: 'Carrier / Shipper Name', key: 'name', type: 'text' },
-          { label: 'GSTIN / UIN', key: 'gstin', type: 'text' },
-          { label: 'PAN', key: 'pan', type: 'text' },
-          { label: 'Contact Phone', key: 'phone', type: 'text' },
-          { label: 'Contact Email', key: 'email', type: 'email' },
-          { label: 'State', key: 'state', type: 'text' },
-          { label: 'Country', key: 'country', type: 'text' },
-          { label: 'Address Details', key: 'address', type: 'text' }
+          { label: 'Vehicle No', key: 'vehicleNo', type: 'text' },
+          { label: 'Driver Mobile', key: 'phone', type: 'text' },
+          { label: 'E-Way Bill No', key: 'ewayBillNo', type: 'text' },
+          { label: 'Transport Name', key: 'name', type: 'text' },
+          { label: 'Station', key: 'station', type: 'text' },
+          { label: 'GR/RR No.', key: 'grRrNo', type: 'text' }
         ];
         break;
       case 'master_hsn':
@@ -788,301 +819,408 @@ export default function Dashboard({
         return null;
     }
 
+    // Per-tab accent palette — subtle, professional, not gimmicky
+    const tabAccent: Record<string, {
+      topBar: string;
+      iconBg: string;
+      iconBgDark: string;
+      iconColor: string;
+      iconColorDark: string;
+      badgeBg: string;
+      badgeText: string;
+      theadBg: string;
+      theadBgDark: string;
+      avatarBg: string;
+      avatarBgDark: string;
+      avatarIcon: string;
+      avatarIconDark: string;
+    }> = {
+      master_vendor: {
+        topBar:        'bg-indigo-500',
+        iconBg:        'bg-indigo-600',
+        iconBgDark:    'dark:bg-indigo-700',
+        iconColor:     'text-indigo-50',
+        iconColorDark: 'dark:text-indigo-100',
+        badgeBg:       'bg-indigo-50 border-indigo-100 dark:bg-indigo-950/40 dark:border-indigo-900/40',
+        badgeText:     'text-indigo-600 dark:text-indigo-400',
+        theadBg:       'bg-indigo-50/40 dark:bg-indigo-950/20',
+        theadBgDark:   '',
+        avatarBg:      'bg-indigo-50 border-indigo-100/70',
+        avatarBgDark:  'dark:bg-indigo-950/30 dark:border-indigo-900/40',
+        avatarIcon:    'text-indigo-500',
+        avatarIconDark:'dark:text-indigo-400',
+      },
+      master_transport: {
+        topBar:        'bg-teal-500',
+        iconBg:        'bg-teal-600',
+        iconBgDark:    'dark:bg-teal-700',
+        iconColor:     'text-teal-50',
+        iconColorDark: 'dark:text-teal-100',
+        badgeBg:       'bg-teal-50 border-teal-100 dark:bg-teal-950/40 dark:border-teal-900/40',
+        badgeText:     'text-teal-600 dark:text-teal-400',
+        theadBg:       'bg-teal-50/40 dark:bg-teal-950/20',
+        theadBgDark:   '',
+        avatarBg:      'bg-teal-50 border-teal-100/70',
+        avatarBgDark:  'dark:bg-teal-950/30 dark:border-teal-900/40',
+        avatarIcon:    'text-teal-500',
+        avatarIconDark:'dark:text-teal-400',
+      },
+      master_hsn: {
+        topBar:        'bg-amber-400',
+        iconBg:        'bg-amber-500',
+        iconBgDark:    'dark:bg-amber-600',
+        iconColor:     'text-amber-50',
+        iconColorDark: 'dark:text-amber-100',
+        badgeBg:       'bg-amber-50 border-amber-100 dark:bg-amber-950/40 dark:border-amber-900/40',
+        badgeText:     'text-amber-600 dark:text-amber-400',
+        theadBg:       'bg-amber-50/40 dark:bg-amber-950/20',
+        theadBgDark:   '',
+        avatarBg:      'bg-amber-50 border-amber-100/70',
+        avatarBgDark:  'dark:bg-amber-950/30 dark:border-amber-900/40',
+        avatarIcon:    'text-amber-500',
+        avatarIconDark:'dark:text-amber-400',
+      },
+      catalog_material: {
+        topBar:        'bg-rose-400',
+        iconBg:        'bg-rose-500',
+        iconBgDark:    'dark:bg-rose-600',
+        iconColor:     'text-rose-50',
+        iconColorDark: 'dark:text-rose-100',
+        badgeBg:       'bg-rose-50 border-rose-100 dark:bg-rose-950/40 dark:border-rose-900/40',
+        badgeText:     'text-rose-600 dark:text-rose-400',
+        theadBg:       'bg-rose-50/40 dark:bg-rose-950/20',
+        theadBgDark:   '',
+        avatarBg:      'bg-rose-50 border-rose-100/70',
+        avatarBgDark:  'dark:bg-rose-950/30 dark:border-rose-900/40',
+        avatarIcon:    'text-rose-500',
+        avatarIconDark:'dark:text-rose-400',
+      },
+      catalog_category: {
+        topBar:        'bg-violet-400',
+        iconBg:        'bg-violet-500',
+        iconBgDark:    'dark:bg-violet-700',
+        iconColor:     'text-violet-50',
+        iconColorDark: 'dark:text-violet-100',
+        badgeBg:       'bg-violet-50 border-violet-100 dark:bg-violet-950/40 dark:border-violet-900/40',
+        badgeText:     'text-violet-600 dark:text-violet-400',
+        theadBg:       'bg-violet-50/40 dark:bg-violet-950/20',
+        theadBgDark:   '',
+        avatarBg:      'bg-violet-50 border-violet-100/70',
+        avatarBgDark:  'dark:bg-violet-950/30 dark:border-violet-900/40',
+        avatarIcon:    'text-violet-500',
+        avatarIconDark:'dark:text-violet-400',
+      },
+    };
+    const accent = tabAccent[activeTab] || null;
+
     const filteredList = list.filter(item => {
       const searchStr = searchTerm.toLowerCase();
       return Object.values(item).some(val => String(val).toLowerCase().includes(searchStr));
     });
 
+    const CLIENT_PAGE_SIZE = 8;
+    const totalPages = Math.max(1, Math.ceil(filteredList.length / CLIENT_PAGE_SIZE));
+    const safePage = Math.min(clientPage, totalPages - 1);
+    const pagedList = filteredList.slice(safePage * CLIENT_PAGE_SIZE, (safePage + 1) * CLIENT_PAGE_SIZE);
+
     return (
-      <div className="space-y-4 text-sans animate-in fade-in duration-205">
-        
-        {/* Header toolbar banner */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-4 rounded-3xl shadow-xs">
-          <div>
-            <h2 className="text-sm font-extrabold text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-1.5">
-              <span>🗄️ {title}</span>
-            </h2>
-            <span className="text-[10px] text-slate-400 block mt-0.5">{description}</span>
-          </div>
-          
-          <div className="flex gap-2 self-start sm:self-center">
-            <button
-              onClick={() => {
-                setEditingMasterItem({ id: 'm_item_' + Date.now() });
-                setIsMasterModalOpen(true);
-              }}
-              className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-[10px] font-extrabold tracking-wide flex items-center gap-1 cursor-pointer shadow-md shadow-sky-950/10"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Registry Record</span>
-            </button>
-            {(activeTab === 'master_vendor' || activeTab === 'master_transport' || activeTab === 'master_hsn' || activeTab === 'catalog_material' || activeTab === 'catalog_category') && (
-              <>
-                <button
-                  onClick={() => {
-                    let headers: string[] = [];
-                    let filename = '';
-                    let sampleRow: string[] = [];
-                    
-                    if (activeTab === 'master_vendor') {
-                      headers = ['Client Name', 'Company Name', 'Category / Tag', 'Email Address', 'Phone Number', 'Billing Address'];
-                      sampleRow = ['John Doe', 'Acme Corp', 'VIP Client', 'john@acme.com', '+1 555-0199', '123 Business Rd, New York'];
-                      filename = 'client_database_template.csv';
-                    } else if (activeTab === 'master_transport') {
-                      headers = ['Carrier Name', 'GSTIN / UIN', 'PAN', 'Phone Number', 'Email Address', 'State', 'Country', 'Address Details'];
-                      sampleRow = ['Safe Express Logistics', '07AAAAS0000A1Z1', 'AAAAS0000A', '+91 9888877777', 'info@safeexpress.com', 'Delhi', 'India', 'Okhla Phase 1, New Delhi'];
-                      filename = 'transport_database_template.csv';
-                    } else if (activeTab === 'master_hsn') {
-                      headers = ['HSN/SAC Code', 'Description', 'Tax Rate (%)'];
-                      sampleRow = ['998311', 'Management Consulting Services', '18'];
-                      filename = 'hsn_registry_template.csv';
-                    } else if (activeTab === 'catalog_material') {
-                      headers = ['Item Name', 'Standard Rate / Unit Price', 'HSN/SAC Code', 'Unit of Measure (UOM)', 'Category'];
-                      sampleRow = ['Premium Advisory Service', '150', '998311', 'hour', 'Consulting'];
-                      filename = 'material_catalog_template.csv';
-                    } else if (activeTab === 'catalog_category') {
-                      headers = ['Category Name', 'Description'];
-                      sampleRow = ['Consulting', 'Advisory and business optimization services'];
-                      filename = 'product_category_template.csv';
-                    }
+      <div className="space-y-5 text-sans animate-in fade-in duration-205">
 
-                    const csvContent = [
-                      headers.join(','),
-                      sampleRow.map(v => `"${v.replace(/"/g, '""')}"`).join(',')
-                    ].join('\n');
+        {/* ── Header Banner ── */}
+        <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 6px rgba(110,96,80,0.07)' }}>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-5 md:p-6">
+            {/* Left: Icon + title + description */}
+            <div className="flex items-start gap-4">
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${accent ? `${accent.iconBg} ${accent.iconBgDark}` : 'bg-[#0f172a]'}`} style={{ boxShadow: accent ? '0 3px 10px rgba(0,0,0,0.18)' : '0 3px 10px rgba(110,96,80,0.32)' }}>
+                <Database className={`w-5 h-5 ${accent ? `${accent.iconColor} ${accent.iconColorDark}` : 'text-[#F0E8DC]'}`} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h2 className="text-xl font-black text-[#3D2C1E] dark:text-white uppercase tracking-tight leading-none">
+                    {title}
+                  </h2>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${accent ? `${accent.badgeBg} ${accent.badgeText}` : 'bg-[#F0E8DC] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 border-[#e2e8f0]/70 dark:border-zinc-700'}`}>
+                    {list.length} {list.length === 1 ? 'Record' : 'Records'}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs text-[#64748b]/75 dark:text-zinc-500 max-w-md leading-relaxed">
+                  {description}
+                </p>
+              </div>
+            </div>
 
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement('a');
-                    const url = URL.createObjectURL(blob);
-                    link.setAttribute('href', url);
-                    link.setAttribute('download', filename);
-                    link.style.visibility = 'hidden';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
-                  className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-705 dark:text-slate-300 rounded-xl text-[10px] font-extrabold tracking-wide flex items-center gap-1 cursor-pointer border border-slate-200 dark:border-slate-700 shadow-xs"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download Template</span>
-                </button>
-                <button
-                  onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = '.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel';
-                  input.onchange = (e: any) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (evt) => {
-                        try {
-                          const data = evt.target?.result;
-                          const workbook = XLSX.read(data, { type: 'binary' });
-                          const firstSheetName = workbook.SheetNames[0];
-                          const worksheet = workbook.Sheets[firstSheetName];
-                          const parsedData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                          
-                          if (parsedData.length === 0) {
-                            alert('No valid items found in file.');
-                            return;
-                          }
+            {/* Right: Action buttons */}
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {(activeTab === 'master_vendor' || activeTab === 'master_transport' || activeTab === 'master_hsn' || activeTab === 'catalog_material' || activeTab === 'catalog_category') && (
+                <>
+                  {/* Download Template */}
+                  <button
+                    onClick={() => {
+                      let headers: string[] = [];
+                      let filename = '';
+                      let sampleRow: string[] = [];
+                      if (activeTab === 'master_vendor') {
+                        headers = ['Client Name', 'Company Name', 'Category / Tag', 'Email Address', 'Phone Number', 'Billing Address'];
+                        sampleRow = ['John Doe', 'Acme Corp', 'VIP Client', 'john@acme.com', '+1 555-0199', '123 Business Rd, New York'];
+                        filename = 'client_database_template.csv';
+                      } else if (activeTab === 'master_transport') {
+                        headers = ['Carrier Name', 'GSTIN / UIN', 'PAN', 'Phone Number', 'Email Address', 'State', 'Country', 'Address Details'];
+                        sampleRow = ['Safe Express Logistics', '07AAAAS0000A1Z1', 'AAAAS0000A', '+91 9888877777', 'info@safeexpress.com', 'Delhi', 'India', 'Okhla Phase 1, New Delhi'];
+                        filename = 'transport_database_template.csv';
+                      } else if (activeTab === 'master_hsn') {
+                        headers = ['HSN/SAC Code', 'Description', 'Tax Rate (%)'];
+                        sampleRow = ['998311', 'Management Consulting Services', '18'];
+                        filename = 'hsn_registry_template.csv';
+                      } else if (activeTab === 'catalog_material') {
+                        headers = ['Item Name', 'Standard Rate / Unit Price', 'HSN/SAC Code', 'Unit of Measure (UOM)', 'Category'];
+                        sampleRow = ['Premium Advisory Service', '150', '998311', 'hour', 'Consulting'];
+                        filename = 'material_catalog_template.csv';
+                      } else if (activeTab === 'catalog_category') {
+                        headers = ['Category Name', 'Description'];
+                        sampleRow = ['Consulting', 'Advisory and business optimization services'];
+                        filename = 'product_category_template.csv';
+                      }
+                      const csvContent = [headers.join(','), sampleRow.map(v => `"${v.replace(/"/g, '""')}"`).join(',')].join('\n');
+                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                      const link = document.createElement('a');
+                      const url = URL.createObjectURL(blob);
+                      link.setAttribute('href', url);
+                      link.setAttribute('download', filename);
+                      link.style.visibility = 'hidden';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-[#F0E8DC] hover:bg-[#E8DDD0] dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[#0f172a] dark:text-zinc-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer border border-[#e2e8f0]/70 dark:border-zinc-700 hover:-translate-y-px active:scale-[0.98]"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Template</span>
+                  </button>
 
-                          // First row contains the headers
-                          const headers = parsedData[0].map((h: any) => String(h || '').trim().replace(/^"|"$/g, ''));
-                          const rows = parsedData.slice(1);
-
-                          const finalItems = rows.filter(r => r && r.length > 0).map((row, index) => {
-                            const rowData: any = {};
-                            headers.forEach((header: string, headerIdx: number) => {
-                              if (header) {
-                                rowData[header] = row[headerIdx] !== undefined ? row[headerIdx] : '';
-                              }
-                            });
-
-                            const id = `bulk_${activeTab}_${Date.now()}_${index}`;
-                            if (activeTab === 'master_vendor') {
-                              return {
-                                id,
-                                name: rowData.name || rowData['Client Name'] || rowData['name'] || 'Unnamed Client',
-                                company: rowData.company || rowData['Company Name'] || rowData['company'] || '',
-                                category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || rowData['category'] || '',
-                                email: rowData.email || rowData['Email Address'] || rowData['email'] || '',
-                                phone: rowData.phone || rowData['Phone Number'] || rowData['phone'] || '',
-                                address: rowData.address || rowData['Billing Address'] || rowData['address'] || ''
-                              };
-                            } else if (activeTab === 'master_transport') {
-                              return {
-                                id,
-                                name: rowData.name || rowData['Carrier Name'] || rowData['name'] || 'Unnamed Carrier',
-                                gstin: rowData.gstin || rowData['GSTIN / UIN'] || rowData['gstin'] || '',
-                                pan: rowData.pan || rowData['PAN'] || rowData['pan'] || '',
-                                phone: rowData.phone || rowData['Phone Number'] || rowData['phone'] || '',
-                                email: rowData.email || rowData['Email Address'] || rowData['email'] || '',
-                                state: rowData.state || rowData['State'] || rowData['state'] || '',
-                                country: rowData.country || rowData['Country'] || rowData['country'] || '',
-                                address: rowData.address || rowData['Address Details'] || rowData['address'] || ''
-                              };
-                            } else if (activeTab === 'master_hsn') {
-                              return {
-                                id,
-                                code: rowData.code || rowData['HSN/SAC Code'] || rowData['code'] || '000000',
-                                description: rowData.description || rowData['Description'] || rowData['description'] || '',
-                                gstRate: Number(rowData.gstRate || rowData['Tax Rate (%)'] || rowData['GST Rate'] || rowData['gstRate'] || 18)
-                              };
-                            } else if (activeTab === 'catalog_material') {
-                              return {
-                                id,
-                                name: rowData.name || rowData['Item Name'] || rowData['Material Name'] || rowData['name'] || 'Unnamed Material',
-                                rate: Number(rowData.rate || rowData['Standard Rate / Unit Price'] || rowData['Standard Rate'] || rowData['rate'] || 0),
-                                hsn: rowData.hsn || rowData['HSN/SAC Code'] || rowData['HSN/SAC Reference'] || rowData['hsn'] || '',
-                                uom: rowData.uom || rowData['Unit of Measure (UOM)'] || rowData['UOM'] || rowData['uom'] || 'pcs',
-                                category: rowData.category || rowData['Category'] || rowData['category'] || ''
-                              };
-                            } else if (activeTab === 'catalog_category') {
-                              return {
-                                id,
-                                name: rowData.name || rowData['Category Name'] || rowData['name'] || 'Unnamed Category',
-                                description: rowData.description || rowData['Description'] || rowData['Scope Description'] || rowData['description'] || ''
-                              };
-                            }
-                            return null;
-                          }).filter(Boolean);
-
-                          if (finalItems.length === 0) {
-                            alert('No valid items found in file.');
-                            return;
-                          }
-
-                          let currentList: any[] = [];
-                          let storageKey = '';
-                          let setterFn: any = null;
-
-                          if (activeTab === 'master_vendor') {
-                            currentList = vendors;
-                            storageKey = 'makbills_masters_vendors';
-                            setterFn = setVendors;
-                          } else if (activeTab === 'master_transport') {
-                            currentList = transports;
-                            storageKey = 'makbills_masters_transports';
-                            setterFn = setTransports;
-                          } else if (activeTab === 'master_hsn') {
-                            currentList = hsnCodes;
-                            storageKey = 'makbills_masters_hsn';
-                            setterFn = setHsnCodes;
-                          } else if (activeTab === 'catalog_material') {
-                            currentList = materials;
-                            storageKey = 'makbills_masters_materials';
-                            setterFn = setMaterials;
-                          } else if (activeTab === 'catalog_category') {
-                            currentList = categories;
-                            storageKey = 'makbills_masters_categories';
-                            setterFn = setCategories;
-                          }
-
-                          if (setterFn) {
-                            const updatedList = [...finalItems, ...currentList];
-                            setterFn(updatedList);
-                            localStorage.setItem(storageKey, JSON.stringify(updatedList));
-                            alert(`Successfully uploaded ${finalItems.length} items!`);
-                          }
-                        } catch (err: any) {
-                          alert('Error parsing file: ' + err.message);
+                  {/* Bulk Upload */}
+                  <button
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = '.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel';
+                      input.onchange = (e: any) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (evt) => {
+                            try {
+                              const data = evt.target?.result;
+                              const workbook = XLSX.read(data, { type: 'binary' });
+                              const firstSheetName = workbook.SheetNames[0];
+                              const worksheet = workbook.Sheets[firstSheetName];
+                              const parsedData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                              if (parsedData.length === 0) { alert('No valid items found in file.'); return; }
+                              const headers = parsedData[0].map((h: any) => String(h || '').trim().replace(/^"|"$/g, ''));
+                              const rows = parsedData.slice(1);
+                              const finalItems = rows.filter(r => r && r.length > 0).map((row, index) => {
+                                const rowData: any = {};
+                                headers.forEach((header: string, headerIdx: number) => { if (header) rowData[header] = row[headerIdx] !== undefined ? row[headerIdx] : ''; });
+                                const id = `bulk_${activeTab}_${Date.now()}_${index}`;
+                                if (activeTab === 'master_vendor') return { id, name: rowData.name || rowData['Client Name'] || 'Unnamed Client', company: rowData.company || rowData['Company Name'] || '', category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || '', email: rowData.email || rowData['Email Address'] || '', phone: rowData.phone || rowData['Phone Number'] || '', address: rowData.address || rowData['Billing Address'] || '' };
+                                if (activeTab === 'master_transport') return { id, name: rowData.name || rowData['Transport Name'] || 'Unnamed Carrier', phone: rowData.phone || rowData['Driver Mobile'] || '', vehicleNo: rowData.vehicleNo || rowData['Vehicle No'] || '', ewayBillNo: rowData.ewayBillNo || rowData['E-Way Bill No'] || '', station: rowData.station || rowData['Station'] || '', grRrNo: rowData.grRrNo || rowData['GR/RR No.'] || '' };
+                                if (activeTab === 'master_hsn') return { id, code: rowData.code || rowData['HSN/SAC Code'] || '000000', description: rowData.description || rowData['Description'] || '', gstRate: Number(rowData.gstRate || rowData['Tax Rate (%)'] || 18) };
+                                if (activeTab === 'catalog_material') return { id, name: rowData.name || rowData['Item Name'] || 'Unnamed Material', rate: Number(rowData.rate || rowData['Standard Rate / Unit Price'] || 0), hsn: rowData.hsn || rowData['HSN/SAC Code'] || '', uom: rowData.uom || rowData['Unit of Measure (UOM)'] || 'pcs', category: rowData.category || rowData['Category'] || '' };
+                                if (activeTab === 'catalog_category') return { id, name: rowData.name || rowData['Category Name'] || 'Unnamed Category', description: rowData.description || rowData['Description'] || '' };
+                                return null;
+                              }).filter(Boolean);
+                              if (finalItems.length === 0) { alert('No valid items found in file.'); return; }
+                              let currentList: any[] = [], storageKey = '', setterFn: any = null;
+                              if (activeTab === 'master_vendor') { currentList = vendors; storageKey = 'makbills_masters_vendors'; setterFn = setVendors; }
+                              else if (activeTab === 'master_transport') { currentList = transports; storageKey = 'makbills_masters_transports'; setterFn = setTransports; }
+                              else if (activeTab === 'master_hsn') { currentList = hsnCodes; storageKey = 'makbills_masters_hsn'; setterFn = setHsnCodes; }
+                              else if (activeTab === 'catalog_material') { currentList = materials; storageKey = 'makbills_masters_materials'; setterFn = setMaterials; }
+                              else if (activeTab === 'catalog_category') { currentList = categories; storageKey = 'makbills_masters_categories'; setterFn = setCategories; }
+                              if (setterFn) { const updatedList = [...finalItems, ...currentList]; setterFn(updatedList); localStorage.setItem(storageKey, JSON.stringify(updatedList)); alert(`Successfully uploaded ${finalItems.length} items!`); }
+                            } catch (err: any) { alert('Error parsing file: ' + err.message); }
+                          };
+                          reader.readAsBinaryString(file);
                         }
                       };
-                      reader.readAsBinaryString(file);
-                    }
-                  };
-                  input.click();
+                      input.click();
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-[#F0E8DC] hover:bg-[#E8DDD0] dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[#0f172a] dark:text-zinc-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer border border-[#e2e8f0]/70 dark:border-zinc-700 hover:-translate-y-px active:scale-[0.98]"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Bulk Upload</span>
+                  </button>
+                </>
+              )}
+
+              {/* Add Registry Record — always visible */}
+              <button
+                onClick={() => {
+                  setEditingMasterItem({ id: 'm_item_' + Date.now() });
+                  setIsMasterModalOpen(true);
                 }}
-                className="px-3.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-[10px] font-extrabold tracking-wide flex items-center gap-1 cursor-pointer shadow-md"
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#3D2C1E] hover:bg-[#5C5043] dark:bg-[#0f172a] dark:hover:bg-[#5C5043] text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer hover:-translate-y-px active:scale-[0.98]"
+                style={{ boxShadow: '0 3px 10px rgba(61,44,30,0.30)' }}
               >
-                <Upload className="w-3.5 h-3.5" />
-                <span>Bulk Upload</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Registry Record</span>
               </button>
-            </>
-          )}
+            </div>
           </div>
         </div>
 
-        {/* Live Filter bar */}
+        {/* ── Search Bar ── */}
         <div className="relative">
+          <Search className="w-4 h-4 text-[#64748b]/60 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
-            placeholder={`Search through ${list.length} directories live...`}
+            placeholder={`Search through ${list.length} ${list.length === 1 ? 'directory' : 'directories'} live...`}
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3.5 py-2 pl-9 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl text-[11px] text-slate-700 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500/25 transition-all shadow-2xs"
+            onChange={(e) => { setSearchTerm(e.target.value); setClientPage(0); }}
+            className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/90 dark:border-zinc-800 rounded-2xl text-sm text-[#0f172a] dark:text-zinc-200 placeholder-[#64748b]/45 focus:outline-none focus:border-[#64748b] dark:focus:border-zinc-600 transition-all"
+            style={{ boxShadow: '0 1px 4px rgba(110,96,80,0.06), inset 0 1px 3px rgba(110,96,80,0.04)' }}
           />
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
         </div>
 
-        {/* Dynamic Table Card display */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/65 rounded-3xl overflow-hidden shadow-xs">
+        {/* ── Table Card ── */}
+        <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 6px rgba(110,96,80,0.07)' }}>
           {filteredList.length === 0 ? (
-            <div className="p-12 text-center">
-              <Database className="w-8 h-8 text-slate-300 mx-auto mb-2 animate-pulse" />
-              <p className="text-xs font-medium text-slate-400">No synchronized registry records matching search query</p>
+            <div className="py-16 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-[#F0E8DC] dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                <Database className="w-5 h-5 text-[#C6A87D] animate-pulse" />
+              </div>
+              <p className="text-xs font-semibold text-[#64748b]/85 dark:text-zinc-500">No synchronized registry records matching search query</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-950/45 border-b border-slate-100 dark:border-slate-800">
-                    {columns.map((col, idx) => (
-                      <th key={idx} className="p-3 text-[9px] uppercase font-extrabold tracking-wider text-slate-400">{col.header}</th>
-                    ))}
-                    <th className="p-3 text-[9px] uppercase font-extrabold tracking-wider text-slate-400 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
-                  {filteredList.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/20 transition-colors">
-                      {columns.map((col, idx2) => (
-                        <td key={idx2} className="p-3 text-[11px] font-medium text-slate-700 dark:text-slate-200">
-                          {col.key === 'rate' ? `${currencySymbol}${parseFloat(item[col.key] || 0).toLocaleString()}` : String(item[col.key] || '')}
-                        </td>
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  {/* Table Head */}
+                  <thead>
+                    <tr className={`border-b border-[#e2e8f0]/70 dark:border-zinc-800 ${accent ? `${accent.theadBg}` : 'bg-[#FDFAF7] dark:bg-zinc-950/60'}`}>
+                      {columns.map((col, idx) => (
+                        <th key={idx} className="px-4 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#64748b]/75 dark:text-zinc-500 whitespace-nowrap">
+                          {col.header}
+                        </th>
                       ))}
-                      <td className="p-3 text-right">
-                        <div className="flex justify-end gap-1.5">
-                          <button
-                            onClick={() => {
-                              setEditingMasterItem(item);
-                              setIsMasterModalOpen(true);
-                            }}
-                            className="p-1.5 hover:bg-sky-50 dark:hover:bg-sky-955/35 text-sky-600 dark:text-sky-400 rounded-lg transition-colors cursor-pointer"
-                            aria-label="Edit record"
-                          >
-                            <PenTool className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteMasterItem(item.id)}
-                            className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-955/35 text-rose-500 rounded-lg transition-colors cursor-pointer"
-                            aria-label="Delete record"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
+                      <th className="px-4 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#64748b]/75 dark:text-zinc-500 text-right">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+
+                  {/* Table Body */}
+                  <tbody className="divide-y divide-[#e2e8f0]/50 dark:divide-zinc-800/60">
+                    {pagedList.map((item, rowIdx) => (
+                      <tr
+                        key={item.id}
+                        className="group hover:bg-[#FDFAF5]/80 dark:hover:bg-zinc-800/40 transition-colors duration-100"
+                      >
+                        {columns.map((col, idx2) => {
+                          const cellVal = item[col.key];
+                          const isFirstCol = idx2 === 0;
+
+                          return (
+                            <td key={idx2} className="px-4 py-3.5">
+                              {isFirstCol ? (
+                                <div className="flex items-center gap-3">
+                                  {/* Avatar — per-tab accent color */}
+                                  <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#F0E8DC] border-[#e2e8f0]/60 dark:bg-zinc-800 dark:border-zinc-700'}`}>
+                                    {activeTab === 'master_vendor' && <User className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                                    {activeTab === 'master_transport' && <Truck className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                                    {activeTab === 'master_hsn' && <FileSpreadsheet className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                                    {activeTab === 'catalog_material' && <Wrench className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                                    {activeTab === 'catalog_category' && <Tag className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                                  </div>
+                                  <span className="text-xs font-extrabold uppercase tracking-tight text-[#3D2C1E] dark:text-white">
+                                    {String(cellVal || '')}
+                                  </span>
+                                </div>
+                              ) : col.key === 'rate' ? (
+                                <span className="text-xs font-mono font-semibold text-[#0f172a] dark:text-zinc-200">
+                                  {currencySymbol}{parseFloat(cellVal || 0).toLocaleString()}
+                                </span>
+                              ) : col.key === 'category' ? (
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${getCategoryBadgeStyle(cellVal)}`}>
+                                  {cellVal || 'General'}
+                                </span>
+                              ) : col.key === 'email' ? (
+                                <span className="text-[11px] text-sky-600 dark:text-sky-400 font-medium font-mono lowercase">
+                                  {cellVal || '—'}
+                                </span>
+                              ) : col.key === 'phone' ? (
+                                <span className="text-[11px] text-[#64748b]/90 dark:text-zinc-400 font-mono">
+                                  {cellVal || '—'}
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-[#0f172a] dark:text-zinc-300 font-medium">
+                                  {String(cellVal || '—')}
+                                </span>
+                              )}
+                            </td>
+                          );
+                        })}
+
+                        {/* Actions */}
+                        <td className="px-4 py-3.5">
+                          <div className="flex justify-end items-center gap-0.5">
+                            <button
+                              onClick={() => { setEditingMasterItem(item); setIsMasterModalOpen(true); }}
+                              className="p-2 text-[#64748b]/70 hover:text-[#0f172a] dark:text-zinc-500 dark:hover:text-zinc-200 hover:bg-[#F0E8DC] dark:hover:bg-zinc-800 rounded-lg transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+                              aria-label="Edit record"
+                            >
+                              <PenTool className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMasterItem(item.id)}
+                              className="p-2 text-rose-400/70 hover:text-rose-500 dark:text-rose-500/60 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+                              aria-label="Delete record"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Strip */}
+              <div className="flex items-center justify-between px-4 py-3 border-t border-[#e2e8f0]/40 dark:border-zinc-800 bg-[#FDFAF7]/60 dark:bg-zinc-950/30">
+                <span className="text-[10px] text-[#64748b]/75 dark:text-zinc-500 font-medium">
+                  Showing {Math.min(safePage * CLIENT_PAGE_SIZE + 1, filteredList.length)}–{Math.min((safePage + 1) * CLIENT_PAGE_SIZE, filteredList.length)} of {filteredList.length} {activeTab === 'master_vendor' ? 'client' : activeTab === 'master_transport' ? 'transport' : 'registry'} records
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setClientPage(p => Math.max(0, p - 1))}
+                    disabled={safePage === 0}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:bg-[#F0E8DC] dark:hover:bg-zinc-800 disabled:opacity-35 disabled:cursor-not-allowed transition-all cursor-pointer text-xs"
+                    aria-label="Previous page"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    onClick={() => setClientPage(p => Math.min(totalPages - 1, p + 1))}
+                    disabled={safePage >= totalPages - 1}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:bg-[#F0E8DC] dark:hover:bg-zinc-800 disabled:opacity-35 disabled:cursor-not-allowed transition-all cursor-pointer text-xs"
+                    aria-label="Next page"
+                  >
+                    ›
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
 
-        {/* Master Registry Form overlay Dialog Modal */}
+
+        {/* ── Master Registry Form Modal ── */}
         {isMasterModalOpen && editingMasterItem && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/45 backdrop-blur-3xs">
             <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
               <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="text-xs font-extrabold text-slate-800 dark:text-white uppercase tracking-tight">Record Editor</h3>
                 <button
-                  onClick={() => {
-                    setIsMasterModalOpen(false);
-                    setEditingMasterItem(null);
-                  }}
+                  onClick={() => { setIsMasterModalOpen(false); setEditingMasterItem(null); }}
                   className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 rounded-full transition-colors cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -1090,10 +1228,7 @@ export default function Dashboard({
               </div>
 
               <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSaveMasterItem(editingMasterItem);
-                }}
+                onSubmit={(e) => { e.preventDefault(); handleSaveMasterItem(editingMasterItem); }}
                 className="space-y-3 text-left"
               >
                 {fields.map((f, idx3) => (
@@ -1103,7 +1238,7 @@ export default function Dashboard({
                       <select
                         value={editingMasterItem[f.key] || ''}
                         onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: e.target.value })}
-                        className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
+                        className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none"
                         required
                       >
                         <option value="">Select type</option>
@@ -1116,27 +1251,23 @@ export default function Dashboard({
                         type={f.type}
                         value={editingMasterItem[f.key] || ''}
                         onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: f.type === 'number' ? parseFloat(e.target.value) : e.target.value })}
-                        className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
+                        className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none"
                         required
                       />
                     )}
                   </div>
                 ))}
-
                 <div className="pt-2 flex justify-end gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsMasterModalOpen(false);
-                      setEditingMasterItem(null);
-                    }}
+                    onClick={() => { setIsMasterModalOpen(false); setEditingMasterItem(null); }}
                     className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-500 rounded-lg text-[9px] font-bold cursor-pointer transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-[9px] font-bold cursor-pointer transition-all shadow-md shadow-sky-950/10"
+                    className="px-4 py-1.5 bg-[#0f172a] hover:bg-[#5C5043] text-white rounded-lg text-[9px] font-bold cursor-pointer transition-all shadow-md shadow-[#0f172a]/20"
                   >
                     Commit Record
                   </button>
@@ -1436,6 +1567,7 @@ export default function Dashboard({
 
   const [isClientEditorOpen, setIsClientEditorOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<ClientProfile | null>(null);
+  const [clientPage, setClientPage] = useState(0);
 
   useEffect(() => {
     if (activePreviewInvoice) {
@@ -1484,6 +1616,9 @@ export default function Dashboard({
   const totalOutstanding = invoices
     .filter(inv => inv.status === 'pending')
     .reduce((sum, inv) => sum + inv.grandTotal, 0);
+
+  const totalTax = invoices
+    .reduce((sum, inv) => sum + (inv.taxTotal || 0), 0);
 
   const totalDraft = invoices
     .filter(inv => inv.status === 'draft')
@@ -1799,6 +1934,9 @@ export default function Dashboard({
     .filter(inv => inv.status === 'pending')
     .reduce((sum, inv) => sum + inv.grandTotal, 0);
 
+  const reportedTaxTotal = reportedInvoices
+    .reduce((sum, inv) => sum + (inv.taxTotal || 0), 0);
+
   const getNavbarBreadcrumbs = (tab: string) => {
     switch (tab) {
       case 'dashboard':
@@ -1825,6 +1963,10 @@ export default function Dashboard({
         return 'Master Registry / Material Catalog';
       case 'catalog_category':
         return 'Master Registry / Product Category';
+      case 'settings':
+        return 'Workspace / App Settings';
+      case 'support':
+        return 'Workspace / Help & Support';
       default:
         return 'Financial Hub / Workspace';
     }
@@ -1836,110 +1978,116 @@ export default function Dashboard({
     <div className="h-dvh w-full max-w-full overflow-hidden bg-[#FCFAF7] dark:bg-zinc-950 text-slate-800 dark:text-slate-100 transition-colors duration-200 text-sans">
       
       {/* Dynamic Main App Bar Header */}
-      <header className="sticky top-0 z-20 w-full bg-[#FCFAF7]/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-[#EBDCC8]/60 dark:border-zinc-805 px-4 py-3 flex items-center justify-between shadow-xs">
-        {/* Left Side: Mobile Menu Trigger + Company Info + Breadcrumbs */}
-        <div className="flex items-center gap-2.5">
+      <header className="sticky top-0 z-30 w-full bg-white dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-xs transition-all duration-200">
+        {/* Left Side: Logo + Mobile Menu Trigger + Breadcrumb */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => window.location.href = '/'}>
+            <img src="/logo.svg" alt="MakInvoices Logo" className="w-8 h-8 object-contain drop-shadow-sm shrink-0" />
+            <div className="hidden lg:block">
+              <span className="text-sm font-black tracking-tight text-slate-800 dark:text-white block leading-none">
+                Mak<span className="text-sky-400">Invoices</span>
+              </span>
+            </div>
+          </div>
+          <div className="w-px h-6 bg-slate-200 dark:bg-zinc-800 hidden sm:block"></div>
           <button
             onClick={() => setIsMobileDrawerOpen(true)}
             aria-label="Toggle structural sidebar menu drawer"
-            className="md:hidden p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-xl transition-all cursor-pointer border border-slate-100 dark:border-slate-800"
+            className="md:hidden p-2 -ml-2 text-slate-500 hover:text-slate-800 dark:text-white/70 dark:hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-slate-100 dark:hover:bg-white/10"
           >
-            <Menu className="w-4 h-4" />
+            <Menu className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#6E6050] text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm">
+          <div className="hidden sm:flex items-center gap-3.5">
+            <div className="w-[32px] h-[32px] rounded-full bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold text-[13px] shadow-sm">
               {profile.name ? profile.name.charAt(0).toUpperCase() : 'M'}
             </div>
-            <div className="min-w-0">
-              <h4 className="text-[11px] font-black text-[#6E6050] dark:text-white uppercase leading-tight truncate">{profile.name || 'MAKINVOICE'}</h4>
-              <span className="text-[9.5px] text-[#88765C]/85 dark:text-zinc-400 font-mono tracking-wide mt-0.5 block truncate">{profile.mobile || profile.phone || '9899728185'}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-[16px] font-bold text-slate-800 dark:text-white tracking-wide">{profile.name || 'MAKINVOICE'}</span>
+              <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-zinc-700"></div>
+              <span className="text-[14px] text-slate-500 dark:text-zinc-400 font-medium tracking-wide">{getNavbarBreadcrumbs(activeTab)}</span>
             </div>
-            <span className="text-[9px] font-black text-[#88765C]/50 uppercase tracking-widest pl-2 border-l border-[#EBDCC8]/40 hidden sm:inline ml-1">{getNavbarBreadcrumbs(activeTab)}</span>
           </div>
         </div>
 
-        {/* Right Side: Search + Notifications + Profile Avatar + Theme Toggle */}
-        <div className="flex items-center gap-3">
-          <div className="relative w-full max-w-[180px] sm:max-w-[240px] hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#88765C]/70" />
-            <input 
-              type="text" 
-              placeholder="Search insights..." 
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-full border border-[#EBDCC8] dark:border-zinc-800 bg-[#FCFAF7]/80 dark:bg-zinc-950 focus:outline-hidden text-[#6E6050] dark:text-white placeholder-[#88765C]/50"
-            />
-          </div>
-          <button className="p-1.5 bg-white dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-800 text-[#88765C] hover:text-[#6E6050] rounded-full transition-colors relative cursor-pointer hidden md:block">
-            <Bell className="w-3.5 h-3.5" />
-            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-rose-500" />
+        {/* Center: Mobile Company Name */}
+        <div className="flex sm:hidden items-center justify-center absolute left-1/2 -translate-x-1/2 pointer-events-none">
+           <span className="font-bold text-slate-800 dark:text-white tracking-wide text-[16px]">{profile.name || 'MAKINVOICE'}</span>
+        </div>
+
+        {/* Right Side: Notifications + Profile Avatar */}
+        <div className="flex items-center gap-3 sm:gap-5">
+          <button 
+            onClick={() => alert('You have no new notifications at this time.')}
+            className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 hover:text-slate-800 dark:text-white/70 dark:hover:text-white transition-colors cursor-pointer border border-transparent dark:hover:border-white/10"
+          >
+            <Bell className="w-[18px] h-[18px]" />
+            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-zinc-950" />
           </button>
           
+          <div className="w-px h-6 bg-slate-200 dark:bg-zinc-800 hidden sm:block"></div>
+
           <div className="relative" id="profile-dropdown-container">
             <button 
               onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-              className="w-8 h-8 rounded-full bg-[#6E6050] text-white flex items-center justify-center text-xs font-black tracking-wider shadow-sm cursor-pointer transition-all hover:scale-105"
+              className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 border border-transparent transition-all cursor-pointer group"
             >
-              {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'MK'}
+              <div className="w-[32px] h-[32px] rounded-full bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[12px] font-bold shadow-sm">
+                {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'MK'}
+              </div>
+              <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:text-white/50 dark:group-hover:text-white/90 hidden sm:block transition-colors" />
             </button>
 
             {isProfileDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-[#FCFAF7] dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-805 shadow-xl py-2 z-50 text-sans animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute right-0 mt-3 w-52 rounded-2xl bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 shadow-[0_8px_30px_rgba(136,118,92,0.12)] py-2 z-50 text-sans animate-in fade-in slide-in-from-top-2 duration-200">
                 <button 
                   onClick={() => {
                     setActiveTab('profile');
                     setIsProfileDropdownOpen(false);
                   }}
-                  className="w-full px-4 py-2 text-left text-xs font-bold text-[#6E6050] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                  className="w-full px-4 py-2.5 text-left text-xs font-bold text-[#0f172a] dark:text-zinc-200 hover:bg-[#f8fafc]/60 dark:hover:bg-zinc-850 transition-colors flex items-center gap-2.5 cursor-pointer"
                 >
-                  <User className="w-3.5 h-3.5 text-[#88765C]" />
-                  <span>Profile</span>
+                  <User className="w-4 h-4 text-[#64748b]" />
+                  <span>Profile Settings</span>
                 </button>
 
                 <button 
                   onClick={() => {
-                    onOpenProfile();
+                    setActiveTab('settings');
                     setIsProfileDropdownOpen(false);
                   }}
-                  className="w-full px-4 py-2 text-left text-xs font-bold text-[#6E6050] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                  className="w-full px-4 py-2.5 text-left text-xs font-bold text-[#0f172a] dark:text-zinc-200 hover:bg-[#f8fafc]/60 dark:hover:bg-zinc-850 transition-colors flex items-center gap-2.5 cursor-pointer"
                 >
-                  <Layout className="w-3.5 h-3.5 text-[#88765C]" />
-                  <span>Settings</span>
+                  <Layout className="w-4 h-4 text-[#64748b]" />
+                  <span>Preferences</span>
                 </button>
 
                 <button 
                   onClick={() => {
-                    setActiveTab('learn');
+                    setActiveTab('support');
                     setIsProfileDropdownOpen(false);
                   }}
-                  className="w-full px-4 py-2 text-left text-xs font-bold text-[#6E6050] dark:text-zinc-200 hover:bg-[#F4EBE1] dark:hover:bg-zinc-850 transition-colors flex items-center gap-2 cursor-pointer"
+                  className="w-full px-4 py-2.5 text-left text-xs font-bold text-[#0f172a] dark:text-zinc-200 hover:bg-[#f8fafc]/60 dark:hover:bg-zinc-850 transition-colors flex items-center gap-2.5 cursor-pointer"
                 >
-                  <Info className="w-3.5 h-3.5 text-[#88765C]" />
-                  <span>Support</span>
+                  <Info className="w-4 h-4 text-[#64748b]" />
+                  <span>Help & Support</span>
                 </button>
 
-                <div className="my-1 border-t border-[#EBDCC8]/50 dark:border-zinc-800" />
+                <div className="my-1.5 border-t border-[#e2e8f0]/50 dark:border-zinc-800/80" />
 
                 <button 
                   onClick={() => {
                     onLogout();
                     setIsProfileDropdownOpen(false);
                   }}
-                  className="w-full px-4 py-2 text-left text-xs font-bold text-rose-600 dark:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors flex items-center gap-2 cursor-pointer"
+                  className="w-full px-4 py-2.5 text-left text-xs font-bold text-rose-600 dark:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors flex items-center gap-2.5 cursor-pointer"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Logout</span>
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
                 </button>
               </div>
             )}
           </div>
-
-          <button 
-            onClick={toggleTheme}
-            aria-label="Toggle App brightness color modes"
-            className="p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-xl transition-colors cursor-pointer border border-slate-200/85 dark:border-slate-800 shadow-3xs"
-          >
-            {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-          </button>
         </div>
       </header>
 
@@ -1948,7 +2096,7 @@ export default function Dashboard({
         
         {/* DESKTOP BRANDING & CONTROL SIDEBAR - Visible only on md screens and larger */}
         <div className="hidden md:block relative shrink-0">
-          <aside className={`flex flex-col bg-[#FCFAF7] dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-800 rounded-3xl shadow-xs h-[calc(100vh-110px)] overflow-y-auto overflow-x-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
+          <aside className={`flex flex-col bg-white dark:bg-zinc-950 border border-[#e2e8f0]/80 dark:border-zinc-800/80 rounded-[1.75rem] shadow-[0_8px_30px_rgba(136,118,92,0.08)] h-[calc(100vh-110px)] overflow-y-auto overflow-x-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
             <div className="w-full h-full">
               {renderNavMenuContent(false)}
             </div>
@@ -1972,56 +2120,87 @@ export default function Dashboard({
 
         {/* ------------------ TAB 1: INVOICES ROUTE ------------------ */}
         {activeTab === 'invoices' && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Quick Metrics summary overview */}
-            <section className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-2.5xl border border-slate-100 dark:border-slate-850 shadow-sm">
-                <span className="text-[9px] uppercase tracking-wider text-slate-400 font-medium block">Paid Funds</span>
-                <span className="text-xs font-extrabold font-mono mt-1 text-emerald-500 block">{currencySymbol}{totalBilled.toLocaleString()}</span>
+            <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border-l-4 border-l-emerald-400 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between">
+                <div>
+                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Settled Funds</span>
+                  <span className="text-base font-black font-mono mt-1 text-emerald-600 dark:text-emerald-400 block">{currencySymbol}{totalBilled.toLocaleString()}</span>
+                </div>
+                {/* Micro Sparkline */}
+                <div className="flex items-end gap-0.5 h-6 shrink-0">
+                  <span className="w-1 bg-emerald-100 dark:bg-zinc-800 h-2 rounded-t" />
+                  <span className="w-1 bg-emerald-200 dark:bg-zinc-800 h-3 rounded-t" />
+                  <span className="w-1 bg-emerald-300 dark:bg-zinc-700 h-4 rounded-t" />
+                  <span className="w-1 bg-emerald-400 dark:bg-zinc-650 h-3 rounded-t" />
+                  <span className="w-1 bg-emerald-500 h-5 rounded-t" />
+                </div>
               </div>
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-2.5xl border border-slate-100 dark:border-slate-850 shadow-sm">
-                <span className="text-[9px] uppercase tracking-wider text-slate-400 font-medium block">Accounts Due</span>
-                <span className="text-xs font-extrabold font-mono mt-1 text-amber-500 block">{currencySymbol}{totalOutstanding.toLocaleString()}</span>
+              <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border-l-4 border-l-amber-400 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between">
+                <div>
+                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Pending Due</span>
+                  <span className="text-base font-black font-mono mt-1 text-amber-600 dark:text-amber-400 block">{currencySymbol}{totalOutstanding.toLocaleString()}</span>
+                </div>
+                {/* Micro Sparkline */}
+                <div className="flex items-end gap-0.5 h-6 shrink-0">
+                  <span className="w-1 bg-amber-100 dark:bg-zinc-800 h-4 rounded-t" />
+                  <span className="w-1 bg-amber-200 dark:bg-zinc-800 h-2 rounded-t" />
+                  <span className="w-1 bg-amber-300 dark:bg-zinc-700 h-3 rounded-t" />
+                  <span className="w-1 bg-amber-400 dark:bg-zinc-650 h-5 rounded-t" />
+                  <span className="w-1 bg-amber-500 h-3 rounded-t" />
+                </div>
               </div>
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-2.5xl border border-slate-100 dark:border-slate-850 shadow-sm">
-                <span className="text-[9px] uppercase tracking-wider text-slate-400 font-medium block">Draft Bills</span>
-                <span className="text-xs font-extrabold font-mono mt-1 text-slate-500 block">{currencySymbol}{totalDraft.toLocaleString()}</span>
+              <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border-l-4 border-l-zinc-400 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between">
+                <div>
+                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Draft Bills</span>
+                  <span className="text-base font-black font-mono mt-1 text-[#0f172a] dark:text-zinc-300 block">{currencySymbol}{totalDraft.toLocaleString()}</span>
+                </div>
+                {/* Micro Sparkline */}
+                <div className="flex items-end gap-0.5 h-6 shrink-0">
+                  <span className="w-1 bg-zinc-100 dark:bg-zinc-800 h-2 rounded-t" />
+                  <span className="w-1 bg-zinc-200 dark:bg-zinc-800 h-3 rounded-t" />
+                  <span className="w-1 bg-zinc-300 dark:bg-zinc-700 h-3 rounded-t" />
+                  <span className="w-1 bg-zinc-450 h-2 rounded-t" />
+                  <span className="w-1 bg-zinc-500 h-4 rounded-t" />
+                </div>
               </div>
             </section>
 
-            {/* Onboarding catalog presets removed to respect user request and prevent clutter */}
-
             {/* Search, Action Header and Filters */}
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-medium text-slate-800 dark:text-slate-100">My Invoice Books</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wider">Invoices Ledger</h2>
+                <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black">{filteredInvoices.length} Bills</span>
+              </div>
               <button
                 onClick={() => onOpenInvoiceEditor(null)}
-                className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer shadow-md shadow-sky-900/15"
+                className="px-4 py-1.5 bg-gradient-to-r from-[#0f172a] to-[#64748b] hover:from-[#5C5043] hover:to-[#0f172a] text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm shadow-[#64748b]/20 transition-all active:scale-95"
               >
-                <Plus className="w-4 h-4" />
-                <span>New Bill</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create Invoice</span>
               </button>
             </div>
 
             {/* Search Input and status selection filters */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-[#FCFAF7]/60 dark:bg-zinc-950/30 p-3 rounded-2xl border border-[#e2e8f0]/40 dark:border-zinc-800">
               <div className="sm:col-span-8 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#64748b]/60" />
                 <input 
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="ID, client search..."
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none shadow-sm"
+                  placeholder="Search by client or invoice number..."
+                  className="w-full pl-8 pr-3 py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 focus:border-[#64748b] dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#64748b]/45 focus:outline-none transition-colors"
                 />
               </div>
-              <div className="sm:col-span-4 flex">
+              <div className="sm:col-span-4 flex relative">
                 <select 
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as InvoiceStatus | 'all')}
-                  className="w-full px-2 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 text-xs text-slate-600 dark:text-slate-350 focus:outline-none"
+                  className="w-full pl-3 pr-7 py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]/60 cursor-pointer transition-colors"
                 >
-                  <option value="all">All States</option>
+                  <option value="all">All Statuses</option>
                   <option value="paid">Paid</option>
                   <option value="pending">Pending</option>
                   <option value="draft">Draft</option>
@@ -2033,17 +2212,17 @@ export default function Dashboard({
             {/* Invoices Array List representation */}
             <div>
               {/* MOBILE ONLY SMALL SCREENS CARDS VIEW */}
-              <div className="space-y-2 md:hidden">
+              <div className="space-y-3.5 md:hidden">
                 {filteredInvoices.length === 0 ? (
-                  <div className="p-8 bg-white dark:bg-slate-900 text-center rounded-2.5xl text-slate-400 border border-slate-100 dark:border-slate-850">
-                    <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                    No invoice books matching filters.
+                  <div className="p-12 bg-white dark:bg-zinc-900 text-center rounded-2xl text-[#64748b]/60 border border-[#e2e8f0]/60 dark:border-zinc-800">
+                    <FileText className="w-8 h-8 mx-auto mb-2 text-[#64748b]/40" />
+                    No invoice records matching criteria.
                   </div>
                 ) : (
                   filteredInvoices.map((inv) => (
                     <div
                       key={inv.id}
-                      className={`p-3 bg-white dark:bg-slate-900 border ${selectedInvoiceIds.includes(inv.id) ? 'border-sky-500 bg-sky-50/10' : 'border-slate-100 dark:border-slate-850/80'} rounded-2.5xl flex gap-3 relative shadow-xs hover:border-sky-500 transition-all cursor-pointer group`}
+                      className={`p-4 bg-white dark:bg-zinc-900 border rounded-2xl flex gap-3 relative shadow-xs hover:border-[#64748b]/40 transition-all cursor-pointer group ${selectedInvoiceIds.includes(inv.id) ? 'border-amber-400 bg-amber-50/5 dark:bg-amber-950/5' : 'border-[#e2e8f0]/60 dark:border-zinc-800'}`}
                       onClick={() => setActivePreviewInvoice(inv)}
                     >
                       <div className="flex items-center justify-center pl-1" onClick={(e) => e.stopPropagation()}>
@@ -2051,112 +2230,105 @@ export default function Dashboard({
                           type="checkbox"
                           checked={selectedInvoiceIds.includes(inv.id)}
                           onChange={(e) => handleToggleSelectInvoice(inv.id, e as any)}
-                          className="rounded text-sky-600 focus:ring-sky-500 cursor-pointer w-4 h-4 accent-sky-600"
+                          className="w-4 h-4 rounded border-[#e2e8f0] text-[#64748b] focus:ring-[#64748b] cursor-pointer"
                         />
                       </div>
-                      <div className="flex-1 flex flex-col gap-2">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-[10px] font-extrabold text-sky-600 font-mono">{inv.invoiceNumber}</span>
-                            {(inv.invoiceType || 'invoice') === 'estimate' ? (
-                              <span className="bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 text-[8px] font-extrabold px-1.5 py-0.5 rounded-full uppercase">
-                                Estimate
-                              </span>
-                            ) : (
-                              <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 text-[8px] font-extrabold px-1.5 py-0.5 rounded-full uppercase">
-                                Invoice
-                              </span>
-                            )}
-                            {inv.recurringSettings?.isRecurring && (
-                              <span className="bg-sky-100 dark:bg-sky-955 text-sky-650 dark:text-sky-305 text-[8px] font-medium px-1 py-0.5 rounded-md flex items-center gap-0.5">
-                                🔄 Repeat {inv.recurringSettings.interval}
-                              </span>
-                            )}
-                            {inv.parentInvoiceId && (
-                              <span className="bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 text-[8px] font-medium px-1 py-0.5 rounded-md">
-                                Spawned child
-                              </span>
-                            )}
+                      <div className="flex-1 flex flex-col gap-2.5">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-black text-sky-600 font-mono tracking-tight">{inv.invoiceNumber}</span>
+                              {(inv.invoiceType || 'invoice') === 'estimate' ? (
+                                <span className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                  Est
+                                </span>
+                              ) : (
+                                <span className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                  Inv
+                                </span>
+                              )}
+                              {inv.recurringSettings?.isRecurring && (
+                                <span className="bg-sky-50 dark:bg-sky-950/30 text-sky-600 border border-sky-200/40 text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                  🔄 Repeat {inv.recurringSettings.interval}
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="text-xs font-black text-[#0f172a] dark:text-white mt-1 uppercase line-clamp-1">{inv.clientName || 'Draft Profile'}</h4>
+                            <div className="flex items-center gap-1.5 mt-0.5 text-[9px] text-[#64748b]/80 font-semibold font-mono">
+                              <span>Dated {inv.date}</span>
+                              <span>•</span>
+                              <span className="text-rose-500">Due {inv.dueDate}</span>
+                            </div>
                           </div>
-                          <h4 className="text-xs font-bold text-slate-800 dark:text-white mt-1 uppercase line-clamp-1">{inv.clientName || 'Draft Profile'}</h4>
-                          <div className="flex items-center gap-1.5 mt-0.5 text-[9px] text-slate-400 font-medium">
-                            <span>Dated {inv.date}</span>
-                            <span>•</span>
-                            <span className="text-rose-500">Due {inv.dueDate}</span>
+
+                          <div className="text-right">
+                            <span className="text-xs font-black font-mono block text-[#0f172a] dark:text-white">{currencySymbol}{inv.grandTotal.toFixed(2)}</span>
+                            <span className={`inline-block px-2 mt-1 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
+                              {inv.status}
+                            </span>
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          <span className="text-xs font-extrabold font-mono block text-slate-805">{currencySymbol}{inv.grandTotal.toFixed(2)}</span>
-                          <span className={`inline-block px-2 mt-1 py-0.5 rounded-full text-[8px] font-extrabold uppercase tracking-wider ${getStatusColor(inv.status)}`}>
-                            {inv.status}
-                          </span>
+                        {/* Footer list triggers */}
+                        <div className="pt-2 border-t border-[#e2e8f0]/30 dark:border-zinc-800 flex items-center justify-between text-[10px] text-slate-400" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-2">
+                            <span className="flex items-center gap-1 text-[8px] font-mono font-bold tracking-tight text-[#64748b]/60">
+                              <span className={`w-1 h-1 rounded-full ${inv.userId === 'local' ? 'bg-amber-400' : 'bg-sky-400'}`} />
+                              {inv.userId === 'local' ? 'On-Device' : 'Cloud Backed'}
+                            </span>
+                          </div>
+
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await exportInvoicePDFAsync(inv, profile, 'save');
+                                } catch (err: any) {
+                                  alert('Failed to generate PDF: ' + (err.message || err.toString()));
+                                }
+                              }}
+                              className="px-2 py-0.5 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/20 text-sky-600 dark:text-sky-400 rounded-md text-[9px] font-bold flex items-center gap-0.5 border border-sky-200/50 cursor-pointer"
+                            >
+                              <FileDown className="w-3 h-3" /> PDF
+                            </button>
+                            <button
+                              onClick={() => handleExportMSWord(inv)}
+                              className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/20 text-blue-650 dark:text-blue-400 rounded-md text-[9px] font-bold flex items-center gap-0.5 border border-blue-200/50 cursor-pointer"
+                            >
+                              Word
+                            </button>
+                            <button
+                              onClick={() => onOpenInvoiceEditor(inv)}
+                              className="text-[#64748b] hover:text-[#0f172a] p-1 rounded hover:bg-[#FCFAF7] dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            >
+                              <PenTool className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => onDeleteInvoice(inv.id)}
+                              className="text-[#64748b]/60 hover:text-rose-500 p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-
-                      {/* Footer list triggers */}
-                      <div className="pt-2 border-t border-slate-50 dark:border-slate-800/40 flex items-center justify-between text-[10px] text-slate-400" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-2">
-                          {/* Sync Icon */}
-                          <span className="flex items-center gap-1 text-[8px] font-mono tracking-tight text-slate-400">
-                            <span className={`w-1 h-1 rounded-full ${inv.userId === 'local' ? 'bg-amber-400' : 'bg-sky-400'}`} />
-                            {inv.userId === 'local' ? 'On-Device Only' : 'Cloud Backed'}
-                          </span>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <button
-                            onClick={async () => {
-                              try {
-                                await exportInvoicePDFAsync(inv, profile, 'save');
-                              } catch (err: any) {
-                                alert('Failed to generate PDF: ' + (err.message || err.toString()));
-                              }
-                            }}
-                            className="px-2 py-0.5 bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 hover:bg-sky-100 rounded-md text-[9px] font-medium flex items-center gap-0.5 cursor-pointer"
-                          >
-                            <FileDown className="w-3 h-3" />
-                            PDF
-                          </button>
-                          <button
-                            onClick={() => handleExportMSWord(inv)}
-                            className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:blue-400 hover:bg-blue-100 rounded-md text-[9px] font-medium flex items-center gap-0.5 cursor-pointer"
-                          >
-                            Word
-                          </button>
-                          <button
-                            onClick={() => onOpenInvoiceEditor(inv)}
-                            className="text-slate-400 hover:text-sky-500 p-0.5 rounded cursor-pointer"
-                          >
-                            <PenTool className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => onDeleteInvoice(inv.id)}
-                            className="text-slate-400 hover:text-rose-500 p-0.5 rounded cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
                     </div>
                   ))
                 )}
               </div>
 
               {/* DESKTOP WORKSPACE GRID TABLE VIEW */}
-              <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-2.5xl overflow-x-auto shadow-xs">
-                <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-                  <thead className="bg-slate-50 dark:bg-slate-950 font-medium text-slate-400 text-[10px] uppercase tracking-wider text-left">
+              <div className="hidden md:block bg-white dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-xs">
+                <table className="min-w-full divide-y divide-[#e2e8f0]/40 dark:divide-zinc-800 text-xs">
+                  <thead className="bg-[#FCFAF7]/70 dark:bg-zinc-900 font-bold text-[#64748b]/80 dark:text-zinc-400 text-[9px] uppercase tracking-wider text-left">
                     <tr>
                       <th className="px-4 py-3.5 text-center w-10">
                         <input
                           type="checkbox"
                           checked={filteredInvoices.length > 0 && filteredInvoices.every(i => selectedInvoiceIds.includes(i.id))}
                           onChange={handleSelectAllFiltered}
-                          className="rounded text-sky-600 focus:ring-sky-500 cursor-pointer w-4 h-4 accent-sky-600"
-                          title="Select / Deselect all matching invoices"
+                          className="w-4 h-4 rounded border-[#e2e8f0] text-[#64748b] focus:ring-[#64748b] cursor-pointer"
+                          title="Select all invoices"
                         />
                       </th>
                       <th className="px-4 py-3.5">Invoice / Type</th>
@@ -2164,22 +2336,22 @@ export default function Dashboard({
                       <th className="px-4 py-3.5">Billing Terms / Due</th>
                       <th className="px-4 py-3.5 text-right">Sum Valuation</th>
                       <th className="px-4 py-3.5 text-center">Settlement</th>
-                      <th className="px-4 py-3.5 text-right">Instant Dispatch Actions</th>
+                      <th className="px-4 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                  <tbody className="divide-y divide-[#e2e8f0]/30 dark:divide-zinc-800/80 bg-white dark:bg-zinc-950">
                     {filteredInvoices.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-4 py-12 text-center text-slate-400 font-medium">
-                          <FileText className="w-10 h-10 mx-auto mb-2 text-slate-300" />
-                          No invoices registered on this filtered track list.
+                        <td colSpan={7} className="px-4 py-16 text-center text-[#64748b]/60 font-medium">
+                          <FileText className="w-8 h-8 mx-auto mb-2 text-[#64748b]/40" />
+                          No invoices matching selected filters.
                         </td>
                       </tr>
                     ) : (
                       filteredInvoices.map((inv) => (
                         <tr 
                           key={inv.id} 
-                          className={`hover:bg-slate-50/50 dark:hover:bg-slate-850/20 cursor-pointer transition-colors ${selectedInvoiceIds.includes(inv.id) ? 'bg-sky-100/30 dark:bg-sky-955/25' : ''}`}
+                          className={`hover:bg-[#FCFAF7]/20 dark:hover:bg-zinc-900/40 cursor-pointer transition-colors ${selectedInvoiceIds.includes(inv.id) ? 'bg-[#FCFAF7]/50 dark:bg-zinc-900/30' : ''}`}
                           onClick={() => setActivePreviewInvoice(inv)}
                         >
                           <td className="px-4 py-3.5 text-center w-10" onClick={(e) => e.stopPropagation()}>
@@ -2187,40 +2359,40 @@ export default function Dashboard({
                               type="checkbox"
                               checked={selectedInvoiceIds.includes(inv.id)}
                               onChange={(e) => handleToggleSelectInvoice(inv.id, e as any)}
-                              className="rounded text-sky-600 focus:ring-sky-500 cursor-pointer w-4 h-4 accent-sky-600"
+                              className="w-4 h-4 rounded border-[#e2e8f0] text-[#64748b] focus:ring-[#64748b] cursor-pointer"
                             />
                           </td>
                           <td className="px-4 py-3.5">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-bold font-mono text-sky-600">{inv.invoiceNumber}</span>
+                              <span className="font-extrabold font-mono text-sky-600 tracking-tight">{inv.invoiceNumber}</span>
                               {(inv.invoiceType || 'invoice') === 'estimate' ? (
-                                <span className="bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 text-[8px] font-extrabold px-1.5 py-0.5 rounded-full uppercase">Est</span>
+                                <span className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Est</span>
                               ) : (
-                                <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 text-[8px] font-extrabold px-1.5 py-0.5 rounded-full uppercase">Inv</span>
+                                <span className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Inv</span>
                               )}
                               {inv.recurringSettings?.isRecurring && (
-                                <span className="text-[10px]" title={`Auto Repeat continuous ${inv.recurringSettings.interval}`}>🔄</span>
+                                <span className="text-[10px]" title={`Auto Repeat ${inv.recurringSettings.interval}`}>🔄</span>
                               )}
                             </div>
                           </td>
                           <td className="px-4 py-3.5">
-                            <div className="font-bold text-slate-800 dark:text-white uppercase truncate max-w-[150px]">{inv.clientName || 'Draft Profile'}</div>
-                            {inv.clientEmail && <span className="text-[10px] text-slate-400 block truncate max-w-[155px] font-mono mt-0.5">{inv.clientEmail}</span>}
+                            <div className="font-black text-[#0f172a] dark:text-white uppercase truncate max-w-[150px]">{inv.clientName || 'Draft Profile'}</div>
+                            {inv.clientEmail && <span className="text-[9.5px] text-[#64748b]/80 block truncate max-w-[155px] font-mono mt-0.5">{inv.clientEmail}</span>}
                           </td>
-                          <td className="px-4 py-3.5 font-mono text-[10px] text-slate-550 dark:text-slate-400">
-                            <div>Release: {inv.date}</div>
-                            <div className="text-rose-500 font-bold mt-0.5">Settle: {inv.dueDate}</div>
+                          <td className="px-4 py-3.5 font-mono text-[10px] text-[#64748b]/80 dark:text-zinc-400">
+                            <div>Issued: {inv.date}</div>
+                            <div className="text-rose-500 font-bold mt-0.5">Due: {inv.dueDate}</div>
                           </td>
-                          <td className="px-4 py-3.5 font-bold font-mono text-slate-805 text-right">
+                          <td className="px-4 py-3.5 font-black font-mono text-[#0f172a] dark:text-white text-right text-[12px]">
                             {currencySymbol}{inv.grandTotal.toFixed(2)}
                           </td>
                           <td className="px-4 py-3.5 text-center">
-                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-[8px] font-extrabold uppercase tracking-wider ${getStatusColor(inv.status)}`}>
+                            <span className={`inline-block px-2.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
                               {inv.status}
                             </span>
                           </td>
                           <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-end gap-2">
+                            <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={async () => {
                                   try {
@@ -2229,24 +2401,24 @@ export default function Dashboard({
                                     alert('Failed to generate PDF: ' + (err.message || err.toString()));
                                   }
                                 }}
-                                className="px-2 py-1 bg-sky-50 dark:bg-sky-955 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900 rounded-md text-[9px] font-medium flex items-center gap-0.5 cursor-pointer border border-transparent"
-                                title="Download Premium PDF Bill"
+                                className="px-2 py-1 bg-sky-50 hover:bg-sky-100 dark:bg-sky-955 text-sky-600 dark:text-sky-400 rounded-md text-[9px] font-bold flex items-center gap-0.5 border border-sky-200/50 cursor-pointer"
+                                title="Download PDF"
                               >
                                 <FileDown className="w-3 h-3" />
                                 <span>PDF</span>
                               </button>
                               <button
                                 onClick={() => handleExportMSWord(inv)}
-                                className="px-2 py-1 bg-blue-50 dark:bg-blue-955 text-blue-600 dark:blue-400 hover:bg-blue-100 dark:hover:bg-sky-900 rounded-md text-[9px] font-medium flex items-center gap-0.5 cursor-pointer"
-                                title="Download Editable Document File"
+                                className="px-2 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-955 text-blue-650 dark:text-blue-400 rounded-md text-[9px] font-bold flex items-center gap-0.5 border border-blue-200/50 cursor-pointer"
+                                title="Download Word file"
                               >
                                 <FileDown className="w-3 h-3" />
                                 <span>Word</span>
                               </button>
                               <button
                                 onClick={() => onOpenInvoiceEditor(inv)}
-                                className="text-slate-400 hover:text-sky-500 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                                title="Edit invoice details"
+                                className="text-[#64748b] hover:text-[#0f172a] p-1.5 rounded-lg hover:bg-[#FCFAF7] dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                                title="Edit Details"
                               >
                                 <PenTool className="w-3.5 h-3.5" />
                               </button>
@@ -2346,314 +2518,571 @@ export default function Dashboard({
 
         {/* ------------------ TAB 2: CLIENTS ROUTE ------------------ */}
         {activeTab === 'clients' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 p-5 rounded-3xl shadow-sm">
-              <div>
-                <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Billed Clients Ledger Book</h2>
-                <span className="text-[10px] text-slate-400 font-medium tracking-wide">Add clients for rapid billing auto-fill list populate</span>
+          <div className="space-y-5 text-sans">
+            
+            {/* ── Page Header ── */}
+            <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 6px rgba(110,96,80,0.07)' }}>
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-5 md:p-6">
+                {/* Left: Icon + title + description */}
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-rose-500 dark:bg-rose-600" style={{ boxShadow: '0 3px 10px rgba(0,0,0,0.18)' }}>
+                    <Users2 className="w-5 h-5 text-rose-50 dark:text-rose-100" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h2 className="text-xl font-black text-[#3D2C1E] dark:text-white uppercase tracking-tight leading-none">
+                        Billed Clients Ledger Book
+                      </h2>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-rose-50 border-rose-100 dark:bg-rose-950/40 dark:border-rose-900/40 text-rose-600 dark:text-rose-400">
+                        {clients.length} {clients.length === 1 ? 'Record' : 'Records'}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-xs text-[#64748b]/75 dark:text-zinc-500 max-w-md leading-relaxed">
+                      Manage client profiles for rapid auto-filling during billing creation
+                    </p>
+                  </div>
+                </div>
               </div>
-              <button
-                onClick={() => handleOpenClientEditor(null)}
-                className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer shadow-md"
-              >
-                <Plus className="w-4.5 h-4.5" />
-                <span>Add Client</span>
-              </button>
             </div>
 
-            {/* Clients profiles scroll log */}
-            <div className="space-y-2.5">
-              {clients.length === 0 ? (
-                <div className="p-8 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-2.5xl text-center text-slate-400 text-xs">
-                  <Notebook className="w-8 h-8 mx-auto mb-2 text-slate-350" />
-                  Your Billed Clients Ledger is currently empty. Add profiles to automatically inject contacts on invoice selection.
-                </div>
-              ) : (
-                clients.map(c => (
+            {/* Clients grid list */}
+            {clients.length === 0 ? (
+              <div 
+                className="bg-white dark:bg-zinc-900 rounded-2xl border border-[#e2e8f0]/50 dark:border-zinc-800/80 p-12 text-center relative overflow-hidden"
+                style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.06)' }}
+              >
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e2e8f0]/50 to-transparent" />
+                <Notebook className="w-10 h-10 mx-auto mb-3 text-[#C6A87D]/70" />
+                <h3 className="text-xs font-bold text-[#0f172a] dark:text-zinc-300 uppercase tracking-wider">Your Billed Clients Ledger is Empty</h3>
+                <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
+                  Add profiles to automatically inject contacts, GSTIN numbers, and addresses instantly on invoice templates.
+                </p>
+                <button
+                  onClick={() => handleOpenClientEditor(null)}
+                  className="mt-4 px-3.5 py-1.5 border border-[#0f172a] hover:bg-[#0f172a] text-[#0f172a] hover:text-white dark:text-zinc-300 dark:border-zinc-700 dark:hover:bg-zinc-800 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer"
+                >
+                  Create First Profile
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {clients.map(c => (
                   <div
                     key={c.id}
-                    className="p-3.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-2.5xl space-y-2 shadow-xs group"
+                    className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800/80 rounded-2xl p-5 shadow-xs relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-rose-500 active:border-rose-600 dark:hover:border-rose-500 dark:active:border-rose-600 hover:-translate-y-1 group flex flex-col justify-between cursor-pointer"
+                    style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.06)' }}
                   >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="text-xs font-medium text-slate-800 dark:text-white uppercase">{c.name}</h4>
-                        {c.companyName && (
-                          <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-550 dark:text-slate-400 font-medium px-1.5 py-0.5 rounded-md mt-0.5 inline-block">
-                            🏢 {c.companyName}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleOpenClientEditor(c)}
-                          className="text-slate-400 hover:text-sky-500 p-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                        >
-                          <PenTool className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => onDeleteClient(c.id)}
-                          className="text-slate-400 hover:text-rose-500 p-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
+                    {/* card top line decoration */}
+                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-rose-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-50 dark:border-slate-800/40 text-[9px] font-medium text-slate-500 dark:text-slate-400">
-                      <div>
-                        <span className="text-slate-400 block font-normal">Contact Email</span>
-                        <span className="truncate block mt-0.5 text-slate-700 dark:text-slate-200">{c.email || 'N/A'}</span>
+                    <div>
+                      {/* Name & Company header */}
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-tight truncate max-w-[160px]">{c.name}</h4>
+                          {c.companyName && (
+                            <span 
+                              className="text-[9px] bg-[#FCFAF7] dark:bg-zinc-950 text-[#64748b] dark:text-zinc-300 border border-[#e2e8f0]/50 dark:border-zinc-800 font-extrabold px-2 py-0.5 rounded-md inline-block uppercase tracking-wider"
+                              style={{ boxShadow: '0 1px 2px rgba(110,96,80,0.04)' }}
+                            >
+                              🏢 {c.companyName}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Quick action buttons */}
+                        <div className="flex gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleOpenClientEditor(c)}
+                            className="text-[#64748b] hover:text-[#0f172a] dark:hover:text-white p-1.5 rounded-lg hover:bg-[#F9F5F0] dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Edit profile"
+                          >
+                            <PenTool className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => onDeleteClient(c.id)}
+                            className="text-zinc-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                            title="Delete profile"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-slate-400 block font-normal">Contact Number</span>
-                        <span className="block mt-0.5 text-slate-700 dark:text-slate-200">{c.phone || 'N/A'}</span>
-                      </div>
-                      <div className="col-span-2 mt-1">
-                        <span className="text-slate-400 block font-normal">Address</span>
-                        <span className="block mt-0.5 text-slate-705 dark:text-slate-300 font-medium truncate">{c.address || 'No billing address registered'}</span>
+
+                      {/* Info lines */}
+                      <div className="mt-4 space-y-3.5 pt-3.5 border-t border-[#e2e8f0]/35 dark:border-zinc-800/60">
+                        {/* Email */}
+                        <div className="flex items-start gap-2 text-[10px] text-[#64748b]/80 dark:text-zinc-400">
+                          <Mail className="w-3.5 h-3.5 text-[#C6A87D] shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <span className="text-[8px] font-black uppercase tracking-wider text-[#64748b]/50 block">Email Address</span>
+                            <span className="truncate block font-semibold text-[#0f172a] dark:text-zinc-200 mt-0.5">{c.email || 'N/A'}</span>
+                          </div>
+                        </div>
+
+                        {/* Phone */}
+                        <div className="flex items-start gap-2 text-[10px] text-[#64748b]/80 dark:text-zinc-400">
+                          <Smartphone className="w-3.5 h-3.5 text-[#C6A87D] shrink-0 mt-0.5" />
+                          <div>
+                            <span className="text-[8px] font-black uppercase tracking-wider text-[#64748b]/50 block">Contact Number</span>
+                            <span className="block font-semibold text-[#0f172a] dark:text-zinc-200 mt-0.5">{c.phone || 'N/A'}</span>
+                          </div>
+                        </div>
+
+                        {/* Address */}
+                        <div className="flex items-start gap-2 text-[10px] text-[#64748b]/80 dark:text-zinc-400">
+                          <MapPin className="w-3.5 h-3.5 text-[#C6A87D] shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <span className="text-[8px] font-black uppercase tracking-wider text-[#64748b]/50 block">Billing Address</span>
+                            <span className="block font-semibold text-[#0f172a] dark:text-zinc-200 mt-0.5 line-clamp-2 leading-relaxed">{c.address || 'No billing address registered'}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* ------------------ TAB 3: REPORTS & TAX ROUTE ------------------ */}
         {activeTab === 'reports' && (
-          <div className="space-y-4">
-            
-            {/* Action buttons list */}
-            <div className="flex items-center justify-between bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 p-5 rounded-3xl shadow-sm">
-              <div>
-                <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Accounting Summary</h2>
-                <span className="text-[10px] text-slate-400 block mt-0.5">Generate customized tax & income expense ledger reports</span>
+          <div className="space-y-5">
+
+            {/* ── Page Header ── */}
+            <div
+              className="relative overflow-hidden bg-white dark:bg-zinc-900 rounded-2xl"
+              style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.10), 0 4px 16px rgba(110,96,80,0.08), inset 0 1px 0 rgba(255,255,255,0.9)' }}
+            >
+              {/* top-edge highlight gives the 'raised panel' feel */}
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e2e8f0] to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[#F9F5F0]/80 via-white/30 to-transparent dark:from-zinc-800/20 pointer-events-none" />
+              <div className="relative flex items-center justify-between gap-4 px-6 py-5">
+                <div className="flex items-center gap-4">
+                  <div
+                    className="w-11 h-11 rounded-xl bg-[#0f172a] flex items-center justify-center shrink-0"
+                    style={{ boxShadow: '0 2px 8px rgba(110,96,80,0.35), inset 0 1px 0 rgba(255,255,255,0.15)' }}
+                  >
+                    <FileText className="w-5 h-5 text-[#e2e8f0]" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-black text-[#0f172a] dark:text-white tracking-tight">Accounting Summary</h2>
+                    <span className="text-[11px] text-[#64748b]/70 dark:text-zinc-400 mt-0.5 block">Generate customised tax &amp; income expense ledger reports</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsExpenseLoggerOpen(true)}
+                  className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-[#0f172a] hover:bg-[#5C5043] hover:translate-y-[-1px] active:translate-y-0 active:scale-[0.98] text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer"
+                  style={{ boxShadow: '0 2px 6px rgba(110,96,80,0.30), 0 1px 2px rgba(110,96,80,0.20)' }}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Log Expense</span>
+                </button>
               </div>
-              <button
-                onClick={() => setIsExpenseLoggerOpen(true)}
-                className="px-3  py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-[10px] font-bold flex items-center gap-1 cursor-pointer shadow-md shadow-rose-950/10"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Log Expense</span>
-              </button>
             </div>
 
-            {/* Configurable Filters Form panel */}
-            <section className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 p-3.5 rounded-2.5xl shadow-sm space-y-3">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block">Report Filters</span>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label htmlFor="rep-start" className="block text-[8px] font-extrabold uppercase text-slate-400 mb-1">Start Date</label>
+            {/* ── Ledger & Invoice Report (unified card) ── */}
+            <section
+              className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden relative"
+              style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.09), 0 4px 14px rgba(110,96,80,0.07), inset 0 1px 0 rgba(255,255,255,0.85)' }}
+            >
+              {/* top highlight */}
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e2e8f0]/80 to-transparent" />
+
+              {/* Card header */}
+              <div className="flex items-center justify-between gap-3 px-6 py-3.5 border-b border-[#e2e8f0]/40 dark:border-zinc-800" style={{ background: 'linear-gradient(to right, #FDFAF7, #FAF7F4)' }}>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-1.5 h-4 rounded-full" style={{ background: 'linear-gradient(to bottom, #D4B896, #C6A87D)' }} />
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#0f172a] dark:text-zinc-300 block">Ledger &amp; Invoice Report</span>
+                    <span className="text-[9px] text-[#64748b]/60 dark:text-zinc-500 block mt-0.5">Filter records and download compiled reports or individual invoices</span>
+                  </div>
+                </div>
+                <div
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/40 border border-sky-200/60 dark:border-sky-800/40 shrink-0"
+                  style={{ boxShadow: 'inset 0 1px 2px rgba(2,132,199,0.06)' }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+                  <span className="text-[10px] font-mono font-bold text-sky-600 dark:text-sky-400">{reportedInvoices.length} matched</span>
+                </div>
+              </div>
+
+              {/* Single horizontal body row */}
+              <div className="px-6 py-5 flex flex-wrap lg:flex-nowrap items-end gap-4">
+
+                {/* Start Date */}
+                <div className="space-y-1.5 flex-1 min-w-[140px]">
+                  <label htmlFor="rep-start" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80">
+                    <span className="w-1 h-1 rounded-full bg-[#C6A87D] inline-block" />
+                    Start Date
+                  </label>
                   <input
                     id="rep-start"
                     type="date"
                     value={reportStartDate}
                     onChange={(e) => setReportStartDate(e.target.value)}
-                    className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-[10px] text-slate-700 dark:text-white focus:outline-none"
+                    className="w-full px-3.5 py-2.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0] hover:border-[#C6A87D] focus:border-[#0f172a] dark:border-zinc-700 dark:focus:border-zinc-500 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none transition-colors duration-150"
+                    style={{ boxShadow: 'inset 0 1px 3px rgba(110,96,80,0.08)' }}
                   />
                 </div>
-                <div>
-                  <label htmlFor="rep-end" className="block text-[8px] font-extrabold uppercase text-slate-400 mb-1">End Date</label>
+
+                {/* End Date */}
+                <div className="space-y-1.5 flex-1 min-w-[140px]">
+                  <label htmlFor="rep-end" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80">
+                    <span className="w-1 h-1 rounded-full bg-[#C6A87D] inline-block" />
+                    End Date
+                  </label>
                   <input
                     id="rep-end"
                     type="date"
                     value={reportEndDate}
                     onChange={(e) => setReportEndDate(e.target.value)}
-                    className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-[10px] text-slate-700 dark:text-white focus:outline-none"
+                    className="w-full px-3.5 py-2.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0] hover:border-[#C6A87D] focus:border-[#0f172a] dark:border-zinc-700 dark:focus:border-zinc-500 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none transition-colors duration-150"
+                    style={{ boxShadow: 'inset 0 1px 3px rgba(110,96,80,0.08)' }}
                   />
                 </div>
-                <div className="col-span-2">
-                  <label htmlFor="rep-client" className="block text-[8px] font-extrabold uppercase text-slate-400 mb-1">Filter by Client Account</label>
+
+                {/* Client Account */}
+                <div className="space-y-1.5 flex-1 min-w-[160px]">
+                  <label htmlFor="rep-client" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80">
+                    <span className="w-1 h-1 rounded-full bg-[#C6A87D] inline-block" />
+                    Client Account
+                  </label>
                   <select
                     id="rep-client"
                     value={reportClientFilter}
                     onChange={(e) => setReportClientFilter(e.target.value)}
-                    className="w-full px-2 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-250 dark:border-slate-800 rounded-lg text-[10px] font-medium text-slate-700 dark:text-white focus:outline-none"
+                    className="w-full px-3.5 py-2.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0] hover:border-[#C6A87D] focus:border-[#0f172a] dark:border-zinc-700 dark:focus:border-zinc-500 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:outline-none transition-colors duration-150 cursor-pointer"
+                    style={{ boxShadow: 'inset 0 1px 3px rgba(110,96,80,0.08)' }}
                   >
-                    <option value="all">-- All Clients combined --</option>
+                    <option value="all">All Clients</option>
                     {Array.from(new Set(invoices.map(it => it.clientName))).filter(Boolean).map(clName => (
                       <option key={clName} value={clName}>{clName}</option>
                     ))}
                   </select>
                 </div>
+
+                {/* Vertical divider */}
+                <div className="hidden lg:block w-px self-stretch bg-gradient-to-b from-transparent via-[#e2e8f0]/60 to-transparent mx-1" />
+
+                {/* Quick chips */}
+                <div className="space-y-1.5 shrink-0">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-[#64748b]/60 dark:text-zinc-500">Quick Range</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { label: '7 Days', days: 7 },
+                      { label: '1 Month', days: 30 },
+                      { label: '1 Year', days: 365 },
+                      { label: 'All Time', days: 0 },
+                    ].map(opt => {
+                      const isReset = opt.days === 0;
+                      return (
+                        <button
+                          key={opt.label}
+                          type="button"
+                          onClick={() => {
+                            if (isReset) {
+                              setReportStartDate('');
+                              setReportEndDate('');
+                            } else {
+                              const end = new Date().toISOString().split('T')[0];
+                              const d = new Date();
+                              d.setDate(d.getDate() - opt.days);
+                              setReportStartDate(d.toISOString().split('T')[0]);
+                              setReportEndDate(end);
+                            }
+                          }}
+                          className="px-3 py-2 rounded-xl text-[11px] font-bold transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.97] cursor-pointer bg-[#FCFAF7] hover:bg-[#f8fafc] text-[#0f172a] dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:text-zinc-300"
+                          style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.12), inset 0 1px 0 rgba(255,255,255,0.8)' }}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Vertical divider */}
+                <div className="hidden lg:block w-px self-stretch bg-gradient-to-b from-transparent via-[#e2e8f0]/60 to-transparent mx-1" />
+
+                {/* Download buttons */}
+                <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (reportedInvoices.length === 0) { alert("No client billing records match the specified interval."); return; }
+                      const rangeLabel = reportStartDate && reportEndDate ? `${reportStartDate} to ${reportEndDate}` : "Cumulative Ledger Period";
+                      exportCollectiveReportPDF(reportedInvoices, profile, rangeLabel);
+                    }}
+                    className="group relative px-4 py-2.5 rounded-xl text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.98] cursor-pointer overflow-hidden whitespace-nowrap"
+                    style={{ background: 'linear-gradient(135deg, #0f172a 0%, #7A6B5A 100%)', boxShadow: '0 2px 8px rgba(110,96,80,0.28), inset 0 1px 0 rgba(255,255,255,0.10)' }}
+                  >
+                    <span className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-150" />
+                    <FileText className="w-3.5 h-3.5 shrink-0" />
+                    <span>Ledger PDF</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (reportedInvoices.length === 0) { alert("No client billing records match the specified interval."); return; }
+                      reportedInvoices.forEach((inv, index) => {
+                        setTimeout(async () => { await exportInvoicePDFAsync(inv, profile); }, index * 350);
+                      });
+                    }}
+                    className="group relative px-4 py-2.5 rounded-xl text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.98] cursor-pointer overflow-hidden whitespace-nowrap"
+                    style={{ background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)', boxShadow: '0 2px 8px rgba(5,150,105,0.26), inset 0 1px 0 rgba(255,255,255,0.12)' }}
+                  >
+                    <span className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-150" />
+                    <Download className="w-3.5 h-3.5 shrink-0" />
+                    <span>All Individual Invoices</span>
+                  </button>
+                </div>
+
               </div>
             </section>
 
-            {/* Unified Collective Invoice & Accounting Downloader Card */}
-            <section className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/85 p-4 rounded-3xl space-y-3.5 shadow-2xs">
-              <div className="flex items-center justify-between">
+            <div className="mt-8 mb-4 flex items-center justify-between gap-3 px-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-1.5 h-4 rounded-full" style={{ background: 'linear-gradient(to bottom, #D4B896, #C6A87D)' }} />
                 <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-600 dark:text-sky-405 block font-sans">Collective Invoice Downloader</span>
-                  <span className="text-[9px] text-slate-400 block mt-0.5">Quickly select date-intervals to download compiled reports or a directory of matching invoices</span>
-                </div>
-                <span className="text-[9px] bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 px-2 py-0.5 rounded-lg border border-sky-100 dark:border-sky-900/60 font-mono font-medium">
-                  {reportedInvoices.length} Matching Records
-                </span>
-              </div>
-
-              {/* Intervals Quick buttons */}
-              <div className="grid grid-cols-4 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const end = new Date().toISOString().split('T')[0];
-                    const d = new Date();
-                    d.setDate(d.getDate() - 7);
-                    const start = d.toISOString().split('T')[0];
-                    setReportStartDate(start);
-                    setReportEndDate(end);
-                  }}
-                  className="px-2 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-850 border border-slate-205 dark:border-slate-800 rounded-xl text-[9px] font-bold text-slate-650 dark:text-slate-350 cursor-pointer transition-all"
-                >
-                  📆 Last 1 Week
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const end = new Date().toISOString().split('T')[0];
-                    const d = new Date();
-                    d.setDate(d.getDate() - 30);
-                    const start = d.toISOString().split('T')[0];
-                    setReportStartDate(start);
-                    setReportEndDate(end);
-                  }}
-                  className="px-2 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-850 border border-slate-205 dark:border-slate-800 rounded-xl text-[9px] font-bold text-slate-655 dark:text-slate-350 cursor-pointer transition-all"
-                >
-                  📅 Last 1 Month
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const end = new Date().toISOString().split('T')[0];
-                    const d = new Date();
-                    d.setDate(d.getDate() - 365);
-                    const start = d.toISOString().split('T')[0];
-                    setReportStartDate(start);
-                    setReportEndDate(end);
-                  }}
-                  className="px-2 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-850 border border-slate-205 dark:border-slate-800 rounded-xl text-[9px] font-bold text-slate-655 dark:text-slate-350 cursor-pointer transition-all"
-                >
-                  👑 Last 1 Year
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setReportStartDate('');
-                    setReportEndDate('');
-                  }}
-                  className="px-2 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-850 border border-slate-205 dark:border-slate-800 rounded-xl text-[9px] font-bold text-slate-655 dark:text-slate-350 cursor-pointer transition-all"
-                >
-                  🔄 Reset To All
-                </button>
-              </div>
-
-              {/* Action Downloads triggers */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (reportedInvoices.length === 0) {
-                      alert("No client billing records match the specified interval.");
-                      return;
-                    }
-                    const rangeLabel = reportStartDate && reportEndDate 
-                      ? `${reportStartDate} to ${reportEndDate}` 
-                      : "Cumulative Ledger Period";
-                    exportCollectiveReportPDF(reportedInvoices, profile, rangeLabel);
-                  }}
-                  className="w-full py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-2xl text-[9.5px] font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Download Ledger Statement PDF</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (reportedInvoices.length === 0) {
-                      alert("No client billing records match the specified interval.");
-                      return;
-                    }
-                    reportedInvoices.forEach((inv, index) => {
-                      setTimeout(async () => {
-                        await exportInvoicePDFAsync(inv, profile);
-                      }, index * 350); // slight delay avoids browser block errors
-                    });
-                  }}
-                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-[9.5px] font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download All Individual PDFs</span>
-                </button>
-              </div>
-            </section>
-
-            {/* Income and Expense Analytics report */}
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="bg-emerald-500/5 dark:bg-emerald-950/15 p-3 rounded-2.5xl border border-emerald-100/40 dark:border-emerald-900/40">
-                <span className="text-[9px] uppercase font-extrabold text-slate-400 block tracking-wider">Gross Profit (Received)</span>
-                <span className="text-md font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-1 block">{currencySymbol}{reportedIncomePaid.toLocaleString()}</span>
-                <span className="text-[9px] text-slate-400 font-medium block mt-0.5">From cleared paid checks</span>
-              </div>
-              
-              <div className="bg-rose-500/5 dark:bg-rose-950/15 p-3 rounded-2.5xl border border-rose-100/40 dark:border-rose-900/40">
-                <span className="text-[9px] uppercase font-extrabold text-slate-400 block tracking-wider">Business Expenses</span>
-                <span className="text-md font-extrabold font-mono text-rose-600 dark:text-rose-400 mt-1 block">{currencySymbol}{totalReportedExpenses.toLocaleString()}</span>
-                <span className="text-[9px] text-slate-400 font-medium block mt-0.5">Direct cost overheads</span>
-              </div>
-
-              <div className="col-span-2 bg-sky-500/5 dark:bg-sky-950/15 p-3 rounded-2.5xl border border-sky-100/40 dark:border-sky-900/40 flex justify-between items-center">
-                <div>
-                  <span className="text-[9px] uppercase font-extrabold text-slate-400 block tracking-wider">Pending Receivables (Unpaid)</span>
-                  <span className="text-md font-extrabold font-mono text-amber-600 dark:text-amber-400 mt-1 block">{currencySymbol}{reportedOutstanding.toLocaleString()}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[9px] bg-amber-100 dark:bg-amber-950 text-amber-705 dark:text-amber-400 px-2 py-0.5 rounded-lg font-medium">Unsettled Receivables</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#0f172a] dark:text-zinc-300 block">Income &amp; Expense Analytics</span>
+                  <span className="text-[9px] text-[#64748b]/60 dark:text-zinc-500 block mt-0.5">Overview of cash flow, liabilities, and profitability based on current ledger</span>
                 </div>
               </div>
             </div>
 
-            {/* Dynamic Interactive SVG Monthly Trend Graph */}
+            {/* Income and Expense Analytics report */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {/* Gross Profit Card */}
+              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-emerald-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                <div className="flex justify-between items-start">
+                  <div className="w-8.5 h-8.5 rounded-full bg-[#ECFDF5] text-[#10B981] border border-[#A7F3D0] flex items-center justify-center font-black text-sm">
+                    ₹
+                  </div>
+                  <span className="text-[9px] font-black text-[#10B981] bg-[#ECFDF5] border border-[#A7F3D0] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    Cleared
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Gross Profit</span>
+                  <span className="text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono">
+                    {currencySymbol}{reportedIncomePaid.toLocaleString()}
+                  </span>
+                </div>
+                {/* Sparkline bars */}
+                <div className="flex items-end gap-1 h-6 self-start mt-2">
+                  <div className="w-1 bg-emerald-200 rounded-t-sm h-2" />
+                  <div className="w-1 bg-emerald-300 rounded-t-sm h-3" />
+                  <div className="w-1 bg-emerald-400 rounded-t-sm h-5" />
+                  <div className="w-1 bg-emerald-300 rounded-t-sm h-3" />
+                  <div className="w-1 bg-emerald-500 rounded-t-sm h-6" />
+                </div>
+              </div>
+
+              {/* Business Expenses Card */}
+              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-rose-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                <div className="flex justify-between items-start">
+                  <div className="w-8.5 h-8.5 rounded-full bg-[#FEF2F2] text-[#EF4444] border border-[#FEE2E2] flex items-center justify-center">
+                    <MinusCircle className="w-4 h-4" />
+                  </div>
+                  <span className="text-[9px] font-black text-[#EF4444] bg-[#FEF2F2] border border-[#FEE2E2] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    Expenses
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Business Expenses</span>
+                  <span className="text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono">
+                    {currencySymbol}{totalReportedExpenses.toLocaleString()}
+                  </span>
+                </div>
+                {/* Sparkline bars */}
+                <div className="flex items-end gap-1 h-6 self-start mt-2">
+                  <div className="w-1 bg-rose-200 rounded-t-sm h-3" />
+                  <div className="w-1 bg-rose-300 rounded-t-sm h-4" />
+                  <div className="w-1 bg-rose-450 h-2" />
+                  <div className="w-1 bg-rose-400 rounded-t-sm h-5" />
+                  <div className="w-1 bg-rose-500 rounded-t-sm h-6" />
+                </div>
+              </div>
+
+              {/* Pending Receivables Card */}
+              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-amber-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                <div className="flex justify-between items-start">
+                  <div className="w-8.5 h-8.5 rounded-full bg-[#FFFBEB] text-[#F59E0B] border border-[#FEF3C7] flex items-center justify-center">
+                    <CheckSquare className="w-4 h-4" />
+                  </div>
+                  <span className="text-[9px] font-black text-[#F59E0B] bg-[#FFFBEB] border border-[#FEF3C7] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    Unpaid
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Pending Receivables</span>
+                  <span className="text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono">
+                    {currencySymbol}{reportedOutstanding.toLocaleString()}
+                  </span>
+                </div>
+                {/* Sparkline bars */}
+                <div className="flex items-end gap-1 h-6 self-start mt-2">
+                  <div className="w-1 bg-amber-200 rounded-t-sm h-4" />
+                  <div className="w-1 bg-amber-300 rounded-t-sm h-2" />
+                  <div className="w-1 bg-amber-400 rounded-t-sm h-5" />
+                  <div className="w-1 bg-amber-500 rounded-t-sm h-6" />
+                  <div className="w-1 bg-amber-300 rounded-t-sm h-3" />
+                </div>
+              </div>
+
+              {/* Tax Calculations Card */}
+              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-sky-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                <div className="flex justify-between items-start">
+                  <div className="w-8.5 h-8.5 rounded-full bg-[#F0F9FF] text-[#0284C7] border border-[#BAE6FD] flex items-center justify-center">
+                    <Percent className="w-4 h-4" />
+                  </div>
+                  <span className="text-[9px] font-black text-[#0284C7] bg-[#F0F9FF] border border-[#BAE6FD] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    TAX/GST
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Tax Liabilities</span>
+                  <span className="text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono">
+                    {currencySymbol}{reportedTaxTotal.toLocaleString()}
+                  </span>
+                </div>
+                {/* Sparkline bars */}
+                <div className="flex items-end gap-1 h-6 self-start mt-2">
+                  <div className="w-1 bg-sky-200 rounded-t-sm h-3" />
+                  <div className="w-1 bg-sky-300 rounded-t-sm h-5" />
+                  <div className="w-1 bg-sky-400 rounded-t-sm h-2" />
+                  <div className="w-1 bg-sky-500 rounded-t-sm h-6" />
+                  <div className="w-1 bg-sky-300 rounded-t-sm h-4" />
+                </div>
+              </div>
+            </div>
+
+            {/* Dynamic Interactive SVG Monthly Trend Graphs */}
             {(() => {
-              const monthsShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-              const records: { label: string; income: number; expense: number }[] = [];
+              type RangeKey = '7d' | '1m' | '3m' | '6m' | '1y' | 'all';
+              const RANGE_OPTS: { key: RangeKey; label: string }[] = [
+                { key: '7d',  label: '7 Days' },
+                { key: '1m',  label: 'Monthly' },
+                { key: '3m',  label: 'Quarterly' },
+                { key: '6m',  label: 'Half Year' },
+                { key: '1y',  label: 'Yearly' },
+                { key: 'all', label: 'All Years' },
+              ];
+
               const now = new Date();
-              
-              // Last 6 months chronological
-              for (let i = 5; i >= 0; i--) {
-                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                records.push({
-                  label: `${monthsShort[d.getMonth()]}`,
-                  income: 0,
-                  expense: 0
+              const records: { label: string; income: number; expense: number; tax: number }[] = [];
+
+              if (reportsChartRange === '7d') {
+                // Daily buckets for last 7 days
+                for (let i = 6; i >= 0; i--) {
+                  const d = new Date(now);
+                  d.setDate(now.getDate() - i);
+                  records.push({
+                    label: `${d.getDate()}/${d.getMonth() + 1}`,
+                    income: 0, expense: 0, tax: 0
+                  });
+                }
+                reportedInvoices.forEach(inv => {
+                  const d = new Date(inv.date);
+                  if (isNaN(d.getTime())) return;
+                  const lbl = `${d.getDate()}/${d.getMonth() + 1}`;
+                  const match = records.find(r => r.label === lbl);
+                  if (match) {
+                    if (inv.status === 'paid') match.income += inv.grandTotal;
+                    match.tax += (inv.taxTotal || 0);
+                  }
+                });
+                reportedExpenses.forEach(exp => {
+                  const d = new Date(exp.date);
+                  if (isNaN(d.getTime())) return;
+                  const lbl = `${d.getDate()}/${d.getMonth() + 1}`;
+                  const match = records.find(r => r.label === lbl);
+                  if (match) match.expense += exp.amount;
+                });
+
+              } else if (reportsChartRange === '1m') {
+                // Weekly buckets for last 4 weeks
+                for (let i = 3; i >= 0; i--) {
+                  const wEnd = new Date(now);
+                  wEnd.setDate(now.getDate() - i * 7);
+                  const wStart = new Date(wEnd);
+                  wStart.setDate(wEnd.getDate() - 6);
+                  records.push({ label: `W${4 - i}`, income: 0, expense: 0, tax: 0, _start: wStart, _end: wEnd } as any);
+                }
+                reportedInvoices.forEach(inv => {
+                  const d = new Date(inv.date);
+                  if (isNaN(d.getTime())) return;
+                  const match = (records as any[]).find(r => d >= r._start && d <= r._end);
+                  if (match) {
+                    if (inv.status === 'paid') match.income += inv.grandTotal;
+                    match.tax += (inv.taxTotal || 0);
+                  }
+                });
+                reportedExpenses.forEach(exp => {
+                  const d = new Date(exp.date);
+                  if (isNaN(d.getTime())) return;
+                  const match = (records as any[]).find(r => d >= r._start && d <= r._end);
+                  if (match) match.expense += exp.amount;
+                });
+
+              } else if (reportsChartRange === 'all') {
+                // Yearly buckets
+                const minYearInv = reportedInvoices.length > 0 ? Math.min(...reportedInvoices.map(i => new Date(i.date).getFullYear())) : now.getFullYear();
+                const minYearExp = reportedExpenses.length > 0 ? Math.min(...reportedExpenses.map(e => new Date(e.date).getFullYear())) : now.getFullYear();
+                const startYear = Math.min(minYearInv, minYearExp, now.getFullYear());
+                const endYear = now.getFullYear();
+                
+                // Show at least a 3-year spread if there's only 1 year of data so the chart line has points
+                const adjustedStart = (endYear - startYear < 2) ? endYear - 2 : startYear;
+                
+                for (let y = adjustedStart; y <= endYear; y++) {
+                  records.push({ label: y.toString(), income: 0, expense: 0, tax: 0, _year: y } as any);
+                }
+                
+                reportedInvoices.forEach(inv => {
+                  const d = new Date(inv.date);
+                  if (isNaN(d.getTime())) return;
+                  const match = (records as any[]).find(r => r._year === d.getFullYear());
+                  if (match) {
+                    if (inv.status === 'paid') match.income += inv.grandTotal;
+                    match.tax += (inv.taxTotal || 0);
+                  }
+                });
+                reportedExpenses.forEach(exp => {
+                  const d = new Date(exp.date);
+                  if (isNaN(d.getTime())) return;
+                  const match = (records as any[]).find(r => r._year === d.getFullYear());
+                  if (match) match.expense += exp.amount;
+                });
+
+              } else {
+                // Monthly buckets
+                const monthCount = reportsChartRange === '3m' ? 3 : reportsChartRange === '6m' ? 6 : 12;
+                const monthsShort = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                for (let i = monthCount - 1; i >= 0; i--) {
+                  const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                  records.push({ label: monthsShort[d.getMonth()], income: 0, expense: 0, tax: 0, _month: d.getMonth(), _year: d.getFullYear() } as any);
+                }
+                reportedInvoices.forEach(inv => {
+                  const d = new Date(inv.date);
+                  if (isNaN(d.getTime())) return;
+                  const match = (records as any[]).find(r => r._month === d.getMonth() && r._year === d.getFullYear());
+                  if (match) {
+                    if (inv.status === 'paid') match.income += inv.grandTotal;
+                    match.tax += (inv.taxTotal || 0);
+                  }
+                });
+                reportedExpenses.forEach(exp => {
+                  const d = new Date(exp.date);
+                  if (isNaN(d.getTime())) return;
+                  const match = (records as any[]).find(r => r._month === d.getMonth() && r._year === d.getFullYear());
+                  if (match) match.expense += exp.amount;
                 });
               }
 
-              // Populate invoices
-              reportedInvoices.forEach(inv => {
-                if (inv.status === 'paid') {
-                  const dateObj = new Date(inv.date);
-                  if (!isNaN(dateObj.getTime())) {
-                    const label = monthsShort[dateObj.getMonth()];
-                    const match = records.find(r => r.label === label);
-                    if (match) match.income += inv.grandTotal;
-                  }
-                }
-              });
-
-              // Populate expenses
-              reportedExpenses.forEach(exp => {
-                const dateObj = new Date(exp.date);
-                if (!isNaN(dateObj.getTime())) {
-                  const label = monthsShort[dateObj.getMonth()];
-                  const match = records.find(r => r.label === label);
-                  if (match) match.expense += exp.amount;
-                }
-              });
-
-              // Chart Math coordinates
-              const maxVal = Math.max(...records.map(d => Math.max(d.income, d.expense)), 100);
               const chartHeight = 130;
               const chartWidth = 500;
               const paddingX = 42;
@@ -2661,216 +3090,592 @@ export default function Dashboard({
               const usableHeight = chartHeight - paddingY * 2;
               const usableWidth = chartWidth - paddingX * 2;
 
-              const pointsIncome = records.map((d, index) => {
-                const x = paddingX + (index / (records.length - 1)) * usableWidth;
-                const y = chartHeight - paddingY - (d.income / maxVal) * usableHeight;
-                return { x, y };
-              });
+              // Grid math for Chart 1: Gross Profit & Tax Liabilities
+              const maxVal1 = Math.max(...records.map(d => Math.max(d.income, d.tax)), 100);
+              const pointsIncome1 = records.map((d, index) => ({
+                x: paddingX + (index / (records.length - 1)) * usableWidth,
+                y: chartHeight - paddingY - (d.income / maxVal1) * usableHeight
+              }));
+              const pointsTax1 = records.map((d, index) => ({
+                x: paddingX + (index / (records.length - 1)) * usableWidth,
+                y: chartHeight - paddingY - (d.tax / maxVal1) * usableHeight
+              }));
+              const pathIncome1 = pointsIncome1.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+              const pathTax1 = pointsTax1.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
-              const pointsExpense = records.map((d, index) => {
-                const x = paddingX + (index / (records.length - 1)) * usableWidth;
-                const y = chartHeight - paddingY - (d.expense / maxVal) * usableHeight;
-                return { x, y };
-              });
-
-              const pathIncomeString = pointsIncome.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-              const areaIncomeString = pointsIncome.length > 0 
-                ? `${pathIncomeString} L ${pointsIncome[pointsIncome.length - 1].x} ${chartHeight - paddingY} L ${pointsIncome[0].x} ${chartHeight - paddingY} Z`
-                : '';
-
-              const pathExpenseString = pointsExpense.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-              const areaExpenseString = pointsExpense.length > 0 
-                ? `${pathExpenseString} L ${pointsExpense[pointsExpense.length - 1].x} ${chartHeight - paddingY} L ${pointsExpense[0].x} ${chartHeight - paddingY} Z`
-                : '';
+              // Grid math for Chart 2: Earnings & Expenses
+              const maxVal2 = Math.max(...records.map(d => Math.max(d.income, d.expense)), 100);
+              const pointsIncome2 = records.map((d, index) => ({
+                x: paddingX + (index / (records.length - 1)) * usableWidth,
+                y: chartHeight - paddingY - (d.income / maxVal2) * usableHeight
+              }));
+              const pointsExpense2 = records.map((d, index) => ({
+                x: paddingX + (index / (records.length - 1)) * usableWidth,
+                y: chartHeight - paddingY - (d.expense / maxVal2) * usableHeight
+              }));
+              const pathIncome2 = pointsIncome2.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+              const pathExpense2 = pointsExpense2.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
               return (
-                <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 p-4 rounded-2.5xl shadow-sm text-sans">
-                  <div className="flex justify-between items-center mb-3">
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Monthly Billings trend</span>
-                      <span className="text-[9px] text-slate-400 block mt-0.5">Income vs expense overview over past months</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-[9px] font-medium">
-                      <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Settled Cash</span>
-                      <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-505 bg-rose-500" /> Expenses</span>
+                <div className="space-y-4">
+
+                  {/* Shared range filter pills */}
+                  <div
+                    className="bg-white dark:bg-zinc-900 rounded-2xl px-5 py-4 flex items-center gap-3 flex-wrap"
+                    style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.09), 0 4px 14px rgba(110,96,80,0.07), inset 0 1px 0 rgba(255,255,255,0.85)' }}
+                  >
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e2e8f0]/80 to-transparent" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[#64748b]/60 dark:text-zinc-500 shrink-0">Trend Period</span>
+                    <div className="flex flex-wrap gap-2">
+                      {RANGE_OPTS.map(opt => {
+                        const isActive = reportsChartRange === opt.key;
+                        return (
+                          <button
+                            key={opt.key}
+                            type="button"
+                            onClick={() => setReportsChartRange(opt.key)}
+                            className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all duration-150 cursor-pointer ${
+                              isActive
+                                ? 'text-white'
+                                : 'bg-[#FCFAF7] hover:bg-[#f8fafc] text-[#0f172a] dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:text-zinc-300 hover:translate-y-[-1px]'
+                            }`}
+                            style={isActive ? {
+                              background: 'linear-gradient(135deg, #0f172a 0%, #64748b 100%)',
+                              boxShadow: '0 2px 6px rgba(110,96,80,0.30), inset 0 1px 0 rgba(255,255,255,0.12)'
+                            } : {
+                              boxShadow: '0 1px 3px rgba(110,96,80,0.12), inset 0 1px 0 rgba(255,255,255,0.8)'
+                            }}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* Pure SVG line mapping */}
-                  <div className="w-full h-36">
-                    <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-full overflow-visible">
-                      <defs>
-                        <linearGradient id="incAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#10b981" stopOpacity="0.12" />
-                          <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-                        </linearGradient>
-                        <linearGradient id="expAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.12" />
-                          <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.0" />
-                        </linearGradient>
-                      </defs>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* CHART 1: Gross Profit vs Tax Liabilities */}
+                  <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 p-5 rounded-2xl shadow-xs text-sans">
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Gross Profit & Taxes</h3>
+                        <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5 font-medium">Comparative analysis of income vs tax liabilities</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-0.5 bg-[#0f172a]" /> PROFIT
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-0.5 border-t border-dashed border-[#0284C7]" /> TAX
+                        </span>
+                      </div>
+                    </div>
 
-                      {/* Horizontal Grid guidelines line helper */}
-                      {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
-                        const y = paddingY + ratio * usableHeight;
-                        const labelValue = Math.round(maxVal * (1 - ratio));
-                        return (
-                          <g key={idx} className="opacity-40">
-                            <line x1={paddingX} y1={y} x2={chartWidth - paddingX} y2={y} stroke="currentColor" strokeWidth="0.5" strokeDasharray="3 3" className="text-slate-100 dark:text-slate-800" />
-                            <text x={paddingX - 8} y={y + 3} textAnchor="end" className="text-[8px] font-mono fill-slate-400 font-extrabold">{currencySymbol}{labelValue}</text>
-                          </g>
-                        );
-                      })}
+                    <div className="w-full overflow-x-auto select-none mt-2">
+                      <svg className="w-full min-w-[400px]" viewBox={`0 0 ${chartWidth} ${chartHeight}`} fill="none">
+                        {/* Grid Lines */}
+                        {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+                          const y = paddingY + ratio * usableHeight;
+                          const labelValue = Math.round(maxVal1 - (ratio * maxVal1));
+                          return (
+                            <g key={`grid-c1-${idx}`}>
+                              <line x1={paddingX} y1={y} x2={chartWidth - paddingX} y2={y} stroke="#e2e8f0" strokeWidth="0.5" strokeOpacity="0.4" />
+                              <text x={paddingX - 10} y={y + 3} textAnchor="end" className="text-[8px] font-mono fill-[#64748b]/70">
+                                {labelValue >= 1000 ? `${(labelValue / 1000).toFixed(0)}k` : labelValue}
+                              </text>
+                            </g>
+                          );
+                        })}
 
-                      {/* Area drawings */}
-                      {areaIncomeString && <path d={areaIncomeString} fill="url(#incAreaGrad)" />}
-                      {areaExpenseString && <path d={areaExpenseString} fill="url(#expAreaGrad)" />}
+                        {/* Vertical guide line */}
+                        {hoveredReportsChartIndex1 !== null && pointsIncome1[hoveredReportsChartIndex1] && (
+                          <line 
+                            x1={pointsIncome1[hoveredReportsChartIndex1].x} 
+                            y1={paddingY} 
+                            x2={pointsIncome1[hoveredReportsChartIndex1].x} 
+                            y2={chartHeight - paddingY} 
+                            stroke="#C6A87D" 
+                            strokeWidth="1" 
+                            strokeDasharray="2 2"
+                            className="opacity-75"
+                          />
+                        )}
 
-                      {/* Line paths */}
-                      {pathIncomeString && <path d={pathIncomeString} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" />}
-                      {pathExpenseString && <path d={pathExpenseString} fill="none" stroke="#f43f5e" strokeWidth="2.5" strokeLinecap="round" />}
+                        {/* Line paths */}
+                        <path d={pathIncome1} fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
+                        <path d={pathTax1} fill="none" stroke="#0284C7" strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
 
-                      {/* Dot indicators and coordinates values */}
-                      {pointsIncome.map((pts, i) => (
-                        <g key={`inc-grp-${i}`}>
-                          <circle cx={pts.x} cy={pts.y} r="3" fill="#10b981" stroke="#fff" strokeWidth="1" />
-                        </g>
-                      ))}
-                      {pointsExpense.map((pts, i) => (
-                        <g key={`exp-grp-${i}`}>
-                          <circle cx={pts.x} cy={pts.y} r="3" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
-                        </g>
-                      ))}
+                        {/* Dots */}
+                        {pointsIncome1.map((pts, i) => (
+                          <circle 
+                            key={`gp-dot-${i}`} 
+                            cx={pts.x} 
+                            cy={pts.y} 
+                            r={hoveredReportsChartIndex1 === i ? "4.5" : "3"} 
+                            fill="#0f172a" 
+                            stroke="#fff" 
+                            strokeWidth={hoveredReportsChartIndex1 === i ? "1.5" : "1"} 
+                          />
+                        ))}
+                        {pointsTax1.map((pts, i) => (
+                          <circle 
+                            key={`tx-dot-${i}`} 
+                            cx={pts.x} 
+                            cy={pts.y} 
+                            r={hoveredReportsChartIndex1 === i ? "4.5" : "3"} 
+                            fill="#0284C7" 
+                            stroke="#fff" 
+                            strokeWidth={hoveredReportsChartIndex1 === i ? "1.5" : "1"} 
+                          />
+                        ))}
 
-                      {/* Bottom months labels */}
-                      {records.map((r, i) => {
-                        const x = paddingX + (i / (records.length - 1)) * usableWidth;
-                        return (
-                          <text key={`lbl-${i}`} x={x} y={chartHeight - 4} textAnchor="middle" className="text-[9px] font-extrabold fill-slate-400 font-mono">{r.label}</text>
-                        );
-                      })}
-                    </svg>
+                        {/* Labels */}
+                        {records.map((r, i) => {
+                          const x = paddingX + (i / (records.length - 1)) * usableWidth;
+                          const isHovered = hoveredReportsChartIndex1 === i;
+                          return (
+                            <text 
+                              key={`lbl-c1-${i}`} 
+                              x={x} 
+                              y={chartHeight - 4} 
+                              textAnchor="middle" 
+                              className={`text-[9px] font-mono transition-all ${isHovered ? 'font-black fill-[#0f172a]' : 'font-bold fill-[#64748b]/80'}`}
+                            >
+                              {r.label}
+                            </text>
+                          );
+                        })}
+
+                        {/* Hover Zones */}
+                        {records.map((_, i) => {
+                          const colWidth = usableWidth / (records.length - 1);
+                          const x = paddingX + i * colWidth - colWidth / 2;
+                          return (
+                            <rect
+                              key={`hz-c1-${i}`}
+                              x={i === 0 ? paddingX : x}
+                              y={paddingY}
+                              width={i === 0 || i === records.length - 1 ? colWidth / 2 : colWidth}
+                              height={usableHeight}
+                              fill="transparent"
+                              className="cursor-pointer"
+                              onMouseEnter={() => setHoveredReportsChartIndex1(i)}
+                              onMouseLeave={() => setHoveredReportsChartIndex1(null)}
+                              onTouchStart={() => setHoveredReportsChartIndex1(i)}
+                              onClick={() => setHoveredReportsChartIndex1(i)}
+                            />
+                          );
+                        })}
+
+                        {/* Tooltip */}
+                        {hoveredReportsChartIndex1 !== null && records[hoveredReportsChartIndex1] && (() => {
+                          const rec = records[hoveredReportsChartIndex1];
+                          const pt = pointsIncome1[hoveredReportsChartIndex1] || { x: 250, y: 80 };
+                          const tooltipWidth = 115;
+                          const tooltipHeight = 44;
+                          let tooltipX = pt.x - tooltipWidth / 2;
+                          if (tooltipX < paddingX) tooltipX = paddingX;
+                          if (tooltipX + tooltipWidth > chartWidth - paddingX) tooltipX = chartWidth - paddingX - tooltipWidth;
+                          const tooltipY = Math.max(paddingY - 5, pt.y - tooltipHeight - 8);
+
+                          return (
+                            <g transform={`translate(${tooltipX}, ${tooltipY})`} className="pointer-events-none filter drop-shadow-[0_2px_4px_rgba(110,96,80,0.12)]">
+                              <rect width={tooltipWidth} height={tooltipHeight} rx="6" fill="rgba(35, 32, 29, 0.95)" stroke="#e2e8f0" strokeWidth="0.5" />
+                              <text x="8" y="12" fill="#e2e8f0" className="text-[8px] font-black uppercase tracking-wider font-mono">{rec.label}</text>
+                              <text x="8" y="24" fill="#10B981" className="text-[8px] font-bold font-mono">Profit: {currencySymbol}{rec.income.toLocaleString()}</text>
+                              <text x="8" y="34" fill="#38BDF8" className="text-[8px] font-bold font-mono">Tax: {currencySymbol}{rec.tax.toLocaleString()}</text>
+                            </g>
+                          );
+                        })()}
+                      </svg>
+                    </div>
                   </div>
+
+                  {/* CHART 2: Earnings vs Expenses */}
+                  <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 p-5 rounded-2xl shadow-xs text-sans">
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Earnings & Expenses</h3>
+                        <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5 font-medium">Comparative analysis of business revenues vs expenses</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-0.5 bg-[#0f172a]" /> EARNED
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-0.5 border-t border-dashed border-[#EF4444]" /> SPENT
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="w-full overflow-x-auto select-none mt-2">
+                      <svg className="w-full min-w-[400px]" viewBox={`0 0 ${chartWidth} ${chartHeight}`} fill="none">
+                        {/* Grid Lines */}
+                        {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+                          const y = paddingY + ratio * usableHeight;
+                          const labelValue = Math.round(maxVal2 - (ratio * maxVal2));
+                          return (
+                            <g key={`grid-c2-${idx}`}>
+                              <line x1={paddingX} y1={y} x2={chartWidth - paddingX} y2={y} stroke="#e2e8f0" strokeWidth="0.5" strokeOpacity="0.4" />
+                              <text x={paddingX - 10} y={y + 3} textAnchor="end" className="text-[8px] font-mono fill-[#64748b]/70">
+                                {labelValue >= 1000 ? `${(labelValue / 1000).toFixed(0)}k` : labelValue}
+                              </text>
+                            </g>
+                          );
+                        })}
+
+                        {/* Vertical guide line */}
+                        {hoveredReportsChartIndex2 !== null && pointsIncome2[hoveredReportsChartIndex2] && (
+                          <line 
+                            x1={pointsIncome2[hoveredReportsChartIndex2].x} 
+                            y1={paddingY} 
+                            x2={pointsIncome2[hoveredReportsChartIndex2].x} 
+                            y2={chartHeight - paddingY} 
+                            stroke="#C6A87D" 
+                            strokeWidth="1" 
+                            strokeDasharray="2 2"
+                            className="opacity-75"
+                          />
+                        )}
+
+                        {/* Line paths */}
+                        <path d={pathIncome2} fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
+                        <path d={pathExpense2} fill="none" stroke="#EF4444" strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
+
+                        {/* Dots */}
+                        {pointsIncome2.map((pts, i) => (
+                          <circle 
+                            key={`earn-dot-${i}`} 
+                            cx={pts.x} 
+                            cy={pts.y} 
+                            r={hoveredReportsChartIndex2 === i ? "4.5" : "3"} 
+                            fill="#0f172a" 
+                            stroke="#fff" 
+                            strokeWidth={hoveredReportsChartIndex2 === i ? "1.5" : "1"} 
+                          />
+                        ))}
+                        {pointsExpense2.map((pts, i) => (
+                          <circle 
+                            key={`exp-dot-c2-${i}`} 
+                            cx={pts.x} 
+                            cy={pts.y} 
+                            r={hoveredReportsChartIndex2 === i ? "4.5" : "3"} 
+                            fill="#EF4444" 
+                            stroke="#fff" 
+                            strokeWidth={hoveredReportsChartIndex2 === i ? "1.5" : "1"} 
+                          />
+                        ))}
+
+                        {/* Labels */}
+                        {records.map((r, i) => {
+                          const x = paddingX + (i / (records.length - 1)) * usableWidth;
+                          const isHovered = hoveredReportsChartIndex2 === i;
+                          return (
+                            <text 
+                              key={`lbl-c2-${i}`} 
+                              x={x} 
+                              y={chartHeight - 4} 
+                              textAnchor="middle" 
+                              className={`text-[9px] font-mono transition-all ${isHovered ? 'font-black fill-[#0f172a]' : 'font-bold fill-[#64748b]/80'}`}
+                            >
+                              {r.label}
+                            </text>
+                          );
+                        })}
+
+                        {/* Hover Zones */}
+                        {records.map((_, i) => {
+                          const colWidth = usableWidth / (records.length - 1);
+                          const x = paddingX + i * colWidth - colWidth / 2;
+                          return (
+                            <rect
+                              key={`hz-c2-${i}`}
+                              x={i === 0 ? paddingX : x}
+                              y={paddingY}
+                              width={i === 0 || i === records.length - 1 ? colWidth / 2 : colWidth}
+                              height={usableHeight}
+                              fill="transparent"
+                              className="cursor-pointer"
+                              onMouseEnter={() => setHoveredReportsChartIndex2(i)}
+                              onMouseLeave={() => setHoveredReportsChartIndex2(null)}
+                              onTouchStart={() => setHoveredReportsChartIndex2(i)}
+                              onClick={() => setHoveredReportsChartIndex2(i)}
+                            />
+                          );
+                        })}
+
+                        {/* Tooltip */}
+                        {hoveredReportsChartIndex2 !== null && records[hoveredReportsChartIndex2] && (() => {
+                          const rec = records[hoveredReportsChartIndex2];
+                          const pt = pointsIncome2[hoveredReportsChartIndex2] || { x: 250, y: 80 };
+                          const tooltipWidth = 115;
+                          const tooltipHeight = 44;
+                          let tooltipX = pt.x - tooltipWidth / 2;
+                          if (tooltipX < paddingX) tooltipX = paddingX;
+                          if (tooltipX + tooltipWidth > chartWidth - paddingX) tooltipX = chartWidth - paddingX - tooltipWidth;
+                          const tooltipY = Math.max(paddingY - 5, pt.y - tooltipHeight - 8);
+
+                          return (
+                            <g transform={`translate(${tooltipX}, ${tooltipY})`} className="pointer-events-none filter drop-shadow-[0_2px_4px_rgba(110,96,80,0.12)]">
+                              <rect width={tooltipWidth} height={tooltipHeight} rx="6" fill="rgba(35, 32, 29, 0.95)" stroke="#e2e8f0" strokeWidth="0.5" />
+                              <text x="8" y="12" fill="#e2e8f0" className="text-[8px] font-black uppercase tracking-wider font-mono">{rec.label}</text>
+                              <text x="8" y="24" fill="#10B981" className="text-[8px] font-bold font-mono">Earned: {currencySymbol}{rec.income.toLocaleString()}</text>
+                              <text x="8" y="34" fill="#EF4444" className="text-[8px] font-bold font-mono">Spent: {currencySymbol}{rec.expense.toLocaleString()}</text>
+                            </g>
+                          );
+                        })()}
+                      </svg>
+                    </div>
+                  </div>
+                </div>
                 </div>
               );
             })()}
 
             {/* Net Income statement tracker bar */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 p-4 rounded-2.5xl shadow-sm text-center">
-              <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold block">Combined Net Cash Flow Statement</span>
-              
-              {/* Calculate Net cash */}
-              {(() => {
-                const netCash = reportedIncomePaid - totalReportedExpenses;
-                const isProfitable = netCash >= 0;
-                return (
-                  <div className="mt-2 space-y-1">
-                    <span className={`text-xl font-extrabold font-mono tracking-tight block ${isProfitable ? 'text-sky-600 dark:text-sky-400' : 'text-rose-500'}`}>
-                      {isProfitable ? '+' : ''}{currencySymbol}{netCash.toLocaleString()}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      {isProfitable ? '🍾 Operating at a net business profit' : '⚠️ Overheads exceed paid cash receipts'}
-                    </span>
-                  </div>
-                );
-              })()}
-            </div>
+            {(() => {
+              const netCash = reportedIncomePaid - totalReportedExpenses;
+              const isProfitable = netCash >= 0;
+              return (
+                <div 
+                  className="relative overflow-hidden bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs"
+                  style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.06)' }}
+                >
+                  {/* Color top border decoration */}
+                  <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${isProfitable ? 'from-emerald-400 via-teal-500 to-emerald-400' : 'from-rose-400 via-pink-500 to-rose-400'}`} />
+                  
+                  {/* Subtle background glow */}
+                  <div className={`absolute inset-0 opacity-[0.03] dark:opacity-[0.06] bg-gradient-to-br pointer-events-none ${isProfitable ? 'from-emerald-500 to-teal-500' : 'from-rose-500 to-pink-500'}`} />
 
-            {/* List of outstanding invoices with due dates */}
-            <div className="space-y-2">
-              <span className="text-[10px] uppercase font-medium tracking-wider text-slate-400 block">Receivables Aging & Pending Bills ({reportedInvoices.filter(i=>i.status==='pending').length})</span>
-              {reportedInvoices.filter(i => i.status === 'pending').length === 0 ? (
-                <div className="p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-2xl text-center text-[10px] text-slate-400 font-medium">
-                  No outstanding receivables in this filtered bracket.
-                </div>
-              ) : (
-                reportedInvoices.filter(i => i.status === 'pending').map(inv => (
-                  <div
-                    key={inv.id}
-                    className="p-3 bg-amber-500/5 dark:bg-amber-950/10 border border-amber-500/10 dark:border-amber-900/30 rounded-2.5xl flex justify-between items-center"
-                  >
-                    <div>
-                      <span className="text-[10px] font-extrabold text-amber-600 block">{inv.invoiceNumber}</span>
-                      <span className="text-xs font-medium block text-slate-705 dark:text-slate-150 truncate uppercase max-w-[200px]">{inv.clientName}</span>
+                  <div className="relative flex flex-col sm:flex-row items-center justify-between gap-4 text-sans select-none">
+                    <div className="flex items-center gap-3.5 text-center sm:text-left">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${isProfitable ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                        {isProfitable ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-[#64748b]/80 dark:text-zinc-400 uppercase tracking-widest font-black block">Combined Net Cash Flow Statement</span>
+                        <span className="text-[11px] font-black text-[#0f172a] dark:text-zinc-300 mt-0.5 block">
+                          {isProfitable ? 'Operating at a net business profit' : 'Overheads exceed paid cash receipts'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-xs font-extrabold font-mono block text-slate-805">{currencySymbol}{inv.grandTotal.toFixed(2)}</span>
-                      <span className="text-[9px] text-rose-500 font-bold block uppercase tracking-wide">Due by: {inv.dueDate}</span>
+
+                    <div className="text-center sm:text-right shrink-0">
+                      <span className={`text-2xl font-black font-mono tracking-tight block ${isProfitable ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
+                        {isProfitable ? '+' : ''}{currencySymbol}{netCash.toLocaleString()}
+                      </span>
+                      <span className={`text-[8.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md mt-1 inline-block ${isProfitable ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-500'}`}>
+                        {isProfitable ? 'Healthy Status' : 'Attention Required'}
+                      </span>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-
-            {/* Business Expenses Ledger logged */}
-            <div className="space-y-2">
-              <span className="text-[10px] uppercase font-medium tracking-wider text-slate-400 block">Logged Expenditure Ledgers ({reportedExpenses.length})</span>
-              {reportedExpenses.length === 0 ? (
-                <div className="p-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-2.5xl text-center text-xs text-slate-400">
-                  No registered business expenses in this bracket. Use &apos;Log Expense&apos; above to enter tax write-offs.
                 </div>
-              ) : (
-                reportedExpenses.map(exp => (
-                  <div
-                    key={exp.id}
-                    className="p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-2.5xl flex justify-between items-center group shadow-xs"
-                  >
-                    <div className="max-w-[250px]">
-                      <span className="text-[9px] uppercase font-extrabold text-rose-500 font-mono tracking-tight block">{exp.category}</span>
-                      <span className="text-xs font-medium text-slate-805 dark:text-slate-200 block truncate">{exp.description || 'General category expenditure'}</span>
-                      <span className="text-[9px] text-slate-400 block font-mono">Charged {exp.date}</span>
+              );
+            })()}
+            {/* Side-by-side Tables Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* List of outstanding invoices with due dates */}
+              <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
+                <div className="flex justify-between items-center pb-4 border-b border-[#e2e8f0]/45 dark:border-zinc-800">
+                  <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Receivables Aging & Pending Bills</h3>
+                  <span className="text-[10px] font-mono font-black text-rose-500 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-lg border border-rose-200/50 dark:border-rose-900/30">
+                    {reportedInvoices.filter(i => i.status === 'pending').length} Pending
+                  </span>
+                </div>
+                <div className="w-full overflow-x-auto mt-3 text-sans">
+                  {reportedInvoices.filter(i => i.status === 'pending').length === 0 ? (
+                    <div className="py-8 text-center">
+                      <p className="text-xs text-[#64748b]/80 font-medium">No outstanding receivables in this filtered bracket.</p>
                     </div>
-                    
-                    <div className="text-right flex items-center gap-3">
-                      <span className="text-xs font-extrabold font-mono text-slate-805">-{currencySymbol}{exp.amount.toFixed(2)}</span>
-                      <button
-                        onClick={() => onDeleteExpense(exp.id)}
-                        className="text-slate-350 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
-                        aria-label="Delete this expense record"
+                  ) : (
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="text-[10px] font-black uppercase text-[#64748b]/60 tracking-wider border-b border-[#e2e8f0]/30">
+                          <th className="py-2.5 font-black">INV ID</th>
+                          <th className="py-2.5 font-black">CLIENT NAME</th>
+                          <th className="py-2.5 font-black">DUE DATE</th>
+                          <th className="py-2.5 font-black">AMOUNT</th>
+                          <th className="py-2.5 font-black">STATUS</th>
+                          <th className="py-2.5"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportedInvoices.filter(i => i.status === 'pending').slice(0, 3).map(inv => (
+                          <tr key={inv.id} className="border-b border-[#e2e8f0]/20 hover:bg-[#FAF8F5]/50 dark:hover:bg-zinc-850/40">
+                            <td className="py-3 font-extrabold text-[#0f172a] dark:text-white">{inv.invoiceNumber}</td>
+                            <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[150px]">{inv.clientName}</td>
+                            <td className="py-3 font-medium text-rose-500 font-sans">Due: {inv.dueDate || inv.date}</td>
+                            <td className="py-3 font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{inv.grandTotal.toLocaleString()}</td>
+                            <td className="py-3">
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-900/30 text-amber-600 dark:text-amber-400">
+                                PENDING
+                              </span>
+                            </td>
+                            <td className="py-3 text-right">
+                              <button 
+                                onClick={() => setActivePreviewInvoice(inv)}
+                                className="text-[#64748b] hover:text-[#0f172a] dark:hover:text-white p-1 cursor-pointer"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                  {reportedInvoices.filter(i => i.status === 'pending').length > 3 && (
+                    <div className="mt-3 pt-3 border-t border-[#e2e8f0]/30 dark:border-zinc-800 text-center">
+                      <button 
+                        onClick={() => setActiveTab('invoices')} 
+                        className="text-[9px] font-black uppercase tracking-wider text-rose-500 hover:text-rose-600 transition-colors"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        See More Pending Bills &rarr;
                       </button>
                     </div>
-                  </div>
-                ))
-              )}
+                  )}
+                </div>
+              </div>
+
+              {/* Business Expenses Ledger logged */}
+              <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
+                <div className="flex justify-between items-center pb-4 border-b border-[#e2e8f0]/45 dark:border-zinc-800">
+                  <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Logged Expenditure Ledgers</h3>
+                  <span className="text-[10px] font-mono font-black text-rose-500 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-lg border border-rose-200/50 dark:border-rose-900/30">
+                    {reportedExpenses.length} Expenses
+                  </span>
+                </div>
+                <div className="w-full overflow-x-auto mt-3 text-sans">
+                  {reportedExpenses.length === 0 ? (
+                    <div className="py-8 text-center">
+                      <p className="text-xs text-[#64748b]/80 font-medium">No registered business expenses in this bracket. Use &apos;Log Expense&apos; above to enter write-offs.</p>
+                    </div>
+                  ) : (
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="text-[10px] font-black uppercase text-[#64748b]/60 tracking-wider border-b border-[#e2e8f0]/30">
+                          <th className="py-2.5 font-black">CATEGORY</th>
+                          <th className="py-2.5 font-black">DESCRIPTION</th>
+                          <th className="py-2.5 font-black">CHARGED DATE</th>
+                          <th className="py-2.5 font-black">AMOUNT</th>
+                          <th className="py-2.5"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(showAllExpenses ? reportedExpenses : reportedExpenses.slice(0, 3)).map(exp => (
+                          <tr key={exp.id} className="border-b border-[#e2e8f0]/20 hover:bg-[#FAF8F5]/50 dark:hover:bg-zinc-850/40 group">
+                            <td className="py-3 font-extrabold text-[#0f172a] dark:text-white uppercase tracking-tight font-mono text-[10px]">{exp.category}</td>
+                            <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[200px]">{exp.description || 'General category expenditure'}</td>
+                            <td className="py-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans">{exp.date}</td>
+                            <td className="py-3 font-extrabold font-mono text-rose-500">-{currencySymbol}{exp.amount.toLocaleString()}</td>
+                            <td className="py-3 text-right">
+                              <button
+                                onClick={() => onDeleteExpense(exp.id)}
+                                className="text-[#64748b]/60 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                                aria-label="Delete expense"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                  {!showAllExpenses && reportedExpenses.length > 3 && (
+                    <div className="mt-3 pt-3 border-t border-[#e2e8f0]/30 dark:border-zinc-800 text-center">
+                      <button 
+                        onClick={() => setShowAllExpenses(true)} 
+                        className="text-[9px] font-black uppercase tracking-wider text-rose-500 hover:text-rose-600 transition-colors"
+                      >
+                        See More Expenditures &rarr;
+                      </button>
+                    </div>
+                  )}
+                  {showAllExpenses && reportedExpenses.length > 3 && (
+                    <div className="mt-3 pt-3 border-t border-[#e2e8f0]/30 dark:border-zinc-800 text-center">
+                      <button 
+                        onClick={() => setShowAllExpenses(false)} 
+                        className="text-[9px] font-black uppercase tracking-wider text-[#64748b] hover:text-[#0f172a] transition-colors"
+                      >
+                        Collapse &uarr;
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}
 
         {/* ------------------ TAB 4: BRAND NEW 'dashboard' BENTO HOME PREMIER VIEW ------------------ */}
         {activeTab === 'dashboard' && (() => {
-          // Calculate KPI sparkline and chart details
-          const monthsShort = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN"];
-          const records: { label: string; income: number; projected: number }[] = [];
+          const records: { label: string; income: number; receivables: number }[] = [];
           const now = new Date();
-          
-          for (let i = 5; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            records.push({
-              label: `${monthsShort[d.getMonth() % 12]}`,
-              income: 0,
-              projected: 0
+
+          if (dashboardChartRange === '7d') {
+            for (let i = 6; i >= 0; i--) {
+              const d = new Date(now); d.setDate(now.getDate() - i);
+              records.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, income: 0, receivables: 0 });
+            }
+            invoices.forEach(inv => {
+              const d = new Date(inv.date); if (isNaN(d.getTime())) return;
+              const lbl = `${d.getDate()}/${d.getMonth() + 1}`;
+              const match = records.find(r => r.label === lbl);
+              if (match) {
+                if (inv.status === 'paid') match.income += inv.grandTotal;
+                else if (inv.status === 'pending') match.receivables += inv.grandTotal;
+              }
+            });
+          } else if (dashboardChartRange === '1m') {
+            for (let i = 3; i >= 0; i--) {
+              const wEnd = new Date(now); wEnd.setDate(now.getDate() - i * 7);
+              const wStart = new Date(wEnd); wStart.setDate(wEnd.getDate() - 6);
+              records.push({ label: `W${4 - i}`, income: 0, receivables: 0, _start: wStart, _end: wEnd } as any);
+            }
+            invoices.forEach(inv => {
+              const d = new Date(inv.date); if (isNaN(d.getTime())) return;
+              const match = (records as any[]).find(r => d >= r._start && d <= r._end);
+              if (match) {
+                if (inv.status === 'paid') match.income += inv.grandTotal;
+                else if (inv.status === 'pending') match.receivables += inv.grandTotal;
+              }
+            });
+          } else if (dashboardChartRange === 'all') {
+            const minYearInv = invoices.length > 0 ? Math.min(...invoices.map(i => new Date(i.date).getFullYear())) : now.getFullYear();
+            const startYear = Math.min(minYearInv, now.getFullYear());
+            const endYear = now.getFullYear();
+            const adjustedStart = (endYear - startYear < 2) ? endYear - 2 : startYear;
+            for (let y = adjustedStart; y <= endYear; y++) {
+              records.push({ label: y.toString(), income: 0, receivables: 0, _year: y } as any);
+            }
+            invoices.forEach(inv => {
+              const d = new Date(inv.date); if (isNaN(d.getTime())) return;
+              const match = (records as any[]).find(r => r._year === d.getFullYear());
+              if (match) {
+                if (inv.status === 'paid') match.income += inv.grandTotal;
+                else if (inv.status === 'pending') match.receivables += inv.grandTotal;
+              }
+            });
+          } else {
+            const monthCount = dashboardChartRange === '3m' ? 3 : dashboardChartRange === '6m' ? 6 : 12;
+            const monthsShort = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            for (let i = monthCount - 1; i >= 0; i--) {
+              const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+              records.push({ label: monthsShort[d.getMonth()], income: 0, receivables: 0, _month: d.getMonth(), _year: d.getFullYear() } as any);
+            }
+            invoices.forEach(inv => {
+              const d = new Date(inv.date); if (isNaN(d.getTime())) return;
+              const match = (records as any[]).find(r => r._month === d.getMonth() && r._year === d.getFullYear());
+              if (match) {
+                if (inv.status === 'paid') match.income += inv.grandTotal;
+                else if (inv.status === 'pending') match.receivables += inv.grandTotal;
+              }
             });
           }
 
-          invoices.forEach(inv => {
-            if (inv.status === 'paid') {
-              const dateObj = new Date(inv.date);
-              if (!isNaN(dateObj.getTime())) {
-                const label = monthsShort[dateObj.getMonth() % 12];
-                const match = records.find(r => r.label === label);
-                if (match) match.income += inv.grandTotal;
-              }
-            }
-          });
-
-          records.forEach((r, idx) => {
-            r.projected = r.income > 0 ? r.income * 0.85 + 25000 : 80000 + idx * 45000;
-          });
-
           // SVG Line coordinates math
-          const maxVal = Math.max(...records.map(d => Math.max(d.income, d.projected)), 100000);
+          const maxVal = Math.max(...records.map(d => Math.max(d.income, d.receivables)), 10000);
           const chartWidth = 500;
           const chartHeight = 160;
           const paddingX = 40;
@@ -2878,101 +3683,133 @@ export default function Dashboard({
           const usableWidth = chartWidth - paddingX * 2;
           const usableHeight = chartHeight - paddingY * 2;
 
-          const pointsActual = records.map((r, i) => ({
+          const pointsEarnings = records.map((r, i) => ({
             x: paddingX + (i / (records.length - 1)) * usableWidth,
             y: chartHeight - paddingY - (r.income / maxVal) * usableHeight
           }));
 
-          const pointsProjected = records.map((r, i) => ({
+          const pointsReceivables = records.map((r, i) => ({
             x: paddingX + (i / (records.length - 1)) * usableWidth,
-            y: chartHeight - paddingY - (r.projected / maxVal) * usableHeight
+            y: chartHeight - paddingY - (r.receivables / maxVal) * usableHeight
           }));
 
-          const pathActual = pointsActual.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-          const pathProjected = pointsProjected.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+          const pathEarnings = pointsEarnings.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+          const pathReceivables = pointsReceivables.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
           const initials = profile.name ? profile.name.slice(0, 2).toUpperCase() : 'MK';
+
+          const totalInvoicedDash = totalBilled + totalOutstanding;
+          const earningsPct = totalInvoicedDash > 0 ? ((totalBilled / totalInvoicedDash) * 100).toFixed(1) + '%' : '0%';
+          const receivablesPct = totalInvoicedDash > 0 ? ((totalOutstanding / totalInvoicedDash) * 100).toFixed(1) + '%' : '0%';
+          const expensesPct = totalInvoicedDash > 0 ? ((totalReportedExpenses / totalInvoicedDash) * 100).toFixed(1) + '%' : '0%';
+          const taxPct = totalInvoicedDash > 0 ? ((totalTax / totalInvoicedDash) * 100).toFixed(1) + '%' : '0%';
 
           return (
             <div className="space-y-6 text-sans animate-in fade-in duration-300">
 
               {/* KPI Cards Row */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 {/* Settled Earnings */}
-                <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-emerald-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
                   <div className="flex justify-between items-start">
                     <div className="w-8.5 h-8.5 rounded-full bg-[#ECFDF5] text-[#10B981] border border-[#A7F3D0] flex items-center justify-center font-black text-sm">
                       ₹
                     </div>
                     <span className="text-[10px] font-black text-[#10B981] bg-[#ECFDF5] border border-[#A7F3D0] px-2 py-0.5 rounded-full">
-                      +12.5%
+                      {earningsPct}
                     </span>
                   </div>
                   <div className="mt-3">
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#88765C]/80 block">Settled Earnings</span>
-                    <span className="text-xl font-black text-[#6E6050] dark:text-white mt-1 block">
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Settled Earnings</span>
+                    <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
                       {currencySymbol}{totalBilled.toLocaleString()}
                     </span>
                   </div>
                   {/* Sparkline bars */}
                   <div className="flex items-end gap-1 h-6 self-start mt-2">
-                    <div className="w-1 bg-[#10B981]/30 rounded-t-sm h-2" />
-                    <div className="w-1 bg-[#10B981]/50 rounded-t-sm h-3" />
-                    <div className="w-1 bg-[#10B981]/70 rounded-t-sm h-5" />
-                    <div className="w-1 bg-[#10B981]/40 rounded-t-sm h-3" />
-                    <div className="w-1 bg-[#10B981] rounded-t-sm h-6" />
+                    <div className="w-1 bg-emerald-200 rounded-t-sm h-2" />
+                    <div className="w-1 bg-emerald-300 rounded-t-sm h-3" />
+                    <div className="w-1 bg-emerald-400 rounded-t-sm h-5" />
+                    <div className="w-1 bg-emerald-300 rounded-t-sm h-3" />
+                    <div className="w-1 bg-emerald-500 rounded-t-sm h-6" />
                   </div>
                 </div>
 
                 {/* Pending Receivables */}
-                <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-amber-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
                   <div className="flex justify-between items-start">
                     <div className="w-8.5 h-8.5 rounded-full bg-[#FFFBEB] text-[#F59E0B] border border-[#FEF3C7] flex items-center justify-center">
                       <CheckSquare className="w-4 h-4" />
                     </div>
                     <span className="text-[10px] font-black text-[#F59E0B] bg-[#FFFBEB] border border-[#FEF3C7] px-2 py-0.5 rounded-full">
-                      +4.2%
+                      {receivablesPct}
                     </span>
                   </div>
                   <div className="mt-3">
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#88765C]/80 block">Pending Receivables</span>
-                    <span className="text-xl font-black text-[#6E6050] dark:text-white mt-1 block">
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Pending Receivables</span>
+                    <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
                       {currencySymbol}{totalOutstanding.toLocaleString()}
                     </span>
                   </div>
                   {/* Sparkline bars */}
                   <div className="flex items-end gap-1 h-6 self-start mt-2">
-                    <div className="w-1 bg-[#F59E0B]/30 rounded-t-sm h-4" />
-                    <div className="w-1 bg-[#F59E0B]/50 rounded-t-sm h-2" />
-                    <div className="w-1 bg-[#F59E0B]/70 rounded-t-sm h-5" />
-                    <div className="w-1 bg-[#F59E0B] rounded-t-sm h-6" />
-                    <div className="w-1 bg-[#F59E0B]/40 rounded-t-sm h-3" />
+                    <div className="w-1 bg-amber-200 rounded-t-sm h-4" />
+                    <div className="w-1 bg-amber-300 rounded-t-sm h-2" />
+                    <div className="w-1 bg-amber-400 rounded-t-sm h-5" />
+                    <div className="w-1 bg-amber-500 rounded-t-sm h-6" />
+                    <div className="w-1 bg-amber-300 rounded-t-sm h-3" />
                   </div>
                 </div>
 
                 {/* Operating Expenses */}
-                <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-rose-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
                   <div className="flex justify-between items-start">
                     <div className="w-8.5 h-8.5 rounded-full bg-[#FEF2F2] text-[#EF4444] border border-[#FEE2E2] flex items-center justify-center">
                       <MinusCircle className="w-4 h-4" />
                     </div>
                     <span className="text-[10px] font-black text-[#EF4444] bg-[#FEF2F2] border border-[#FEE2E2] px-2 py-0.5 rounded-full">
-                      -2.8%
+                      {expensesPct}
                     </span>
                   </div>
                   <div className="mt-3">
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#88765C]/80 block">Operating Expenses</span>
-                    <span className="text-xl font-black text-[#6E6050] dark:text-white mt-1 block">
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Operating Expenses</span>
+                    <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
                       {currencySymbol}{totalReportedExpenses.toLocaleString()}
                     </span>
                   </div>
                   {/* Sparkline bars */}
                   <div className="flex items-end gap-1 h-6 self-start mt-2">
-                    <div className="w-1 bg-[#EF4444] rounded-t-sm h-6" />
-                    <div className="w-1 bg-[#EF4444]/50 rounded-t-sm h-3" />
-                    <div className="w-1 bg-[#EF4444]/70 rounded-t-sm h-5" />
-                    <div className="w-1 bg-[#EF4444]/30 rounded-t-sm h-2" />
-                    <div className="w-1 bg-[#EF4444]/80 rounded-t-sm h-4" />
+                    <div className="w-1 bg-rose-500 rounded-t-sm h-6" />
+                    <div className="w-1 bg-rose-300 rounded-t-sm h-3" />
+                    <div className="w-1 bg-rose-400 rounded-t-sm h-5" />
+                    <div className="w-1 bg-rose-200 rounded-t-sm h-2" />
+                    <div className="w-1 bg-rose-400 rounded-t-sm h-4" />
+                  </div>
+                </div>
+
+                {/* Tax Liabilities */}
+                <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-sky-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                  <div className="flex justify-between items-start">
+                    <div className="w-8.5 h-8.5 rounded-full bg-[#F0F9FF] text-[#0284C7] border border-[#BAE6FD] flex items-center justify-center">
+                      <Percent className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-black text-[#0284C7] bg-[#F0F9FF] border border-[#BAE6FD] px-2 py-0.5 rounded-full">
+                      {taxPct}
+                    </span>
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Tax Liabilities</span>
+                    <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
+                      {currencySymbol}{totalTax.toLocaleString()}
+                    </span>
+                  </div>
+                  {/* Sparkline bars */}
+                  <div className="flex items-end gap-1 h-6 self-start mt-2">
+                    <div className="w-1 bg-sky-200 rounded-t-sm h-3" />
+                    <div className="w-1 bg-sky-300 rounded-t-sm h-5" />
+                    <div className="w-1 bg-sky-400 rounded-t-sm h-2" />
+                    <div className="w-1 bg-sky-500 rounded-t-sm h-6" />
+                    <div className="w-1 bg-sky-300 rounded-t-sm h-4" />
                   </div>
                 </div>
               </div>
@@ -2980,18 +3817,37 @@ export default function Dashboard({
               {/* Chart & Donut Middle Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-[1.72fr_1.28fr] gap-6">
                 {/* Revenue Intelligence Line Chart */}
-                <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
-                  <div className="flex justify-between items-start pb-4">
+                <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                  <div className="flex justify-between items-start pb-4 border-b border-[#e2e8f0]/30 dark:border-zinc-800 flex-wrap gap-2">
                     <div>
-                      <h3 className="text-sm font-black text-[#6E6050] dark:text-white uppercase tracking-tight">Revenue Intelligence</h3>
-                      <span className="text-[10px] text-[#88765C]/80 dark:text-zinc-400 block mt-0.5">Comparative analysis of cash flow vs projections</span>
+                      <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Revenue Intelligence</h3>
+                      <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5">Comparative analysis of earnings vs unpaid receivables</span>
+                      {/* Interval dropdown selector */}
+                      <div className="mt-2 w-fit">
+                        <select
+                          value={dashboardChartRange}
+                          onChange={(e) => {
+                            setDashboardChartRange(e.target.value as any);
+                            setHoveredDashboardChartIndex(null);
+                          }}
+                          className="px-3.5 py-1.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0] hover:border-[#C6A87D] focus:border-[#0f172a] dark:border-zinc-700 dark:focus:border-zinc-500 rounded-lg text-[10px] font-black uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 focus:outline-none cursor-pointer transition-colors duration-150"
+                          style={{ boxShadow: 'inset 0 1px 3px rgba(110,96,80,0.08)' }}
+                        >
+                          <option value="7d">7 Days</option>
+                          <option value="1m">Monthly</option>
+                          <option value="3m">Quarterly</option>
+                          <option value="6m">Half Year</option>
+                          <option value="1y">Yearly</option>
+                          <option value="all">All Years</option>
+                        </select>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#88765C]/80 dark:text-zinc-400">
+                    <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400 mt-1">
                       <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-0.5 bg-[#6E6050]" /> ACTUAL
+                        <span className="w-2.5 h-0.5 bg-[#0f172a]" /> EARNINGS
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-0.5 border-t border-dashed border-[#C6A87D]" /> PROJECTED
+                        <span className="w-2.5 h-0.5 border-t border-dashed border-[#C6A87D]" /> RECEIVABLES
                       </span>
                     </div>
                   </div>
@@ -3004,130 +3860,233 @@ export default function Dashboard({
                         const labelValue = Math.round(maxVal - (ratio * maxVal));
                         return (
                           <g key={`grid-${i}`}>
-                            <line x1={paddingX} y1={y} x2={chartWidth - paddingX} y2={y} stroke="#EBDCC8" strokeWidth="0.5" strokeOpacity="0.4" />
-                            <text x={paddingX - 10} y={y + 3} textAnchor="end" className="text-[8px] font-mono fill-[#88765C]/70">
+                            <line x1={paddingX} y1={y} x2={chartWidth - paddingX} y2={y} stroke="#e2e8f0" strokeWidth="0.5" strokeOpacity="0.4" />
+                            <text x={paddingX - 10} y={y + 3} textAnchor="end" className="text-[8px] font-mono fill-[#64748b]/70">
                               {labelValue >= 1000 ? `${(labelValue / 1000).toFixed(0)}k` : labelValue}
                             </text>
                           </g>
                         );
                       })}
 
+                      {/* Vertical guidance line on hover */}
+                      {hoveredDashboardChartIndex !== null && pointsEarnings[hoveredDashboardChartIndex] && (
+                        <line 
+                          x1={pointsEarnings[hoveredDashboardChartIndex].x} 
+                          y1={paddingY} 
+                          x2={pointsEarnings[hoveredDashboardChartIndex].x} 
+                          y2={chartHeight - paddingY} 
+                          stroke="#C6A87D" 
+                          strokeWidth="1" 
+                          strokeDasharray="2 2"
+                          className="opacity-75"
+                        />
+                      )}
+
                       {/* Line paths */}
-                      <path d={pathActual} fill="none" stroke="#6E6050" strokeWidth="2" strokeLinecap="round" />
-                      <path d={pathProjected} fill="none" stroke="#C6A87D" strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
+                      <path d={pathEarnings} fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
+                      <path d={pathReceivables} fill="none" stroke="#C6A87D" strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
 
                       {/* Dot indicators */}
-                      {pointsActual.map((pts, i) => (
-                        <circle key={`act-dot-${i}`} cx={pts.x} cy={pts.y} r="3" fill="#6E6050" stroke="#fff" strokeWidth="1" />
+                      {pointsEarnings.map((pts, i) => (
+                        <circle 
+                          key={`act-dot-${i}`} 
+                          cx={pts.x} 
+                          cy={pts.y} 
+                          r={hoveredDashboardChartIndex === i ? "4.5" : "3"} 
+                          fill="#0f172a" 
+                          stroke="#fff" 
+                          strokeWidth={hoveredDashboardChartIndex === i ? "1.5" : "1"} 
+                          className="transition-all"
+                        />
+                      ))}
+                      {pointsReceivables.map((pts, i) => (
+                        <circle 
+                          key={`proj-dot-${i}`} 
+                          cx={pts.x} 
+                          cy={pts.y} 
+                          r={hoveredDashboardChartIndex === i ? "4.5" : "3"} 
+                          fill="#C6A87D" 
+                          stroke="#fff" 
+                          strokeWidth={hoveredDashboardChartIndex === i ? "1.5" : "1"} 
+                          className="transition-all"
+                        />
                       ))}
 
                       {/* Bottom months labels */}
                       {records.map((r, i) => {
                         const x = paddingX + (i / (records.length - 1)) * usableWidth;
+                        const isHovered = hoveredDashboardChartIndex === i;
                         return (
-                          <text key={`lbl-chart-${i}`} x={x} y={chartHeight - 4} textAnchor="middle" className="text-[9px] font-black fill-[#88765C]/80 font-mono">{r.label}</text>
+                          <text 
+                            key={`lbl-chart-${i}`} 
+                            x={x} 
+                            y={chartHeight - 4} 
+                            textAnchor="middle" 
+                            className={`text-[9px] font-mono transition-all ${isHovered ? 'font-black fill-[#0f172a]' : 'font-bold fill-[#64748b]/80'}`}
+                          >
+                            {r.label}
+                          </text>
                         );
                       })}
+
+                      {/* Interactive Transparent Hover zones */}
+                      {records.map((_, i) => {
+                        const colWidth = usableWidth / (records.length - 1);
+                        const x = paddingX + i * colWidth - colWidth / 2;
+                        return (
+                          <rect
+                            key={`hover-zone-${i}`}
+                            x={i === 0 ? paddingX : x}
+                            y={paddingY}
+                            width={i === 0 || i === records.length - 1 ? colWidth / 2 : colWidth}
+                            height={usableHeight}
+                            fill="transparent"
+                            className="cursor-pointer"
+                            onMouseEnter={() => setHoveredDashboardChartIndex(i)}
+                            onMouseLeave={() => setHoveredDashboardChartIndex(null)}
+                            onTouchStart={() => setHoveredDashboardChartIndex(i)}
+                            onClick={() => setHoveredDashboardChartIndex(i)}
+                          />
+                        );
+                      })}
+
+                      {/* Tooltip render overlay */}
+                      {hoveredDashboardChartIndex !== null && records[hoveredDashboardChartIndex] && (() => {
+                        const rec = records[hoveredDashboardChartIndex];
+                        const pt = pointsEarnings[hoveredDashboardChartIndex] || { x: 250, y: 80 };
+                        const tooltipWidth = 115;
+                        const tooltipHeight = 44;
+                        let tooltipX = pt.x - tooltipWidth / 2;
+                        if (tooltipX < paddingX) tooltipX = paddingX;
+                        if (tooltipX + tooltipWidth > chartWidth - paddingX) tooltipX = chartWidth - paddingX - tooltipWidth;
+                        const tooltipY = Math.max(paddingY - 5, pt.y - tooltipHeight - 8);
+
+                        return (
+                          <g transform={`translate(${tooltipX}, ${tooltipY})`} className="pointer-events-none filter drop-shadow-[0_2px_4px_rgba(110,96,80,0.12)]">
+                            <rect 
+                              width={tooltipWidth} 
+                              height={tooltipHeight} 
+                              rx="6" 
+                              fill="rgba(35, 32, 29, 0.95)" 
+                              stroke="#e2e8f0"
+                              strokeWidth="0.5"
+                            />
+                            <text x="8" y="12" fill="#e2e8f0" className="text-[8px] font-black uppercase tracking-wider font-mono">{rec.label}</text>
+                            <text x="8" y="24" fill="#10B981" className="text-[8px] font-bold font-mono">
+                              Earn: {currencySymbol}{rec.income.toLocaleString()}
+                            </text>
+                            <text x="8" y="34" fill="#F59E0B" className="text-[8px] font-bold font-mono">
+                              Due: {currencySymbol}{rec.receivables.toLocaleString()}
+                            </text>
+                          </g>
+                        );
+                      })()}
                     </svg>
                   </div>
                 </div>
 
                 {/* Donut Chart: Revenue Segments */}
-                <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
                   <div>
-                    <h3 className="text-sm font-black text-[#6E6050] dark:text-white uppercase tracking-tight">Revenue Segments</h3>
+                    <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Revenue Segments</h3>
                   </div>
 
-                  <div className="flex flex-col items-center justify-center py-4 relative">
-                    <svg className="w-36 h-36" viewBox="0 0 200 200">
-                      {/* Grey Base background track */}
-                      <circle cx="100" cy="100" r="70" fill="none" stroke="#F1EDE6" strokeWidth="18" />
-                      
-                      {/* Corporate Sales (68%) */}
-                      <circle 
-                        cx="100" 
-                        cy="100" 
-                        r="70" 
-                        fill="none" 
-                        stroke="#6E6050" 
-                        strokeWidth="18" 
-                        strokeDasharray="299 440" 
-                        strokeDashoffset="0" 
-                        strokeLinecap="round" 
-                        className="transform -rotate-90 origin-center" 
-                      />
-                      
-                      {/* Direct Retail (12%) */}
-                      <circle 
-                        cx="100" 
-                        cy="100" 
-                        r="70" 
-                        fill="none" 
-                        stroke="#c6a87d" 
-                        strokeWidth="18" 
-                        strokeDasharray="53 440" 
-                        strokeDashoffset="-299" 
-                        strokeLinecap="round" 
-                        className="transform -rotate-90 origin-center" 
-                      />
+                  {(() => {
+                    const totalExpensesVal = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+                    const segTotal = totalBilled + totalOutstanding + totalExpensesVal + totalTax || 1;
+                    const c = 440; // circumference
+                    const earnDash = (totalBilled / segTotal) * c;
+                    const recvDash = (totalOutstanding / segTotal) * c;
+                    const expDash = (totalExpensesVal / segTotal) * c;
+                    const taxDash = (totalTax / segTotal) * c;
 
-                      {/* Consultancy (20%) */}
-                      <circle 
-                        cx="100" 
-                        cy="100" 
-                        r="70" 
-                        fill="none" 
-                        stroke="#d1c7bd" 
-                        strokeWidth="18" 
-                        strokeDasharray="88 440" 
-                        strokeDashoffset="-352" 
-                        strokeLinecap="round" 
-                        className="transform -rotate-90 origin-center" 
-                      />
+                    return (
+                      <>
+                        <div className="flex flex-col items-center justify-center py-4 relative">
+                          <svg className="w-36 h-36" viewBox="0 0 200 200">
+                            {/* Base track */}
+                            <circle cx="100" cy="100" r="70" fill="none" stroke="#F1EDE6" strokeWidth="18" />
+                            
+                            {/* Earnings — emerald */}
+                            <circle 
+                              cx="100" cy="100" r="70" fill="none" stroke="#10B981" strokeWidth="18" 
+                              strokeDasharray={`${earnDash} ${c}`} strokeDashoffset="0" 
+                              strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
+                            />
+                            
+                            {/* Receivables — amber */}
+                            <circle 
+                              cx="100" cy="100" r="70" fill="none" stroke="#F59E0B" strokeWidth="18" 
+                              strokeDasharray={`${recvDash} ${c}`} strokeDashoffset={`-${earnDash}`} 
+                              strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
+                            />
 
-                      {/* Total inside circle */}
-                      <text x="100" y="98" textAnchor="middle" className="text-xl font-black fill-[#6E6050] dark:fill-white">
-                        ₹ {(((totalBilled + totalOutstanding) || 640000) / 100000).toFixed(1)}L
-                      </text>
-                      <text x="100" y="116" textAnchor="middle" className="text-[9px] font-black uppercase tracking-wider fill-[#88765C]/80">
-                        TOTAL
-                      </text>
-                    </svg>
-                  </div>
+                            {/* Expenses — rose */}
+                            <circle 
+                              cx="100" cy="100" r="70" fill="none" stroke="#F43F5E" strokeWidth="18" 
+                              strokeDasharray={`${expDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash}`} 
+                              strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
+                            />
 
-                  {/* Legend list */}
-                  <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-[#88765C]/90 dark:text-zinc-400 mt-2 px-2">
-                    <div className="flex items-center justify-between gap-1.5">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#6E6050]" /> Corporate Sales
-                      </span>
-                      <span className="font-extrabold text-[#6E6050] dark:text-white">68%</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-1.5">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#c6a87d]" /> Direct Retail
-                      </span>
-                      <span className="font-extrabold text-[#6E6050] dark:text-white">12%</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-1.5 col-span-2 border-t border-[#EBDCC8]/40 pt-1.5">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#d1c7bd]" /> Consultancy
-                      </span>
-                      <span className="font-extrabold text-[#6E6050] dark:text-white">20%</span>
-                    </div>
-                  </div>
+                            {/* Taxes — sky */}
+                            <circle 
+                              cx="100" cy="100" r="70" fill="none" stroke="#38BDF8" strokeWidth="18" 
+                              strokeDasharray={`${taxDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash + expDash}`} 
+                              strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
+                            />
+
+                            {/* Total inside circle */}
+                            <text x="100" y="98" textAnchor="middle" className="text-[13px] font-black fill-[#0f172a] dark:fill-white">
+                              {currencySymbol}{(segTotal >= 1000 ? (segTotal / 1000).toFixed(1) + 'k' : (segTotal === 1 ? '0' : segTotal))}
+                            </text>
+                            <text x="100" y="116" textAnchor="middle" className="text-[9px] font-black uppercase tracking-wider fill-[#64748b]/80">
+                              TOTAL
+                            </text>
+                          </svg>
+                        </div>
+
+                        {/* Legend list */}
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-3 text-[10px] font-bold text-[#64748b]/90 dark:text-zinc-400 mt-2 px-2">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <span className="flex items-center gap-1.5 whitespace-nowrap">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" /> Earnings
+                            </span>
+                            <span className="font-extrabold text-[#0f172a] dark:text-white">{Math.round((totalBilled / segTotal) * 100)}%</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-1.5">
+                            <span className="flex items-center gap-1.5 whitespace-nowrap">
+                              <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" /> Receivables
+                            </span>
+                            <span className="font-extrabold text-[#0f172a] dark:text-white">{Math.round((totalOutstanding / segTotal) * 100)}%</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-[#e2e8f0]/40 dark:border-zinc-800">
+                            <span className="flex items-center gap-1.5 whitespace-nowrap">
+                              <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" /> Expenses
+                            </span>
+                            <span className="font-extrabold text-[#0f172a] dark:text-white">{Math.round((totalExpensesVal / segTotal) * 100)}%</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-[#e2e8f0]/40 dark:border-zinc-800">
+                            <span className="flex items-center gap-1.5 whitespace-nowrap">
+                              <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" /> Taxes
+                            </span>
+                            <span className="font-extrabold text-[#0f172a] dark:text-white">{Math.round((totalTax / segTotal) * 100)}%</span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
               {/* Bottom Records Table & Compliance Protocol Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-[1.72fr_1.28fr] gap-6">
                 {/* Recent Billing Table */}
-                <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
-                  <div className="flex justify-between items-center pb-4 border-b border-[#EBDCC8]/45 dark:border-zinc-800">
-                    <h3 className="text-sm font-black text-[#6E6050] dark:text-white uppercase tracking-tight">Recent Billing Records</h3>
+                <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                  <div className="flex justify-between items-center pb-4 border-b border-[#e2e8f0]/45 dark:border-zinc-800">
+                    <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Recent Billing Records</h3>
                     <button 
                       onClick={() => setActiveTab('invoices')}
-                      className="text-[10px] font-black text-[#88765C] hover:text-[#6E6050] uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                      className="text-[10px] font-black text-[#64748b] hover:text-[#0f172a] uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                     >
                       View All Records →
                     </button>
@@ -3136,12 +4095,12 @@ export default function Dashboard({
                   <div className="w-full overflow-x-auto mt-3">
                     {invoices.length === 0 ? (
                       <div className="py-12 text-center">
-                        <p className="text-xs text-[#88765C]/80 font-medium">Generate your first invoice to view records here!</p>
+                        <p className="text-xs text-[#64748b]/80 font-medium">Generate your first invoice to view records here!</p>
                       </div>
                     ) : (
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
-                          <tr className="text-[10px] font-black uppercase text-[#88765C]/60 tracking-wider border-b border-[#EBDCC8]/30">
+                          <tr className="text-[10px] font-black uppercase text-[#64748b]/60 tracking-wider border-b border-[#e2e8f0]/30">
                             <th className="py-2.5 font-black">INV ID</th>
                             <th className="py-2.5 font-black">CLIENT NAME</th>
                             <th className="py-2.5 font-black">DUE DATE</th>
@@ -3152,11 +4111,11 @@ export default function Dashboard({
                         </thead>
                         <tbody>
                           {invoices.slice(0, 3).map(inv => (
-                            <tr key={inv.id} className="border-b border-[#EBDCC8]/20 hover:bg-[#FAF8F5]/50 dark:hover:bg-zinc-850/40">
-                              <td className="py-3 font-extrabold text-[#6E6050] dark:text-white">{inv.invoiceNumber}</td>
-                              <td className="py-3 font-bold text-[#88765C] dark:text-zinc-300 truncate max-w-[120px]">{inv.clientName}</td>
-                              <td className="py-3 font-medium text-[#88765C]/80 dark:text-zinc-400 font-sans">{inv.dueDate || inv.date}</td>
-                              <td className="py-3 font-extrabold font-mono text-[#6E6050] dark:text-white">{currencySymbol}{inv.grandTotal.toLocaleString()}</td>
+                            <tr key={inv.id} className="border-b border-[#e2e8f0]/20 hover:bg-[#FAF8F5]/50 dark:hover:bg-zinc-850/40">
+                              <td className="py-3 font-extrabold text-[#0f172a] dark:text-white">{inv.invoiceNumber}</td>
+                              <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[120px]">{inv.clientName}</td>
+                              <td className="py-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans">{inv.dueDate || inv.date}</td>
+                              <td className="py-3 font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{inv.grandTotal.toLocaleString()}</td>
                               <td className="py-3">
                                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
                                   {inv.status}
@@ -3165,7 +4124,7 @@ export default function Dashboard({
                               <td className="py-3 text-right">
                                 <button 
                                   onClick={() => setActivePreviewInvoice(inv)}
-                                  className="text-[#88765C] hover:text-[#6E6050] p-1 cursor-pointer"
+                                  className="text-[#64748b] hover:text-[#0f172a] p-1 cursor-pointer"
                                 >
                                   <MoreVertical className="w-4 h-4" />
                                 </button>
@@ -3218,77 +4177,143 @@ export default function Dashboard({
 
         {/* ------------------ TAB 5: LEARN DOCUMENTATION & TERMS AND CONDITIONS ------------------ */}
         {activeTab === 'learn' && (
-          <div className="space-y-6 text-sans animate-in fade-in duration-200">
-            {/* Main Header Guide card */}
-            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-sm hover:shadow-md transition-all duration-300 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-rose-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
-                  <Sparkles className="w-5 h-5 text-white animate-pulse" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-tight">
-                    How to use our App & Company Billing Policies
-                  </h2>
-                </div>
-              </div>
-              <p className="text-[11.5px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                Welcome to the official IndoTech portal documentation! Here you will find step-by-step app user guidelines, business terms, and invoicing best practices.
-              </p>
+          <div className="space-y-6 animate-in fade-in duration-200 w-full">
+
+            {/* Page Header */}
+            <div>
+              <h1 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
+                <span className="bg-gradient-to-r from-[#0f172a] to-[#64748b] bg-clip-text text-transparent dark:from-white dark:to-[#e2e8f0]">User Guide</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              </h1>
+              <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">App usage documentation, billing policies, and company invoicing standards</p>
             </div>
 
-            {/* How to Use Our App */}
-            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-sm space-y-5">
-              <h3 className="text-xs font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-tight flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                <span className="px-2 py-1 bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded-lg text-[10px] font-extrabold font-mono shadow-sm">STEP-BY-STEP</span>
-                <span>Part A: How to Use Our Billing App</span>
-              </h3>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-                <div className="group p-4 bg-slate-50 dark:bg-slate-950/50 hover:bg-sky-50 dark:hover:bg-sky-500/10 border border-slate-100 dark:border-slate-800 rounded-2.5xl space-y-1.5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                  <strong className="text-slate-800 dark:text-slate-100 block text-xs flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-600 flex justify-center items-center font-medium">1</span> Establish Profile</strong>
-                  <p className="font-medium mt-2">Click your round profile icon on the top right bar, head to profile dashboard, and register your complete organization details.</p>
-                </div>
-                <div className="group p-4 bg-slate-50 dark:bg-slate-950/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 border border-slate-100 dark:border-slate-800 rounded-2.5xl space-y-1.5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                  <strong className="text-slate-800 dark:text-slate-100 block text-xs flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 flex justify-center items-center font-medium">2</span> Client Ledger</strong>
-                  <p className="font-medium mt-2">Save corporate clients inside the Clients Ledger to avoid typing contact details repeatedly and set their local addresses.</p>
-                </div>
-                <div className="group p-4 bg-slate-50 dark:bg-slate-950/50 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 border border-slate-100 dark:border-slate-800 rounded-2.5xl space-y-1.5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                  <strong className="text-slate-800 dark:text-slate-100 block text-xs flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-600 flex justify-center items-center font-medium">3</span> Draft Invoices</strong>
-                  <p className="font-medium mt-2">Select <strong>New Bill</strong> on the dashboard, add line items with rates, quantities, descriptions, and discount percentages.</p>
-                </div>
-                <div className="group p-4 bg-slate-50 dark:bg-slate-950/50 hover:bg-amber-50 dark:hover:bg-amber-500/10 border border-slate-100 dark:border-slate-800 rounded-2.5xl space-y-1.5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                  <strong className="text-slate-800 dark:text-slate-100 block text-xs flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-600 flex justify-center items-center font-medium">4</span> Official Documents</strong>
-                  <p className="font-medium mt-2">Hit the download icon to save a clean PDF invoice, or use the Accounting Summary for collective reports.</p>
-                </div>
-              </div>
+            {/* Quick nav pills */}
+            <div className="flex items-center gap-2 flex-wrap bg-[#FCFAF7]/50 dark:bg-zinc-950/20 p-2 rounded-2xl border border-[#e2e8f0]/30 dark:border-zinc-800">
+              <span className="text-[9px] font-black text-[#64748b]/60 dark:text-zinc-500 uppercase tracking-widest pl-2">Jump to:</span>
+              {['Getting Started', 'App Walkthrough', 'Billing Policies', 'Tax & Compliance', 'Tips & Shortcuts'].map((label, i) => (
+                <a
+                  key={label}
+                  href={`#learn-section-${i}`}
+                  className="px-3 py-1 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-lg text-[10px] font-bold text-[#64748b] dark:text-zinc-400 hover:border-[#64748b]/50 hover:text-[#0f172a] dark:hover:text-white transition-all cursor-pointer shadow-2xs"
+                >
+                  {label}
+                </a>
+              ))}
             </div>
 
-            {/* Terms and conditions card */}
-            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-sm space-y-5">
-              <h3 className="text-xs font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-tight flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                <span className="px-2 py-1 bg-gradient-to-r from-amber-500 to-rose-500 text-white rounded-lg text-[10px] font-extrabold font-mono shadow-sm">T&C</span>
-                <span>Part B: Company Terms & Conditions for Invoicing</span>
-              </h3>
+            {/* Asymmetric Bento Grid Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-              <div className="space-y-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-405">
-                <div className="group p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-2xl border-l-2 border-slate-200 dark:border-slate-700 hover:border-amber-400 transition-colors duration-300">
-                  <strong className="text-slate-800 dark:text-slate-100 uppercase tracking-wider text-[10px] block mb-1">1. Payment Intervals & Net Terms</strong>
-                  <p className="font-medium">Unless explicitly formulated differently in custom contract items, all standard invoices are published under <strong>Net-15 payment terms</strong>. Beneficiaries must complete payments via our electronic banking or QR asset channels within fifteen days of bill publication.</p>
+              {/* Bento Card 1: Part A (App Walkthrough) — Spans 2 Columns */}
+              <div id="learn-section-0" className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden flex flex-col justify-between">
+                <div className="relative">
+                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-400 via-sky-400 to-amber-500" />
+                  <div className="p-5 border-b border-[#e2e8f0]/30 dark:border-zinc-800 flex justify-between items-center bg-[#FCFAF7]/20">
+                    <div className="flex items-center gap-2.5">
+                      <span className="px-2 py-0.5 bg-emerald-500 text-white text-[8px] font-black uppercase tracking-widest rounded">Part A</span>
+                      <h2 className="text-[11px] font-black text-[#0f172a] dark:text-white uppercase tracking-wide">Structural Walkthrough</h2>
+                    </div>
+                    <span className="text-[9px] text-[#64748b] font-black uppercase tracking-wider">6 Modules</span>
+                  </div>
                 </div>
-                <div className="group p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-2xl border-l-2 border-slate-200 dark:border-slate-700 hover:border-rose-400 transition-colors duration-300">
-                  <strong className="text-slate-800 dark:text-slate-100 uppercase tracking-wider text-[10px] block mb-1">2. Late Fees & Interest Penalties</strong>
-                  <p className="font-medium">To discourage deliberate delayed cash resolutions, invoices unpaid past Net-15 days are susceptible to late fee interest. Interest is computed according to company and regional guidelines.</p>
-                </div>
-                <div className="group p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-2xl border-l-2 border-slate-200 dark:border-slate-700 hover:border-sky-400 transition-colors duration-300">
-                  <strong className="text-slate-800 dark:text-slate-100 uppercase tracking-wider text-[10px] block mb-1">3. Tax Compliance & Place of Supply</strong>
-                  <p className="font-medium">Invoices are generated strictly according to compliance guidelines. Taxes are applied and split based on local vs interstate client relationships.</p>
-                </div>
-                <div className="group p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-2xl border-l-2 border-slate-200 dark:border-slate-700 hover:border-emerald-400 transition-colors duration-300">
-                  <strong className="text-slate-800 dark:text-slate-100 uppercase tracking-wider text-[10px] block mb-1">4. Audit Reconciliations & Revisions</strong>
-                  <p className="font-medium">Invoices must be thoroughly checked by the recipient within seven business days from receiving. Any dispute claims or modifications shall be governed by standard trade rules.</p>
+
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 flex-1">
+                  {[
+                    { step: '01', title: 'Set Up Your Profile', desc: 'Click your avatar in the top-right corner, open Profile, and enter company name, GSTIN, logo, and bank accounts. This info prints directly on PDF invoices.' },
+                    { step: '02', title: 'Build Client Ledger', desc: 'Go to Clients from the sidebar. Save repeating corporate accounts with billing addresses to enable rapid dropdown injection when generating new bills.' },
+                    { step: '03', title: 'Create an Invoice', desc: 'Click "New Invoice" on the dashboard. Choose a registered client, add HSN/SAC codes, quantities, and rates. The calculations update instantly.' },
+                    { step: '04', title: 'Export & Deliver', desc: 'Download clean PDF bills using the download button, print directly, or export collective XLSX summaries from the Reports ledger tab.' },
+                    { step: '05', title: 'Track Payment Status', desc: 'Mark bills as Paid, Unpaid, or Overdue. Your dashboard intelligence metrics will update automatically based on active statuses.' },
+                    { step: '06', title: 'Sync Across Devices', desc: 'Authenticate your account to activate instant Supabase cloud synchronization. Retrieve your clients and templates from any modern browser.' },
+                  ].map((item, idx) => {
+                    const stepColors = ['bg-emerald-500', 'bg-sky-500', 'bg-amber-500', 'bg-violet-500', 'bg-rose-500', 'bg-teal-500'];
+                    return (
+                      <div key={item.step} className="flex gap-3.5 p-4 bg-[#FCFAF7]/40 dark:bg-zinc-950/40 border border-[#e2e8f0]/30 dark:border-zinc-800 rounded-xl hover:border-[#64748b]/30 hover:bg-[#FCFAF7]/80 transition-all duration-200 group">
+                        <div className={`flex-shrink-0 w-7 h-7 rounded-lg ${stepColors[idx]} text-white flex items-center justify-center font-black text-[10px] shadow-2xs`}>
+                          {item.step}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[11px] font-black text-[#0f172a] dark:text-zinc-100 block mb-1">{item.title}</span>
+                          <p className="text-[10.5px] text-[#64748b]/80 dark:text-zinc-500 leading-relaxed font-medium">{item.desc}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
+
+              {/* Bento Card 2: Quick Tips & Protocol Checklist — Spans 1 Column */}
+              <div id="learn-section-4" className="bg-[#FCFAF7] dark:bg-zinc-900/50 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-1 bg-[#64748b]" />
+                
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between border-b border-[#e2e8f0]/40 dark:border-zinc-800 pb-3">
+                    <span className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-wider">Quick Utilities</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  </div>
+
+                  {[
+                    { title: 'Keyboard Controls', tip: 'Use browser Ctrl+P to print and save clean layout copies directly.' },
+                    { title: 'Sidebar Toggle', tip: 'Click the collapse button to lock labels and gain workspace size.' },
+                    { title: 'Tax Auditing', tip: 'Always cross-verify client GSTIN formats before printing tax summaries.' }
+                  ].map((tip, idx) => (
+                    <div key={tip.title} className="space-y-1 bg-white dark:bg-zinc-950 p-3 rounded-xl border border-[#e2e8f0]/30 dark:border-zinc-800 hover:border-[#64748b]/35 transition-colors">
+                      <span className="text-[10.5px] font-black text-[#0f172a] dark:text-zinc-200 uppercase tracking-wide block">{tip.title}</span>
+                      <p className="text-[10.5px] text-[#64748b]/85 dark:text-zinc-550 leading-relaxed font-medium">{tip.tip}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-5 pt-3 border-t border-[#e2e8f0]/40 dark:border-zinc-800 text-[10px] text-[#64748b]/75 font-semibold leading-relaxed">
+                  Refer to local jurisdiction rules for official GST formatting regulations.
+                </div>
+              </div>
+
+              {/* Bento Card 3: Part B (Company Policies) — Spans 3 Columns */}
+              <div id="learn-section-2" className="lg:col-span-3 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden">
+                <div className="relative">
+                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-violet-400 via-rose-400 to-[#64748b]" />
+                  <div className="p-5 border-b border-[#e2e8f0]/30 dark:border-zinc-800 flex justify-between items-center bg-[#FCFAF7]/20">
+                    <div className="flex items-center gap-2.5">
+                      <span className="px-2 py-0.5 bg-[#64748b] text-white text-[8px] font-black uppercase tracking-widest rounded">Part B</span>
+                      <h2 className="text-[11px] font-black text-[#0f172a] dark:text-white uppercase tracking-wide">Corporate Billing Regulations & Terms</h2>
+                    </div>
+                    <span className="text-[9px] text-[#64748b] font-black uppercase tracking-wider">5 Standards</span>
+                  </div>
+                </div>
+
+                <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    { title: 'Payment Terms — Net-15', body: 'All published invoices operate under Net-15 intervals. Completed transactions must be processed via our approved corporate banking or dynamic QR codes within 15 calendar days from billing date.' },
+                    { title: 'Late Payment Penalties', body: 'Overdue invoices past the Net-15 window are subject to calculated interest fees governed by standard company guidelines. Notifications will be dispatched prior to calculation.' },
+                    { title: 'Tax & GST Compliance', body: 'Taxes are processed based on regional boundaries. Same-state operations apply CGST + SGST; interstate supplies apply IGST. Place of Supply is determined from active registry.' },
+                    { title: 'Disputes & Revisions', body: 'Discrepancy claims must be submitted to accounting within 7 business days from receipt. Past this window, invoice figures are considered finalized and accepted.' },
+                    { title: 'Confidentiality of Financials', body: 'Billing metrics, client registry ledgers, and company tax data are protected by database row-level security policies and are never shared with external agencies.' }
+                  ].map((policy, idx) => {
+                    const borderColors = ['border-emerald-400', 'border-rose-400', 'border-sky-400', 'border-amber-400', 'border-violet-400'];
+                    const dotColors = ['bg-emerald-400', 'bg-rose-400', 'bg-sky-400', 'bg-amber-400', 'bg-violet-400'];
+                    return (
+                      <div key={policy.title} className={`flex gap-3.5 p-4 border-l-2 border-[#e2e8f0] dark:border-zinc-700 hover:${borderColors[idx]} hover:bg-[#FCFAF7]/40 dark:hover:bg-zinc-950/40 rounded-r-xl transition-all group`}>
+                        <div className={`flex-shrink-0 w-5.5 h-5.5 rounded-full ${dotColors[idx]} text-white flex items-center justify-center font-black text-[9px] shadow-2xs`}>
+                          {idx + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[10.5px] font-black text-[#0f172a] dark:text-zinc-200 uppercase tracking-wide block mb-1">{policy.title}</span>
+                          <p className="text-[10.5px] text-[#64748b]/80 dark:text-zinc-550 leading-relaxed font-medium">{policy.body}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
             </div>
+            <div className="flex items-start gap-3 px-4 py-3.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/40 dark:border-zinc-800 rounded-xl text-[10.5px] text-[#64748b]/80 dark:text-zinc-500">
+              <Info className="w-4 h-4 text-[#64748b] flex-shrink-0 mt-0.5" />
+              <span>This documentation applies to MakInvoices v1.2. For technical support, open the <strong className="text-[#0f172a] dark:text-zinc-300">Help & Support</strong> page from the profile menu. Policies are subject to periodic updates — last revised July 2025.</span>
+            </div>
+
           </div>
         )}
 
@@ -3299,12 +4324,12 @@ export default function Dashboard({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
               {/* Left Column: Creator Identity card */}
-              <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 p-6 sm:p-8 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
-                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#EBDCC8] via-[#C6A87D] to-[#88765C]" />
+              <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 p-6 sm:p-8 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#e2e8f0] via-[#C6A87D] to-[#64748b]" />
                 
                 <div>
                   <div className="flex items-center gap-5 mb-6">
-                    <div className="w-16 h-16 rounded-2xl bg-[#F4EBE1] dark:bg-zinc-800 text-[#88765C] dark:text-[#EADFCF] flex items-center justify-center shadow-sm border border-[#EBDCC8]/80 dark:border-zinc-700 overflow-hidden flex-shrink-0">
+                    <div className="w-16 h-16 rounded-2xl bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-[#EADFCF] flex items-center justify-center shadow-sm border border-[#e2e8f0]/80 dark:border-zinc-700 overflow-hidden flex-shrink-0">
                       {profile.logoUrl ? (
                         <img src={profile.logoUrl} referrerPolicy="no-referrer" alt={profile.name} className="w-full h-full object-cover" />
                       ) : (
@@ -3312,39 +4337,39 @@ export default function Dashboard({
                       )}
                     </div>
                     <div>
-                      <h2 className="text-base font-black text-[#6E6050] dark:text-white uppercase tracking-tight">{profile.name || 'My Invoice Studio'}</h2>
-                      <span className="text-[10px] text-[#88765C] font-mono block mt-0.5">{profile.email || 'No email established'}</span>
+                      <h2 className="text-base font-black text-[#0f172a] dark:text-white uppercase tracking-tight">{profile.name || 'My Invoice Studio'}</h2>
+                      <span className="text-[10px] text-[#64748b] font-mono block mt-0.5">{profile.email || 'No email established'}</span>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80">
-                      <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-500 block">LLC Brand Registry</span>
-                      <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block truncate">{profile.name || 'Sole Proprietorship'}</span>
+                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
+                      <span className="text-[9px] uppercase font-extrabold text-[#64748b]/75 dark:text-zinc-500 block">LLC Brand Registry</span>
+                      <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 mt-1 block truncate">{profile.name || 'Sole Proprietorship'}</span>
                     </div>
-                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80">
-                      <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-500 block">Tax Registry (GSTIN)</span>
-                      <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block truncate font-mono">{profile.taxId || 'Not Configured'}</span>
+                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
+                      <span className="text-[9px] uppercase font-extrabold text-[#64748b]/75 dark:text-zinc-500 block">Tax Registry (GSTIN)</span>
+                      <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 mt-1 block truncate font-mono">{profile.taxId || 'Not Configured'}</span>
                     </div>
-                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80">
-                      <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-500 block">Primary currency</span>
-                      <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block">{profile.currency || 'INR'} ({currencySymbol})</span>
+                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
+                      <span className="text-[9px] uppercase font-extrabold text-[#64748b]/75 dark:text-zinc-500 block">Primary currency</span>
+                      <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 mt-1 block">{profile.currency || 'INR'} ({currencySymbol})</span>
                     </div>
-                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80">
-                      <span className="text-[9px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-500 block">Mobile Number</span>
-                      <span className="text-xs font-bold text-[#6E6050] dark:text-zinc-200 mt-1 block truncate">{profile.mobile || profile.phone || 'N/A'}</span>
+                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
+                      <span className="text-[9px] uppercase font-extrabold text-[#64748b]/75 dark:text-zinc-500 block">Mobile Number</span>
+                      <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 mt-1 block truncate">{profile.mobile || profile.phone || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-[#EBDCC8]/30 dark:border-zinc-800 flex items-center justify-between">
+                <div className="mt-8 pt-6 border-t border-[#e2e8f0]/30 dark:border-zinc-800 flex items-center justify-between">
                   <div className="text-left">
-                    <span className="text-[10px] uppercase font-extrabold text-[#88765C]/75 dark:text-zinc-500 block">Creator Settings</span>
-                    <p className="text-[10px] text-[#6E6050]/80 dark:text-zinc-400 mt-0.5 font-medium leading-normal">Customize your brand names, billing information, signature sketchpad, and bank details.</p>
+                    <span className="text-[10px] uppercase font-extrabold text-[#64748b]/75 dark:text-zinc-500 block">Creator Settings</span>
+                    <p className="text-[10px] text-[#0f172a]/80 dark:text-zinc-400 mt-0.5 font-medium leading-normal">Customize your brand names, billing information, signature sketchpad, and bank details.</p>
                   </div>
                   <button
                     onClick={onOpenProfile}
-                    className="px-5 py-2.5 bg-[#88765C] hover:bg-[#6E6050] text-[#FCFAF7] text-[10.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs hover:shadow-sm flex-shrink-0"
+                    className="px-5 py-2.5 bg-[#64748b] hover:bg-[#0f172a] text-[#FCFAF7] text-[10.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs hover:shadow-sm flex-shrink-0"
                   >
                     <PenTool className="w-3.5 h-3.5 text-white/80" />
                     <span>Customize Details</span>
@@ -3353,15 +4378,15 @@ export default function Dashboard({
               </div>
 
               {/* Right Column: Security and Session details */}
-              <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
-                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#C6A87D] to-[#88765C]" />
+              <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#C6A87D] to-[#64748b]" />
                 
                 <div>
-                  <h3 className="text-xs font-black text-[#6E6050] dark:text-white uppercase tracking-widest mb-4">Access Control & PIN</h3>
+                  <h3 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-widest mb-4">Access Control & PIN</h3>
                   
-                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80 mb-4">
-                    <span className="text-[9px] uppercase font-extrabold text-[#88765C] block">PIN Passcode Lock</span>
-                    <p className="text-[10px] text-[#6E6050]/85 dark:text-zinc-400 mt-1 leading-normal font-medium">Requires a secure 4-digit PIN code on app refresh to prevent unauthorized local database access.</p>
+                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80 mb-4">
+                    <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">PIN Passcode Lock</span>
+                    <p className="text-[10px] text-[#0f172a]/85 dark:text-zinc-400 mt-1 leading-normal font-medium">Requires a secure 4-digit PIN code on app refresh to prevent unauthorized local database access.</p>
                     
                     <button
                       type="button"
@@ -3369,29 +4394,29 @@ export default function Dashboard({
                       className={`mt-4 w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-3xs ${
                         isPinLockEnabled 
                           ? 'bg-rose-500 hover:bg-rose-600 text-white' 
-                          : 'bg-[#EADFCF] hover:bg-[#ebdcc8] text-[#6E6050]'
+                          : 'bg-[#EADFCF] hover:bg-[#e2e8f0] text-[#0f172a]'
                       }`}
                     >
                       {isPinLockEnabled ? 'Disable PIN Lock' : 'Enable PIN Lock'}
                     </button>
                   </div>
 
-                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80">
-                    <span className="text-[9px] uppercase font-extrabold text-[#88765C] block">Database Status</span>
+                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
+                    <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">Database Status</span>
                     <div className="mt-2 space-y-1.5">
                       <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-[#6E6050] dark:text-zinc-400 font-medium">Local Ledger</span>
+                        <span className="text-[#0f172a] dark:text-zinc-400 font-medium">Local Ledger</span>
                         <span className="font-mono font-bold text-emerald-500">Active</span>
                       </div>
                       <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-[#6E6050] dark:text-zinc-400 font-medium">Cloud Synchronizer</span>
+                        <span className="text-[#0f172a] dark:text-zinc-400 font-medium">Cloud Synchronizer</span>
                         <span className="font-mono font-bold text-emerald-500">Synced</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-[#EBDCC8]/30 dark:border-zinc-800 text-[9.5px] text-[#88765C]/80 dark:text-zinc-450 text-center font-mono">
+                <div className="mt-6 pt-4 border-t border-[#e2e8f0]/30 dark:border-zinc-800 text-[9.5px] text-[#64748b]/80 dark:text-zinc-450 text-center font-mono">
                   Invoice Studio Pro v1.2.0
                 </div>
               </div>
@@ -3401,99 +4426,99 @@ export default function Dashboard({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
               {/* Bank Settlement & Signature Details */}
-              <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+              <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
                 <div className="absolute top-0 inset-x-0 h-1.5 bg-[#C6A87D]" />
                 
                 <div>
-                  <h3 className="text-xs font-black text-[#6E6050] dark:text-white uppercase tracking-widest mb-4">Bank Settlement & Signature</h3>
+                  <h3 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-widest mb-4">Bank Settlement & Signature</h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Bank Details */}
-                    <div className="space-y-3 bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80">
-                      <span className="text-[9px] uppercase font-extrabold text-[#88765C] block">Direct Transfer Account</span>
+                    <div className="space-y-3 bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
+                      <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">Direct Transfer Account</span>
                       
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between">
-                          <span className="text-[#88765C]/80">Bank</span>
-                          <span className="font-bold text-[#6E6050] dark:text-zinc-200">{profile.bankName || 'Not Set'}</span>
+                          <span className="text-[#64748b]/80">Bank</span>
+                          <span className="font-bold text-[#0f172a] dark:text-zinc-200">{profile.bankName || 'Not Set'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#88765C]/80">Account No.</span>
-                          <span className="font-mono font-bold text-[#6E6050] dark:text-zinc-200">{profile.accountNumber || 'Not Set'}</span>
+                          <span className="text-[#64748b]/80">Account No.</span>
+                          <span className="font-mono font-bold text-[#0f172a] dark:text-zinc-200">{profile.accountNumber || 'Not Set'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#88765C]/80">IFSC Code</span>
-                          <span className="font-mono font-bold text-[#6E6050] dark:text-zinc-200">{profile.ifsc || 'Not Set'}</span>
+                          <span className="text-[#64748b]/80">IFSC Code</span>
+                          <span className="font-mono font-bold text-[#0f172a] dark:text-zinc-200">{profile.ifsc || 'Not Set'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#88765C]/80">UPI Address</span>
-                          <span className="font-mono font-bold text-[#6E6050] dark:text-zinc-200">{profile.upiId || 'Not Set'}</span>
+                          <span className="text-[#64748b]/80">UPI Address</span>
+                          <span className="font-mono font-bold text-[#0f172a] dark:text-zinc-200">{profile.upiId || 'Not Set'}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Signature Preview */}
-                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80 flex flex-col justify-between min-h-[140px]">
+                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80 flex flex-col justify-between min-h-[140px]">
                       <div>
-                        <span className="text-[9px] uppercase font-extrabold text-[#88765C] block">Authorized Signature</span>
-                        <p className="text-[10px] text-[#6E6050]/80 dark:text-zinc-400 mt-1 leading-normal font-medium">Applied automatically to newly generated billing sheets.</p>
+                        <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">Authorized Signature</span>
+                        <p className="text-[10px] text-[#0f172a]/80 dark:text-zinc-400 mt-1 leading-normal font-medium">Applied automatically to newly generated billing sheets.</p>
                       </div>
                       
-                      <div className="mt-3 flex items-center justify-center bg-white dark:bg-zinc-900 border border-[#EBDCC8]/30 dark:border-zinc-800 rounded-lg p-2 h-16 relative overflow-hidden">
+                      <div className="mt-3 flex items-center justify-center bg-white dark:bg-zinc-900 border border-[#e2e8f0]/30 dark:border-zinc-800 rounded-lg p-2 h-16 relative overflow-hidden">
                         {profile.signature ? (
                           <img src={profile.signature} alt="Signature Preview" className="max-h-full max-w-full object-contain" />
                         ) : (
-                          <span className="text-[10px] text-[#88765C]/50 uppercase tracking-wider font-bold">No Signature Configured</span>
+                          <span className="text-[10px] text-[#64748b]/50 uppercase tracking-wider font-bold">No Signature Configured</span>
                         )}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-[#EBDCC8]/30 dark:border-zinc-800 flex justify-between items-center text-[10px]">
-                  <span className="text-[#88765C]/80">Legal Entity Status</span>
-                  <span className="font-bold text-[#6E6050] dark:text-zinc-200">{profile.pan ? `PAN: ${profile.pan}` : 'PAN Not Registered'}</span>
+                <div className="mt-4 pt-4 border-t border-[#e2e8f0]/30 dark:border-zinc-800 flex justify-between items-center text-[10px]">
+                  <span className="text-[#64748b]/80">Legal Entity Status</span>
+                  <span className="font-bold text-[#0f172a] dark:text-zinc-200">{profile.pan ? `PAN: ${profile.pan}` : 'PAN Not Registered'}</span>
                 </div>
               </div>
 
               {/* Physical Location details */}
-              <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
-                <div className="absolute top-0 inset-x-0 h-1.5 bg-[#88765C]" />
+              <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+                <div className="absolute top-0 inset-x-0 h-1.5 bg-[#64748b]" />
                 
                 <div>
-                  <h3 className="text-xs font-black text-[#6E6050] dark:text-white uppercase tracking-widest mb-4">Location & Presets</h3>
+                  <h3 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-widest mb-4">Location & Presets</h3>
                   
-                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80 mb-4">
-                    <span className="text-[9px] uppercase font-extrabold text-[#88765C] block">Registered Address</span>
-                    <p className="text-xs text-[#6E6050] dark:text-zinc-300 font-medium leading-relaxed mt-2 whitespace-pre-line">
+                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80 mb-4">
+                    <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">Registered Address</span>
+                    <p className="text-xs text-[#0f172a] dark:text-zinc-300 font-medium leading-relaxed mt-2 whitespace-pre-line">
                       {profile.address || 'No registered business address set.'}
                     </p>
                     {profile.state && (
-                      <div className="mt-2 pt-2 border-t border-[#EBDCC8]/20 dark:border-zinc-800 flex justify-between text-[10px]">
-                        <span className="text-[#88765C]/80">State / Region</span>
-                        <span className="font-bold text-[#6E6050] dark:text-zinc-200">{profile.state} ({profile.stateCode || 'N/A'})</span>
+                      <div className="mt-2 pt-2 border-t border-[#e2e8f0]/20 dark:border-zinc-800 flex justify-between text-[10px]">
+                        <span className="text-[#64748b]/80">State / Region</span>
+                        <span className="font-bold text-[#0f172a] dark:text-zinc-200">{profile.state} ({profile.stateCode || 'N/A'})</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#EBDCC8]/40 dark:border-zinc-800/80">
-                    <span className="text-[9px] uppercase font-extrabold text-[#88765C] block">Billing Preferences</span>
+                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
+                    <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">Billing Preferences</span>
                     <div className="mt-2 space-y-1.5 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-[#88765C]/80">Invoice Prefix</span>
-                        <span className="font-mono font-bold text-[#6E6050] dark:text-zinc-200">{profile.invoicePrefix || 'Not Set'}</span>
+                        <span className="text-[#64748b]/80">Invoice Prefix</span>
+                        <span className="font-mono font-bold text-[#0f172a] dark:text-zinc-200">{profile.invoicePrefix || 'Not Set'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[#88765C]/80">Starting Number</span>
-                        <span className="font-mono font-bold text-[#6E6050] dark:text-zinc-200">{profile.startingInvoiceNumber || '0001'}</span>
+                        <span className="text-[#64748b]/80">Starting Number</span>
+                        <span className="font-mono font-bold text-[#0f172a] dark:text-zinc-200">{profile.startingInvoiceNumber || '0001'}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-[#EBDCC8]/30 dark:border-zinc-800 text-[10px] flex justify-between">
-                  <span className="text-[#88765C]/80">Website</span>
-                  <a href={profile.website ? (profile.website.startsWith('http') ? profile.website : `https://${profile.website}`) : '#'} target="_blank" rel="noreferrer" className="font-bold text-[#88765C] hover:underline truncate max-w-[150px]">
+                <div className="mt-6 pt-4 border-t border-[#e2e8f0]/30 dark:border-zinc-800 text-[10px] flex justify-between">
+                  <span className="text-[#64748b]/80">Website</span>
+                  <a href={profile.website ? (profile.website.startsWith('http') ? profile.website : `https://${profile.website}`) : '#'} target="_blank" rel="noreferrer" className="font-bold text-[#64748b] hover:underline truncate max-w-[150px]">
                     {profile.website || 'Not Configured'}
                   </a>
                 </div>
@@ -3501,6 +4526,23 @@ export default function Dashboard({
 
             </div>
           </div>
+        )}
+
+        {/* ------------------ TAB: SETTINGS ------------------ */}
+        {activeTab === 'settings' && (
+          <SettingsPage
+            theme={theme}
+            toggleTheme={toggleTheme}
+            profile={profile}
+            isPinLockEnabled={isPinLockEnabled}
+            onToggleSecurity={onToggleSecurity}
+            onLogout={onLogout}
+          />
+        )}
+
+        {/* ------------------ TAB: SUPPORT ------------------ */}
+        {activeTab === 'support' && (
+          <SupportPage />
         )}
 
         {/* ------------------ TAB 7: DYNAMIC REGISTRIES HANDLER ------------------ */}

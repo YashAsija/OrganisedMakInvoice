@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, LayoutTemplate, FileText, Check, Trash2, Edit2, Copy, Download, Upload, Search, Filter } from 'lucide-react';
+import { Plus, LayoutTemplate, FileText, Check, Trash2, Edit2, Copy, Download, Upload, Search, Filter, ChevronDown } from 'lucide-react';
 import { InvoiceTemplate, BusinessProfile } from '../types';
 import { LivePreview } from './TemplateBuilder/LivePreview';
 import { exportInvoicePDFAsync } from '../lib/pdfExporter';
@@ -16,13 +16,12 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
           let parsed = JSON.parse(saved) as InvoiceTemplate[];
           let changed = false;
           parsed = parsed.map(t => {
-            if (t.name.includes('MakBills')) {
+            let newName = t.name.replace(/MakBills/g, 'MakInvoices');
+            // Clean up any corrupted names like "MakInvoicessss" and prevent future duplication
+            newName = newName.replace(/MakInvoices*/g, 'MakInvoices');
+            if (newName !== t.name) {
               changed = true;
-              return { ...t, name: t.name.replace(/MakBills/g, 'MakInvoices') };
-            }
-            if (t.name.includes('MakInvoice')) {
-              changed = true;
-              return { ...t, name: t.name.replace(/MakInvoice/g, 'MakInvoices') };
+              return { ...t, name: newName };
             }
             return t;
           });
@@ -237,7 +236,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
   };
 
   if (isBuilding) {
-        return (
+    return (
       <TemplateCreationHub 
         initialTemplate={editingTemplate} 
         businessProfile={businessProfile}
@@ -250,7 +249,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     );
   }
 
-    const categories = ['All', 'Default', 'GST', 'Service', 'Retail', 'User'];
+  const categories = ['All', 'Default', 'GST', 'Service', 'Retail', 'User'];
   
   const rawTemplates = activeLibraryTab === 'my_templates' ? templates : TEMPLATE_PRESETS;
   const sourceTemplates = rawTemplates.map(t => ({
@@ -270,199 +269,255 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     const timeA = (a as any).updatedAt || (sourceTemplates.indexOf(a) + 1);
     const timeB = (b as any).updatedAt || (sourceTemplates.indexOf(b) + 1);
 
-    if (sortBy === 'oldest') {
-      return timeA - timeB;
-    }
-    if (sortBy === 'latest') {
-      return timeB - timeA;
-    }
-    if (sortBy === 'detailed') {
-      return getVisibleSectionsCount(b) - getVisibleSectionsCount(a);
-    }
-    if (sortBy === 'less_detailed') {
-      return getVisibleSectionsCount(a) - getVisibleSectionsCount(b);
-    }
+    if (sortBy === 'oldest') return timeA - timeB;
+    if (sortBy === 'latest') return timeB - timeA;
+    if (sortBy === 'detailed') return getVisibleSectionsCount(b) - getVisibleSectionsCount(a);
+    if (sortBy === 'less_detailed') return getVisibleSectionsCount(a) - getVisibleSectionsCount(b);
     return 0;
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 animate-in fade-in duration-200 w-full">
+
+      {/* ── Page Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
-            <LayoutTemplate className="w-6 h-6 text-indigo-500" />
-            Invoice Template Builder
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Create completely custom invoice layouts with our step-by-step visual builder.
+          <h1 className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
+            <span className="bg-gradient-to-r from-amber-600 via-[#64748b] to-rose-500 bg-clip-text text-transparent dark:from-amber-400 dark:via-white dark:to-rose-400">Invoice Template Builder</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+          </h1>
+          <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">
+            Design custom invoice layouts and manage your template library
           </p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap pb-1 sm:pb-0">
-          <input type="file" accept=".json" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-          <button
-            onClick={handleImportClick}
-            className="px-3 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
-          >
-            <Upload className="w-4 h-4" />
-            Import
-          </button>
+
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <button
             onClick={() => {
               setEditingTemplate(null);
               setIsBuilding(true);
             }}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md shadow-indigo-900/20 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#0f172a] to-[#64748b] hover:from-[#5C5043] hover:to-[#0f172a] text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm shadow-[#64748b]/20"
           >
-            <Plus className="w-4 h-4" />
-            Create New Template
+            <Plus className="w-3.5 h-3.5" />
+            New Template
           </button>
         </div>
       </div>
-      
-            {/* Library Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 mb-6">
-        <button
-          onClick={() => setActiveLibraryTab('my_templates')}
-          className={`py-3 px-6 text-sm font-semibold border-b-2 transition-colors ${activeLibraryTab === 'my_templates' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-        >
-          My Templates
-        </button>
-        <button
-          onClick={() => setActiveLibraryTab('system')}
-          className={`py-3 px-6 text-sm font-semibold border-b-2 transition-colors ${activeLibraryTab === 'system' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-        >
-          System Templates (Presets)
-        </button>
-      </div>
 
-      {/* Search and Filters */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Search templates..." 
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
-          />
+      {/* ── Library Tabs ── */}
+      <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden">
+        {/* Accent bar */}
+        <div className="h-1 bg-gradient-to-r from-[#e2e8f0] via-[#C6A87D] to-[#64748b]" />
+
+        <div className="flex border-b border-[#e2e8f0]/45 dark:border-zinc-800 px-2 bg-[#FCFAF7]/30 dark:bg-zinc-950/10">
+          {[
+            { key: 'my_templates', label: 'My Templates', count: templates.length, activeColor: 'border-amber-500 text-[#0f172a]', countBg: 'bg-amber-100 text-amber-800' },
+            { key: 'system', label: 'System Presets', count: TEMPLATE_PRESETS.length, activeColor: 'border-sky-500 text-[#0f172a]', countBg: 'bg-sky-100 text-sky-800' },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveLibraryTab(tab.key as any)}
+              className={`flex items-center gap-2 px-5 py-3.5 text-[11px] font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                activeLibraryTab === tab.key
+                  ? `${tab.activeColor} dark:text-white`
+                  : 'border-transparent text-[#64748b]/70 dark:text-zinc-500 hover:text-[#0f172a] dark:hover:text-zinc-300'
+              }`}
+            >
+              {tab.label}
+              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
+                activeLibraryTab === tab.key
+                  ? tab.countBg
+                  : 'bg-[#e2e8f0]/60 dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400'
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
         </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <Filter className="w-4 h-4 text-slate-400 mr-1" />
-            {categories.map(cat => (
-               <button
+
+        {/* ── Search + Filter bar ── */}
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 p-4 bg-[#FCFAF7]/60 dark:bg-zinc-950/30">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]/60" />
+            <input
+              type="text"
+              placeholder="Search templates..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 focus:border-[#64748b] dark:border-zinc-700 rounded-xl text-[11px] text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none transition-colors"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <Filter className="w-3.5 h-3.5 text-[#64748b]/60 flex-shrink-0" />
+            {(() => {
+              const catStyles: Record<string, { active: string; inactive: string }> = {
+                All:     { active: 'bg-[#0f172a] text-white border-[#0f172a]', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-[#64748b]/50' },
+                Default: { active: 'bg-amber-500 text-white border-amber-500', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-amber-400/50 hover:text-amber-600' },
+                GST:     { active: 'bg-emerald-600 text-white border-emerald-600', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-emerald-400/50 hover:text-emerald-600' },
+                Service: { active: 'bg-sky-600 text-white border-sky-600', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-sky-400/50 hover:text-sky-600' },
+                Retail:  { active: 'bg-violet-600 text-white border-violet-600', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-violet-400/50 hover:text-violet-600' },
+                User:    { active: 'bg-rose-500 text-white border-rose-500', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-rose-400/50 hover:text-rose-500' },
+              };
+              return categories.map(cat => (
+                <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${activeCategory === cat ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
-               >
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
+                    activeCategory === cat
+                      ? (catStyles[cat]?.active ?? 'bg-[#0f172a] text-white border-[#0f172a]')
+                      : (catStyles[cat]?.inactive ?? 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 text-[#64748b]')
+                  }`}
+                >
                   {cat}
-               </button>
-            ))}
+                </button>
+              ));
+            })()}
           </div>
-          <div className="flex items-center gap-2 border-l border-slate-200 dark:border-slate-800 pl-4 h-6">
-            <span className="text-xs font-bold text-slate-400 dark:text-slate-500">Sort:</span>
-            <select
-              value={sortBy}
-              onChange={e => setSortBy(e.target.value as any)}
-              className="p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white cursor-pointer transition-all"
-            >
-              <option value="latest">Latest</option>
-              <option value="oldest">Oldest</option>
-              <option value="detailed">Detailed</option>
-              <option value="less_detailed">Less Detailed</option>
-            </select>
+
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <span className="text-[10px] font-black text-[#64748b]/60 dark:text-zinc-500 uppercase tracking-wider whitespace-nowrap">Sort by</span>
+            <div className="relative">
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value as any)}
+                className="appearance-none pl-3 pr-7 py-1.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-[11px] font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]/60 cursor-pointer transition-colors"
+              >
+                <option value="latest">Latest</option>
+                <option value="oldest">Oldest</option>
+                <option value="detailed">Most Detailed</option>
+                <option value="less_detailed">Less Detailed</option>
+              </select>
+              <ChevronDown className="w-3 h-3 text-[#64748b] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {sortedTemplates.map(template => (
-          <div key={template.id} className={`flex flex-col bg-white dark:bg-slate-900 border ${template.isDefault ? 'border-indigo-500 ring-1 ring-indigo-500/20' : 'border-slate-200 dark:border-slate-800'} rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all group relative`}>
-            {template.isDefault && (
-               <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden z-10">
-                 <div className="absolute top-4 -right-5 bg-indigo-500 text-white text-[9px] font-bold py-0.5 px-6 transform rotate-45 shadow-sm">DEFAULT</div>
-               </div>
-            )}
-            
-            {/* Thumbnail Preview Area */}
-            <div className="w-full h-48 sm:h-60 bg-white dark:bg-slate-900 relative overflow-hidden border-b border-slate-100 dark:border-slate-800/80 pointer-events-none">
-              <svg viewBox="0 0 794 1123" className="w-full h-auto origin-top" preserveAspectRatio="xMidYMin slice">
-                <foreignObject width="794" height="1123">
-                  <div className="w-[794px] h-[1123px] bg-white">
-                    <LivePreview template={template} businessProfile={businessProfile} />
+        {/* ── Template Grid ── */}
+        <div className="p-4">
+          {sortedTemplates.length === 0 ? (
+            <div className="py-16 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-zinc-800 text-amber-500 flex items-center justify-center mx-auto mb-3 border border-amber-200/50 dark:border-zinc-700">
+                <LayoutTemplate className="w-6 h-6" />
+              </div>
+              <p className="text-xs font-bold text-[#64748b]/70 dark:text-zinc-500">
+                {activeLibraryTab === 'my_templates'
+                  ? 'No custom templates yet. Create your first one.'
+                  : 'No presets match your filters.'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {sortedTemplates.map(template => (
+                <div
+                  key={template.id}
+                  className={`flex flex-col bg-white dark:bg-zinc-950 border rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all group relative ${
+                    template.isDefault
+                      ? 'border-emerald-500 dark:border-emerald-600 ring-2 ring-emerald-500/20'
+                      : 'border-[#e2e8f0]/60 dark:border-zinc-800 hover:border-[#64748b]/35'
+                  }`}
+                >
+                  {/* Default badge */}
+                  {template.isDefault && (
+                    <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden z-10 pointer-events-none">
+                      <div className="absolute top-4 -right-5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[8px] font-black py-0.5 px-6 transform rotate-45 shadow-xs tracking-widest uppercase">
+                        DEFAULT
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Thumbnail preview */}
+                  <div className="w-full h-44 sm:h-52 bg-[#FCFAF7] dark:bg-zinc-900 relative overflow-hidden border-b border-[#e2e8f0]/40 dark:border-zinc-800 pointer-events-none">
+                    <svg viewBox="0 0 794 1123" className="w-full h-auto origin-top" preserveAspectRatio="xMidYMin slice">
+                      <foreignObject width="794" height="1123">
+                        <div className="w-[794px] h-[1123px] bg-white">
+                          <LivePreview template={template} businessProfile={businessProfile} />
+                        </div>
+                      </foreignObject>
+                    </svg>
                   </div>
-                </foreignObject>
-              </svg>
-            </div>
 
-            <div className="p-5 flex flex-col flex-1 justify-between">
-              <div>
-                <div className="flex items-start justify-between mb-1 pr-6">
-                  <h3 className="font-bold text-sm text-slate-800 dark:text-white line-clamp-1" title={template.name}>{template.name}</h3>
+                  {/* Card body */}
+                  <div className="p-4 flex flex-col flex-1 justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h3 className="text-xs font-black text-[#0f172a] dark:text-white truncate" title={template.name}>
+                          {template.name}
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black uppercase tracking-wider">
+                          {template.category}
+                        </span>
+                        <span className="px-1.5 py-0.5 bg-sky-50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 border border-sky-200/60 dark:border-sky-800/40 rounded text-[9px] font-black uppercase tracking-wider">
+                          {template.layout.type}
+                        </span>
+                      </div>
+                      <p className="text-[10.5px] text-[#64748b]/75 dark:text-zinc-500 line-clamp-2 leading-relaxed min-h-[30px]">
+                        {template.description || 'No description provided.'}
+                      </p>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            setEditingTemplate(template);
+                            setIsBuilding(true);
+                          }}
+                          className="flex-1 py-1.5 bg-violet-50 dark:bg-violet-950/20 hover:bg-violet-100 dark:hover:bg-violet-900/30 text-violet-700 dark:text-violet-300 border border-violet-200/60 dark:border-violet-800/40 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                          {activeLibraryTab === 'system' ? 'Use Preset' : 'Edit'}
+                        </button>
+                        <button
+                          onClick={() => handleDuplicate(template)}
+                          title="Duplicate template"
+                          className="px-2 py-1.5 bg-sky-50 dark:bg-sky-950/20 hover:bg-sky-100 dark:hover:bg-sky-900/30 text-sky-600 dark:text-sky-400 border border-sky-200/60 dark:border-sky-800/40 rounded-lg transition-colors flex items-center justify-center cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleExportPDF(template)}
+                          title="Download sample PDF"
+                          className="px-2 py-1.5 bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40 rounded-lg transition-colors flex items-center justify-center cursor-pointer"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-1.5 border-t border-[#e2e8f0]/40 dark:border-zinc-800">
+                        {!template.isDefault ? (
+                          <button
+                            onClick={() => handleSetDefault(template.id)}
+                            className="flex-1 py-1 text-[10px] font-black uppercase tracking-wider text-[#64748b] hover:text-[#0f172a] dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                          >
+                            Set as Default
+                          </button>
+                        ) : (
+                          <span className="flex-1 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1">
+                            <Check className="w-3 h-3" /> Active Default
+                          </span>
+                        )}
+                        {activeLibraryTab !== 'system' && (
+                          <button
+                            onClick={() => handleDelete(template.id)}
+                            title="Delete template"
+                            className="p-1 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-[#64748b]/50 hover:text-rose-500 rounded-lg transition-colors cursor-pointer ml-auto"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold mb-2">
-                  {template.category} • {template.layout.type}
-                </p>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 mb-4 min-h-[32px]">
-                  {template.description || "No description provided."}
-                </p>
-              </div>
-              
-              <div className="flex flex-col gap-2 mt-auto">
-              <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap pb-1 sm:pb-0">
-                <button 
-                  onClick={() => {
-                    setEditingTemplate(template);
-                    setIsBuilding(true);
-                  }}
-                  className="flex-1 py-1.5 text-[11px] font-bold bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg transition-colors flex items-center justify-center gap-1"
-                >
-                  <Edit2 className="w-3.5 h-3.5" /> {activeLibraryTab === 'system' ? 'Use Preset' : 'Edit'}
-                </button>
-                <button 
-                  onClick={() => handleDuplicate(template)}
-                  className="px-2.5 py-1.5 text-[11px] font-bold bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg transition-colors flex items-center justify-center"
-                  title="Duplicate template"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                </button>
-                 <button 
-                   onClick={() => handleExportPDF(template)}
-                   className="px-2.5 py-1.5 text-[11px] font-bold bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg transition-colors flex items-center justify-center"
-                   title="Download PDF"
-                 >
-                   <Download className="w-3.5 h-3.5" />
-                 </button>
-              </div>
-              <div className="flex items-center gap-2 border-t border-slate-100 dark:border-slate-800 pt-2">
-                {!template.isDefault && (
-                  <button 
-                    onClick={() => handleSetDefault(template.id)}
-                    className="flex-1 py-1.5 text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded transition-colors"
-                  >
-                    Set Default
-                  </button>
-                )}
-                {activeLibraryTab !== 'system' && (
-                  <button 
-                    onClick={() => handleDelete(template.id)}
-                    className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 rounded transition-colors ml-auto"
-                    title="Delete template"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
+              ))}
             </div>
-            </div>
-          </div>
-        ))}
-        {filteredTemplates.length === 0 && (
-          <div className="col-span-full py-12 text-center text-slate-400 text-xs">
-            No templates found matching your criteria.
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

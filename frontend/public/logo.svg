@@ -1,0 +1,24 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Document Base -->
+  <path d="M120 64C120 46.3269 134.327 32 152 32H360L424 96V448C424 465.673 409.673 480 392 480H152C134.327 480 120 465.673 120 448V64Z" fill="#FFFFFF" stroke="#38A3EE" stroke-width="16" stroke-linejoin="round"/>
+  
+  <!-- Folded Corner -->
+  <path d="M360 32V96H424L360 32Z" fill="#E0F2FE" stroke="#38A3EE" stroke-width="16" stroke-linejoin="round"/>
+  
+  <!-- The M -->
+  <path d="M210 160L210 260" stroke="#2B231B" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M210 160L256 220L302 160" stroke="#2B231B" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M302 160L302 260" stroke="#2B231B" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- INVOICES Text -->
+  <text x="256" y="320" font-family="Arial, sans-serif" font-size="38" font-weight="900" fill="#2B231B" text-anchor="middle" letter-spacing="3">INVOICES</text>
+  
+  <!-- Document Lines -->
+  <path d="M180 380H280" stroke="#BAE6FD" stroke-width="16" stroke-linecap="round"/>
+  <path d="M180 420H240" stroke="#BAE6FD" stroke-width="16" stroke-linecap="round"/>
+  
+  <!-- Checkmark Badge Base -->
+  <circle cx="390" cy="390" r="70" fill="#38A3EE" stroke="#FFFFFF" stroke-width="16"/>
+  <!-- Checkmark -->
+  <path d="M355 395L375 415L425 365" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

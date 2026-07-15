@@ -286,14 +286,12 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
         
         {/* Logo Brand */}
         <div className="flex items-center gap-3 cursor-pointer z-10 hover:opacity-90 transition-opacity" onClick={() => window.location.href = '/'}>
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-extrabold text-base shadow-lg shadow-sky-500/10">
-            MI
-          </div>
+          <img src="/logo.svg" alt="MakInvoices Logo" className="w-12 h-12 object-contain drop-shadow-md shrink-0" />
           <div>
-            <span className="text-sm font-black tracking-tight text-white block">
+            <span className="text-xl font-black tracking-tight text-white block leading-none">
               Mak<span className="text-sky-400">Invoices</span>
             </span>
-            <span className="text-[9px] font-bold text-slate-400 block -mt-1 tracking-widest uppercase">Ledger Hub</span>
+            <span className="text-[10px] font-bold text-slate-400 block tracking-widest uppercase mt-0.5">Ledger Hub</span>
           </div>
         </div>
 

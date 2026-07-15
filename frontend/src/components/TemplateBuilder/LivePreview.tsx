@@ -429,13 +429,15 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const dueDate = invoiceData?.dueDate || '';
 
   const isRealInvoice = invoiceData !== undefined && invoiceData !== null;
-  const clientName = invoiceData?.clientName || (isRealInvoice ? '' : 'Sameer Enterprises');
-  const clientAddr = invoiceData?.clientAddress || (isRealInvoice ? '' : 'Plot No. 45, Phase 3, Okhla Industrial Area, New Delhi');
-  const clientGst = (invoiceData as any)?.clientGstin || (invoiceData as any)?.clientTaxId || (isRealInvoice ? '' : '07SM123456789A1');
-  const clientPhone = invoiceData?.clientPhone || (isRealInvoice ? '' : '+91 9999988888');
-  const clientEmail = invoiceData?.clientEmail || (isRealInvoice ? '' : 'sameer@enterprises.com');
-  const clientState = (invoiceData as any)?.clientState || (isRealInvoice ? '' : 'Delhi');
-  const clientCountry = (invoiceData as any)?.clientCountry || (isRealInvoice ? '' : 'India');
+  const getFallback = (defaultMock: string) => isRealInvoice ? (isInteractive ? '' : 'N/A') : defaultMock;
+
+  const clientName = invoiceData?.clientName || getFallback('Sameer Enterprises');
+  const clientAddr = invoiceData?.clientAddress || getFallback('Plot No. 45, Phase 3, Okhla Industrial Area, New Delhi');
+  const clientGst = (invoiceData as any)?.clientGstin || (invoiceData as any)?.clientTaxId || getFallback('07SM123456789A1');
+  const clientPhone = invoiceData?.clientPhone || getFallback('+91 9999988888');
+  const clientEmail = invoiceData?.clientEmail || getFallback('sameer@enterprises.com');
+  const clientState = (invoiceData as any)?.clientState || getFallback('Delhi');
+  const clientCountry = (invoiceData as any)?.clientCountry || getFallback('India');
 
   const items: any[] = invoiceData?.items || [];
 
@@ -692,17 +694,17 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
             if (layout.type === 'Modal Classic') {
 
-              const placeOfSupply = invoiceData?.placeOfSupply || "N/A";
-              const grRrNo = invoiceData?.grRrNo || "N/A";
-              const referenceNumber = (invoiceData as any)?.referenceNumber || "N/A";
+              const placeOfSupply = invoiceData?.placeOfSupply || getFallback('N/A');
+              const grRrNo = invoiceData?.grRrNo || getFallback('N/A');
+              const referenceNumber = (invoiceData as any)?.referenceNumber || getFallback('N/A');
               return (
                 <div key="invoiceInfo" style={{ ...getSectionStyle('invoiceInfo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px' }}>
                   <div className="border border-gray-300 p-2.5 h-full" style={{ borderRadius: getBorderRadius() }}>
                     {config.invoiceInfo.fields.includes('invoiceNumber') && <div className={rowStyle}><span className={labelStyle}>{noLabel}</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(invNo, 'invoiceNumber')}</span></div>}
                     {config.invoiceInfo.fields.includes('invoiceDate') && <div className={rowStyle}><span className={labelStyle}>Dated</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(invDate, 'date')}</span></div>}
                     {config.invoiceInfo.fields.includes('dueDate') && <div className={rowStyle}><span className={labelStyle}>{dueDateLabel}</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(dueDate, 'dueDate')}</span></div>}
-                    {config.invoiceInfo.fields.includes('poNumber') && <div className={rowStyle}><span className={labelStyle}>PO Number</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive((invoiceData as any)?.poNumber || 'N/A', 'poNumber')}</span></div>}
-                    {config.invoiceInfo.fields.includes('deliveryNote') && <div className={rowStyle}><span className={labelStyle}>Delivery Note</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive((invoiceData as any)?.deliveryNote || 'N/A', 'deliveryNote')}</span></div>}
+                    {config.invoiceInfo.fields.includes('poNumber') && <div className={rowStyle}><span className={labelStyle}>PO Number</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive((invoiceData as any)?.poNumber || getFallback('N/A'), 'poNumber')}</span></div>}
+                    {config.invoiceInfo.fields.includes('deliveryNote') && <div className={rowStyle}><span className={labelStyle}>Delivery Note</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive((invoiceData as any)?.deliveryNote || getFallback('N/A'), 'deliveryNote')}</span></div>}
                     <div className={rowStyle}><span className={labelStyle}>Place of Supply</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(placeOfSupply, 'placeOfSupply')}</span></div>
                     <div className={rowStyle}><span className={labelStyle}>GR/RR No.</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(grRrNo, 'grRrNo')}</span></div>
                     <div className={rowStyle}><span className={labelStyle}>Ref. No.</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(referenceNumber, 'referenceNumber')}</span></div>
@@ -721,8 +723,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 {config.invoiceInfo.fields.includes('invoiceNumber') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>{noLabel}</strong> {renderInteractive(invNo, 'invoiceNumber')}</p>}
                 {config.invoiceInfo.fields.includes('invoiceDate') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Date:</strong> {renderInteractive(invDate, 'date')}</p>}
                 {config.invoiceInfo.fields.includes('dueDate') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>{dueDateLabel}</strong> {renderInteractive(dueDate, 'dueDate')}</p>}
-                {config.invoiceInfo.fields.includes('poNumber') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>PO No:</strong> {renderInteractive((invoiceData as any)?.poNumber || 'N/A', 'poNumber')}</p>}
-                <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Ref No:</strong> {renderInteractive((invoiceData as any)?.referenceNumber || 'N/A', 'referenceNumber')}</p>
+                {config.invoiceInfo.fields.includes('poNumber') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>PO No:</strong> {renderInteractive((invoiceData as any)?.poNumber || getFallback('N/A'), 'poNumber')}</p>}
+                <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Ref No:</strong> {renderInteractive((invoiceData as any)?.referenceNumber || getFallback('N/A'), 'referenceNumber')}</p>
                 {config.invoiceInfo.customFields.map(f => (
                   <p key={f.id} style={{ fontSize: '12px', margin: '2px 0' }}><strong>{f.label}:</strong> {renderInteractive(f.value, `customField_${f.id}`)}</p>
                 ))}
@@ -768,8 +770,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">GSTIN:</span><span className="text-gray-900 font-bold">{renderInteractive(clientGst, 'clientGstin', 'text', 'GSTIN')}</span></div>
                     )}
                     {config.client.fields.includes('pan') && (
-                      isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">PAN</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive((invoiceData as any)?.clientPan || (isInteractive ? '' : 'ABCDE1234F'), 'clientPan', 'text', 'PAN')}</span></div> :
-                        <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">PAN:</span><span className="text-gray-900 font-bold">{renderInteractive((invoiceData as any)?.clientPan || (isInteractive ? '' : 'ABCDE1234F'), 'clientPan', 'text', 'PAN')}</span></div>
+                      isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">PAN</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive((invoiceData as any)?.clientPan || getFallback('ABCDE1234F'), 'clientPan', 'text', 'PAN')}</span></div> :
+                        <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">PAN:</span><span className="text-gray-900 font-bold">{renderInteractive((invoiceData as any)?.clientPan || getFallback('ABCDE1234F'), 'clientPan', 'text', 'PAN')}</span></div>
                     )}
                   </div>
                 </div>
@@ -795,14 +797,14 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           }
 
           if (section.id === 'shipTo') {
-            const shipName = (invoiceData as any)?.shippedToName || (isRealInvoice ? '' : 'Sameer Enterprises');
-            const shipPhone = (invoiceData as any)?.shippedToPhone || (isRealInvoice ? '' : '+91 9999988888');
-            const shipEmail = (invoiceData as any)?.shippedToEmail || (isRealInvoice ? '' : 'sameer@enterprises.com');
-            const shipPan = (invoiceData as any)?.shippedToPan || (isRealInvoice ? '' : 'PANSM1234E');
-            const shipCountry = (invoiceData as any)?.shippedToCountry || (isRealInvoice ? '' : 'India');
-            const shipState = (invoiceData as any)?.shippedToState || (isRealInvoice ? '' : 'Delhi');
-            const shipAddr = (invoiceData as any)?.shippedToAddress || (isRealInvoice ? '' : 'Plot No. 45, Phase 3, Okhla Industrial Area, New Delhi');
-            const shipGst = (invoiceData as any)?.shippedToGstin || (isRealInvoice ? '' : '07SM123456789A1');
+            const shipName = (invoiceData as any)?.shippedToName || getFallback('Sameer Enterprises');
+            const shipPhone = (invoiceData as any)?.shippedToPhone || getFallback('+91 9999988888');
+            const shipEmail = (invoiceData as any)?.shippedToEmail || getFallback('sameer@enterprises.com');
+            const shipPan = (invoiceData as any)?.shippedToPan || getFallback('PANSM1234E');
+            const shipCountry = (invoiceData as any)?.shippedToCountry || getFallback('India');
+            const shipState = (invoiceData as any)?.shippedToState || getFallback('Delhi');
+            const shipAddr = (invoiceData as any)?.shippedToAddress || getFallback('Plot No. 45, Phase 3, Okhla Industrial Area, New Delhi');
+            const shipGst = (invoiceData as any)?.shippedToGstin || getFallback('07SM123456789A1');
 
             if (layout.type === 'Modal Classic') {
 
