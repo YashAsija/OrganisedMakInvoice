@@ -39,7 +39,19 @@ import {
   Smartphone,
   Check,
   Menu,
-  Layout
+  Layout,
+  BookOpen,
+  Bell,
+  CheckSquare,
+  MinusCircle,
+  Users2,
+  Truck,
+  Tag,
+  Zap,
+  Wrench,
+  MoreVertical,
+  Info,
+  FileSpreadsheet
 } from 'lucide-react';
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from '../types';
 import { BUSINESS_TEMPLATES } from '../lib/presets';
@@ -455,205 +467,162 @@ export default function Dashboard({
       }
     };
 
+    const navItemClass = (tab: string) => {
+      const isActive = activeTab === tab;
+      return `w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all duration-300 flex items-center justify-between cursor-pointer ${
+        isActive
+          ? 'bg-[#EADFCF] text-[#5C5043] dark:bg-zinc-800 dark:text-white border-r-[3px] border-[#88765C] font-black'
+          : 'text-[#88765C]/90 hover:text-[#5C5043] dark:text-zinc-400 hover:bg-[#F4EBE1]/60 dark:hover:bg-zinc-800/40'
+      }`;
+    };
+
     return (
-      <div className="flex flex-col h-full space-y-5 text-sans select-none">
+      <div className="flex flex-col h-full space-y-6 text-sans select-none">
         
         {/* User Card info */}
-        <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm shadow-indigo-500/20">
-            {profile.name ? profile.name.charAt(0).toUpperCase() : 'C'}
+        <div className="flex items-center gap-3 pb-4 border-b border-[#EBDCC8]/65 dark:border-zinc-800">
+          <div className="w-10 h-10 rounded-xl bg-[#5C5043] text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm">
+            {profile.name ? profile.name.charAt(0).toUpperCase() : 'M'}
           </div>
           <div className="min-w-0">
-            <h4 className="text-xs font-bold text-slate-800 dark:text-white uppercase leading-tight truncate">{profile.name || 'Crix'}</h4>
-            <span className="text-[10px] text-slate-400 font-mono tracking-wide mt-0.5 block truncate">{profile.mobile || profile.phone || '9899728185'}</span>
+            <h4 className="text-[11px] font-black text-[#5C5043] dark:text-white uppercase leading-tight truncate">{profile.name || 'MAKINVOICE'}</h4>
+            <span className="text-[9.5px] text-[#88765C]/85 dark:text-zinc-400 font-mono tracking-wide mt-0.5 block truncate">{profile.mobile || profile.phone || '9899728185'}</span>
           </div>
         </div>
 
-        {/* Core items group */}
+        {/* SETTINGS MENU */}
         <div className="space-y-1">
-          <span className="text-[9px] uppercase font-extrabold tracking-widest text-slate-400 block pb-1">Primary Menu</span>
+          <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#88765C]/60 dark:text-zinc-500 block px-2 pb-1">Settings Menu</span>
           
           <button
             onClick={() => handleTabClick('dashboard')}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'dashboard'
-                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-black'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
-            }`}
+            className={navItemClass('dashboard')}
           >
-            <Database className="w-4 h-4" />
-            <span>Billing Dashboard</span>
+            <div className="flex items-center gap-2.5">
+              <BarChart3 className="w-4 h-4" />
+              <span>Billing Dashboard</span>
+            </div>
           </button>
-
-          {/* My Profile Link moved to the top bar as requested */}
 
           <button
             onClick={() => handleTabClick('learn')}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'learn'
-                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-black'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
-            }`}
+            className={navItemClass('learn')}
           >
-            <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
-            <span>Learn MakInvoices</span>
+            <div className="flex items-center gap-2.5">
+              <BookOpen className="w-4 h-4" />
+              <span>Learn MakInvoices</span>
+            </div>
           </button>
 
           <button
             onClick={() => handleTabClick('invoice_templates')}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'invoice_templates'
-                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-black'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
-            }`}
+            className={navItemClass('invoice_templates')}
           >
-            <Layout className="w-4 h-4 text-indigo-500" />
-            <span>Invoice Template Builder</span>
-          </button>
-
-          <button
-            onClick={() => {
-              onOpenInvoiceEditor(null);
-              if (isMobileView) setIsMobileDrawerOpen(false);
-            }}
-            className="w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all flex items-center gap-2.5 cursor-pointer"
-          >
-            <Plus className="w-4 h-4 text-emerald-500" />
-            <span>Add New Invoice</span>
+            <div className="flex items-center gap-2.5">
+              <Layout className="w-4 h-4" />
+              <span>Invoice Template</span>
+            </div>
           </button>
 
           <button
             onClick={() => handleTabClick('invoices')}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
-              activeTab === 'invoices'
-                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-black'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
-            }`}
+            className={navItemClass('invoices')}
           >
             <div className="flex items-center gap-2.5">
               <FileText className="w-4 h-4" />
               <span>Invoices Ledger</span>
             </div>
-            <span className={`text-[9.5px] px-1.5 py-0.5 rounded-full font-medium ${activeTab === 'invoices' ? 'bg-sky-705 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+            <span className={`text-[9.5px] px-1.5 py-0.5 rounded-full font-medium ${activeTab === 'invoices' ? 'bg-[#88765C] text-white' : 'bg-[#F4EBE1] text-[#88765C]'}`}>
               {invoices.length}
             </span>
           </button>
 
           <button
-            onClick={() => handleTabClick('clients')}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
-              activeTab === 'clients'
-                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-black'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Notebook className="w-4 h-4" />
-              <span>Billed Clients</span>
-            </div>
-            <span className={`text-[9.5px] px-1.5 py-0.5 rounded-full font-medium ${activeTab === 'clients' ? 'bg-sky-705 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-              {clients.length}
-            </span>
-          </button>
-
-          <button
             onClick={() => handleTabClick('reports')}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
-              activeTab === 'reports'
-                ? 'bg-sky-600 text-white shadow-md shadow-sky-950/10 font-black'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
-            }`}
+            className={navItemClass('reports')}
           >
             <div className="flex items-center gap-2.5">
-              <BarChart3 className="w-4 h-4" />
+              <TrendingUp className="w-4 h-4" />
               <span>Accounting Summary</span>
             </div>
           </button>
         </div>
 
-        {/* Master collapse selection */}
+        {/* MASTER REGISTRY */}
         <div className="space-y-1">
+          <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#88765C]/60 dark:text-zinc-500 block px-2 pb-1">Master Registry</span>
+
           <button
-            type="button"
-            onClick={() => setIsMasterExpanded(!isMasterExpanded)}
-            className="w-full flex items-center justify-between text-[10px] uppercase font-extrabold tracking-widest text-slate-400 py-1 cursor-pointer hover:text-slate-600 dark:hover:text-white"
+            onClick={() => handleTabClick('master_vendor')}
+            className={navItemClass('master_vendor')}
           >
-            <span>Master Registry</span>
-            <span className="text-slate-400">{isMasterExpanded ? '▲' : '▼'}</span>
+            <div className="flex items-center gap-2.5">
+              <Users2 className="w-4 h-4" />
+              <span>Client Database</span>
+            </div>
           </button>
 
-          {isMasterExpanded && (
-            <div className="pl-2 space-y-0.5 border-l border-slate-100 dark:border-slate-800 ml-1.5 my-1">
-              <button
-                onClick={() => handleTabClick('master_vendor')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
-                  activeTab === 'master_vendor' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                }`}
-              >
-                🏢 Client Database
-              </button>
-              <button
-                onClick={() => handleTabClick('master_hsn')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
-                  activeTab === 'master_hsn' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                }`}
-              >
-                🔢 HSN Registry
-              </button>
-              <button
-                onClick={() => handleTabClick('master_transport')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
-                  activeTab === 'master_transport' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                }`}
-              >
-                🚚 Transport Database
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Catalog collapse selection */}
-        <div className="space-y-1">
           <button
-            type="button"
-            onClick={() => setIsCatalogExpanded(!isCatalogExpanded)}
-            className="w-full flex items-center justify-between text-[10px] uppercase font-extrabold tracking-widest text-slate-400 py-1 cursor-pointer hover:text-slate-600 dark:hover:text-white"
+            onClick={() => handleTabClick('master_hsn')}
+            className={navItemClass('master_hsn')}
           >
-            <span>Catalog Master</span>
-            <span className="text-slate-400">{isCatalogExpanded ? '▲' : '▼'}</span>
+            <div className="flex items-center gap-2.5">
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>HSN Registry</span>
+            </div>
           </button>
 
-          {isCatalogExpanded && (
-            <div className="pl-2 space-y-0.5 border-l border-slate-100 dark:border-slate-800 ml-1.5 my-1">
-              <button
-                onClick={() => handleTabClick('catalog_material')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
-                  activeTab === 'catalog_material' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                }`}
-              >
-                🛠️ Material Catalog
-              </button>
-              <button
-                onClick={() => handleTabClick('catalog_category')}
-                className={`w-full px-3 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all block cursor-pointer ${
-                  activeTab === 'catalog_category' ? 'bg-sky-600/10 text-sky-600 dark:text-sky-450 font-extrabold font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                }`}
-              >
-                🏷️ Product Category
-              </button>
+          <button
+            onClick={() => handleTabClick('master_transport')}
+            className={navItemClass('master_transport')}
+          >
+            <div className="flex items-center gap-2.5">
+              <Truck className="w-4 h-4" />
+              <span>Transport Database</span>
             </div>
-          )}
+          </button>
+
+          <button
+            onClick={() => handleTabClick('catalog_category')}
+            className={navItemClass('catalog_category')}
+          >
+            <div className="flex items-center gap-2.5">
+              <Tag className="w-4 h-4" />
+              <span>Product Category</span>
+            </div>
+          </button>
         </div>
 
-        {/* Bottom sign out */}
-        <div className="pt-4 pb-6 border-t border-slate-100 dark:border-slate-800 mt-auto">
+        {/* BOTTOM QUICK BILL & MATERIAL CATALOG */}
+        <div className="pt-4 border-t border-[#EBDCC8]/65 dark:border-zinc-800 mt-auto space-y-2">
+          <button
+            onClick={() => {
+              onOpenInvoiceEditor(null);
+              if (isMobileView) setIsMobileDrawerOpen(false);
+            }}
+            className="w-full py-2.5 bg-[#88765C] hover:bg-[#5C5043] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-xs hover:shadow-md transition-all duration-300"
+          >
+            <Zap className="w-4 h-4 fill-white" />
+            <span>Quick Bill</span>
+          </button>
+
+          <button
+            onClick={() => handleTabClick('catalog_material')}
+            className={navItemClass('catalog_material')}
+          >
+            <div className="flex items-center gap-2.5">
+              <Wrench className="w-4 h-4" />
+              <span>Material Catalog</span>
+            </div>
+          </button>
+
           {userEmail ? (
             <button
               onClick={() => {
                 onLogout();
                 if (isMobileView) setIsMobileDrawerOpen(false);
               }}
-              className="w-full px-3 py-2 bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-955 text-rose-600 dark:text-rose-450 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer border border-transparent dark:border-rose-900/30 font-bold"
+              className="w-full px-3 py-2 bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-955 text-rose-600 dark:text-rose-450 text-[10px] font-extrabold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer border border-transparent dark:border-rose-900/30"
             >
               <LogOut className="w-4 h-4" />
               <span>Log out</span>
@@ -664,7 +633,7 @@ export default function Dashboard({
                 onLogin();
                 if (isMobileView) setIsMobileDrawerOpen(false);
               }}
-              className="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm font-bold"
+              className="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
             >
               <LogIn className="w-4 h-4" />
               <span>Log In</span>
@@ -1855,10 +1824,10 @@ export default function Dashboard({
   const totalReportedExpenses = reportedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
   return (
-    <div className="h-dvh w-full max-w-full overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200 text-sans">
+    <div className="h-dvh w-full max-w-full overflow-hidden bg-[#FCFAF7] dark:bg-zinc-950 text-slate-800 dark:text-slate-100 transition-colors duration-200 text-sans">
       
       {/* Dynamic Main App Bar Header */}
-      <header className="sticky top-0 z-20 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-150 dark:border-slate-800/80 px-4 py-3 flex items-center justify-between shadow-xs">
+      <header className={`sticky top-0 z-20 w-full bg-white/95 dark:bg-slate-905/95 backdrop-blur-md border-b border-slate-150 dark:border-slate-800/80 px-4 py-3 flex items-center justify-between shadow-xs ${activeTab === 'dashboard' ? 'md:hidden' : ''}`}>
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setIsMobileDrawerOpen(true)}
@@ -1926,7 +1895,7 @@ export default function Dashboard({
         
         {/* DESKTOP BRANDING & CONTROL SIDEBAR - Visible only on md screens and larger */}
         <div className="hidden md:block relative shrink-0">
-          <aside className={`flex flex-col bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/80 rounded-3xl shadow-xs h-[calc(100vh-110px)] overflow-y-auto overflow-x-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
+          <aside className={`flex flex-col bg-[#FCFAF7] dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-800 rounded-3xl shadow-xs h-[calc(100vh-110px)] overflow-y-auto overflow-x-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
             <div className="w-full h-full">
               {renderNavMenuContent(false)}
             </div>
@@ -2817,153 +2786,408 @@ export default function Dashboard({
         )}
 
         {/* ------------------ TAB 4: BRAND NEW 'dashboard' BENTO HOME PREMIER VIEW ------------------ */}
-        {activeTab === 'dashboard' && (
-          <div className="space-y-6 text-sans animate-in fade-in duration-200">
-            
-            {/* Page Header heading block */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow duration-300">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
-                  <Sparkles className="w-5 h-5 text-white animate-pulse" />
-                </div>
+        {activeTab === 'dashboard' && (() => {
+          // Calculate KPI sparkline and chart details
+          const monthsShort = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN"];
+          const records: { label: string; income: number; projected: number }[] = [];
+          const now = new Date();
+          
+          for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            records.push({
+              label: `${monthsShort[d.getMonth() % 12]}`,
+              income: 0,
+              projected: 0
+            });
+          }
+
+          invoices.forEach(inv => {
+            if (inv.status === 'paid') {
+              const dateObj = new Date(inv.date);
+              if (!isNaN(dateObj.getTime())) {
+                const label = monthsShort[dateObj.getMonth() % 12];
+                const match = records.find(r => r.label === label);
+                if (match) match.income += inv.grandTotal;
+              }
+            }
+          });
+
+          records.forEach((r, idx) => {
+            r.projected = r.income > 0 ? r.income * 0.85 + 25000 : 80000 + idx * 45000;
+          });
+
+          // SVG Line coordinates math
+          const maxVal = Math.max(...records.map(d => Math.max(d.income, d.projected)), 100000);
+          const chartWidth = 500;
+          const chartHeight = 160;
+          const paddingX = 40;
+          const paddingY = 20;
+          const usableWidth = chartWidth - paddingX * 2;
+          const usableHeight = chartHeight - paddingY * 2;
+
+          const pointsActual = records.map((r, i) => ({
+            x: paddingX + (i / (records.length - 1)) * usableWidth,
+            y: chartHeight - paddingY - (r.income / maxVal) * usableHeight
+          }));
+
+          const pointsProjected = records.map((r, i) => ({
+            x: paddingX + (i / (records.length - 1)) * usableWidth,
+            y: chartHeight - paddingY - (r.projected / maxVal) * usableHeight
+          }));
+
+          const pathActual = pointsActual.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+          const pathProjected = pointsProjected.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+          const initials = profile.name ? profile.name.slice(0, 2).toUpperCase() : 'MK';
+
+          return (
+            <div className="space-y-6 text-sans animate-in fade-in duration-300">
+              {/* Main Topbar Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#EBDCC8]/60 dark:border-zinc-800">
                 <div>
-                  <h2 className="text-sm font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-tight">
-                    Welcome to {profile.name || 'MakInvoices Workspace'}
-                  </h2>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5 font-medium">Real-time financials, pre-coded GST collections, and catalog registries.</span>
+                  <span className="text-[10px] font-bold text-[#88765C]/80 uppercase tracking-widest">Financial Hub / Dashboard</span>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onOpenInvoiceEditor(null)}
-                  className="px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white rounded-xl text-[10px] font-extrabold tracking-wide flex items-center gap-1.5 cursor-pointer shadow-lg shadow-sky-500/30 hover:shadow-sky-500/40 hover:-translate-y-0.5 transition-all duration-300"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Quick Bill</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Quick stats grid */}
-            <section className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <div className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-medium flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[9px] uppercase font-extrabold tracking-wider text-slate-500 dark:text-slate-400 block truncate">Cleared</span>
-                  <span className="text-[13px] font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate">{currencySymbol}{totalBilled.toLocaleString()}</span>
-                </div>
-              </div>
-
-              <div className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-medium flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                  <Clock className="w-5 h-5 animate-pulse" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[9px] uppercase font-extrabold tracking-wider text-slate-500 dark:text-slate-400 block truncate">Receivables</span>
-                  <span className="text-[13px] font-extrabold font-mono text-amber-600 dark:text-amber-400 mt-0.5 block truncate">{currencySymbol}{totalOutstanding.toLocaleString()}</span>
-                </div>
-              </div>
-
-              <div className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-rose-500/0 via-rose-500/5 to-rose-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center font-medium flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                  <TrendingDown className="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[9px] uppercase font-extrabold tracking-wider text-slate-500 dark:text-slate-400 block truncate">Expenses</span>
-                  <span className="text-[13px] font-extrabold font-mono text-rose-600 dark:text-rose-400 mt-0.5 block truncate">{currencySymbol}{totalReportedExpenses.toLocaleString()}</span>
-                </div>
-              </div>
-            </section>
-
-            {/* Recent Billing table first */}
-            <div className="space-y-3">
-              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Recent billing records ({invoices.slice(0,3).length})</span>
-              {invoices.length === 0 ? (
-                <div className="p-8 bg-white dark:bg-slate-900 border border-slate-150 rounded-3xl text-center">
-                  <p className="text-[11px] font-medium text-slate-400">Generate your first invoice to view details here!</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {invoices.slice(0, 3).map(inv => (
-                    <div 
-                      key={inv.id}
-                      onClick={() => setActivePreviewInvoice(inv)}
-                      className="group relative p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between"
-                    >
-                      <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-sky-400 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      <div>
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-[10px] font-extrabold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-500/10 px-2 py-0.5 rounded-lg">{inv.invoiceNumber}</span>
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[8px] font-extrabold uppercase tracking-wider ${getStatusColor(inv.status)}`}>
-                            {inv.status}
-                          </span>
-                        </div>
-                        <span className="text-sm font-medium text-slate-800 dark:text-white mt-2 block truncate">{inv.clientName}</span>
-                        <span className="text-[9px] text-slate-400 font-medium mt-1 flex items-center gap-1">
-                          <Calendar className="w-3 h-3" /> Released {inv.date}
-                        </span>
-                      </div>
-                      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex justify-between items-end">
-                        <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Total</span>
-                        <span className="text-sm font-extrabold font-mono text-slate-800 dark:text-slate-100">{currencySymbol}{inv.grandTotal.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Layout grid structure with financial curve graph and guidelines below recent billing */}
-            <div className="grid grid-cols-1 lg:grid-cols-[1.72fr_1.28fr] gap-6">
-              {/* Left Column: Line Graph */}
-              <div className="space-y-4">
-                <h3 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Financial Performance Curve</h3>
-                {renderTrendChartSection()}
-              </div>
-
-              {/* Right Column: Mini registry shortcuts */}
-              <div className="space-y-4">
-                <h3 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Billing Guidelines & How to Use</h3>
-                
-                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-3xl space-y-5 shadow-sm hover:shadow-md transition-shadow duration-300">
-                  <div className="group p-3 rounded-2xl hover:bg-sky-50 dark:hover:bg-sky-500/5 transition-colors duration-300 cursor-default">
-                    <span className="text-[10px] uppercase font-extrabold text-sky-600 dark:text-sky-400 tracking-wider block mb-2 flex items-center gap-1.5"><span className="p-1 bg-sky-100 dark:bg-sky-500/20 rounded-lg">📖</span> Quick User Guide</span>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium space-y-1">
-                      <span className="block">• Check your GSTIN details in <strong>Profile Settings</strong></span>
-                      <span className="block">• Add your customer directory in the <strong>Clients Ledger</strong></span>
-                      <span className="block">• Hit <strong>New Bill</strong> to draft a new itemized professional invoice</span>
-                      <span className="block">• Click the download or print icons to save official compliance PDFs</span>
-                    </p>
+                <div className="flex items-center gap-4 self-end sm:self-auto">
+                  <div className="relative w-full max-w-[280px]">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#88765C]/70" />
+                    <input 
+                      type="text" 
+                      placeholder="Search insights..." 
+                      className="w-full pl-9 pr-4 py-2 text-xs rounded-full border border-[#EBDCC8] dark:border-zinc-800 bg-[#FCFAF7]/80 dark:bg-zinc-950 focus:outline-hidden text-[#5C5043] dark:text-white placeholder-[#88765C]/50"
+                    />
                   </div>
-
-                  <div className="group p-3 rounded-2xl hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-colors duration-300 cursor-default">
-                    <span className="text-[10px] uppercase font-extrabold text-amber-600 dark:text-amber-400 tracking-wider block mb-2 flex items-center gap-1.5"><span className="p-1 bg-amber-100 dark:bg-amber-500/20 rounded-lg">⚖️</span> Company Billing Policy</span>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium space-y-1">
-                      <span className="block">• Standard Net-15/Net-30 payment intervals applied</span>
-                      <span className="block">• Overdue bills incur late fee penalties per Indian MSME rules</span>
-                      <span className="block">• Split CGST/SGST on Intrastate; unified IGST on Interstate</span>
-                    </p>
-                  </div>
-
+                  <button className="p-2 bg-white dark:bg-zinc-900 border border-[#EBDCC8] dark:border-zinc-800 text-[#88765C] hover:text-[#5C5043] rounded-full transition-colors relative cursor-pointer">
+                    <Bell className="w-4 h-4" />
+                    <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-rose-500" />
+                  </button>
                   <button 
-                    onClick={() => setActiveTab('learn')}
-                    className="group w-full py-2.5 bg-gradient-to-r from-slate-100 to-slate-50 hover:from-sky-500 hover:to-indigo-500 dark:from-slate-800 dark:to-slate-850 dark:hover:from-sky-500 dark:hover:to-indigo-500 text-slate-700 hover:text-white dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-transparent rounded-2xl text-[11px] font-extrabold uppercase tracking-wide cursor-pointer transition-all duration-300 flex items-center justify-center gap-2 shadow-sm hover:shadow-lg"
+                    onClick={() => setActiveTab('profile')}
+                    className="w-9 h-9 rounded-full bg-[#5C5043] text-white flex items-center justify-center text-xs font-black tracking-wider shadow-sm cursor-pointer"
                   >
-                    View Detailed Manual 
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    {initials}
                   </button>
                 </div>
               </div>
-            </div>
 
-          </div>
-        )}
+              {/* KPI Cards Row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {/* Settled Earnings */}
+                <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                  <div className="flex justify-between items-start">
+                    <div className="w-8.5 h-8.5 rounded-full bg-[#ECFDF5] text-[#10B981] border border-[#A7F3D0] flex items-center justify-center font-black text-sm">
+                      ₹
+                    </div>
+                    <span className="text-[10px] font-black text-[#10B981] bg-[#ECFDF5] border border-[#A7F3D0] px-2 py-0.5 rounded-full">
+                      +12.5%
+                    </span>
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#88765C]/80 block">Settled Earnings</span>
+                    <span className="text-xl font-black text-[#5C5043] dark:text-white mt-1 block">
+                      {currencySymbol}{totalBilled.toLocaleString()}
+                    </span>
+                  </div>
+                  {/* Sparkline bars */}
+                  <div className="flex items-end gap-1 h-6 self-start mt-2">
+                    <div className="w-1 bg-[#10B981]/30 rounded-t-sm h-2" />
+                    <div className="w-1 bg-[#10B981]/50 rounded-t-sm h-3" />
+                    <div className="w-1 bg-[#10B981]/70 rounded-t-sm h-5" />
+                    <div className="w-1 bg-[#10B981]/40 rounded-t-sm h-3" />
+                    <div className="w-1 bg-[#10B981] rounded-t-sm h-6" />
+                  </div>
+                </div>
+
+                {/* Pending Receivables */}
+                <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                  <div className="flex justify-between items-start">
+                    <div className="w-8.5 h-8.5 rounded-full bg-[#FFFBEB] text-[#F59E0B] border border-[#FEF3C7] flex items-center justify-center">
+                      <CheckSquare className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-black text-[#F59E0B] bg-[#FFFBEB] border border-[#FEF3C7] px-2 py-0.5 rounded-full">
+                      +4.2%
+                    </span>
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#88765C]/80 block">Pending Receivables</span>
+                    <span className="text-xl font-black text-[#5C5043] dark:text-white mt-1 block">
+                      {currencySymbol}{totalOutstanding.toLocaleString()}
+                    </span>
+                  </div>
+                  {/* Sparkline bars */}
+                  <div className="flex items-end gap-1 h-6 self-start mt-2">
+                    <div className="w-1 bg-[#F59E0B]/30 rounded-t-sm h-4" />
+                    <div className="w-1 bg-[#F59E0B]/50 rounded-t-sm h-2" />
+                    <div className="w-1 bg-[#F59E0B]/70 rounded-t-sm h-5" />
+                    <div className="w-1 bg-[#F59E0B] rounded-t-sm h-6" />
+                    <div className="w-1 bg-[#F59E0B]/40 rounded-t-sm h-3" />
+                  </div>
+                </div>
+
+                {/* Operating Expenses */}
+                <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                  <div className="flex justify-between items-start">
+                    <div className="w-8.5 h-8.5 rounded-full bg-[#FEF2F2] text-[#EF4444] border border-[#FEE2E2] flex items-center justify-center">
+                      <MinusCircle className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-black text-[#EF4444] bg-[#FEF2F2] border border-[#FEE2E2] px-2 py-0.5 rounded-full">
+                      -2.8%
+                    </span>
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#88765C]/80 block">Operating Expenses</span>
+                    <span className="text-xl font-black text-[#5C5043] dark:text-white mt-1 block">
+                      {currencySymbol}{totalReportedExpenses.toLocaleString()}
+                    </span>
+                  </div>
+                  {/* Sparkline bars */}
+                  <div className="flex items-end gap-1 h-6 self-start mt-2">
+                    <div className="w-1 bg-[#EF4444] rounded-t-sm h-6" />
+                    <div className="w-1 bg-[#EF4444]/50 rounded-t-sm h-3" />
+                    <div className="w-1 bg-[#EF4444]/70 rounded-t-sm h-5" />
+                    <div className="w-1 bg-[#EF4444]/30 rounded-t-sm h-2" />
+                    <div className="w-1 bg-[#EF4444]/80 rounded-t-sm h-4" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Chart & Donut Middle Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-[1.72fr_1.28fr] gap-6">
+                {/* Revenue Intelligence Line Chart */}
+                <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                  <div className="flex justify-between items-start pb-4">
+                    <div>
+                      <h3 className="text-sm font-black text-[#5C5043] dark:text-white uppercase tracking-tight">Revenue Intelligence</h3>
+                      <span className="text-[10px] text-[#88765C]/80 dark:text-zinc-400 block mt-0.5">Comparative analysis of cash flow vs projections</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#88765C]/80 dark:text-zinc-400">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-0.5 bg-[#5C5043]" /> ACTUAL
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-0.5 border-t border-dashed border-[#C6A87D]" /> PROJECTED
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="w-full overflow-x-auto select-none mt-2">
+                    <svg className="w-full min-w-[420px]" viewBox={`0 0 ${chartWidth} ${chartHeight}`} fill="none">
+                      {/* Grid Lines */}
+                      {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                        const y = paddingY + ratio * usableHeight;
+                        const labelValue = Math.round(maxVal - (ratio * maxVal));
+                        return (
+                          <g key={`grid-${i}`}>
+                            <line x1={paddingX} y1={y} x2={chartWidth - paddingX} y2={y} stroke="#EBDCC8" strokeWidth="0.5" strokeOpacity="0.4" />
+                            <text x={paddingX - 10} y={y + 3} textAnchor="end" className="text-[8px] font-mono fill-[#88765C]/70">
+                              {labelValue >= 1000 ? `${(labelValue / 1000).toFixed(0)}k` : labelValue}
+                            </text>
+                          </g>
+                        );
+                      })}
+
+                      {/* Line paths */}
+                      <path d={pathActual} fill="none" stroke="#5C5043" strokeWidth="2" strokeLinecap="round" />
+                      <path d={pathProjected} fill="none" stroke="#C6A87D" strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
+
+                      {/* Dot indicators */}
+                      {pointsActual.map((pts, i) => (
+                        <circle key={`act-dot-${i}`} cx={pts.x} cy={pts.y} r="3" fill="#5C5043" stroke="#fff" strokeWidth="1" />
+                      ))}
+
+                      {/* Bottom months labels */}
+                      {records.map((r, i) => {
+                        const x = paddingX + (i / (records.length - 1)) * usableWidth;
+                        return (
+                          <text key={`lbl-chart-${i}`} x={x} y={chartHeight - 4} textAnchor="middle" className="text-[9px] font-black fill-[#88765C]/80 font-mono">{r.label}</text>
+                        );
+                      })}
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Donut Chart: Revenue Segments */}
+                <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-sm font-black text-[#5C5043] dark:text-white uppercase tracking-tight">Revenue Segments</h3>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center py-4 relative">
+                    <svg className="w-36 h-36" viewBox="0 0 200 200">
+                      {/* Grey Base background track */}
+                      <circle cx="100" cy="100" r="70" fill="none" stroke="#F1EDE6" strokeWidth="18" />
+                      
+                      {/* Corporate Sales (68%) */}
+                      <circle 
+                        cx="100" 
+                        cy="100" 
+                        r="70" 
+                        fill="none" 
+                        stroke="#5c5043" 
+                        strokeWidth="18" 
+                        strokeDasharray="299 440" 
+                        strokeDashoffset="0" 
+                        strokeLinecap="round" 
+                        className="transform -rotate-90 origin-center" 
+                      />
+                      
+                      {/* Direct Retail (12%) */}
+                      <circle 
+                        cx="100" 
+                        cy="100" 
+                        r="70" 
+                        fill="none" 
+                        stroke="#c6a87d" 
+                        strokeWidth="18" 
+                        strokeDasharray="53 440" 
+                        strokeDashoffset="-299" 
+                        strokeLinecap="round" 
+                        className="transform -rotate-90 origin-center" 
+                      />
+
+                      {/* Consultancy (20%) */}
+                      <circle 
+                        cx="100" 
+                        cy="100" 
+                        r="70" 
+                        fill="none" 
+                        stroke="#d1c7bd" 
+                        strokeWidth="18" 
+                        strokeDasharray="88 440" 
+                        strokeDashoffset="-352" 
+                        strokeLinecap="round" 
+                        className="transform -rotate-90 origin-center" 
+                      />
+
+                      {/* Total inside circle */}
+                      <text x="100" y="98" textAnchor="middle" className="text-xl font-black fill-[#5C5043] dark:fill-white">
+                        ₹ {(((totalBilled + totalOutstanding) || 640000) / 100000).toFixed(1)}L
+                      </text>
+                      <text x="100" y="116" textAnchor="middle" className="text-[9px] font-black uppercase tracking-wider fill-[#88765C]/80">
+                        TOTAL
+                      </text>
+                    </svg>
+                  </div>
+
+                  {/* Legend list */}
+                  <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-[#88765C]/90 dark:text-zinc-400 mt-2 px-2">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[#5c5043]" /> Corporate Sales
+                      </span>
+                      <span className="font-extrabold text-[#5C5043] dark:text-white">68%</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[#c6a87d]" /> Direct Retail
+                      </span>
+                      <span className="font-extrabold text-[#5C5043] dark:text-white">12%</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-1.5 col-span-2 border-t border-[#EBDCC8]/40 pt-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[#d1c7bd]" /> Consultancy
+                      </span>
+                      <span className="font-extrabold text-[#5C5043] dark:text-white">20%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Records Table & Compliance Protocol Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-[1.72fr_1.28fr] gap-6">
+                {/* Recent Billing Table */}
+                <div className="bg-white dark:bg-zinc-900 border border-[#EBDCC8]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                  <div className="flex justify-between items-center pb-4 border-b border-[#EBDCC8]/45 dark:border-zinc-800">
+                    <h3 className="text-sm font-black text-[#5C5043] dark:text-white uppercase tracking-tight">Recent Billing Records</h3>
+                    <button 
+                      onClick={() => setActiveTab('invoices')}
+                      className="text-[10px] font-black text-[#88765C] hover:text-[#5C5043] uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                    >
+                      View All Records →
+                    </button>
+                  </div>
+
+                  <div className="w-full overflow-x-auto mt-3">
+                    {invoices.length === 0 ? (
+                      <div className="py-12 text-center">
+                        <p className="text-xs text-[#88765C]/80 font-medium">Generate your first invoice to view records here!</p>
+                      </div>
+                    ) : (
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="text-[10px] font-black uppercase text-[#88765C]/60 tracking-wider border-b border-[#EBDCC8]/30">
+                            <th className="py-2.5 font-black">INV ID</th>
+                            <th className="py-2.5 font-black">CLIENT NAME</th>
+                            <th className="py-2.5 font-black">DUE DATE</th>
+                            <th className="py-2.5 font-black">AMOUNT</th>
+                            <th className="py-2.5 font-black">STATUS</th>
+                            <th className="py-2.5"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {invoices.slice(0, 3).map(inv => (
+                            <tr key={inv.id} className="border-b border-[#EBDCC8]/20 hover:bg-[#FAF8F5]/50 dark:hover:bg-zinc-850/40">
+                              <td className="py-3 font-extrabold text-[#5C5043] dark:text-white">{inv.invoiceNumber}</td>
+                              <td className="py-3 font-bold text-[#88765C] dark:text-zinc-300 truncate max-w-[120px]">{inv.clientName}</td>
+                              <td className="py-3 font-medium text-[#88765C]/80 dark:text-zinc-400 font-sans">{inv.dueDate || inv.date}</td>
+                              <td className="py-3 font-extrabold font-mono text-[#5C5043] dark:text-white">{currencySymbol}{inv.grandTotal.toLocaleString()}</td>
+                              <td className="py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
+                                  {inv.status}
+                                </span>
+                              </td>
+                              <td className="py-3 text-right">
+                                <button 
+                                  onClick={() => setActivePreviewInvoice(inv)}
+                                  className="text-[#88765C] hover:text-[#5C5043] p-1 cursor-pointer"
+                                >
+                                  <MoreVertical className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+
+                {/* Dark Card: Billing Protocol */}
+                <div className="bg-[#23201D] text-[#FAF8F5] rounded-2xl p-6 shadow-md flex flex-col justify-between h-full min-h-[250px]">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#EADFCF]">
+                      <Info className="w-4.5 h-4.5 text-[#C6A87D]" />
+                      <span>Billing Protocol</span>
+                    </div>
+                    
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-start gap-2.5 text-xs">
+                        <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400 shrink-0 mt-0.5" />
+                        <span className="font-semibold text-[#EADFCF]/90">Ensure GSTR-1 compliance before EOM.</span>
+                      </div>
+                      <div className="flex items-start gap-2.5 text-xs">
+                        <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400 shrink-0 mt-0.5" />
+                        <span className="font-semibold text-[#EADFCF]/90">Validate HSN codes for industrial goods.</span>
+                      </div>
+                      <div className="flex items-start gap-2.5 text-xs">
+                        <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400 shrink-0 mt-0.5" />
+                        <span className="font-semibold text-[#EADFCF]/90">Maintain Net-30 payment intervals.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    <button 
+                      onClick={() => setActiveTab('learn')}
+                      className="w-full py-2.5 bg-[#2E2A27] border border-[#524A44] hover:bg-[#3E3834] text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer"
+                    >
+                      View Compliance Docs
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ------------------ TAB 5: LEARN DOCUMENTATION & TERMS AND CONDITIONS ------------------ */}
         {activeTab === 'learn' && (
