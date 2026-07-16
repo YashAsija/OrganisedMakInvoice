@@ -231,9 +231,9 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
 
   // Create a hidden container within viewport bounds to prevent blank captures
   const container = document.createElement('div');
-  container.style.position = 'fixed';
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
   container.style.top = '0';
-  container.style.left = '0';
   container.style.zIndex = '-9999'; // Hide behind app
   container.style.width = activeTemplate.layout.pageSize === 'A4' ? '794px' : '816px';
   container.style.minHeight = 'auto';
@@ -297,8 +297,8 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
     const rowHeights = rows.map(r => r.offsetHeight > 20 ? r.offsetHeight : 55);
     
     // Calculate totalsHeight by measuring bottom totals grid
-    let totalsHeight = 180;
-    const totalsEls = Array.from(container.querySelectorAll('[key="taxEngine"], [key="payment"], [key="amountInWords"]')) as HTMLElement[];
+    let totalsHeight = 0;
+    const totalsEls = Array.from(container.querySelectorAll('#section-taxEngine, #section-payment, #section-amountInWords')) as HTMLElement[];
     if (totalsEls.length > 0) {
       let minTop = Infinity;
       let maxBottom = 0;
@@ -318,9 +318,9 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
     const items = tempInvoice.items || [];
     const N = items.length;
     const chunks: any[][] = [];
-    const availablePageHeight = pageHeight - footerHeight - 190; // 190px safety buffer to prevent footer clipping
+    const availablePageHeight = pageHeight - footerHeight - 20; // 20px bottom padding
     const page1Budget = availablePageHeight - tableTop - tableHeaderHeight;
-    const subsequentPageBudget = availablePageHeight - 50 - tableHeaderHeight;
+    const subsequentPageBudget = page1Budget; // Headers are now rendered on every page, so budget is same as page 1
 
     const totalRowsHeight = rowHeights.reduce((a, b) => a + b, 0);
     const singlePageBudget = page1Budget - totalsHeight;
@@ -333,12 +333,19 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
       let currentHeight = 0;
       let idx = 0;
       const p1Items: any[] = [];
-      while (idx < N && currentHeight + rowHeights[idx] <= page1Budget) {
-        currentHeight += rowHeights[idx];
-        p1Items.push(items[idx]);
-        idx++;
+      while (idx < N) {
+        const isLastItem = (idx === N - 1);
+        const requiredBudget = isLastItem ? rowHeights[idx] + totalsHeight : rowHeights[idx];
+        if (currentHeight + requiredBudget <= page1Budget) {
+          currentHeight += rowHeights[idx];
+          p1Items.push(items[idx]);
+          idx++;
+        } else {
+          break;
+        }
       }
       if (p1Items.length === 0 && N > 0) {
+        currentHeight += rowHeights[0];
         p1Items.push(items[0]);
         idx++;
       }
@@ -357,12 +364,19 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
           break;
         }
 
-        while (idx < N && curHeight + rowHeights[idx] <= subsequentPageBudget) {
-          curHeight += rowHeights[idx];
-          pageItems.push(items[idx]);
-          idx++;
+        while (idx < N) {
+          const isLastItem = (idx === N - 1);
+          const requiredBudget = isLastItem ? rowHeights[idx] + totalsHeight : rowHeights[idx];
+          if (curHeight + requiredBudget <= subsequentPageBudget) {
+            curHeight += rowHeights[idx];
+            pageItems.push(items[idx]);
+            idx++;
+          } else {
+            break;
+          }
         }
         if (pageItems.length === 0 && N > 0) {
+          curHeight += rowHeights[idx];
           pageItems.push(items[idx]);
           idx++;
         }

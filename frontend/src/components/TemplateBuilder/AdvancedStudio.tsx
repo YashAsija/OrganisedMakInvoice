@@ -408,8 +408,11 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
                   style={{ 
                     width: '794px',
                     minHeight: '1123px',
-                    transform: `scale(${previewScale})`, 
+                    transform: `scale(${previewScale})`,
+                    transformOrigin: 'top left',
                     transition: 'transform 0.2s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
                   }}
                 >
                   <LivePreview template={template} businessProfile={businessProfile} />

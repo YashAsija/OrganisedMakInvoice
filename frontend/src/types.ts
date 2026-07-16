@@ -35,6 +35,7 @@ export interface Invoice {
   invoiceNumber: string;
   referenceNumber?: string; // Reference number support
   poNumber?: string; // Purchase Order number support
+  deliveryNote?: string; // Delivery Note support
   date: string;
   dueDate: string;
   clientName: string;

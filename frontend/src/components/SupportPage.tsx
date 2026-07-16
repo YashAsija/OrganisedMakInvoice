@@ -5,8 +5,6 @@ import {
   Star, ThumbsUp, Send, HelpCircle, Shield, Video, ArrowRight
 } from 'lucide-react';
 
-interface SupportPageProps {}
-
 type TicketCategory = 'billing' | 'technical' | 'account' | 'feature' | 'other';
 
 const faqs = [
@@ -40,7 +38,7 @@ const faqs = [
   },
 ];
 
-export default function SupportPage({}: SupportPageProps) {
+export default function SupportPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [ticketCategory, setTicketCategory] = useState<TicketCategory>('technical');
   const [ticketSubject, setTicketSubject] = useState('');
@@ -176,7 +174,7 @@ export default function SupportPage({}: SupportPageProps) {
                 </div>
                 <div>
                   <p className="text-sm font-black text-[#0f172a] dark:text-white">Ticket Submitted!</p>
-                  <p className="text-[11px] text-[#64748b]/70 dark:text-zinc-500 mt-1">We'll reach back at your registered email shortly.</p>
+                  <p className="text-[11px] text-[#64748b]/70 dark:text-zinc-500 mt-1">We&apos;ll reach back at your registered email shortly.</p>
                 </div>
               </div>
             ) : (

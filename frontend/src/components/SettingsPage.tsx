@@ -18,6 +18,30 @@ interface SettingsPageProps {
 
 type SettingsSection = 'appearance' | 'notifications' | 'security' | 'data' | 'account';
 
+const Row = ({ label, description, control }: { label: string; description?: string; control: React.ReactNode }) => (
+  <div className="flex items-center justify-between gap-4 py-3.5 border-b border-[#e2e8f0]/30 dark:border-zinc-800 last:border-0">
+    <div className="min-w-0 flex-1">
+      <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 block">{label}</span>
+      {description && <span className="text-[10px] text-[#64748b]/75 dark:text-zinc-500 mt-0.5 block leading-normal">{description}</span>}
+    </div>
+    <div className="flex-shrink-0">{control}</div>
+  </div>
+);
+
+const Toggle = ({ checked, onChange, onToggle }: { checked: boolean; onChange: () => void; onToggle?: () => void }) => (
+  <button
+    type="button"
+    onClick={() => { onChange(); onToggle?.(); }}
+    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer flex-shrink-0 ${
+      checked ? 'bg-[#64748b]' : 'bg-[#e2e8f0] dark:bg-zinc-700'
+    }`}
+  >
+    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+      checked ? 'translate-x-5' : 'translate-x-1'
+    }`} />
+  </button>
+);
+
 export default function SettingsPage({
   theme,
   toggleTheme,
@@ -48,29 +72,9 @@ export default function SettingsPage({
     { id: 'account', label: 'Account', icon: <LogOut className="w-4 h-4" /> },
   ];
 
-  const Toggle = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
-    <button
-      type="button"
-      onClick={() => { onChange(); showSaved(); }}
-      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer flex-shrink-0 ${
-        checked ? 'bg-[#64748b]' : 'bg-[#e2e8f0] dark:bg-zinc-700'
-      }`}
-    >
-      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
-        checked ? 'translate-x-5' : 'translate-x-1'
-      }`} />
-    </button>
-  );
 
-  const Row = ({ label, description, control }: { label: string; description?: string; control: React.ReactNode }) => (
-    <div className="flex items-center justify-between gap-4 py-3.5 border-b border-[#e2e8f0]/30 dark:border-zinc-800 last:border-0">
-      <div className="min-w-0 flex-1">
-        <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 block">{label}</span>
-        {description && <span className="text-[10px] text-[#64748b]/75 dark:text-zinc-500 mt-0.5 block leading-normal">{description}</span>}
-      </div>
-      <div className="flex-shrink-0">{control}</div>
-    </div>
-  );
+
+
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200 w-full">
@@ -130,7 +134,7 @@ export default function SettingsPage({
               <Row
                 label="Compact Layout"
                 description="Reduce spacing and padding for a denser workspace view"
-                control={<Toggle checked={compactMode} onChange={() => setCompactMode(v => !v)} />}
+                control={<Toggle checked={compactMode} onChange={() => setCompactMode(v => !v)} onToggle={showSaved} />}
               />
               <Row
                 label="Invoice Font"
@@ -169,17 +173,17 @@ export default function SettingsPage({
               <Row
                 label="Invoice Activity Alerts"
                 description="Get notified on invoice creation, edit, and deletion events"
-                control={<Toggle checked={notifInvoice} onChange={() => setNotifInvoice(v => !v)} />}
+                control={<Toggle checked={notifInvoice} onChange={() => setNotifInvoice(v => !v)} onToggle={showSaved} />}
               />
               <Row
                 label="Payment Reminders"
                 description="Receive smart reminders when invoices approach due dates"
-                control={<Toggle checked={notifReminders} onChange={() => setNotifReminders(v => !v)} />}
+                control={<Toggle checked={notifReminders} onChange={() => setNotifReminders(v => !v)} onToggle={showSaved} />}
               />
               <Row
                 label="Cloud Sync Alerts"
                 description="Notifications on successful or failed cloud synchronization"
-                control={<Toggle checked={notifCloud} onChange={() => setNotifCloud(v => !v)} />}
+                control={<Toggle checked={notifCloud} onChange={() => setNotifCloud(v => !v)} onToggle={showSaved} />}
               />
               <div className="mt-6 p-4 bg-[#FCFAF7] dark:bg-zinc-950 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800">
                 <span className="text-[9px] uppercase font-extrabold text-[#64748b] block mb-2">Notification Channels</span>
@@ -217,7 +221,7 @@ export default function SettingsPage({
               <Row
                 label="Auto-Save Drafts"
                 description="Automatically save invoice drafts while editing to prevent data loss"
-                control={<Toggle checked={autoSave} onChange={() => setAutoSave(v => !v)} />}
+                control={<Toggle checked={autoSave} onChange={() => setAutoSave(v => !v)} onToggle={showSaved} />}
               />
               <div className="mt-6 p-4 bg-[#FCFAF7] dark:bg-zinc-950 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800 space-y-3">
                 <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">Active Session</span>

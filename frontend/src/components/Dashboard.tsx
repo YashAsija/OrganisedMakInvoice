@@ -1982,9 +1982,9 @@ export default function Dashboard({
         {/* Left Side: Logo + Mobile Menu Trigger + Breadcrumb */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => window.location.href = '/'}>
-            <img src="/logo.svg" alt="MakInvoices Logo" className="w-8 h-8 object-contain drop-shadow-sm shrink-0" />
+            <img src="/logo.svg" alt="MakInvoices Logo" className="w-10 h-10 object-contain drop-shadow-sm shrink-0" />
             <div className="hidden lg:block">
-              <span className="text-sm font-black tracking-tight text-slate-800 dark:text-white block leading-none">
+              <span className="text-xl font-black tracking-tight text-slate-800 dark:text-white block leading-none">
                 Mak<span className="text-sky-400">Invoices</span>
               </span>
             </div>
@@ -4369,7 +4369,7 @@ export default function Dashboard({
                   </div>
                   <button
                     onClick={onOpenProfile}
-                    className="px-5 py-2.5 bg-[#64748b] hover:bg-[#0f172a] text-[#FCFAF7] text-[10.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs hover:shadow-sm flex-shrink-0"
+                    className="px-5 py-2.5 bg-[#88765C] hover:bg-[#5C5043] text-[#FCFAF7] text-[10.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs hover:shadow-sm flex-shrink-0"
                   >
                     <PenTool className="w-3.5 h-3.5 text-white/80" />
                     <span>Customize Details</span>

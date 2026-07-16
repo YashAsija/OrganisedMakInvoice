@@ -268,7 +268,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     return value;
   };
 
-  const rowStyle = "flex items-center text-[11px] mb-1.5";
+  const rowStyle = "flex items-center text-[11px] mb-1";
   const labelStyle = "w-28 font-medium text-gray-700";
   const valStyle = "flex-1 text-gray-900";
 
@@ -281,13 +281,13 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
       default: return '40px';
     }
   };
-
   const getBorderRadius = () => styleConfig.roundedCorners ? '8px' : '0';
 
   const baseStyle: React.CSSProperties = {
     width: isPrintMode ? '100%' : width,
+    height: minHeight,
     minHeight: minHeight,
-    paddingTop: getPadding(),
+    paddingTop: layout.margins === 'Compact' ? '10px' : '20px',
     paddingLeft: getPadding(),
     paddingRight: getPadding(),
     paddingBottom: '15px',
@@ -419,7 +419,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const ownerName = (businessProfile as any)?.displayName || (businessProfile as any)?.ownerName || "";
   let compLogo = (businessProfile as any)?.logoUrl || (businessProfile as any)?.logo || null;
   if (compLogo && typeof compLogo === 'string' && compLogo.includes('supabase') && compLogo.includes('/storage/')) {
-    const buster = `t=${businessProfile?.updatedAt ? new Date(businessProfile.updatedAt).getTime() : Date.now()}`;
+    const buster = `t=${businessProfile?.updatedAt ? new Date(businessProfile.updatedAt).getTime() : new Date().getTime()}`;
     compLogo = compLogo.includes('?') ? `${compLogo}&${buster}` : `${compLogo}?${buster}`;
   }
   const compStateCode = (businessProfile as any)?.stateCode || "";
@@ -481,9 +481,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     ? (invoiceData?.taxTotal !== undefined ? invoiceData.taxTotal : (subTotal * taxRate) / 100)
     : 0;
 
-  const grandTotal = isTaxPresent
-    ? (invoiceData?.grandTotal !== undefined ? invoiceData.grandTotal : subTotal + taxAmount)
-    : subTotal;
+  const grandTotal = invoiceData?.grandTotal !== undefined
+    ? invoiceData.grandTotal
+    : Math.max(0, subTotal - (invoiceData?.discountTotal || 0) + (isTaxPresent ? taxAmount : 0));
 
   const renderInvoiceContent = (
     currentItems?: any[],
@@ -514,12 +514,13 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           {layout.watermark.text}
         </div>
       )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gridAutoFlow: 'row', columnGap: '20px', rowGap: '0px', position: 'relative', zIndex: 1, flex: 'none' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gridAutoFlow: 'row', columnGap: '20px', rowGap: '0px', position: 'relative', zIndex: 1, flex: 'none' }}>
 
         {orderedSections.filter(s => !['terms', 'signature', 'footer'].includes(s.id)).map(section => {
-          if (['header', 'companyInfo', 'invoiceInfo', 'billTo', 'shipTo', 'transport'].includes(section.id)) {
-            if (!isFirstPage) return null;
+          // Headers will render on every page as per pagination requirements
+          if (['header', 'billTo', 'shipTo', 'transport'].includes(section.id)) {
+            // Now rendering these sections on every page as requested
           }
           if (['taxEngine', 'payment', 'amountInWords'].includes(section.id)) {
             if (!isLastPage) return null;
@@ -699,15 +700,15 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               const referenceNumber = (invoiceData as any)?.referenceNumber || getFallback('N/A');
               return (
                 <div key="invoiceInfo" style={{ ...getSectionStyle('invoiceInfo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px' }}>
-                  <div className="border border-gray-300 p-2.5 h-full" style={{ borderRadius: getBorderRadius() }}>
+                  <div className="border border-gray-300 px-2.5 py-1 h-full" style={{ borderRadius: getBorderRadius() }}>
                     {config.invoiceInfo.fields.includes('invoiceNumber') && <div className={rowStyle}><span className={labelStyle}>{noLabel}</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(invNo, 'invoiceNumber')}</span></div>}
                     {config.invoiceInfo.fields.includes('invoiceDate') && <div className={rowStyle}><span className={labelStyle}>Dated</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(invDate, 'date')}</span></div>}
                     {config.invoiceInfo.fields.includes('dueDate') && <div className={rowStyle}><span className={labelStyle}>{dueDateLabel}</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(dueDate, 'dueDate')}</span></div>}
                     {config.invoiceInfo.fields.includes('poNumber') && <div className={rowStyle}><span className={labelStyle}>PO Number</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive((invoiceData as any)?.poNumber || getFallback('N/A'), 'poNumber')}</span></div>}
                     {config.invoiceInfo.fields.includes('deliveryNote') && <div className={rowStyle}><span className={labelStyle}>Delivery Note</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive((invoiceData as any)?.deliveryNote || getFallback('N/A'), 'deliveryNote')}</span></div>}
-                    <div className={rowStyle}><span className={labelStyle}>Place of Supply</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(placeOfSupply, 'placeOfSupply')}</span></div>
-                    <div className={rowStyle}><span className={labelStyle}>GR/RR No.</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(grRrNo, 'grRrNo')}</span></div>
-                    <div className={rowStyle}><span className={labelStyle}>Ref. No.</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(referenceNumber, 'referenceNumber')}</span></div>
+                    {config.invoiceInfo.fields.includes('placeOfSupply') && <div className={rowStyle}><span className={labelStyle}>Place of Supply</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(placeOfSupply, 'placeOfSupply')}</span></div>}
+                    {config.invoiceInfo.fields.includes('grRrNo') && <div className={rowStyle}><span className={labelStyle}>GR/RR No.</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(grRrNo, 'grRrNo')}</span></div>}
+                    {config.invoiceInfo.fields.includes('referenceNumber') && <div className={rowStyle}><span className={labelStyle}>Ref. No.</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(referenceNumber, 'referenceNumber')}</span></div>}
                     {config.invoiceInfo.customFields.map(f => (
                       <div key={f.id} className={rowStyle}><span className={labelStyle}>{f.label}</span><span className="mr-2">:</span><span className={valStyle}>{renderInteractive(f.value, `customField_${f.id}`)}</span></div>
                     ))}
@@ -724,7 +725,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 {config.invoiceInfo.fields.includes('invoiceDate') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Date:</strong> {renderInteractive(invDate, 'date')}</p>}
                 {config.invoiceInfo.fields.includes('dueDate') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>{dueDateLabel}</strong> {renderInteractive(dueDate, 'dueDate')}</p>}
                 {config.invoiceInfo.fields.includes('poNumber') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>PO No:</strong> {renderInteractive((invoiceData as any)?.poNumber || getFallback('N/A'), 'poNumber')}</p>}
-                <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Ref No:</strong> {renderInteractive((invoiceData as any)?.referenceNumber || getFallback('N/A'), 'referenceNumber')}</p>
+                {config.invoiceInfo.fields.includes('referenceNumber') && <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Ref No:</strong> {renderInteractive((invoiceData as any)?.referenceNumber || getFallback('N/A'), 'referenceNumber')}</p>}
                 {config.invoiceInfo.customFields.map(f => (
                   <p key={f.id} style={{ fontSize: '12px', margin: '2px 0' }}><strong>{f.label}:</strong> {renderInteractive(f.value, `customField_${f.id}`)}</p>
                 ))}
@@ -742,8 +743,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               const isSecondCol = amigoIndex === 1;
 
               return (
-                <div key="billTo" style={{ ...getSectionStyle('billTo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginTop: '20px' }}>
-                  <div className={`border border-gray-300 p-2.5 h-full flex ${isAdjacent ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
+                <div key="billTo" style={{ ...getSectionStyle('billTo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginBottom: '0px', marginTop: amigoIndex === 2 ? '-1px' : '5px' }}>
+                  <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${isAdjacent ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
                     <h3 className={`font-bold text-[11px] text-gray-800 uppercase ${isAdjacent ? 'mb-1' : 'w-full mb-0'}`}>BILLED TO</h3>
                     {config.client.fields.includes('name') && <div className={`${isAdjacent ? 'text-[12px] font-medium text-gray-900 mb-0.5' : 'flex items-center text-[10px]'}`}>{isAdjacent ? renderInteractive(clientName, 'clientName', 'text', 'Client Name') : <><span className="text-gray-500 font-medium mr-1">Name:</span><span className="text-gray-900 font-bold">{renderInteractive(clientName, 'clientName', 'text', 'Client Name')}</span></>}</div>}
                     {config.client.fields.includes('phone') && (
@@ -813,8 +814,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               const isSecondCol = amigoIndex === 1;
 
               return (
-                <div key="shipTo" style={{ ...getSectionStyle('shipTo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginTop: '20px' }}>
-                  <div className={`border border-gray-300 p-2.5 h-full flex ${isAdjacent ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
+                <div key="shipTo" style={{ ...getSectionStyle('shipTo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginBottom: '0px', marginTop: amigoIndex === 2 ? '-1px' : '5px' }}>
+                  <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${isAdjacent ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
                     <div className={`flex justify-between items-center ${isAdjacent ? 'mb-1' : 'w-full mb-0'}`}>
                       <h3 className={`font-bold text-[11px] text-gray-800 uppercase`}>SHIPPED TO</h3>
                       {isInteractive && onCopyBillingToShipping && (
@@ -919,32 +920,24 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               })();
 
               return (
-                <div key="productTable" style={{ ...getSectionStyle('productTable'), marginTop: isFirstPage ? '20px' : '0px', gridColumn: 'span 12' }}>
-                  {!isFirstPage && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid #cbd5e1', paddingBottom: '12px', marginBottom: '20px' }}>
-                      <span style={{ fontSize: '10px', color: styleConfig.primaryColor || '#64748b', fontWeight: 'bold', whiteSpace: 'nowrap' }}>TAX INVOICE</span>
-                      <span style={{ fontSize: '10px', color: '#64748b', whiteSpace: 'nowrap' }}>
-                        Invoice No: {invoiceData?.invoiceNumber || ''} | Date: {invoiceData?.date || ''} | Page {pageIdx + 1} of {totalPages}
-                      </span>
-                    </div>
-                  )}
-                  <div style={{ borderRadius: getBorderRadius(), overflow: 'hidden', border: styleConfig.roundedCorners ? '1px solid #d1d5db' : 'none' }}>
-                    <table className="w-full text-left border-collapse border border-gray-300" style={{ border: styleConfig.roundedCorners ? 'none' : undefined }}>
+                <div key="productTable" style={{ ...getSectionStyle('productTable'), marginTop: '5px', gridColumn: 'span 12' }}>
+                  <div style={{ borderRadius: getBorderRadius(), overflow: 'hidden', border: '1px solid #d1d5db' }}>
+                    <table className="w-full text-left" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
                       <thead>
                         <tr className="text-white text-[10px] uppercase tracking-wide" style={{ backgroundColor: styleConfig.tableHeaderBackground, color: styleConfig.tableHeaderTextColor }}>
-                          {renderCols.map(col => (
-                            <th key={col.id} className="py-2.5 px-3 border border-gray-300 text-left uppercase">
+                          {renderCols.map((col, colIdx) => (
+                            <th key={col.id} className="py-2.5 px-3 text-left uppercase" style={{ borderBottom: '1px solid #d1d5db', borderRight: colIdx === renderCols.length - 1 ? 'none' : '1px solid #d1d5db' }}>
                               {col.id === 'tax' ? dynamicTaxHeader : col.label}
                             </th>
                           ))}
                         </tr>
                       </thead>
-                    <tbody className="divide-y divide-gray-300">
+                    <tbody>
                       {activeItems.map((item, idx) => {
                         return (
                           <tr key={idx} className="align-top text-[11px] relative group">
                             {renderCols.map((col, colIdx) => (
-                              <td key={col.id} style={{ verticalAlign: 'top' }} className={`py-3 px-3 border-r border-gray-300 relative ${colIdx === 0 && isInteractive ? 'pl-7' : ''} ${col.id === 'sr' ? 'text-left text-gray-500' : 'text-left font-bold'}`}>
+                              <td key={col.id} style={{ verticalAlign: 'top', borderBottom: idx === activeItems.length - 1 ? 'none' : '1px solid #d1d5db', borderRight: colIdx === renderCols.length - 1 ? 'none' : '1px solid #d1d5db' }} className={`py-3 px-3 relative ${colIdx === 0 && isInteractive ? 'pl-7' : ''} ${col.id === 'sr' ? 'text-left text-gray-500' : 'text-left font-bold'}`}>
                                 {colIdx === 0 && isInteractive && onInteractiveRemoveItem && (
                                   <button
                                     onClick={() => onInteractiveRemoveItem(item.id)}
@@ -999,6 +992,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                           </tr>
                         );
                       })}
+
                       {isInteractive && onInteractiveAddItem && (
                         <tr className="print:hidden border-t border-dashed border-gray-300">
                           <td colSpan={renderCols.length} className="py-2 px-3 text-center">
@@ -1044,29 +1038,21 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             })();
 
             return (
-              <div key="productTable" style={{ ...getSectionStyle('productTable'), marginTop: isFirstPage ? '0px' : '0px', gridColumn: 'span 12' }}>
-                {!isFirstPage && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid #cbd5e1', paddingBottom: '12px', marginBottom: '20px' }}>
-                    <span style={{ fontSize: '10px', color: styleConfig.primaryColor || '#64748b', fontWeight: 'bold', whiteSpace: 'nowrap' }}>TAX INVOICE</span>
-                    <span style={{ fontSize: '10px', color: '#64748b', whiteSpace: 'nowrap' }}>
-                      Invoice No: {invoiceData?.invoiceNumber || ''} | Date: {invoiceData?.date || ''} | Page {pageIdx + 1} of {totalPages}
-                    </span>
-                  </div>
-                )}
-                <div style={{ borderRadius: getBorderRadius(), overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: styleConfig.roundedCorners ? 'separate' : 'collapse', borderSpacing: '0', fontSize: '12px' }}>
+              <div key="productTable" style={{ ...getSectionStyle('productTable'), marginTop: '0px', gridColumn: 'span 12' }}>
+                <div style={{ border: styleConfig.borderStyle !== 'None' ? '1px solid #e2e8f0' : 'none', borderRadius: getBorderRadius(), overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '12px' }}>
                   <thead>
                     <tr style={{ backgroundColor: styleConfig.tableHeaderBackground, color: styleConfig.tableHeaderTextColor }}>
                       {renderCols.map((col, idx) => (
-                        <th key={col.id} style={{ padding: '10px', textAlign: 'left', borderRadius: styleConfig.roundedCorners ? (idx === 0 ? '8px 0 0 8px' : idx === renderCols.length - 1 ? '0 8px 8px 0' : '0') : '0' }}>{col.id === 'tax' ? dynamicTaxHeader.toUpperCase() : col.label}</th>
+                        <th key={col.id} style={{ padding: '10px', textAlign: 'left', borderBottom: styleConfig.borderStyle !== 'None' ? '1px solid #e2e8f0' : 'none', borderRight: styleConfig.borderStyle !== 'None' && idx !== renderCols.length - 1 ? '1px solid #e2e8f0' : 'none', borderRadius: styleConfig.roundedCorners ? (idx === 0 ? '8px 0 0 0' : idx === renderCols.length - 1 ? '0 8px 0 0' : '0') : '0' }}>{col.id === 'tax' ? dynamicTaxHeader.toUpperCase() : col.label}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {activeItems.map((item, index) => (
-                      <tr key={index} className="relative group" style={{ borderBottom: styleConfig.borderStyle !== 'None' ? '1px solid #e2e8f0' : 'none', backgroundColor: styleConfig.alternatingRowColors && index % 2 !== 0 ? '#f8fafc' : 'transparent' }}>
+                      <tr key={index} className="relative group" style={{ backgroundColor: styleConfig.alternatingRowColors && index % 2 !== 0 ? '#f8fafc' : 'transparent' }}>
                         {renderCols.map((col, colIdx) => (
-                          <td key={col.id} style={{ padding: '10px', paddingLeft: colIdx === 0 && isInteractive ? '28px' : '10px', textAlign: 'left', position: colIdx === 0 ? 'relative' : undefined, verticalAlign: 'top' }}>
+                          <td key={col.id} style={{ padding: '10px', paddingLeft: colIdx === 0 && isInteractive ? '28px' : '10px', textAlign: 'left', position: colIdx === 0 ? 'relative' : undefined, verticalAlign: 'top', borderBottom: styleConfig.borderStyle !== 'None' && index !== activeItems.length - 1 ? '1px solid #e2e8f0' : 'none', borderRight: styleConfig.borderStyle !== 'None' && colIdx !== renderCols.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
                             {colIdx === 0 && isInteractive && onInteractiveRemoveItem && (
                               <button
                                 onClick={() => onInteractiveRemoveItem(item.id)}
@@ -1108,6 +1094,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         ))}
                       </tr>
                     ))}
+
                     {isInteractive && onInteractiveAddItem && (
                       <tr className="print:hidden border-t border-dashed" style={{ borderColor: '#e2e8f0' }}>
                         <td colSpan={renderCols.length} style={{ padding: '8px', textAlign: 'center' }}>
@@ -1145,8 +1132,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               const isSecondCol = amigoIndex === 1;
 
               return (
-                <div key="transport" style={{ ...getSectionStyle('transport'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginTop: '20px' }}>
-                  <div className={`border border-gray-300 p-2.5 h-full flex ${(isAdjacent && !bothAdded) ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderLeft: isSecondCol ? 'none' : '1px solid #d1d5db', borderRadius: getBorderRadius() }}>
+                <div key="transport" style={{ ...getSectionStyle('transport'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginBottom: '0px', marginTop: amigoIndex === 2 ? '-1px' : '5px' }}>
+                  <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${(isAdjacent && !bothAdded) ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderLeft: isSecondCol ? 'none' : '1px solid #d1d5db', borderRadius: getBorderRadius() }}>
                     <div className={`flex justify-between items-center ${(isAdjacent && !bothAdded) ? 'mb-1' : 'w-full mb-0'}`}>
                       <h3 className={`font-bold text-[11px] text-gray-800 uppercase`}>TRANSPORT</h3>
                       {isInteractive && onUpdateHasTransport && (
@@ -1220,12 +1207,33 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               const paddingStyle = align === 'right' ? { paddingRight: '20px', paddingLeft: '0px' } : { paddingLeft: '0px', paddingRight: '0px' };
               
               return (
-                <div key="taxEngine" style={{ ...getSectionStyle('taxEngine'), ...paddingStyle, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', width: '100%' }}>
+                <div id="section-taxEngine" key="taxEngine" style={{ ...getSectionStyle('taxEngine'), ...paddingStyle, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', width: '100%' }}>
                   <div className="space-y-2 text-[11px] w-full max-w-[240px]">
                     {config.tax.showTotal && (
                       <div className="flex justify-between text-gray-600">
                         <span>Sub Total</span>
                         <span>{subTotal.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {/* Discount row - always visible for every template */}
+                    {((invoiceData?.discountTotal || 0) > 0 || isInteractive) && (
+                      <div className="flex justify-between" style={{ color: '#e11d48' }}>
+                        <span
+                          style={isInteractive ? { cursor: 'pointer', textDecoration: 'underline dashed', textUnderlineOffset: '2px' } : {}}
+                          onClick={() => {
+                            if (isInteractive && onUpdateField) {
+                              const nextType = invoiceData?.discountType === 'none' ? 'percent' : invoiceData?.discountType === 'percent' ? 'flat' : 'none';
+                              onUpdateField('discountType', nextType);
+                              if (nextType === 'none') onUpdateField('discountValue', '0');
+                            }
+                          }}
+                          title={isInteractive ? 'Click to toggle discount type (None, %, Flat)' : ''}
+                        >
+                          Discount {invoiceData?.discountType === 'percent' ? '(%)' : invoiceData?.discountType === 'flat' ? '(Flat)' : '(Add)'}
+                        </span>
+                        {invoiceData?.discountType !== 'none' && (
+                          <span>-{currencySymbol} {renderInteractive(invoiceData?.discountValue || 0, 'discountValue', 'text', 'Amount')}</span>
+                        )}
                       </div>
                     )}
                     {hasTaxCol && (
@@ -1266,7 +1274,30 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               );
             }
             return (
-              <div key="taxEngine" style={getSectionStyle('taxEngine')}>
+              <div id="section-taxEngine" key="taxEngine" style={getSectionStyle('taxEngine')}>
+                {/* Discount row - always visible regardless of tax breakdown setting */}
+                {((invoiceData?.discountTotal || 0) > 0 || isInteractive) && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', color: '#e11d48' }}>
+                    <span
+                      style={isInteractive ? { cursor: 'pointer', textDecoration: 'underline dashed', textUnderlineOffset: '2px' } : {}}
+                      onClick={() => {
+                        if (isInteractive && onUpdateField) {
+                          const nextType = invoiceData?.discountType === 'none' ? 'percent' : invoiceData?.discountType === 'percent' ? 'flat' : 'none';
+                          onUpdateField('discountType', nextType);
+                          if (nextType === 'none') onUpdateField('discountValue', '0');
+                        }
+                      }}
+                      title={isInteractive ? 'Click to toggle discount type (None, %, Flat)' : ''}
+                    >
+                      Discount {invoiceData?.discountType === 'percent' ? '(%)' : invoiceData?.discountType === 'flat' ? '(Flat)' : '(Add)'}
+                    </span>
+                    {invoiceData?.discountType !== 'none' && (
+                      <span style={{ display: 'flex', alignItems: 'center' }}>
+                        -{currencySymbol} {renderInteractive(invoiceData?.discountValue || 0, 'discountValue', 'text', 'Amount')}
+                      </span>
+                    )}
+                  </div>
+                )}
                 {config.tax.enableTaxBreakdown && (
                   <div style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: getBorderRadius(), border: '1px solid #e2e8f0', width: '100%' }}>
                     {config.tax.showTaxableAmount && <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}><span>Taxable Amount:</span> <span>{currencySymbol} {subTotal.toFixed(2)}</span></div>}
@@ -1291,6 +1322,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', paddingTop: '10px', borderTop: '2px solid #e2e8f0', fontSize: '16px', fontWeight: 'bold', color: styleConfig.primaryColor }}><span>Grand Total:</span> <span>{currencySymbol} {grandTotal.toFixed(2)}</span></div>
                   </div>
                 )}
+                {!config.tax.enableTaxBreakdown && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #e2e8f0', fontSize: '14px', fontWeight: 'bold', color: styleConfig.primaryColor }}>
+                    <span>Grand Total:</span>
+                    <span>{currencySymbol} {grandTotal.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
             );
           }
@@ -1300,8 +1337,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               if (!config.amountInWords.enabled) return null;
               const words = numberToWords(grandTotal || 0, config.amountInWords.format);
               return (
-                <div key="amountInWords" style={getSectionStyle('amountInWords')}>
-                  <div className="text-left pt-4">
+                <div id="section-amountInWords" key="amountInWords" style={getSectionStyle('amountInWords')}>
+                  <div className="text-left pt-1">
                     <div className="font-bold text-[10px] text-gray-800">Amount in Words:</div>
                     <div className="text-[10px] text-gray-500 italic mt-0.5">{words}</div>
                   </div>
@@ -1312,7 +1349,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             if (!config.amountInWords.enabled) return null;
             const words = numberToWords(grandTotal || 0, config.amountInWords.format);
             return (
-              <div key="amountInWords" style={getSectionStyle('amountInWords')}>
+              <div id="section-amountInWords" key="amountInWords" style={getSectionStyle('amountInWords')}>
                 <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>Amount in Words:</p>
                 <p style={{ fontSize: '12px', fontStyle: 'italic', margin: '4px 0', textTransform: 'capitalize' }}>{words}</p>
               </div>
@@ -1346,7 +1383,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             if (layout.type === 'Modal Classic') {
               const align = getSectionAlignment('payment');
               return (
-                <div key="payment" style={{ ...getSectionStyle('payment'), textAlign: align, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', width: '100%' }}>
+                <div id="section-payment" key="payment" style={{ ...getSectionStyle('payment'), textAlign: align, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', width: '100%' }}>
                   <div className="font-bold text-gray-800 text-[10px] mb-1">Banking Information</div>
                   <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap" style={{ textAlign: align, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start' }}>
                     {config.payment.generateQrCode && <div style={{ width: 60, height: 60, backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '5px' }}>QR</div>}
@@ -1360,7 +1397,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             const payAlign = getFooterAlignment('payment');
             const payJustify = payAlign === 'left' ? 'flex-start' : payAlign === 'center' ? 'center' : 'flex-end';
             return (
-              <div key="payment" style={{ ...getSectionStyle('payment'), textAlign: payAlign }}>
+              <div id="section-payment" key="payment" style={{ ...getSectionStyle('payment'), textAlign: payAlign }}>
                 <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0, color: '#64748b' }}>Payment Details</p>
                 <div style={{ display: 'flex', gap: '20px', marginTop: '10px', justifyContent: payJustify }}>
                   {config.payment.generateQrCode && (
@@ -1492,54 +1529,67 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           )}
         </div>
       )}
+        </div>
       </div>
     );
   };
 
-  if (isPrintMode && printPageChunks) {
-    const pages = printPageChunks;
-    const totalPages = pages.length;
-
-    return (
-      <div className="invoice-print-container" style={{ display: 'flex', flexDirection: 'column', gap: '40px', backgroundColor: '#f1f5f9' }}>
-        {pages.map((pageItems, pageIdx) => {
-          const isFirstPage = pageIdx === 0;
-          const isLastPage = pageIdx === totalPages - 1;
-          
-          let startSrNo = 0;
-          for (let p = 0; p < pageIdx; p++) {
-            startSrNo += pages[p].length;
-          }
-
-          return (
-            <div
-              key={pageIdx}
-              className="invoice-pdf-page bg-white relative flex flex-col"
-              style={{
-                width: layout.pageSize === 'A4' ? '794px' : '816px',
-                height: layout.pageSize === 'A4' ? '1123px' : '1056px',
-                paddingTop: '40px',
-                paddingLeft: '40px',
-                paddingRight: '40px',
-                paddingBottom: '20px',
-                boxSizing: 'border-box',
-                fontFamily: styleConfig.fontFamily || 'Inter',
-                color: '#333',
-                backgroundColor: '#ffffff',
-                position: 'relative'
-              }}
-            >
-              {renderInvoiceContent(pageItems, startSrNo, isFirstPage, isLastPage, pageIdx, totalPages)}
-            </div>
-          );
-        })}
-      </div>
-    );
+  let pages: any[][] = [];
+  if (printPageChunks && printPageChunks.length > 0) {
+    pages = printPageChunks;
+  } else {
+    const FIRST_PAGE_ITEMS = 8;
+    const SUBSEQUENT_PAGE_ITEMS = 7;
+    
+    if (!items || items.length === 0) {
+      pages = [[]];
+    } else if (!isPrintMode) {
+      pages = [[...items]];
+    } else {
+      const remainingItems = [...items];
+      pages.push(remainingItems.splice(0, FIRST_PAGE_ITEMS));
+      while (remainingItems.length > 0) {
+        pages.push(remainingItems.splice(0, SUBSEQUENT_PAGE_ITEMS));
+      }
+    }
   }
 
+  const totalPages = pages.length;
+
   return (
-    <div style={baseStyle} className="invoice-live-preview">
-      {renderInvoiceContent(items, 0, true, true, 0, 1)}
+    <div className={`invoice-live-preview-container ${isPrintMode ? 'invoice-print-container' : 'flex-1 h-full'}`} style={isPrintMode ? { display: 'flex', flexDirection: 'column', gap: '40px', backgroundColor: '#f1f5f9' } : { display: 'flex', flexDirection: 'column', gap: '40px', height: '100%', flex: 1 }}>
+      {pages.map((pageItems, pageIdx) => {
+        const isFirstPage = pageIdx === 0;
+        const isLastPage = pageIdx === totalPages - 1;
+        
+        let startSrNo = 0;
+        for (let p = 0; p < pageIdx; p++) {
+          startSrNo += pages[p].length;
+        }
+
+        return (
+          <div
+            key={pageIdx}
+            className={isPrintMode ? "invoice-pdf-page bg-white relative flex flex-col" : "invoice-live-preview relative flex flex-col"}
+            style={isPrintMode ? {
+              width: layout.pageSize === 'A4' ? '794px' : '816px',
+              height: layout.pageSize === 'A4' ? '1123px' : '1056px',
+              paddingTop: '20px',
+              paddingLeft: '40px',
+              paddingRight: '40px',
+              paddingBottom: '20px',
+              boxSizing: 'border-box',
+              fontFamily: styleConfig.fontFamily || 'Inter',
+              color: '#333',
+              backgroundColor: '#ffffff',
+              position: 'relative'
+            } : { ...baseStyle, position: 'relative' }}
+          >
+            {renderInvoiceContent(pageItems, startSrNo, isFirstPage, isLastPage, pageIdx, totalPages)}
+          </div>
+        );
+      })}
+      
       {isInteractive && clients && clients.length > 0 && (
         <>
           <datalist id="billed-to-clients">

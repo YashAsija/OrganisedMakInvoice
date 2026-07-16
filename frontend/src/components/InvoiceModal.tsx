@@ -125,6 +125,7 @@ export default function InvoiceModal({
   const [invoiceType, setInvoiceType] = useState<'invoice' | 'estimate'>('invoice');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [poNumber, setPoNumber] = useState('');
+    const [deliveryNote, setDeliveryNote] = useState('');
   const [selectedTemplateStyle, setSelectedTemplateStyle] = useState<'minimal' | 'professional' | 'modern' | 'startup' | 'agency' | 'enterprise'>('professional');
   const [qrCodeTriggerUrl, setQrCodeTriggerUrl] = useState('');
 
@@ -299,6 +300,7 @@ export default function InvoiceModal({
       setInvoiceType(invoice.invoiceType || 'invoice');
       setReferenceNumber(invoice.referenceNumber || '');
       setPoNumber(invoice.poNumber || '');
+        setDeliveryNote((invoice as any).deliveryNote || '');
       setSelectedTemplateStyle(invoice.selectedTemplateStyle || 'professional');
       setQrCodeTriggerUrl(invoice.qrCodeTriggerUrl || '');
       setAiPromptText('');
@@ -379,6 +381,7 @@ export default function InvoiceModal({
       setInvoiceType('invoice');
       setReferenceNumber('');
       setPoNumber('');
+        setDeliveryNote('');
       setSelectedTemplateStyle('professional');
       setQrCodeTriggerUrl('');
       setAiPromptText('');
@@ -781,7 +784,8 @@ export default function InvoiceModal({
     : 1;
 
   // Calculate taxes item by item
-  const calculatedTaxTotal = items.reduce((sum, item) => {
+  const hasTaxColActive = activeTemplate?.config?.table?.columns?.some(c => c.id === 'tax' && c.visible !== false);
+  const calculatedTaxTotal = hasTaxColActive ? items.reduce((sum, item) => {
     const itemSubtotal = item.rate * item.quantity;
     const itemDiscAmount = itemSubtotal * ((item.discountPercentage || 0) / 100);
     const itemNet = itemSubtotal - itemDiscAmount;
@@ -796,7 +800,7 @@ export default function InvoiceModal({
     }
 
     return sum + (itemTaxBase * (activeTaxPct / 100));
-  }, 0);
+  }, 0) : 0;
 
   const roundedTaxTotal = parseFloat(calculatedTaxTotal.toFixed(2));
   const calculatedGrandTotal = parseFloat(Math.max(0, (finalDiscountedSubtotal + roundedTaxTotal)).toFixed(2));
@@ -818,6 +822,7 @@ export default function InvoiceModal({
       invoiceNumber,
       referenceNumber: referenceNumber.trim() || undefined,
       poNumber: poNumber.trim() || undefined,
+        deliveryNote: deliveryNote.trim() || undefined,
       selectedTemplateStyle,
       selectedCustomTemplateId: activeTemplate.id,
       qrCodeTriggerUrl: qrCodeTriggerUrl.trim() || undefined,
@@ -897,7 +902,7 @@ export default function InvoiceModal({
     shippedToGstin, shippedToAddress,
     transport, vehicleNo, driverMobile, station, ewayBillNo, grRrNo,
     placeOfSupply, calculatedSubtotal, roundedTaxTotal, calculatedGrandTotal,
-    poNumber, referenceNumber, invoiceType
+    poNumber, deliveryNote, referenceNumber, invoiceType
   ]);
 
   const handleUpdateItemCustomTax = (id: string, colName: string, value: number) => {
@@ -1057,6 +1062,7 @@ export default function InvoiceModal({
       invoiceNumber,
       referenceNumber: referenceNumber.trim() || undefined,
       poNumber: poNumber.trim() || undefined,
+        deliveryNote: deliveryNote.trim() || undefined,
       selectedTemplateStyle,
       selectedCustomTemplateId: activeTemplate.id,
       qrCodeTriggerUrl: qrCodeTriggerUrl.trim() || undefined,
@@ -1236,6 +1242,7 @@ export default function InvoiceModal({
                 />
               </div>
 ) }
+              { activeTemplate.config.invoiceInfo?.fields.includes('poNumber') && (
               <div>
                 <label htmlFor="inv-po" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">P.O. Number (Optional)</label>
                 <input 
@@ -1247,6 +1254,20 @@ export default function InvoiceModal({
                   className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-mono text-xs focus:outline-none"
                 />
               </div>
+              ) }
+              { activeTemplate.config.invoiceInfo?.fields.includes('deliveryNote') && (
+              <div>
+                <label htmlFor="inv-dn" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Delivery Note (Optional)</label>
+                <input 
+                  id="inv-dn"
+                  type="text" 
+                  placeholder="DN-102"
+                  value={deliveryNote}
+                  onChange={(e) => setDeliveryNote(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-mono text-xs focus:outline-none"
+                />
+              </div>
+              ) }
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
@@ -1263,6 +1284,7 @@ export default function InvoiceModal({
                 />
               </div>
 ) }
+              { activeTemplate.config.invoiceInfo?.fields.includes('dueDate') && (
               <div>
                 <label htmlFor="inv-duedate" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Due Date</label>
                 <input 
@@ -1274,6 +1296,7 @@ export default function InvoiceModal({
                   className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white focus:outline-none"
                 />
               </div>
+              ) }
             </div>
 
             <div className="border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
@@ -1304,17 +1327,7 @@ export default function InvoiceModal({
               ) }
             </div>
 
-            <div className="border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
-              <label htmlFor="inv-qr" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Payment link URL (UPI/Venmo/Stripe/PayPal)</label>
-              <input 
-                id="inv-qr"
-                type="text" 
-                placeholder="https://paypal.me/company/total"
-                value={qrCodeTriggerUrl}
-                onChange={(e) => setQrCodeTriggerUrl(e.target.value)}
-                className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white focus:outline-none"
-              />
-            </div>
+
           </div>
 
           {/* Client Info */}
@@ -1413,7 +1426,7 @@ export default function InvoiceModal({
 ) }
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              { activeTemplate.config.client?.fields.includes('country') && (
+              { (activeTemplate.config.client?.fields.includes('address') || activeTemplate.config.client?.fields.includes('country')) && (
 <div>
                 <label htmlFor="client-country" className="sr-only">Client Country</label>
                 <select
@@ -1435,7 +1448,7 @@ export default function InvoiceModal({
                 </select>
               </div>
 ) }
-              { activeTemplate.config.client?.fields.includes('state') && (
+              { (activeTemplate.config.client?.fields.includes('address') || activeTemplate.config.client?.fields.includes('state')) && (
 <div>
                 <label htmlFor="client-state" className="sr-only">Client State</label>
                 <select
@@ -1531,7 +1544,7 @@ export default function InvoiceModal({
                   <input type="text" value={shippedToName} onChange={e => setShippedToName(e.target.value)} placeholder="Name" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
                 ) }
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  { activeTemplate.config.shipping?.fields.includes('country') && (
+                  { (activeTemplate.config.shipping?.fields.includes('address') || activeTemplate.config.shipping?.fields.includes('country')) && (
                   <select
                     value={Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode || ''}
                     onChange={(e) => {
@@ -1549,7 +1562,7 @@ export default function InvoiceModal({
                     ))}
                   </select>
                 ) }
-                  { activeTemplate.config.shipping?.fields.includes('state') && (
+                  { (activeTemplate.config.shipping?.fields.includes('address') || activeTemplate.config.shipping?.fields.includes('state')) && (
                   <select
                     value={(() => {
                       const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode;
@@ -2211,7 +2224,7 @@ export default function InvoiceModal({
             {/* Invoice Layout Column */}
             <div className={`xl:w-[55%] xl:block xl:overflow-y-auto ${activeMode === 'editable' ? 'block' : 'hidden'}`}>
               <div className="w-full overflow-x-auto bg-slate-100/50 dark:bg-slate-950/30 p-2 sm:p-6 rounded-2xl border border-slate-100 dark:border-slate-800 xl:flex xl:flex-col xl:items-center">
-                <div className="w-[794px] mx-auto xl:mx-0 xl:scale-[0.88] xl:origin-top bg-white p-4 sm:p-8 xl:p-5 relative min-h-[1123px] shadow-sm border border-slate-200 dark:border-slate-300 xl:-mb-[135px]" id="pdf-export-content-editable">
+                <div className="w-[794px] mx-auto xl:mx-0 xl:scale-[0.88] xl:origin-top bg-white p-4 sm:p-8 xl:p-5 relative h-[1123px] shadow-sm border border-slate-200 dark:border-slate-300 xl:-mb-[135px] flex flex-col" id="pdf-export-content-editable">
                       <LivePreview 
                   template={activeTemplate} 
                   invoiceData={liveInvoiceData || invoice || {}} 
@@ -2288,7 +2301,13 @@ export default function InvoiceModal({
                      if(field==='invoiceTerms') setInvoiceTerms(val);
                      if(field==='notes') setNotes(val);
                      if(field==='poNumber') setPoNumber(val);
+                     if(field==='deliveryNote') setDeliveryNote(val);
                      if(field==='referenceNumber') setReferenceNumber(val);
+                     if(field==='discountType') setDiscountType(val as any);
+                     if(field==='discountValue') {
+                       const parsed = parseFloat(val);
+                       setDiscountValue(!isNaN(parsed) ? parsed : 0);
+                     }
                   }}
                  onInteractiveAddItem={handleAddItem}
                  onInteractiveRemoveItem={handleInteractiveRemoveItem}

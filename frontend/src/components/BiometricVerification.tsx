@@ -151,7 +151,7 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
     setAttemptCount(newState.count);
 
     if (newState.lockedUntil) {
-      const secs = Math.ceil((newState.lockedUntil - Date.now()) / 1000);
+      const secs = Math.ceil((newState.lockedUntil - new Date().getTime()) / 1000);
       setLockoutSeconds(secs);
       setError(`Too many attempts. Locked for ${secs}s.`);
     } else {

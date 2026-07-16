@@ -108,7 +108,7 @@ export default function GuidePage({ theme, onNavigate, onGoogleLogin }: GuidePag
                   <h3 className="text-lg font-black text-slate-805">Draft, Sketch & Customize Layouts</h3>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Hit the "Add New Invoice" button to start designing your document. Select from modern, agency, or minimal layouts, pick professional font pairings, and use the interactive signature sketchpad to sign with your cursor, stylus, or touch screen.
+                  Hit the &quot;Add New Invoice&quot; button to start designing your document. Select from modern, agency, or minimal layouts, pick professional font pairings, and use the interactive signature sketchpad to sign with your cursor, stylus, or touch screen.
                 </p>
                 <div className="bg-slate-50/50 dark:bg-neutral-950/40 p-3.5 rounded-2xl border border-slate-100 dark:border-neutral-900 text-[11px] text-slate-450 dark:text-slate-400 space-y-1.5">
                   <p className="font-extrabold text-slate-650 dark:text-slate-300">💡 Pro Tips:</p>
@@ -138,7 +138,7 @@ export default function GuidePage({ theme, onNavigate, onGoogleLogin }: GuidePag
                 <div className="bg-slate-50/50 dark:bg-neutral-950/40 p-3.5 rounded-2xl border border-slate-100 dark:border-neutral-900 text-[11px] text-slate-450 dark:text-slate-400 space-y-1.5">
                   <p className="font-extrabold text-slate-650 dark:text-slate-300">💡 Pro Tips:</p>
                   <ul className="list-disc pl-4 space-y-1">
-                    <li>Set margins or select "Save to PDF" in the browser print popup to customize your output formatting.</li>
+                    <li>Set margins or select &quot;Save to PDF&quot; in the browser print popup to customize your output formatting.</li>
                     <li>Sync your data to the cloud automatically by signing up to prevent local cache clear loss.</li>
                   </ul>
                 </div>
