@@ -9,6 +9,7 @@ import { LivePreview } from './TemplateBuilder/LivePreview';
 import { Country, State } from 'country-state-city';
 import { TEMPLATE_PRESETS } from '../lib/templatePresets';
 import { supabase } from '../lib/supabase';
+import { emitNotification } from '../lib/notifications';
 
 interface InvoiceModalProps {
   invoice: Invoice | null; // null means create new
@@ -120,6 +121,21 @@ export default function InvoiceModal({
   // Active Template
   const [activeTemplate, setActiveTemplate] = useState<InvoiceTemplate>(TEMPLATE_PRESETS[0]);
   const [activeProfile, setActiveProfile] = useState<BusinessProfile>(profile);
+  const [modalPreviewScale, setModalPreviewScale] = useState(0.88);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1280) { // 1280px is xl
+        const fitScale = Math.max(0.35, Math.min(0.88, (window.innerWidth - 32) / 794));
+        setModalPreviewScale(fitScale);
+      } else {
+        setModalPreviewScale(0.88);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Advanced features and billing options
   const [invoiceType, setInvoiceType] = useState<'invoice' | 'estimate'>('invoice');
@@ -963,7 +979,9 @@ export default function InvoiceModal({
     if (tempInvoice) {
       try {
         await exportInvoicePDFAsync(tempInvoice, activeProfile, 'save', activeTemplate);
+        emitNotification('PDF Downloaded', `Invoice #${invoiceNumber} PDF has been downloaded successfully.`, 'success');
       } catch (err: any) {
+        emitNotification('Download Failed', `Failed to export PDF: ${err.message || err.toString()}`, 'error');
         alert('Failed to export PDF: ' + (err.message || err.toString()));
       }
     }
@@ -1127,6 +1145,12 @@ export default function InvoiceModal({
       shippedToAddress: shippedToAddress.trim() || undefined
     });
 
+    emitNotification(
+      invoice ? 'Invoice Updated' : 'Invoice Created',
+      `Invoice #${invoiceNumber} for ${clientName || 'Unknown Client'} has been saved successfully.`,
+      'success'
+    );
+
     onClose();
   };
 
@@ -1170,37 +1194,37 @@ export default function InvoiceModal({
         </div>
 
           {/* Toggle Mode Tab + Template Switcher */}
-          <div className="flex xl:hidden border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950 px-4 py-3 gap-2 select-none items-center justify-center flex-wrap shadow-xs z-10 relative">
+          <div className="flex xl:hidden border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950 px-3 sm:px-4 py-2.5 sm:py-3 gap-2 select-none items-center justify-between shadow-xs z-10 relative">
           {/* Primary tab: Interactive Layout */}
           <button
             type="button"
             onClick={() => setActiveMode('editable')}
-            className={`px-5 py-2 rounded-lg text-[13px] font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`flex-1 justify-center py-2 rounded-lg text-xs sm:text-[13px] font-bold transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
               activeMode === 'editable'
                 ? 'bg-sky-600 text-white shadow-sm ring-1 ring-slate-900/5'
                 : 'text-slate-650 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800/60'
             }`}
           >
-            <span>✨ Invoice Layout</span>
+            <span>✨ Layout</span>
           </button>
 
           {/* Secondary tab: Advanced Settings */}
           <button
             type="button"
             onClick={() => setActiveMode('edit')}
-            className={`px-5 py-2 rounded-lg text-[13px] font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`flex-1 justify-center py-2 rounded-lg text-xs sm:text-[13px] font-bold transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
               activeMode === 'edit'
                 ? 'bg-slate-700 text-white shadow-sm ring-1 ring-slate-900/5'
                 : 'text-slate-650 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800/60'
             }`}
           >
-            <span>⚙️ Advanced Settings</span>
+            <span>⚙️ Settings</span>
           </button>
         </div>
 
 
                  {/* Scrollable Contents */}
-          <form onSubmit={handleSaveSubmit} className="flex-1 overflow-hidden p-4 md:p-6 text-sans text-sm pb-8 flex flex-col">
+          <form onSubmit={handleSaveSubmit} className="flex-1 overflow-hidden p-3 sm:p-4 md:p-6 text-sans text-sm pb-6 sm:pb-8 flex flex-col">
             
             {/* Wrapper for the two panes */}
             <div className="flex-1 overflow-y-auto xl:overflow-hidden xl:flex xl:flex-row-reverse xl:gap-6">
@@ -2223,8 +2247,18 @@ export default function InvoiceModal({
 
             {/* Invoice Layout Column */}
             <div className={`xl:w-[55%] xl:block xl:overflow-y-auto ${activeMode === 'editable' ? 'block' : 'hidden'}`}>
-              <div className="w-full overflow-x-auto bg-slate-100/50 dark:bg-slate-950/30 p-2 sm:p-6 rounded-2xl border border-slate-100 dark:border-slate-800 xl:flex xl:flex-col xl:items-center">
-                <div className="w-[794px] mx-auto xl:mx-0 xl:scale-[0.88] xl:origin-top bg-white p-4 sm:p-8 xl:p-5 relative h-[1123px] shadow-sm border border-slate-200 dark:border-slate-300 xl:-mb-[135px] flex flex-col" id="pdf-export-content-editable">
+                <div style={{ width: 794 * modalPreviewScale, height: 1123 * modalPreviewScale, transition: 'all 0.2s ease' }} className="shrink-0 mx-auto relative xl:mx-0 xl:-mb-[135px]">
+                  <div 
+                    id="pdf-export-content-editable"
+                    className="shadow-sm bg-white origin-top-left absolute top-0 left-0 flex flex-col border border-slate-200 dark:border-slate-300 p-4 sm:p-8 xl:p-5" 
+                    style={{ 
+                      width: '794px',
+                      minHeight: '1123px',
+                      transform: `scale(${modalPreviewScale})`,
+                      transformOrigin: 'top left',
+                      transition: 'transform 0.2s ease',
+                    }}
+                  >
                       <LivePreview 
                   template={activeTemplate} 
                   invoiceData={liveInvoiceData || invoice || {}} 
@@ -2326,26 +2360,26 @@ export default function InvoiceModal({
                  }}
                  hasTransport={hasTransport}
                  onUpdateHasTransport={setHasTransport}
-               />
+                />
               </div>
-            </div>
-            </div>
-            
+             </div>
+             </div>
+
             </div> {/* End Wrapper */}
 
           {/* Triggers */}
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3.5 bg-white dark:bg-slate-900 hide-on-print w-full shrink-0">
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between sm:justify-end gap-2.5 sm:gap-3.5 bg-white dark:bg-slate-900 hide-on-print w-full shrink-0 mt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
+              className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer text-center"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleDirectExportPDF}
-              className="px-5 py-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
+              className="hidden sm:flex px-5 py-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-medium items-center gap-1.5 transition-all cursor-pointer"
               title="Download PDF directly without saving yet"
             >
               <svg className="w-4 h-4 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -2355,7 +2389,7 @@ export default function InvoiceModal({
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shadow-sky-950/20 active:scale-95 cursor-pointer"
+              className="flex-1 sm:flex-none justify-center px-4 sm:px-6 py-2.5 sm:py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-sky-950/20 active:scale-95 cursor-pointer"
             >
               <Check className="w-4 h-4" />
               Save Invoice

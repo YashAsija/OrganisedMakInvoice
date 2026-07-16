@@ -62,9 +62,9 @@ const defaultTemplate: InvoiceTemplate = {
     tax: { showTaxableAmount: true, showCgstSgst: true, showIgst: true, showCess: false, showDiscount: true, showRoundOff: true, showTotal: true, enableHsnSummary: false, enableGstSummary: false, enableTaxBreakdown: true },
     payment: { generateQrCode: true, enableInstructions: true, customNote: 'Please include invoice number in payment.' },
     amountInWords: { format: 'Indian', enabled: true },
-    terms: { presetId: 'default', customText: '1. Subject to local jurisdiction.\n2. Goods once sold will not be taken back.' },
+    terms: { presetId: 'default', customText: '1. Subject to local jurisdiction.\n2. Goods once sold will not be taken back.', notesText: 'Thank you for your business!' },
     signature: { showSignature: true, showStamp: false, position: 'Right', width: 150, height: 60, signatoryName: 'Authorized Signatory', designation: '' },
-    footer: { message: 'Thank you for your business!', thankYouNote: '', supportContact: '', website: '', showPageNumbers: true, showGeneratedBy: true, customText: '' }
+    footer: { message: 'Thank you for your business!', thankYouNote: '', supportContact: '', website: '', showPageNumbers: true, showGeneratedBy: true, customText: '', showContact: true, showWebsite: true }
   },
   styleConfig: {
     primaryColor: '#0f172a',
@@ -139,29 +139,45 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
   };
 
   useEffect(() => {
-    const handleResize = () => {
-      if (previewContainerRef.current) {
-        const containerWidth = previewContainerRef.current.clientWidth;
-        const containerHeight = previewContainerRef.current.clientHeight;
-        const paddingWidth = 32;
-        const paddingHeight = 32;
-        const availableWidth = containerWidth - paddingWidth;
-        const availableHeight = containerHeight - paddingHeight;
-        
-        const targetWidth = template.layout.pageSize === 'A4' ? 794 : 816;
-        const targetHeight = template.layout.pageSize === 'A4' ? 1123 : 1056;
-        
-        const scaleWidth = availableWidth / targetWidth;
-        const scaleHeight = availableHeight / targetHeight;
-        
-        const newScale = Math.min(1, Math.min(scaleWidth, scaleHeight));
+    const calcScale = (el: HTMLDivElement) => {
+      const containerWidth = el.clientWidth;
+      const containerHeight = el.clientHeight;
+      const padding = 32;
+      const isMobile = window.innerWidth < 1024;
+
+      const targetWidth = template.layout.pageSize === 'A4' ? 794 : 816;
+      const targetHeight = template.layout.pageSize === 'A4' ? 1123 : 1056;
+
+      const availableWidth = Math.max(1, containerWidth - padding);
+      const scaleByWidth = availableWidth / targetWidth;
+
+      if (isMobile) {
+        // On mobile stacked layout: fit by width only, panel scrolls vertically
+        const newScale = Math.min(0.9, Math.max(0.3, scaleByWidth));
+        setPreviewScale(newScale);
+      } else {
+        const availableHeight = Math.max(1, containerHeight - padding);
+        const scaleByHeight = availableHeight / targetHeight;
+        const newScale = Math.min(1, Math.min(scaleByWidth, scaleByHeight));
         setPreviewScale(newScale);
       }
     };
 
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const el = previewContainerRef.current;
+    if (!el) return;
+
+    calcScale(el);
+
+    const ro = new ResizeObserver(() => { if (previewContainerRef.current) calcScale(previewContainerRef.current); });
+    ro.observe(el);
+
+    const onWinResize = () => { if (previewContainerRef.current) calcScale(previewContainerRef.current); };
+    window.addEventListener('resize', onWinResize);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', onWinResize);
+    };
   }, [template.layout.pageSize]);
 
   const updateConfig = (section: keyof InvoiceTemplate['config'], data: any) => {
@@ -181,7 +197,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
   const currentStep = STEPS[currentStepIndex];
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200 w-full relative">
+    <div className="flex flex-col lg:flex-row min-h-[calc(100dvh-120px)] lg:h-[calc(100vh-120px)] bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200 w-full relative">
       
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
@@ -192,7 +208,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
       <div className={`fixed inset-y-0 left-0 z-50 w-64 shrink-0 bg-white dark:bg-zinc-900 border-r border-[#e2e8f0]/40 dark:border-zinc-800 flex-col h-full overflow-y-auto custom-scrollbar transition-transform duration-300 lg:relative lg:translate-x-0 lg:flex ${isMobileMenuOpen ? 'translate-x-0 flex' : '-translate-x-full flex'}`}>
         
         {/* Sidebar Header */}
-        <div className="p-4 border-b border-[#e2e8f0]/30 dark:border-zinc-800 bg-[#FCFAF7]/50 dark:bg-zinc-950/20 sticky top-0 z-10 flex items-center justify-between">
+        <div className="p-4 border-b border-[#e2e8f0]/30 dark:border-zinc-800 bg-[#FCFAF7] dark:bg-zinc-900 sticky top-0 z-10 flex items-center justify-between">
           <div>
             <h2 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
               <span className="bg-gradient-to-r from-amber-600 via-[#64748b] to-rose-500 bg-clip-text text-transparent dark:from-amber-400 dark:via-white dark:to-rose-400">Advanced Studio</span>
@@ -319,7 +335,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           
           {/* Controls Panel */}
-          <div className="w-full md:max-w-sm shrink-0 border-b md:border-b-0 md:border-r border-[#e2e8f0]/40 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 overflow-y-auto p-5 custom-scrollbar h-[40vh] md:h-full">
+          <div className="w-full md:max-w-sm shrink-0 border-b md:border-b-0 md:border-r border-[#e2e8f0]/40 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 overflow-y-auto p-5 custom-scrollbar h-[45vh] md:h-full">
             {currentStep.id === 'start' && (
               <div className="space-y-4">
                 <div>
@@ -392,7 +408,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
           </div>
 
           {/* Right Live Preview Canvas */}
-          <div className="flex-1 relative flex flex-col h-full overflow-hidden bg-[#FCFAF7]/40 dark:bg-zinc-950/20">
+          <div className="flex-1 relative flex flex-col h-full min-h-[70vw] md:min-h-0 overflow-hidden bg-[#FCFAF7]/40 dark:bg-zinc-950/20">
             <div 
               ref={previewContainerRef} 
               onMouseDown={handleMouseDown} 

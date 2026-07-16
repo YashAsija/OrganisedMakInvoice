@@ -155,8 +155,7 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
 
   if (stepId === 'company') {
     const companyFieldOptions = [
-      { id: 'name',    label: 'NAME' },
-      { id: 'owner',   label: 'OWNER / CONTACT PERSON' },
+      { id: 'name',    label: 'OWNER / CONTACT PERSON' },
       { id: 'email',   label: 'EMAIL' },
       { id: 'phone',   label: 'PHONE' },
       { id: 'address', label: 'ADDRESS' },
@@ -400,6 +399,10 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
     return (
       <div className="space-y-4">
         <div>
+          <label className="text-xs font-bold text-slate-700 mb-1 block">Notes / Greetings</label>
+          <textarea value={config.terms.notesText || ''} onChange={e => updateConfig('terms', { notesText: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm h-20" placeholder="Thank you for your business!" />
+        </div>
+        <div>
           <label className="text-xs font-bold text-slate-700 mb-1 block">Terms & Conditions</label>
           <textarea value={config.terms.customText} onChange={e => updateConfig('terms', { customText: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm h-32" />
         </div>
@@ -447,18 +450,16 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
           <label className="text-xs font-bold text-slate-700 mb-1 block">Footer Message</label>
           <input type="text" value={config.footer.message} onChange={e => updateConfig('footer', { message: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
         </div>
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-bold text-slate-700">Contact / Website</label>
-            <button 
-              type="button"
-              onClick={() => updateConfig('footer', { supportContact: '', website: '' })} 
-              className="text-[10px] text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded transition-colors"
-            >
-              Remove
-            </button>
-          </div>
-          <input type="text" value={config.footer.supportContact} onChange={e => updateConfig('footer', { supportContact: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" placeholder="contact@example.com / www.example.com" />
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-700 block mb-1">Contact & Website Toggles</label>
+          <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
+             <input type="checkbox" checked={config.footer.showContact !== false} onChange={e => updateConfig('footer', { showContact: e.target.checked })} />
+             Show Contact (Email & Phone)
+          </label>
+          <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
+             <input type="checkbox" checked={config.footer.showWebsite !== false} onChange={e => updateConfig('footer', { showWebsite: e.target.checked })} />
+             Show Website
+          </label>
         </div>
       </div>
     );

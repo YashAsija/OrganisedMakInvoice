@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PinSetupModal } from './components/PinSetupModal';
 import type { User } from '@supabase/supabase-js';
 import { supabase, handleSupabaseError, OperationType, isSupabaseConfigured } from './lib/supabase';
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from './types';
@@ -196,22 +197,38 @@ export default function App() {
     };
   }, []);
 
+  // --- PIN SETUP MODAL STATE ---
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [pinModalMode, setPinModalMode] = useState<'enable' | 'disable'>('enable');
+  const [pinModalLoading, setPinModalLoading] = useState(false);
+  const [pinModalError, setPinModalError] = useState('');
+
   // --- INITIALIZE SECURITY SETTINGS OR RE-SYNC ON EDIT ---
   const handleToggleSecurity = async (type: 'pin' | 'bio') => {
     if (type !== 'pin') return;
     const current = getSecuritySettings();
-
     const enable = !current.isPinLockEnabled;
+
+    if (enable && !isOnline) {
+      setPinModalError('You must be online to set or enable a PIN lock.');
+    }
+
+    setPinModalMode(enable ? 'enable' : 'disable');
+    setPinModalError('');
+    setPinModalOpen(true);
+  };
+
+  const handlePinConfirm = async (rawPin: string) => {
+    const current = getSecuritySettings();
+    const enable = !current.isPinLockEnabled;
+    setPinModalLoading(true);
+    setPinModalError('');
     let pinVal = '';
     let salt: string | undefined;
     if (enable) {
       if (!isOnline) {
-        alert("You must be online to set or enable a PIN lock.");
-        return;
-      }
-      const rawPin = prompt("Enter a new 4-digit screen-lock PIN:");
-      if (!rawPin || rawPin.length !== 4 || isNaN(Number(rawPin))) {
-        alert("Invalid PIN. It must be exactly 4 digits. Setup cancelled.");
+        setPinModalLoading(false);
+        setPinModalError('You must be online to set or enable a PIN lock.');
         return;
       }
       // Use PBKDF2 with random salt (new users and PIN changes)
@@ -240,12 +257,14 @@ export default function App() {
               }
             }
           } catch {
-            alert('Could not sync PIN to server. Screen lock setup failed.');
+            setPinModalLoading(false);
+            setPinModalError('Could not sync PIN to server. Please try again.');
             return;
           }
         }
       }
-      alert(`Screen lock PIN set. You will be prompted on next app open.`);
+      setPinModalLoading(false);
+      setPinModalOpen(false);
     } else {
       // Disabling PIN — clear server hash too
       if (isOnline && user) {
@@ -277,6 +296,8 @@ export default function App() {
 
     setSecuritySettings(updated);
     saveSecuritySettings(updated);
+    setPinModalLoading(false);
+    setPinModalOpen(false);
   };
 
 
@@ -370,14 +391,9 @@ export default function App() {
 
   // --- CONNECT SUPABASE LISTENERS OR DEGRADE GRACEFULLY (CLOUD SYNCING) ---
   useEffect(() => {
-    // PIN gate: don't load any data until the user has unlocked the screen.
-    // This is the critical fix — previously loadLocalData() and the Supabase auth
-    // listener fired unconditionally at mount, loading all data into React state
-    // before the lock screen even rendered (Bypass #2 from the security audit).
-    if (!isUnlocked) return;
-
-    // Load local storage fallback immediately so the app shows data instantly before network resolves (and works fully offline)
-    loadLocalData();
+    // Always register the auth listener regardless of PIN lock so that login/logout
+    // properly sets userEmail and navigates away from the homepage.
+    // Data sync is separately gated by isUnlocked (see the effect below).
 
     let activeChannels: ReturnType<typeof supabase.channel>[] = [];
 
@@ -392,7 +408,7 @@ export default function App() {
       activeChannels = [];
     };
 
-    // Setup Auth State Listener
+    // Setup Auth State Listener — runs unconditionally so login always works
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         try {
@@ -406,6 +422,9 @@ export default function App() {
           const activeEmail = currentUser.email ?? currentUser.phone ?? null;
           setUserEmail(activeEmail);
           const suffix = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
+
+          // Only load cloud data if unlocked (PIN gate for data protection)
+          if (!isUnlocked) return;
 
           if (isOnline) {
             // --- SYNC / RESOLVE FROM CLOUD ---
@@ -503,7 +522,7 @@ export default function App() {
               console.warn('Error fetching/setting cloud profile:', String(err));
             }
 
-            // 2. Load Invoices from Supabase and attach realtime listener
+            // 2. Load Invoices and attach realtime listener
             try {
               const { data: cloudInvoices } = await supabase
                 .from('invoices')
@@ -669,6 +688,12 @@ export default function App() {
       cleanupActiveListeners();
     };
   }, [isOnline, isUnlocked]);
+
+  // Load local data when unlocked (PIN gate for offline data)
+  useEffect(() => {
+    if (!isUnlocked) return;
+    loadLocalData();
+  }, [isUnlocked]);
 
 
 
@@ -1550,6 +1575,16 @@ export default function App() {
         isOpen={isInvoiceEditorOpen}
         onClose={() => setIsInvoiceEditorOpen(false)}
         onSave={handleSaveInvoice}
+      />
+
+      {/* PIN Setup Modal */}
+      <PinSetupModal
+        isOpen={pinModalOpen}
+        mode={pinModalMode}
+        onConfirm={handlePinConfirm}
+        onCancel={() => { setPinModalOpen(false); setPinModalError(''); }}
+        isLoading={pinModalLoading}
+        errorMessage={pinModalError}
       />
     </>
   );

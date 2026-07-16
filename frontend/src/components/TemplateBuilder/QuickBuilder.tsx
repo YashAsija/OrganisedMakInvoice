@@ -81,29 +81,44 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
   };
 
   useEffect(() => {
-    const handleResize = () => {
-      if (previewContainerRef.current) {
-        const containerWidth = previewContainerRef.current.clientWidth;
-        const containerHeight = previewContainerRef.current.clientHeight;
-        const paddingWidth = 32;
-        const paddingHeight = 32;
-        const availableWidth = containerWidth - paddingWidth;
-        const availableHeight = containerHeight - paddingHeight;
-        
-        const targetWidth = 794;
-        const targetHeight = 1123;
-        
-        const scaleWidth = availableWidth / targetWidth;
-        const scaleHeight = availableHeight / targetHeight;
-        
-        const newScale = Math.min(1, Math.min(scaleWidth, scaleHeight));
+    const calcScale = (el: HTMLDivElement) => {
+      const containerWidth = el.clientWidth;
+      const containerHeight = el.clientHeight;
+      const padding = 32;
+      const isMobile = window.innerWidth < 1024; // below `lg` breakpoint = stacked layout
+
+      const availableWidth = Math.max(1, containerWidth - padding);
+      const scaleByWidth = availableWidth / 794;
+
+      if (isMobile) {
+        // On mobile the panel height is unbounded (scrolls) — only fit by width
+        const newScale = Math.min(0.9, Math.max(0.3, scaleByWidth));
+        setPreviewScale(newScale);
+      } else {
+        const availableHeight = Math.max(1, containerHeight - padding);
+        const scaleByHeight = availableHeight / 1123;
+        const newScale = Math.min(1, Math.min(scaleByWidth, scaleByHeight));
         setPreviewScale(newScale);
       }
     };
 
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const el = previewContainerRef.current;
+    if (!el) return;
+
+    // Fire immediately
+    calcScale(el);
+
+    // Watch container size changes (layout reflows, panel expanding on mobile, etc.)
+    const ro = new ResizeObserver(() => { if (previewContainerRef.current) calcScale(previewContainerRef.current); });
+    ro.observe(el);
+
+    // Also handle orientation changes
+    window.addEventListener('resize', () => { if (previewContainerRef.current) calcScale(previewContainerRef.current); });
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', () => { if (previewContainerRef.current) calcScale(previewContainerRef.current); });
+    };
   }, []);
 
   const [state, setState] = useState<QuickBuilderState>(INITIAL_STATE);
@@ -117,10 +132,10 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
     <div className="flex flex-col lg:flex-row min-h-[calc(100dvh-120px)] lg:h-[calc(100vh-120px)] bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200 w-full">
       
       {/* Left Sidebar - Wizard Controls */}
-      <div className="w-full lg:w-[420px] shrink-0 bg-white dark:bg-zinc-900 border-b lg:border-b-0 lg:border-r border-[#e2e8f0]/40 dark:border-zinc-800 flex flex-col min-h-[50dvh] lg:h-full z-10">
+      <div className="w-full lg:w-[420px] shrink-0 bg-white dark:bg-zinc-900 border-b lg:border-b-0 lg:border-r border-[#e2e8f0]/40 dark:border-zinc-800 flex flex-col min-h-[45dvh] sm:min-h-[50dvh] lg:h-full z-10">
         
         {/* Header bar */}
-        <div className="p-6 border-b border-[#e2e8f0]/30 dark:border-zinc-800 flex items-center justify-between bg-[#FCFAF7]/60 dark:bg-zinc-950/20">
+        <div className="p-4 sm:p-6 border-b border-[#e2e8f0]/30 dark:border-zinc-800 flex items-center justify-between bg-[#FCFAF7]/60 dark:bg-zinc-950/20">
            <div>
              <h2 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
                <span className="bg-gradient-to-r from-amber-600 via-[#64748b] to-rose-500 bg-clip-text text-transparent dark:from-amber-400 dark:via-white dark:to-rose-400">Quick Builder Wizard</span>
@@ -159,11 +174,11 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
         </div>
 
         {/* Form elements container */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           {currentStep === 1 && (
             <div className="space-y-4 animate-in fade-in duration-200">
               <h3 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wide">Document Purpose</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {['Invoice', 'Estimate', 'Proforma', 'Credit Note'].map((type, idx) => {
                   const active = state.invoiceType === type;
                   const borderColors = ['border-emerald-400', 'border-sky-400', 'border-amber-400', 'border-violet-400'];
@@ -195,7 +210,7 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
           {currentStep === 2 && (
             <div className="space-y-4 animate-in fade-in duration-200">
               <h3 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wide">Base Template Style</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {['Modern', 'Corporate', 'Minimal', 'Premium'].map((style, idx) => {
                   const active = state.templateStyle === style;
                   const textColors = ['text-emerald-500', 'text-sky-500', 'text-amber-500', 'text-violet-500'];
@@ -280,7 +295,7 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
                 <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-500 mt-0.5">Toggle structural content containers depending on usecase</span>
               </div>
               
-              <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 gap-2 max-h-[260px] sm:max-h-[300px] overflow-y-auto pr-1">
                 {[
                   { key: 'company', label: 'Company' },
                   { key: 'customer', label: 'Customer (Bill To)' },
@@ -397,7 +412,7 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
       </div>
 
       {/* Right Side - Live Preview */}
-      <div className="flex-1 relative flex flex-col h-full overflow-hidden bg-[#FCFAF7]/40 dark:bg-zinc-950/20">
+      <div className="flex-1 relative flex flex-col h-full min-h-[60vw] sm:min-h-0 overflow-hidden bg-[#FCFAF7]/40 dark:bg-zinc-950/20">
         <div 
           ref={previewContainerRef} 
           onMouseDown={handleMouseDown} 

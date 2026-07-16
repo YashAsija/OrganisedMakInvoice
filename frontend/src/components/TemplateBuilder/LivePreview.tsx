@@ -285,7 +285,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
   const baseStyle: React.CSSProperties = {
     width: isPrintMode ? '100%' : width,
-    height: minHeight,
+    height: isPrintMode ? minHeight : 'auto',
     minHeight: minHeight,
     paddingTop: layout.margins === 'Compact' ? '10px' : '20px',
     paddingLeft: getPadding(),
@@ -295,7 +295,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     fontFamily: styleConfig.fontFamily,
     color: '#333',
     position: 'relative',
-    overflow: 'hidden',
+    overflow: isPrintMode ? 'hidden' : 'visible',
     boxShadow: isPrintMode ? 'none' : '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
     transform: isPrintMode ? 'none' : 'scale(var(--preview-scale, 1))',
     transformOrigin: 'top center',
@@ -637,13 +637,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             const hasGst = config.company.fields.includes('gstin') && compGst && compGst.trim() !== '';
             const hasPan = config.company.fields.includes('pan') && compPan && compPan.trim() !== '';
             const hasWebsite = config.company.fields.includes('website') && compWebsite && compWebsite.trim() !== '';
-            // Read company location fields directly — these always render if set
             const compStateFull = (businessProfile as any)?.state || '';
             const compStateCodeFull = (businessProfile as any)?.stateCode || compStateCode || '';
             const compCountryFull = (businessProfile as any)?.country || '';
-            const hasState = compStateFull.trim() !== '';
+            const hasState = config.company.fields.includes('state') && compStateFull.trim() !== '';
             const hasStateCode = compStateCodeFull.trim() !== '';
-            const hasCountry = compCountryFull.trim() !== '';
+            const hasCountry = config.company.fields.includes('country') && compCountryFull.trim() !== '';
 
             if (layout.type === 'Modal Classic') {
               if (!compLogo && !config.header.showLogo) return null;
@@ -738,25 +737,25 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
               const clientCountry = (invoiceData as any)?.clientCountry || (isInteractive ? "" : "India");
               const clientState = (invoiceData as any)?.clientState || (isInteractive ? "" : "Delhi");
-              const isAdjacent = dynamicSpans['billTo'] !== 12;
               const amigoIndex = orderedSections.filter(s => ['billTo', 'shipTo', 'transport'].includes(s.id)).findIndex(a => a.id === 'billTo');
               const isSecondCol = amigoIndex === 1;
+              const isVertical = amigoIndex !== 2;
 
               return (
                 <div key="billTo" style={{ ...getSectionStyle('billTo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginBottom: '0px', marginTop: amigoIndex === 2 ? '-1px' : '5px' }}>
-                  <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${isAdjacent ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
-                    <h3 className={`font-bold text-[11px] text-gray-800 uppercase ${isAdjacent ? 'mb-1' : 'w-full mb-0'}`}>BILLED TO</h3>
-                    {config.client.fields.includes('name') && <div className={`${isAdjacent ? 'text-[12px] font-medium text-gray-900 mb-0.5' : 'flex items-center text-[10px]'}`}>{isAdjacent ? renderInteractive(clientName, 'clientName', 'text', 'Client Name') : <><span className="text-gray-500 font-medium mr-1">Name:</span><span className="text-gray-900 font-bold">{renderInteractive(clientName, 'clientName', 'text', 'Client Name')}</span></>}</div>}
+                  <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${isVertical ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
+                    <h3 className={`font-bold text-[11px] text-gray-800 uppercase ${isVertical ? 'mb-1' : 'w-full mb-0'}`}>BILLED TO</h3>
+                    {config.client.fields.includes('name') && <div className={`${isVertical ? 'text-[12px] font-medium text-gray-900 mb-0.5' : 'flex items-center text-[10px]'}`}>{isVertical ? renderInteractive(clientName, 'clientName', 'text', 'Client Name') : <><span className="text-gray-500 font-medium mr-1">Name:</span><span className="text-gray-900 font-bold">{renderInteractive(clientName, 'clientName', 'text', 'Client Name')}</span></>}</div>}
                     {config.client.fields.includes('phone') && (
-                      isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Party Mobile No</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(clientPhone, 'clientPhone', 'text', 'Phone')}</span></div> :
+                      isVertical ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Party Mobile No</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(clientPhone, 'clientPhone', 'text', 'Phone')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Mobile No:</span><span className="text-gray-900 font-bold">{renderInteractive(clientPhone, 'clientPhone', 'text', 'Phone')}</span></div>
                     )}
                     {config.client.fields.includes('email') && (
-                      isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Email</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(clientEmail, 'clientEmail', 'text', 'Email')}</span></div> :
+                      isVertical ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Email</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(clientEmail, 'clientEmail', 'text', 'Email')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Email:</span><span className="text-gray-900 font-bold">{renderInteractive(clientEmail, 'clientEmail', 'text', 'Email')}</span></div>
                     )}
                     {config.client.fields.includes('address') && (
-                      isAdjacent ? <>
+                      isVertical ? <>
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Country</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(clientCountry, 'clientCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</span></div>
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">State</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(clientState, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</span></div>
                         <div className="flex items-start text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Address</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(clientAddr, 'clientAddress', 'textarea', 'Address')}</span></div>
@@ -767,11 +766,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                       </>
                     )}
                     {config.client.fields.includes('gstin') && (
-                      isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">GSTIN / UIN</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(clientGst, 'clientGstin', 'text', 'GSTIN')}</span></div> :
+                      isVertical ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">GSTIN / UIN</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(clientGst, 'clientGstin', 'text', 'GSTIN')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">GSTIN:</span><span className="text-gray-900 font-bold">{renderInteractive(clientGst, 'clientGstin', 'text', 'GSTIN')}</span></div>
                     )}
                     {config.client.fields.includes('pan') && (
-                      isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">PAN</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive((invoiceData as any)?.clientPan || getFallback('ABCDE1234F'), 'clientPan', 'text', 'PAN')}</span></div> :
+                      isVertical ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">PAN</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive((invoiceData as any)?.clientPan || getFallback('ABCDE1234F'), 'clientPan', 'text', 'PAN')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">PAN:</span><span className="text-gray-900 font-bold">{renderInteractive((invoiceData as any)?.clientPan || getFallback('ABCDE1234F'), 'clientPan', 'text', 'PAN')}</span></div>
                     )}
                   </div>
@@ -808,15 +807,14 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             const shipGst = (invoiceData as any)?.shippedToGstin || getFallback('07SM123456789A1');
 
             if (layout.type === 'Modal Classic') {
-
-              const isAdjacent = dynamicSpans['shipTo'] !== 12;
               const amigoIndex = orderedSections.filter(s => ['billTo', 'shipTo', 'transport'].includes(s.id)).findIndex(a => a.id === 'shipTo');
               const isSecondCol = amigoIndex === 1;
+              const isVertical = amigoIndex !== 2;
 
               return (
                 <div key="shipTo" style={{ ...getSectionStyle('shipTo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginBottom: '0px', marginTop: amigoIndex === 2 ? '-1px' : '5px' }}>
-                  <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${isAdjacent ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
-                    <div className={`flex justify-between items-center ${isAdjacent ? 'mb-1' : 'w-full mb-0'}`}>
+                  <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${isVertical ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
+                    <div className={`flex justify-between items-center ${isVertical ? 'mb-1' : 'w-full mb-0'}`}>
                       <h3 className={`font-bold text-[11px] text-gray-800 uppercase`}>SHIPPED TO</h3>
                       {isInteractive && onCopyBillingToShipping && (
                         <button
@@ -829,21 +827,21 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                       )}
                     </div>
                     <>
-                      {config.shipping.fields.includes('name') && <div className={`${isAdjacent ? 'text-[12px] font-medium text-gray-900 mb-0.5' : 'flex items-center text-[10px]'}`}>{isAdjacent ? renderInteractive(shipName, 'shippedToName', 'text', 'Client Name') : <><span className="text-gray-500 font-medium mr-1">Name:</span><span className="text-gray-900 font-bold">{renderInteractive(shipName, 'shippedToName', 'text', 'Client Name')}</span></>}</div>}
+                      {config.shipping.fields.includes('name') && <div className={`${isVertical ? 'text-[12px] font-medium text-gray-900 mb-0.5' : 'flex items-center text-[10px]'}`}>{isVertical ? renderInteractive(shipName, 'shippedToName', 'text', 'Client Name') : <><span className="text-gray-500 font-medium mr-1">Name:</span><span className="text-gray-900 font-bold">{renderInteractive(shipName, 'shippedToName', 'text', 'Client Name')}</span></>}</div>}
                       {config.shipping.fields.includes('phone') && (
-                        isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Party Mobile No</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipPhone, 'shippedToPhone', 'text', 'Phone')}</span></div> :
+                        isVertical ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Party Mobile No</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipPhone, 'shippedToPhone', 'text', 'Phone')}</span></div> :
                           <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Mobile No:</span><span className="text-gray-900 font-bold">{renderInteractive(shipPhone, 'shippedToPhone', 'text', 'Phone')}</span></div>
                       )}
                       {config.shipping.fields.includes('email') && (
-                        isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Email</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipEmail, 'shippedToEmail', 'text', 'Email')}</span></div> :
+                        isVertical ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Email</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipEmail, 'shippedToEmail', 'text', 'Email')}</span></div> :
                           <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Email:</span><span className="text-gray-900 font-bold">{renderInteractive(shipEmail, 'shippedToEmail', 'text', 'Email')}</span></div>
                       )}
                       {config.shipping.fields.includes('pan') && (
-                        isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">PAN</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipPan, 'shippedToPan', 'text', 'PAN')}</span></div> :
+                        isVertical ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">PAN</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipPan, 'shippedToPan', 'text', 'PAN')}</span></div> :
                           <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">PAN:</span><span className="text-gray-900 font-bold">{renderInteractive(shipPan, 'shippedToPan', 'text', 'PAN')}</span></div>
                       )}
                       {config.shipping.fields.includes('address') && (
-                        isAdjacent ? <>
+                        isVertical ? <>
                           <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Country</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(shipCountry, 'shippedToCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</span></div>
                           <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">State</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</span></div>
                           <div className="flex items-start text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Address</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipAddr, 'shippedToAddress', 'textarea', 'Address')}</span></div>
@@ -854,7 +852,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         </>
                       )}
                       {config.shipping.fields.includes('gstin') && (
-                        isAdjacent ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">GSTIN / UIN</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipGst, 'shippedToGstin', 'text', 'GSTIN')}</span></div> :
+                        isVertical ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">GSTIN / UIN</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipGst, 'shippedToGstin', 'text', 'GSTIN')}</span></div> :
                           <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">GSTIN:</span><span className="text-gray-900 font-bold">{renderInteractive(shipGst, 'shippedToGstin', 'text', 'GSTIN')}</span></div>
                       )}
                     </>
@@ -1126,15 +1124,14 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               const station = (invoiceData as any)?.station || (isInteractive ? "" : "N/A");
               const ewayBillNo = (invoiceData as any)?.eWayBillNo || (isInteractive ? "" : "N/A");
               const poNumber = invoiceData?.poNumber || (isInteractive ? "" : "N/A");
-
-              const isAdjacent = dynamicSpans['transport'] !== 12;
               const amigoIndex = orderedSections.filter(s => ['billTo', 'shipTo', 'transport'].includes(s.id)).findIndex(a => a.id === 'transport');
               const isSecondCol = amigoIndex === 1;
+              const isVertical = amigoIndex !== 2;
 
               return (
                 <div key="transport" style={{ ...getSectionStyle('transport'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginBottom: '0px', marginTop: amigoIndex === 2 ? '-1px' : '5px' }}>
-                  <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${(isAdjacent && !bothAdded) ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderLeft: isSecondCol ? 'none' : '1px solid #d1d5db', borderRadius: getBorderRadius() }}>
-                    <div className={`flex justify-between items-center ${(isAdjacent && !bothAdded) ? 'mb-1' : 'w-full mb-0'}`}>
+                  <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${isVertical ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
+                    <div className={`flex justify-between items-center ${isVertical ? 'mb-1' : 'w-full mb-0'}`}>
                       <h3 className={`font-bold text-[11px] text-gray-800 uppercase`}>TRANSPORT</h3>
                       {isInteractive && onUpdateHasTransport && (
                         <button
@@ -1147,32 +1144,32 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                       )}
                     </div>
                     {config.transport.fields.includes('vehicleNo') && (
-                      (isAdjacent && !bothAdded) ?
+                      isVertical ?
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Vehicle No.</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(vehicleNo, 'vehicleNo', 'text', 'Vehicle No')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Vehicle No:</span><span className="text-gray-900 font-bold">{renderInteractive(vehicleNo, 'vehicleNo', 'text', 'Vehicle No')}</span></div>
                     )}
                     {config.transport.fields.includes('poNumber') && (
-                      (isAdjacent && !bothAdded) ?
+                      isVertical ?
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">PO Number</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(poNumber, 'poNumber', 'text', 'PO Number')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">PO Number:</span><span className="text-gray-900 font-bold">{renderInteractive(poNumber, 'poNumber', 'text', 'PO Number')}</span></div>
                     )}
                     {config.transport.fields.includes('transport') && (
-                      (isAdjacent && !bothAdded) ?
+                      isVertical ?
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Transport Name</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive((invoiceData as any)?.transportName || (isInteractive ? '' : 'N/A'), 'transport', 'text', 'Transporter Name')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Transport Name:</span><span className="text-gray-900 font-bold">{renderInteractive((invoiceData as any)?.transportName || (isInteractive ? '' : 'N/A'), 'transport', 'text', 'Transporter Name')}</span></div>
                     )}
                     {config.transport.fields.includes('driverMobile') && (
-                      (isAdjacent && !bothAdded) ?
+                      isVertical ?
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Driver Mobile</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(driverMobile, 'driverMobile', 'text', 'Driver Mobile')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Driver Mobile:</span><span className="text-gray-900 font-bold">{renderInteractive(driverMobile, 'driverMobile', 'text', 'Driver Mobile')}</span></div>
                     )}
                     {config.transport.fields.includes('station') && (
-                      (isAdjacent && !bothAdded) ?
+                      isVertical ?
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Station</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(station, 'station', 'text', 'Station')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Station:</span><span className="text-gray-900 font-bold">{renderInteractive(station, 'station', 'text', 'Station')}</span></div>
                     )}
                     {config.transport.fields.includes('ewayBillNo') && (
-                      (isAdjacent && !bothAdded) ?
+                      isVertical ?
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">E-Way Bill No.</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(ewayBillNo, 'ewayBillNo', 'text', 'E-Way Bill No')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">E-Way Bill No:</span><span className="text-gray-900 font-bold">{renderInteractive(ewayBillNo, 'ewayBillNo', 'text', 'E-Way Bill No')}</span></div>
                     )}
@@ -1361,7 +1358,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               return (
                 <div key="terms" style={{ ...getSectionStyle('terms'), marginTop: 'auto' }}>
                   <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">Notes</div>
-                  <div className="text-gray-600 text-[10px] leading-relaxed mb-4">{renderInteractive(invoiceData?.notes || 'Thank you for your business!', 'notes', 'textarea')}</div>
+                  <div className="text-gray-600 text-[10px] leading-relaxed mb-4">{renderInteractive(invoiceData?.notes || config.terms.notesText || 'Thank you for your business!', 'notes', 'textarea')}</div>
                   <div className="font-bold text-gray-800 text-[10px] mb-1">Terms & Conditions</div>
                   <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap">{renderInteractive(invoiceData?.invoiceTerms || config.terms.customText, 'invoiceTerms', 'textarea')}</div>
                 </div>
@@ -1372,7 +1369,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             return (
               <div key="terms" style={{ ...getSectionStyle('terms'), textAlign: termsAlign }}>
                 <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0, color: '#64748b' }}>Notes</p>
-                <div style={{ fontSize: '10px', margin: '4px 0', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{renderInteractive(invoiceData?.notes || 'Thank you for your business!', 'notes', 'textarea')}</div>
+                <div style={{ fontSize: '10px', margin: '4px 0', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{renderInteractive(invoiceData?.notes || config.terms.notesText || 'Thank you for your business!', 'notes', 'textarea')}</div>
                 <p style={{ fontSize: '12px', fontWeight: 'bold', margin: '8px 0 0 0', color: '#64748b' }}>Terms & Conditions</p>
                 <div style={{ fontSize: '10px', margin: '4px 0', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{renderInteractive(invoiceData?.invoiceTerms || config.terms.customText, 'invoiceTerms', 'textarea')}</div>
               </div>
@@ -1380,15 +1377,40 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           }
 
            if (section.id === 'payment') {
+            const upiIdVal = businessProfile?.upiId || (invoiceData as any)?.upiId || '';
+            const upiPayeeName = businessProfile?.name || '';
+            const upiAmount = grandTotal || 0;
+            const upiUri = upiIdVal ? `upi://pay?pa=${upiIdVal}&pn=${encodeURIComponent(upiPayeeName)}&am=${upiAmount}&cu=INR` : '';
+            const qrCodeUrl = upiUri ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUri)}` : '';
+
+            const getBankDetailsText = () => {
+              const parts = [];
+              if (businessProfile?.bankName) parts.push(`Bank: ${businessProfile.bankName}`);
+              if (businessProfile?.accountNumber) parts.push(`A/C No: ${businessProfile.accountNumber}`);
+              if (businessProfile?.ifsc) parts.push(`IFSC: ${businessProfile.ifsc}`);
+              if (businessProfile?.upiId) parts.push(`UPI ID: ${businessProfile.upiId}`);
+              return parts.length > 0 ? parts.join('\n') : 'Bank: HDFC Bank\nA/C No: 1234567890\nIFSC: HDFC0001234';
+            };
+
+            const bankDetailsText = config.payment.customNote || getBankDetailsText();
+
             if (layout.type === 'Modal Classic') {
               const align = getSectionAlignment('payment');
               return (
                 <div id="section-payment" key="payment" style={{ ...getSectionStyle('payment'), textAlign: align, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', width: '100%' }}>
                   <div className="font-bold text-gray-800 text-[10px] mb-1">Banking Information</div>
                   <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap" style={{ textAlign: align, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start' }}>
-                    {config.payment.generateQrCode && <div style={{ width: 60, height: 60, backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '5px' }}>QR</div>}
+                    {config.payment.generateQrCode && (
+                      qrCodeUrl ? (
+                        <div style={{ marginBottom: '5px' }}>
+                          <img src={qrCodeUrl} alt="UPI QR Code" style={{ width: 60, height: 60, display: 'block', border: '1px solid #e2e8f0', padding: '1px', backgroundColor: '#fff' }} />
+                        </div>
+                      ) : (
+                        <div style={{ width: 60, height: 60, backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '5px', fontSize: '8px', color: '#64748b', textAlign: 'center' }}>No UPI ID</div>
+                      )
+                    )}
                     <div style={{ whiteSpace: 'pre-wrap', textAlign: align }}>
-                      {config.payment.customNote || `Bank Name: Axis\nAccount No.: 098654345678\nIFSC Code: UTIB00056`}
+                      {bankDetailsText}
                     </div>
                   </div>
                 </div>
@@ -1401,11 +1423,16 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0, color: '#64748b' }}>Payment Details</p>
                 <div style={{ display: 'flex', gap: '20px', marginTop: '10px', justifyContent: payJustify }}>
                   {config.payment.generateQrCode && (
-                    <div style={{ width: '80px', height: '80px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>QR CODE</div>
+                    qrCodeUrl ? (
+                      <div>
+                        <img src={qrCodeUrl} alt="UPI QR Code" style={{ width: '80px', height: '80px', display: 'block', border: '1px solid #e2e8f0', padding: '2px', backgroundColor: '#fff' }} />
+                      </div>
+                    ) : (
+                      <div style={{ width: '80px', height: '80px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#64748b', textAlign: 'center' }}>No UPI ID</div>
+                    )
                   )}
                   <div style={{ fontSize: '11px', textAlign: 'left' }}>
-                    <p style={{ margin: '2px 0', whiteSpace: 'pre-wrap' }}>{(businessProfile as any)?.bankDetails || 'Bank: HDFC Bank\nA/C No: 1234567890\nIFSC: HDFC0001234'}</p>
-                    {config.payment.customNote && <p style={{ margin: '4px 0', color: '#64748b', fontStyle: 'italic' }}>{config.payment.customNote}</p>}
+                    <p style={{ margin: '2px 0', whiteSpace: 'pre-wrap' }}>{bankDetailsText}</p>
                   </div>
                 </div>
               </div>
@@ -1462,9 +1489,20 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             return (
               <div key="footer" style={{ ...getSectionStyle('footer'), borderTop: '1px solid #e2e8f0', paddingTop: '20px', marginTop: 'auto', textAlign: 'center' }}>
                 {config.footer.message && <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0' }}>{config.footer.message}</p>}
-                {(config.footer.website || config.footer.supportContact || compEmail || compPhone) && (
-                  <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0' }}>{[config.footer.website || compEmail, config.footer.supportContact || compPhone].filter(Boolean).join(' | ')}</p>
-                )}
+                {(() => {
+                  const contactParts = [];
+                  if (config.footer.showWebsite !== false && compWebsite && compWebsite.trim() !== '') {
+                    contactParts.push(compWebsite);
+                  }
+                  if (config.footer.showContact !== false) {
+                    if (compEmail && compEmail.trim() !== '') contactParts.push(compEmail);
+                    if (compPhone && compPhone.trim() !== '') contactParts.push(compPhone);
+                  }
+                  const footerLine = contactParts.filter(Boolean).join(' | ');
+                  return footerLine ? (
+                    <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0' }}>{footerLine}</p>
+                  ) : null;
+                })()}
                 {config.footer.showPageNumbers && <p style={{ fontSize: '10px', color: '#94a3b8', margin: '10px 0 0 0' }}>Page 1 of 1</p>}
               </div>
             );
@@ -1483,7 +1521,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               {sections.terms?.visible !== false && (
                 <div>
                   <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">NOTES</div>
-                  <div className="text-gray-600 text-[10px] leading-relaxed mb-4">{renderInteractive(invoiceData?.notes || 'Thank you for your business!', 'notes', 'textarea')}</div>
+                  <div className="text-gray-600 text-[10px] leading-relaxed mb-4">{renderInteractive(invoiceData?.notes || config.terms.notesText || 'Thank you for your business!', 'notes', 'textarea')}</div>
                   <div className="font-bold text-gray-800 text-[10px] mb-1">Terms & Conditions</div>
                   <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap">{renderInteractive(invoiceData?.invoiceTerms || config.terms.customText, 'invoiceTerms', 'textarea')}</div>
                 </div>
@@ -1521,9 +1559,20 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           {sections.footer?.visible !== false && (
             <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '15px', textAlign: 'center' }}>
               {config.footer.message && <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0' }}>{config.footer.message}</p>}
-              {(config.footer.website || config.footer.supportContact || compEmail || compPhone) && (
-                <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0' }}>{[config.footer.website || compEmail, config.footer.supportContact || compPhone].filter(Boolean).join(' | ')}</p>
-              )}
+                {(() => {
+                  const contactParts = [];
+                  if (config.footer.showWebsite !== false && compWebsite && compWebsite.trim() !== '') {
+                    contactParts.push(compWebsite);
+                  }
+                  if (config.footer.showContact !== false) {
+                    if (compEmail && compEmail.trim() !== '') contactParts.push(compEmail);
+                    if (compPhone && compPhone.trim() !== '') contactParts.push(compPhone);
+                  }
+                  const footerLine = contactParts.filter(Boolean).join(' | ');
+                  return footerLine ? (
+                    <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0' }}>{footerLine}</p>
+                  ) : null;
+                })()}
               {config.footer.showPageNumbers && <p style={{ fontSize: '10px', color: '#94a3b8', margin: '8px 0 0 0' }}>Page {pageIdx + 1} of {totalPages}</p>}
             </div>
           )}

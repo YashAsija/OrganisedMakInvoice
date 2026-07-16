@@ -4,6 +4,7 @@ import {
   ExternalLink, Search, Zap, BookOpen, AlertCircle, CheckCircle2,
   Star, ThumbsUp, Send, HelpCircle, Shield, Video, ArrowRight
 } from 'lucide-react';
+import { emitNotification } from '../lib/notifications';
 
 type TicketCategory = 'billing' | 'technical' | 'account' | 'feature' | 'other';
 
@@ -58,6 +59,7 @@ export default function SupportPage() {
     e.preventDefault();
     if (!ticketSubject.trim() || !ticketBody.trim()) return;
     setTicketSubmitted(true);
+    emitNotification('Support Ticket Submitted', `Your ticket "${ticketSubject}" has been received. Our team will contact you shortly.`, 'success');
     setTimeout(() => {
       setTicketSubmitted(false);
       setTicketSubject('');

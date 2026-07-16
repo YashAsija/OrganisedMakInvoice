@@ -143,10 +143,11 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
                   {config.company.fields.includes('email') && compEmail && compEmail.trim() !== '' && <div>Email: {compEmail}</div>}
                   {config.company.fields.includes('phone') && compPhone && compPhone.trim() !== '' && <div>Phone: {compPhone}</div>}
                   {config.company.fields.includes('address') && compAddr && compAddr.trim() !== '' && <div className="whitespace-pre-wrap">{compAddr}</div>}
-                  {compState.trim() !== '' && <div>State: {compState}{compStateCode.trim() !== '' ? ` (${compStateCode})` : ''}</div>}
-                  {compCountry.trim() !== '' && <div>Country: {compCountry}</div>}
+                  {config.company.fields.includes('state') && compState.trim() !== '' && <div>State: {compState}{compStateCode.trim() !== '' ? ` (${compStateCode})` : ''}</div>}
+                  {config.company.fields.includes('country') && compCountry.trim() !== '' && <div>Country: {compCountry}</div>}
                   {config.company.fields.includes('gstin') && compGst && compGst.trim() !== '' && <div>GSTIN: {compGst}</div>}
                   {config.company.fields.includes('pan') && compPan && compPan.trim() !== '' && <div>PAN: {compPan}</div>}
+                  {config.company.fields.includes('website') && (businessProfile as any)?.website && (businessProfile as any)?.website.trim() !== '' && <div>Website: {(businessProfile as any).website}</div>}
                 </div>
               </>
             )}
@@ -265,7 +266,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
             <>
               <div>
                 <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">Notes</div>
-                <div className="text-gray-600 text-[10px] leading-relaxed">Thank you for your business!</div>
+                <div className="text-gray-600 text-[10px] leading-relaxed">{invoiceData?.notes || config.terms.notesText || "Thank you for your business!"}</div>
               </div>
               <div>
                 <div className="font-bold text-gray-800 text-[10px] mb-1">Terms & Conditions</div>

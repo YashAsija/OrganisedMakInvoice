@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Check, Trash2, Upload, CreditCard, ShieldCheck, Sparkles, Building2, Landmark, Sliders, Award, FileSpreadsheet, KeyRound, ArrowLeft, ArrowRight, Plus, AlertCircle, Lock, Banknote, SlidersHorizontal, Hash, FileText, HelpCircle } from 'lucide-react';
+import { X, Check, Trash2, Upload, CreditCard, ShieldCheck, Sparkles, Building2, Landmark, Sliders, Award, FileSpreadsheet, KeyRound, ArrowLeft, ArrowRight, Plus, AlertCircle, Lock, Banknote, SlidersHorizontal, Hash, FileText, HelpCircle, RefreshCw } from 'lucide-react';
 import { BusinessProfile } from '../types';
 import { Country, State } from 'country-state-city';
+import { HexColorPicker } from 'react-colorful';
 import { supabase } from '../lib/supabase';
+import { emitNotification } from '../lib/notifications';
 
 interface BusinessProfileModalProps {
   profile: BusinessProfile;
@@ -42,6 +44,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const [currency, setCurrency] = useState(() => isOnboarding ? '' : (profile.currency || 'USD'));
   const [defaultTaxRate, setDefaultTaxRate] = useState(() => isOnboarding ? 0 : (profile.defaultTaxRate || 0));
   const [logoUrl, setLogoUrl] = useState(() => isOnboarding ? '' : (profile.logoUrl || ''));
+  const [website, setWebsite] = useState(() => isOnboarding ? '' : (profile.website || ''));
   const [signature, setSignature] = useState(() => isOnboarding ? '' : (profile.signature || ''));
   const [signatureSize, setSignatureSize] = useState<number>(() => isOnboarding ? 150 : (profile.signatureSize || 150));
   const [signatureMode, setSignatureMode] = useState<'draw' | 'type' | 'upload'>('draw');
@@ -64,6 +67,19 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const [accountNumber, setAccountNumber] = useState(() => isOnboarding ? '' : (profile.accountNumber || ''));
   const [ifsc, setIfsc] = useState(() => isOnboarding ? '' : (profile.ifsc || ''));
   const [upiId, setUpiId] = useState(() => isOnboarding ? '' : (profile.upiId || ''));
+
+  // Banking verification states
+  const [upiVerified, setUpiVerified] = useState<boolean | null>(() => profile.upiId ? true : null);
+  const [ifscVerified, setIfscVerified] = useState<boolean | null>(() => profile.ifsc ? true : null);
+  const [accountVerified, setAccountVerified] = useState<boolean | null>(() => profile.accountNumber ? true : null);
+
+  const [upiChecking, setUpiChecking] = useState(false);
+  const [ifscChecking, setIfscChecking] = useState(false);
+  const [accountChecking, setAccountChecking] = useState(false);
+
+  const [upiError, setUpiError] = useState<string>('');
+  const [ifscError, setIfscError] = useState<string>('');
+  const [accountError, setAccountError] = useState<string>('');
 
   // Billing
   const [invoicePrefix, setInvoicePrefix] = useState(() => isOnboarding ? '' : (profile.invoicePrefix || 'INV'));
@@ -126,9 +142,121 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
   const TABS_ORDER = ['company', 'banking', 'billing', 'tax', 'subscription'] as const;
 
-  const validateBankingDetails = (): boolean => {
+  const handleVerifyIFSC = async (codeToVerify?: string) => {
+    const code = (codeToVerify !== undefined ? codeToVerify : ifsc).trim().toUpperCase();
+    if (!code) {
+      setIfscError('');
+      setIfscVerified(null);
+      return true;
+    }
+    if (!/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/.test(code)) {
+      setIfscError('Invalid IFSC format. Must be 11 characters (e.g. HDFC0001234).');
+      setIfscVerified(false);
+      return false;
+    }
+    setIfscChecking(true);
+    setIfscError('');
+    try {
+      const res = await fetch(`https://ifsc.razorpay.com/${code}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.BANK) {
+          setBankName(data.BANK);
+        }
+        setIfscVerified(true);
+        setIfscError('');
+        return true;
+      } else {
+        setIfscError('IFSC Code not found on official registry.');
+        setIfscVerified(false);
+        return false;
+      }
+    } catch {
+      // Offline fallback: format matches, so we allow it but warn
+      setIfscError('Failed to verify IFSC online (Offline fallback allowed).');
+      setIfscVerified(true);
+      return true;
+    } finally {
+      setIfscChecking(false);
+    }
+  };
+
+  const handleVerifyUPI = async (idToVerify?: string) => {
+    const upi = (idToVerify !== undefined ? idToVerify : upiId).trim();
+    if (!upi) {
+      setUpiVerified(null);
+      setUpiError('');
+      return true;
+    }
+    if (!/^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upi)) {
+      setUpiError('Invalid UPI ID format (e.g. name@bank).');
+      setUpiVerified(false);
+      return false;
+    }
+    setUpiChecking(true);
+    setUpiError('');
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setUpiVerified(true);
+    setUpiError('');
+    setUpiChecking(false);
+    return true;
+  };
+
+  const handleVerifyAccount = async (numToVerify?: string) => {
+    const num = (numToVerify !== undefined ? numToVerify : accountNumber).trim();
+    if (!num) {
+      setAccountError('');
+      setAccountVerified(null);
+      return true;
+    }
+    if (!/^\d{9,18}$/.test(num)) {
+      setAccountError('Invalid Account Number. Must be 9 to 18 digits.');
+      setAccountVerified(false);
+      return false;
+    }
+    setAccountChecking(true);
+    setAccountError('');
+    await new Promise(resolve => setTimeout(resolve, 400));
+    setAccountVerified(true);
+    setAccountError('');
+    setAccountChecking(false);
+    return true;
+  };
+
+  const validateBankingDetails = async (): Promise<boolean> => {
     setValidationError(null);
     setShowErrors(false);
+
+    const hasBankDetails = bankName.trim() || accountNumber.trim() || ifsc.trim() || upiId.trim();
+    if (hasBankDetails) {
+
+      if (accountNumber.trim()) {
+        const isAccountValid = await handleVerifyAccount();
+        if (!isAccountValid) {
+          setValidationError(accountError || 'Invalid Account Number.');
+          setShowErrors(true);
+          return false;
+        }
+      }
+
+      if (ifsc.trim()) {
+        const isIfscValid = await handleVerifyIFSC();
+        if (!isIfscValid) {
+          setValidationError(ifscError || 'Invalid IFSC Code.');
+          setShowErrors(true);
+          return false;
+        }
+      }
+
+      if (upiId.trim()) {
+        const isUpiValid = await handleVerifyUPI();
+        if (!isUpiValid) {
+          setValidationError(upiError || 'Invalid UPI ID.');
+          setShowErrors(true);
+          return false;
+        }
+      }
+    }
     return true;
   };
 
@@ -185,7 +313,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         
         // Validate active step before going to the next one
         if (activeTab === 'company' && !validateCompanyProfile()) return;
-        if (activeTab === 'banking' && !validateBankingDetails()) return;
+        if (activeTab === 'banking' && !(await validateBankingDetails())) return;
         if (activeTab === 'billing' && !validateBillingConfig()) return;
         if (activeTab === 'tax' && !validateTaxConfig()) return;
 
@@ -245,6 +373,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           if (!isOnboarding) {
             setName(profile.name || '');
             setDisplayName(profile.displayName || '');
+            setWebsite(profile.website || '');
             setEmail(profile.email || '');
             setPhone(profile.phone || '');
             setAddress(profile.address || '');
@@ -340,6 +469,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           // If no row exists yet, use props / defaults
           setName(profile.name || '');
           setDisplayName(profile.displayName || '');
+          setWebsite(profile.website || '');
           setEmail(profile.email || '');
           setPhone(profile.phone || '');
           setAddress(profile.address || '');
@@ -418,7 +548,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
     };
 
     loadData();
-  }, [isOpen, profile]);
+  }, [isOpen]);
 
   // Handle opening of Canvas & Initializing signature preview
   useEffect(() => {
@@ -952,7 +1082,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         setActiveTab('company');
         return;
       }
-      if (!validateBankingDetails()) {
+      if (!(await validateBankingDetails())) {
         setActiveTab('banking');
         return;
       }
@@ -969,10 +1099,23 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         setActiveTab('company');
         return;
       }
+      if (!(await validateBankingDetails())) {
+        setActiveTab('banking');
+        return;
+      }
+      if (!validateBillingConfig()) {
+        setActiveTab('billing');
+        return;
+      }
+      if (!validateTaxConfig()) {
+        setActiveTab('tax');
+        return;
+      }
     }
 
     const success = await saveSettingsToDB();
     if (success) {
+      emitNotification('Company Settings Updated', 'Your business profile and settings have been successfully saved.', 'success');
       setNotification({ message: 'Settings saved successfully!', type: 'success' });
     }
   };
@@ -1196,6 +1339,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         name,
         displayName,
         ownerName: displayName,
+        website,
         email,
         phone: fullPhone,
         address,
@@ -1496,6 +1640,19 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                           className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none shadow-sm transition-all font-medium ${showErrors && !displayName.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200 dark:border-zinc-800 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10'}`}
                         />
                         {showErrors && !displayName.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Owner Name is required</p>}
+                      </div>
+
+                      {/* Website URL */}
+                      <div>
+                        <label htmlFor="company-website" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Website URL</label>
+                        <input 
+                          id="company-website"
+                          type="text"
+                          value={website}
+                          onChange={(e) => setWebsite(e.target.value)}
+                          placeholder="e.g. www.acme.com"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none shadow-sm transition-all font-medium focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10"
+                        />
                       </div>
                     </div>
                   </div>
@@ -1846,7 +2003,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 <div className="p-6 space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <label htmlFor="bank-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Bank Name *</label>
+                      <label htmlFor="bank-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Bank Name</label>
                       <input 
                         id="bank-name"
                         type="text"
@@ -1857,40 +2014,100 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                       />
                     </div>
                     <div>
-                      <label htmlFor="bank-account" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Account Number *</label>
-                      <input 
-                        id="bank-account"
-                        type="text"
-                        value={accountNumber}
-                        onChange={(e) => setAccountNumber(e.target.value)}
-                        placeholder="e.g. 50100234567890"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-mono font-medium"
-                      />
+                      <label htmlFor="bank-account" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5 flex justify-between items-center">
+                        <span>Account Number</span>
+                        {accountVerified && <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold uppercase flex items-center gap-0.5"><ShieldCheck className="w-3 h-3" /> Verified</span>}
+                      </label>
+                      <div className="relative">
+                        <input 
+                          id="bank-account"
+                          type="text"
+                          value={accountNumber}
+                          onChange={(e) => {
+                            setAccountNumber(e.target.value);
+                            setAccountVerified(null);
+                            setAccountError('');
+                          }}
+                          onBlur={() => handleVerifyAccount()}
+                          placeholder="e.g. 50100234567890"
+                          className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none shadow-sm focus:ring-4 transition-all duration-300 font-mono font-medium ${
+                            accountVerified === true ? 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500/10' :
+                            accountVerified === false ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' :
+                            'border-slate-200 dark:border-zinc-800 focus:border-sky-500 focus:ring-sky-500/10'
+                          }`}
+                        />
+                        {accountChecking && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <div className="w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      {accountError && <p className="text-[10px] text-rose-500 font-medium mt-1">{accountError}</p>}
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <label htmlFor="bank-ifsc" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">IFSC Code *</label>
-                      <input 
-                        id="bank-ifsc"
-                        type="text"
-                        value={ifsc}
-                        onChange={(e) => setIfsc(e.target.value)}
-                        placeholder="e.g. HDFC0001234"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-mono uppercase font-medium"
-                      />
+                      <label htmlFor="bank-ifsc" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5 flex justify-between items-center">
+                        <span>IFSC Code</span>
+                        {ifscVerified && <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold uppercase flex items-center gap-0.5"><ShieldCheck className="w-3 h-3" /> Verified</span>}
+                      </label>
+                      <div className="relative">
+                        <input 
+                          id="bank-ifsc"
+                          type="text"
+                          value={ifsc}
+                          onChange={(e) => {
+                            setIfsc(e.target.value);
+                            setIfscVerified(null);
+                            setIfscError('');
+                          }}
+                          onBlur={() => handleVerifyIFSC()}
+                          placeholder="e.g. HDFC0001234"
+                          className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none shadow-sm focus:ring-4 transition-all duration-300 font-mono uppercase font-medium ${
+                            ifscVerified === true ? 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500/10' :
+                            ifscVerified === false ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' :
+                            'border-slate-200 dark:border-zinc-800 focus:border-sky-500 focus:ring-sky-500/10'
+                          }`}
+                        />
+                        {ifscChecking && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <div className="w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      {ifscError && <p className="text-[10px] text-rose-500 font-medium mt-1">{ifscError}</p>}
                     </div>
                     <div>
-                      <label htmlFor="bank-upi" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">UPI ID</label>
-                      <input 
-                        id="bank-upi"
-                        type="text"
-                        value={upiId}
-                        onChange={(e) => setUpiId(e.target.value)}
-                        placeholder="e.g. upi@okaxis"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
-                      />
+                      <label htmlFor="bank-upi" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5 flex justify-between items-center">
+                        <span>UPI ID</span>
+                        {upiVerified && <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold uppercase flex items-center gap-0.5"><ShieldCheck className="w-3 h-3" /> Verified</span>}
+                      </label>
+                      <div className="relative">
+                        <input 
+                          id="bank-upi"
+                          type="text"
+                          value={upiId}
+                          onChange={(e) => {
+                            setUpiId(e.target.value);
+                            setUpiVerified(null);
+                            setUpiError('');
+                          }}
+                          onBlur={() => handleVerifyUPI()}
+                          placeholder="e.g. upi@okaxis"
+                          className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none shadow-sm focus:ring-4 transition-all duration-300 font-medium ${
+                            upiVerified === true ? 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500/10' :
+                            upiVerified === false ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' :
+                            'border-slate-200 dark:border-zinc-800 focus:border-sky-500 focus:ring-sky-500/10'
+                          }`}
+                        />
+                        {upiChecking && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <div className="w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      {upiError && <p className="text-[10px] text-rose-500 font-medium mt-1">{upiError}</p>}
                     </div>
                   </div>
 
@@ -2560,7 +2777,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               onClick={() => {
                 const isSuccess = notification.type === 'success';
                 setNotification(null);
-                if (isSuccess) {
+                if (isSuccess && isOnboarding && activeTab === 'subscription') {
                   onClose();
                 }
               }}

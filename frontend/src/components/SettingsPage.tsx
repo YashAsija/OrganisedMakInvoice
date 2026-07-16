@@ -6,6 +6,7 @@ import {
   Smartphone, Monitor, Zap
 } from 'lucide-react';
 import { BusinessProfile } from '../types';
+import { emitNotification } from '../lib/notifications';
 
 interface SettingsPageProps {
   theme: 'light' | 'dark';
@@ -61,6 +62,7 @@ export default function SettingsPage({
 
   const showSaved = () => {
     setSavedMsg(true);
+    emitNotification('Preferences Updated', 'Your workspace settings have been successfully saved.', 'success');
     setTimeout(() => setSavedMsg(false), 2000);
   };
 

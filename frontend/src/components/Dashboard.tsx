@@ -143,28 +143,79 @@ export default function Dashboard({
   React.useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, []);
+  const [dashPreviewScale, setDashPreviewScale] = useState(0.78);
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        const fitScale = Math.max(0.35, Math.min(0.78, (window.innerWidth - 32) / 794));
+        setDashPreviewScale(fitScale);
+      } else {
+        setDashPreviewScale(0.78);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isDesktopSidebarExpanded, setIsDesktopSidebarExpanded] = useState(true);
   const [isMasterExpanded, setIsMasterExpanded] = useState(true);
   const [isCatalogExpanded, setIsCatalogExpanded] = useState(true);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  
+  // App Notifications Global State
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>(() => {
+    const cached = localStorage.getItem('makbills_notifications');
+    if (cached) {
+      try { return JSON.parse(cached); } catch(e) {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('makbills_notifications', JSON.stringify(notifications));
+  }, [notifications]);
+
+  useEffect(() => {
+    const handleNotification = (e: any) => {
+      const { title, message, type } = e.detail;
+      const newNotif = {
+        id: Date.now().toString() + Math.random().toString(),
+        title,
+        message,
+        type,
+        timestamp: new Date().toISOString(),
+        read: false
+      };
+      setNotifications(prev => [newNotif, ...prev]);
+    };
+    window.addEventListener('mak_notification', handleNotification);
+    return () => window.removeEventListener('mak_notification', handleNotification);
+  }, []);
+
   const [hoveredDashboardChartIndex, setHoveredDashboardChartIndex] = useState<number | null>(null);
   const [hoveredReportsChartIndex1, setHoveredReportsChartIndex1] = useState<number | null>(null);
   const [hoveredReportsChartIndex2, setHoveredReportsChartIndex2] = useState<number | null>(null);
   const [dashboardChartRange, setDashboardChartRange] = useState<'7d' | '1m' | '3m' | '6m' | '1y' | 'all'>('6m');
   const [reportsChartRange, setReportsChartRange] = useState<'7d' | '1m' | '3m' | '6m' | '1y' | 'all'>('6m');
   const [showAllExpenses, setShowAllExpenses] = useState(false);
+  
   useEffect(() => {
-    if (!isProfileDropdownOpen) return;
+    if (!isProfileDropdownOpen && !isNotificationsOpen) return;
     const handleOutsideClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest('#profile-dropdown-container') && !target.closest('#profile-dropdown-container-other')) {
+      if (isProfileDropdownOpen && !target.closest('#profile-dropdown-container') && !target.closest('#profile-dropdown-container-other')) {
         setIsProfileDropdownOpen(false);
+      }
+      if (isNotificationsOpen && !target.closest('#notifications-dropdown-container')) {
+        setIsNotificationsOpen(false);
       }
     };
     document.addEventListener('click', handleOutsideClick);
     return () => document.removeEventListener('click', handleOutsideClick);
-  }, [isProfileDropdownOpen]);
+  }, [isProfileDropdownOpen, isNotificationsOpen]);
 
   // Reusable Master & Catalog form builders state
   const [editingMasterItem, setEditingMasterItem] = useState<MasterItemType | null>(null);
@@ -928,7 +979,7 @@ export default function Dashboard({
 
         {/* ── Header Banner ── */}
         <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 6px rgba(110,96,80,0.07)' }}>
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-5 md:p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-4 sm:p-5 md:p-6">
             {/* Left: Icon + title + description */}
             <div className="flex items-start gap-4">
               <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${accent ? `${accent.iconBg} ${accent.iconBgDark}` : 'bg-[#0f172a]'}`} style={{ boxShadow: accent ? '0 3px 10px rgba(0,0,0,0.18)' : '0 3px 10px rgba(110,96,80,0.32)' }}>
@@ -936,7 +987,7 @@ export default function Dashboard({
               </div>
               <div>
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <h2 className="text-xl font-black text-[#3D2C1E] dark:text-white uppercase tracking-tight leading-none">
+                  <h2 className="text-lg md:text-xl font-black text-[#3D2C1E] dark:text-white uppercase tracking-tight leading-none">
                     {title}
                   </h2>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${accent ? `${accent.badgeBg} ${accent.badgeText}` : 'bg-[#F0E8DC] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 border-[#e2e8f0]/70 dark:border-zinc-700'}`}>
@@ -1091,7 +1142,8 @@ export default function Dashboard({
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   {/* Table Head */}
                   <thead>
@@ -1164,14 +1216,14 @@ export default function Dashboard({
                           <div className="flex justify-end items-center gap-0.5">
                             <button
                               onClick={() => { setEditingMasterItem(item); setIsMasterModalOpen(true); }}
-                              className="p-2 text-[#64748b]/70 hover:text-[#0f172a] dark:text-zinc-500 dark:hover:text-zinc-200 hover:bg-[#F0E8DC] dark:hover:bg-zinc-800 rounded-lg transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+                              className="p-2 text-[#64748b]/70 hover:text-[#0f172a] dark:text-zinc-500 dark:hover:text-zinc-200 hover:bg-[#F0E8DC] dark:hover:bg-zinc-800 rounded-lg transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                               aria-label="Edit record"
                             >
                               <PenTool className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleDeleteMasterItem(item.id)}
-                              className="p-2 text-rose-400/70 hover:text-rose-500 dark:text-rose-500/60 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+                              className="p-2 text-rose-400/70 hover:text-rose-500 dark:text-rose-500/60 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                               aria-label="Delete record"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1184,8 +1236,87 @@ export default function Dashboard({
                 </table>
               </div>
 
+              {/* Mobile Card View */}
+              <div className="md:hidden flex flex-col divide-y divide-[#e2e8f0]/50 dark:divide-zinc-800/60">
+                {pagedList.map((item, rowIdx) => (
+                  <div key={item.id} className="p-4 flex flex-col gap-3">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex items-start gap-3">
+                        {/* Avatar */}
+                        <div className={`w-9 h-9 mt-0.5 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#F0E8DC] border-[#e2e8f0]/60 dark:bg-zinc-800 dark:border-zinc-700'}`}>
+                          {activeTab === 'master_vendor' && <User className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                          {activeTab === 'master_transport' && <Truck className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                          {activeTab === 'master_hsn' && <FileSpreadsheet className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                          {activeTab === 'catalog_material' && <Wrench className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                          {activeTab === 'catalog_category' && <Tag className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-black uppercase tracking-tight text-[#3D2C1E] dark:text-white block truncate">
+                            {String(item[columns[0].key] || '')}
+                          </span>
+                          <span className="text-[10px] text-[#64748b]/70 font-bold uppercase tracking-wider block mt-0.5">
+                            {columns[0].header}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => { setEditingMasterItem(item); setIsMasterModalOpen(true); }}
+                          className="p-2 text-[#64748b]/70 hover:text-[#0f172a] dark:text-zinc-500 dark:hover:text-zinc-200 bg-[#F0E8DC]/50 hover:bg-[#F0E8DC] dark:bg-zinc-800/50 dark:hover:bg-zinc-800 rounded-lg transition-all"
+                        >
+                          <PenTool className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMasterItem(item.id)}
+                          className="p-2 text-rose-400/70 hover:text-rose-500 bg-rose-50/50 hover:bg-rose-50 dark:bg-rose-950/20 dark:hover:bg-rose-950/30 rounded-lg transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Remaining Columns */}
+                    {columns.length > 1 && (
+                      <div className="grid grid-cols-1 gap-2.5 mt-2 bg-[#FCFAF7] dark:bg-zinc-950/40 border border-[#e2e8f0]/40 dark:border-zinc-800 p-3 rounded-xl">
+                        {columns.slice(1).map((col, idx2) => {
+                          const cellVal = item[col.key];
+                          return (
+                            <div key={idx2} className="flex justify-between items-start gap-4">
+                              <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 font-bold uppercase tracking-wider shrink-0 mt-0.5">{col.header}</span>
+                              <span className="text-xs text-[#0f172a] dark:text-zinc-200 font-medium text-right break-words overflow-hidden">
+                                {col.key === 'rate' ? (
+                                  <span className="font-mono font-bold">
+                                    {currencySymbol}{parseFloat(cellVal || 0).toLocaleString()}
+                                  </span>
+                                ) : col.key === 'category' ? (
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${getCategoryBadgeStyle(cellVal)}`}>
+                                    {cellVal || 'General'}
+                                  </span>
+                                ) : col.key === 'email' ? (
+                                  <span className="text-sky-600 dark:text-sky-400 font-medium font-mono lowercase break-all">
+                                    {cellVal || '—'}
+                                  </span>
+                                ) : col.key === 'phone' ? (
+                                  <span className="text-[#64748b]/90 dark:text-zinc-400 font-mono">
+                                    {cellVal || '—'}
+                                  </span>
+                                ) : (
+                                  <span>{String(cellVal || '—')}</span>
+                                )}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
               {/* Pagination Strip */}
-              <div className="flex items-center justify-between px-4 py-3 border-t border-[#e2e8f0]/40 dark:border-zinc-800 bg-[#FDFAF7]/60 dark:bg-zinc-950/30">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-[#e2e8f0]/40 dark:border-zinc-800 bg-[#FDFAF7]/60 dark:bg-zinc-950/30">
                 <span className="text-[10px] text-[#64748b]/75 dark:text-zinc-500 font-medium">
                   Showing {Math.min(safePage * CLIENT_PAGE_SIZE + 1, filteredList.length)}–{Math.min((safePage + 1) * CLIENT_PAGE_SIZE, filteredList.length)} of {filteredList.length} {activeTab === 'master_vendor' ? 'client' : activeTab === 'master_transport' ? 'transport' : 'registry'} records
                 </span>
@@ -1215,9 +1346,9 @@ export default function Dashboard({
 
         {/* ── Master Registry Form Modal ── */}
         {isMasterModalOpen && editingMasterItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/45 backdrop-blur-3xs">
-            <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
-              <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/45 backdrop-blur-3xs">
+            <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-3xl flex flex-col max-h-[90vh] shadow-2xl animate-in zoom-in-95 duration-150">
+              <div className="flex justify-between items-center p-4 sm:p-5 pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
                 <h3 className="text-xs font-extrabold text-slate-800 dark:text-white uppercase tracking-tight">Record Editor</h3>
                 <button
                   onClick={() => { setIsMasterModalOpen(false); setEditingMasterItem(null); }}
@@ -1227,52 +1358,54 @@ export default function Dashboard({
                 </button>
               </div>
 
-              <form
-                onSubmit={(e) => { e.preventDefault(); handleSaveMasterItem(editingMasterItem); }}
-                className="space-y-3 text-left"
-              >
-                {fields.map((f, idx3) => (
-                  <div key={idx3}>
-                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">{f.label}</label>
-                    {f.type === 'select' ? (
-                      <select
-                        value={editingMasterItem[f.key] || ''}
-                        onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: e.target.value })}
-                        className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none"
-                        required
-                      >
-                        <option value="">Select type</option>
-                        {f.options?.map((opt, idxOpt) => (
-                          <option key={idxOpt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type={f.type}
-                        value={editingMasterItem[f.key] || ''}
-                        onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: f.type === 'number' ? parseFloat(e.target.value) : e.target.value })}
-                        className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none"
-                        required
-                      />
-                    )}
+              <div className="p-4 sm:p-5 overflow-y-auto">
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleSaveMasterItem(editingMasterItem); }}
+                  className="space-y-3 text-left"
+                >
+                  {fields.map((f, idx3) => (
+                    <div key={idx3}>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">{f.label}</label>
+                      {f.type === 'select' ? (
+                        <select
+                          value={editingMasterItem[f.key] || ''}
+                          onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: e.target.value })}
+                          className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none"
+                          required
+                        >
+                          <option value="">Select type</option>
+                          {f.options?.map((opt, idxOpt) => (
+                            <option key={idxOpt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type={f.type}
+                          value={editingMasterItem[f.key] || ''}
+                          onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: f.type === 'number' ? parseFloat(e.target.value) : e.target.value })}
+                          className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none"
+                          required
+                        />
+                      )}
+                    </div>
+                  ))}
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setIsMasterModalOpen(false); setEditingMasterItem(null); }}
+                      className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-500 rounded-lg text-[9px] font-bold cursor-pointer transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-1.5 bg-[#0f172a] hover:bg-[#5C5043] text-white rounded-lg text-[9px] font-bold cursor-pointer transition-all shadow-md shadow-[#0f172a]/20"
+                    >
+                      Commit Record
+                    </button>
                   </div>
-                ))}
-                <div className="pt-2 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => { setIsMasterModalOpen(false); setEditingMasterItem(null); }}
-                    className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-500 rounded-lg text-[9px] font-bold cursor-pointer transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-1.5 bg-[#0f172a] hover:bg-[#5C5043] text-white rounded-lg text-[9px] font-bold cursor-pointer transition-all shadow-md shadow-[#0f172a]/20"
-                  >
-                    Commit Record
-                  </button>
-                </div>
-              </form>
+                </form>
+              </div>
             </div>
           </div>
         )}
@@ -2017,13 +2150,83 @@ export default function Dashboard({
 
         {/* Right Side: Notifications + Profile Avatar */}
         <div className="flex items-center gap-3 sm:gap-5">
-          <button 
-            onClick={() => alert('You have no new notifications at this time.')}
-            className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 hover:text-slate-800 dark:text-white/70 dark:hover:text-white transition-colors cursor-pointer border border-transparent dark:hover:border-white/10"
-          >
-            <Bell className="w-[18px] h-[18px]" />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-zinc-950" />
-          </button>
+          <div className="relative" id="notifications-dropdown-container">
+            <button 
+              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+              className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 hover:text-slate-800 dark:text-white/70 dark:hover:text-white transition-colors cursor-pointer border border-transparent dark:hover:border-white/10"
+            >
+              <Bell className="w-[18px] h-[18px]" />
+              {notifications.some(n => !n.read) && (
+                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-zinc-950" />
+              )}
+            </button>
+            
+            {isNotificationsOpen && (
+              <div className="absolute right-[-60px] sm:right-0 mt-3 w-[320px] sm:w-[380px] rounded-2xl bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 shadow-[0_8px_30px_rgba(136,118,92,0.12)] py-2 z-50 text-sans animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="px-4 py-2.5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
+                  <span className="font-bold text-[13px] text-slate-800 dark:text-white">Notifications</span>
+                  <div className="flex gap-2.5 items-center">
+                    <button 
+                      onClick={() => setNotifications(prev => prev.map(n => ({...n, read: true})))}
+                      className="text-[11px] font-bold text-sky-600 hover:text-sky-700 dark:text-sky-400 cursor-pointer transition-colors"
+                    >
+                      Mark all read
+                    </button>
+                    <div className="w-[1px] h-3 bg-slate-200 dark:bg-zinc-700"></div>
+                    <button 
+                      onClick={() => setNotifications([])}
+                      className="text-[11px] font-bold text-slate-400 hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300 cursor-pointer transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="max-h-[360px] overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-10 text-center flex flex-col items-center justify-center">
+                      <div className="w-12 h-12 bg-slate-50 dark:bg-zinc-800/50 rounded-full flex items-center justify-center mb-3">
+                        <Bell className="w-5 h-5 text-slate-300 dark:text-zinc-600" />
+                      </div>
+                      <p className="text-[13px] text-slate-500 dark:text-zinc-400 font-medium">You're all caught up!</p>
+                      <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">No new notifications at this time.</p>
+                    </div>
+                  ) : (
+                    notifications.map(notif => (
+                      <div 
+                        key={notif.id} 
+                        className={`px-4 py-3.5 border-b border-slate-50 dark:border-zinc-800/30 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors flex gap-3 cursor-pointer ${!notif.read ? 'bg-sky-50/40 dark:bg-sky-900/10' : ''}`}
+                        onClick={() => setNotifications(prev => prev.map(n => n.id === notif.id ? {...n, read: true} : n))}
+                      >
+                        <div className="mt-0.5 shrink-0">
+                          {notif.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                          {notif.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-500" />}
+                          {notif.type === 'error' && <AlertCircle className="w-4 h-4 text-rose-500" />}
+                          {notif.type === 'info' && <Info className="w-4 h-4 text-sky-500" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-[12.5px] truncate leading-tight ${notif.read ? 'font-semibold text-slate-600 dark:text-zinc-300' : 'font-bold text-slate-800 dark:text-white'}`}>
+                            {notif.title}
+                          </p>
+                          <p className="text-[11.5px] text-slate-500 dark:text-zinc-400 mt-1 line-clamp-2 leading-snug">
+                            {notif.message}
+                          </p>
+                          <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1.5 font-medium flex items-center gap-1.5">
+                            {new Date(notif.timestamp).toLocaleString(undefined, {
+                              month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                        {!notif.read && (
+                          <div className="w-2 h-2 rounded-full bg-sky-500 mt-1.5 shrink-0 shadow-[0_0_8px_rgba(14,165,233,0.5)]" />
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           
           <div className="w-px h-6 bg-slate-200 dark:bg-zinc-800 hidden sm:block"></div>
 
@@ -2168,14 +2371,14 @@ export default function Dashboard({
             </section>
 
             {/* Search, Action Header and Filters */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wider">Invoices Ledger</h2>
                 <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black">{filteredInvoices.length} Bills</span>
               </div>
               <button
                 onClick={() => onOpenInvoiceEditor(null)}
-                className="px-4 py-1.5 bg-gradient-to-r from-[#0f172a] to-[#64748b] hover:from-[#5C5043] hover:to-[#0f172a] text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm shadow-[#64748b]/20 transition-all active:scale-95"
+                className="px-4 py-1.5 bg-gradient-to-r from-[#0f172a] to-[#64748b] hover:from-[#5C5043] hover:to-[#0f172a] text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm shadow-[#64748b]/20 transition-all active:scale-95 whitespace-nowrap"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Create Invoice</span>
@@ -2234,7 +2437,7 @@ export default function Dashboard({
                         />
                       </div>
                       <div className="flex-1 flex flex-col gap-2.5">
-                        <div className="flex justify-between items-start">
+                        <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-3">
                           <div>
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-[10px] font-black text-sky-600 font-mono tracking-tight">{inv.invoiceNumber}</span>
@@ -2270,7 +2473,7 @@ export default function Dashboard({
                         </div>
 
                         {/* Footer list triggers */}
-                        <div className="pt-2 border-t border-[#e2e8f0]/30 dark:border-zinc-800 flex items-center justify-between text-[10px] text-slate-400" onClick={(e) => e.stopPropagation()}>
+                        <div className="pt-2 border-t border-[#e2e8f0]/30 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-2">
                             <span className="flex items-center gap-1 text-[8px] font-mono font-bold tracking-tight text-[#64748b]/60">
                               <span className={`w-1 h-1 rounded-full ${inv.userId === 'local' ? 'bg-amber-400' : 'bg-sky-400'}`} />
@@ -2522,7 +2725,7 @@ export default function Dashboard({
             
             {/* ── Page Header ── */}
             <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 6px rgba(110,96,80,0.07)' }}>
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-5 md:p-6">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-4 sm:p-5 md:p-6">
                 {/* Left: Icon + title + description */}
                 <div className="flex items-start gap-4">
                   <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-rose-500 dark:bg-rose-600" style={{ boxShadow: '0 3px 10px rgba(0,0,0,0.18)' }}>
@@ -2530,7 +2733,7 @@ export default function Dashboard({
                   </div>
                   <div>
                     <div className="flex items-center gap-2.5 flex-wrap">
-                      <h2 className="text-xl font-black text-[#3D2C1E] dark:text-white uppercase tracking-tight leading-none">
+                      <h2 className="text-lg md:text-xl font-black text-[#3D2C1E] dark:text-white uppercase tracking-tight leading-none">
                         Billed Clients Ledger Book
                       </h2>
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-rose-50 border-rose-100 dark:bg-rose-950/40 dark:border-rose-900/40 text-rose-600 dark:text-rose-400">
@@ -2569,7 +2772,7 @@ export default function Dashboard({
                 {clients.map(c => (
                   <div
                     key={c.id}
-                    className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800/80 rounded-2xl p-5 shadow-xs relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-rose-500 active:border-rose-600 dark:hover:border-rose-500 dark:active:border-rose-600 hover:-translate-y-1 group flex flex-col justify-between cursor-pointer"
+                    className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800/80 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-rose-500 active:border-rose-600 dark:hover:border-rose-500 dark:active:border-rose-600 hover:-translate-y-1 group flex flex-col justify-between cursor-pointer"
                     style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.06)' }}
                   >
                     {/* card top line decoration */}
@@ -2577,9 +2780,9 @@ export default function Dashboard({
 
                     <div>
                       {/* Name & Company header */}
-                      <div className="flex justify-between items-start gap-2">
-                        <div className="space-y-1">
-                          <h4 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-tight truncate max-w-[160px]">{c.name}</h4>
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="space-y-1 flex-1 min-w-0">
+                          <h4 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-tight truncate">{c.name}</h4>
                           {c.companyName && (
                             <span 
                               className="text-[9px] bg-[#FCFAF7] dark:bg-zinc-950 text-[#64748b] dark:text-zinc-300 border border-[#e2e8f0]/50 dark:border-zinc-800 font-extrabold px-2 py-0.5 rounded-md inline-block uppercase tracking-wider"
@@ -2658,7 +2861,7 @@ export default function Dashboard({
               {/* top-edge highlight gives the 'raised panel' feel */}
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e2e8f0] to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-br from-[#F9F5F0]/80 via-white/30 to-transparent dark:from-zinc-800/20 pointer-events-none" />
-              <div className="relative flex items-center justify-between gap-4 px-6 py-5">
+              <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-5 sm:px-6 py-4 sm:py-5">
                 <div className="flex items-center gap-4">
                   <div
                     className="w-11 h-11 rounded-xl bg-[#0f172a] flex items-center justify-center shrink-0"
@@ -2691,7 +2894,7 @@ export default function Dashboard({
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e2e8f0]/80 to-transparent" />
 
               {/* Card header */}
-              <div className="flex items-center justify-between gap-3 px-6 py-3.5 border-b border-[#e2e8f0]/40 dark:border-zinc-800" style={{ background: 'linear-gradient(to right, #FDFAF7, #FAF7F4)' }}>
+              <div className="flex flex-wrap items-start sm:items-center justify-between gap-3 px-5 sm:px-6 py-3.5 border-b border-[#e2e8f0]/40 dark:border-zinc-800" style={{ background: 'linear-gradient(to right, #FDFAF7, #FAF7F4)' }}>
                 <div className="flex items-center gap-2.5">
                   <div className="w-1.5 h-4 rounded-full" style={{ background: 'linear-gradient(to bottom, #D4B896, #C6A87D)' }} />
                   <div>
@@ -2843,7 +3046,7 @@ export default function Dashboard({
               </div>
             </section>
 
-            <div className="mt-8 mb-4 flex items-center justify-between gap-3 px-2">
+            <div className="mt-8 mb-4 flex flex-wrap items-center justify-between gap-3 px-2">
               <div className="flex items-center gap-2.5">
                 <div className="w-1.5 h-4 rounded-full" style={{ background: 'linear-gradient(to bottom, #D4B896, #C6A87D)' }} />
                 <div>
@@ -2854,20 +3057,20 @@ export default function Dashboard({
             </div>
 
             {/* Income and Expense Analytics report */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
               {/* Gross Profit Card */}
-              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-emerald-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
-                <div className="flex justify-between items-start">
-                  <div className="w-8.5 h-8.5 rounded-full bg-[#ECFDF5] text-[#10B981] border border-[#A7F3D0] flex items-center justify-center font-black text-sm">
+              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-emerald-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
+                <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-2">
+                  <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-[#ECFDF5] text-[#10B981] border border-[#A7F3D0] flex items-center justify-center font-black text-xs sm:text-sm">
                     ₹
                   </div>
-                  <span className="text-[9px] font-black text-[#10B981] bg-[#ECFDF5] border border-[#A7F3D0] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="text-[8px] sm:text-[9px] font-black text-[#10B981] bg-[#ECFDF5] border border-[#A7F3D0] px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider">
                     Cleared
                   </span>
                 </div>
-                <div className="mt-2">
-                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Gross Profit</span>
-                  <span className="text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono">
+                <div className="mt-2 min-w-0">
+                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block truncate">Gross Profit</span>
+                  <span className="text-sm sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono truncate">
                     {currencySymbol}{reportedIncomePaid.toLocaleString()}
                   </span>
                 </div>
@@ -2882,18 +3085,18 @@ export default function Dashboard({
               </div>
 
               {/* Business Expenses Card */}
-              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-rose-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
-                <div className="flex justify-between items-start">
-                  <div className="w-8.5 h-8.5 rounded-full bg-[#FEF2F2] text-[#EF4444] border border-[#FEE2E2] flex items-center justify-center">
-                    <MinusCircle className="w-4 h-4" />
+              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-rose-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
+                <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-2">
+                  <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-[#FEF2F2] text-[#EF4444] border border-[#FEE2E2] flex items-center justify-center">
+                    <MinusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-                  <span className="text-[9px] font-black text-[#EF4444] bg-[#FEF2F2] border border-[#FEE2E2] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="text-[8px] sm:text-[9px] font-black text-[#EF4444] bg-[#FEF2F2] border border-[#FEE2E2] px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider">
                     Expenses
                   </span>
                 </div>
-                <div className="mt-2">
-                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Business Expenses</span>
-                  <span className="text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono">
+                <div className="mt-2 min-w-0">
+                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block truncate">Business Expenses</span>
+                  <span className="text-sm sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono truncate">
                     {currencySymbol}{totalReportedExpenses.toLocaleString()}
                   </span>
                 </div>
@@ -2908,18 +3111,18 @@ export default function Dashboard({
               </div>
 
               {/* Pending Receivables Card */}
-              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-amber-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
-                <div className="flex justify-between items-start">
-                  <div className="w-8.5 h-8.5 rounded-full bg-[#FFFBEB] text-[#F59E0B] border border-[#FEF3C7] flex items-center justify-center">
-                    <CheckSquare className="w-4 h-4" />
+              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-amber-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
+                <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-2">
+                  <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-[#FFFBEB] text-[#F59E0B] border border-[#FEF3C7] flex items-center justify-center">
+                    <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-                  <span className="text-[9px] font-black text-[#F59E0B] bg-[#FFFBEB] border border-[#FEF3C7] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="text-[8px] sm:text-[9px] font-black text-[#F59E0B] bg-[#FFFBEB] border border-[#FEF3C7] px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider">
                     Unpaid
                   </span>
                 </div>
-                <div className="mt-2">
-                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Pending Receivables</span>
-                  <span className="text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono">
+                <div className="mt-2 min-w-0">
+                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block truncate">Pending Receivables</span>
+                  <span className="text-sm sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono truncate">
                     {currencySymbol}{reportedOutstanding.toLocaleString()}
                   </span>
                 </div>
@@ -2934,18 +3137,18 @@ export default function Dashboard({
               </div>
 
               {/* Tax Calculations Card */}
-              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-sky-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
-                <div className="flex justify-between items-start">
-                  <div className="w-8.5 h-8.5 rounded-full bg-[#F0F9FF] text-[#0284C7] border border-[#BAE6FD] flex items-center justify-center">
-                    <Percent className="w-4 h-4" />
+              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-sky-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
+                <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-2">
+                  <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-[#F0F9FF] text-[#0284C7] border border-[#BAE6FD] flex items-center justify-center">
+                    <Percent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-                  <span className="text-[9px] font-black text-[#0284C7] bg-[#F0F9FF] border border-[#BAE6FD] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="text-[8px] sm:text-[9px] font-black text-[#0284C7] bg-[#F0F9FF] border border-[#BAE6FD] px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider">
                     TAX/GST
                   </span>
                 </div>
-                <div className="mt-2">
-                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Tax Liabilities</span>
-                  <span className="text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono">
+                <div className="mt-2 min-w-0">
+                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block truncate">Tax Liabilities</span>
+                  <span className="text-sm sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono truncate">
                     {currencySymbol}{reportedTaxTotal.toLocaleString()}
                   </span>
                 </div>
@@ -3156,7 +3359,7 @@ export default function Dashboard({
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* CHART 1: Gross Profit vs Tax Liabilities */}
                   <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 p-5 rounded-2xl shadow-xs text-sans">
-                    <div className="flex justify-between items-center mb-4">
+                    <div className="flex flex-wrap justify-between items-start sm:items-center gap-2 mb-4">
                       <div>
                         <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Gross Profit & Taxes</h3>
                         <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5 font-medium">Comparative analysis of income vs tax liabilities</span>
@@ -3293,7 +3496,7 @@ export default function Dashboard({
 
                   {/* CHART 2: Earnings vs Expenses */}
                   <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 p-5 rounded-2xl shadow-xs text-sans">
-                    <div className="flex justify-between items-center mb-4">
+                    <div className="flex flex-wrap justify-between items-start sm:items-center gap-2 mb-4">
                       <div>
                         <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Earnings & Expenses</h3>
                         <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5 font-medium">Comparative analysis of business revenues vs expenses</span>
@@ -3708,7 +3911,7 @@ export default function Dashboard({
             <div className="space-y-6 text-sans animate-in fade-in duration-300">
 
               {/* KPI Cards Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
                 {/* Settled Earnings */}
                 <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-emerald-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
                   <div className="flex justify-between items-start">
@@ -3852,8 +4055,8 @@ export default function Dashboard({
                     </div>
                   </div>
 
-                  <div className="w-full overflow-x-auto select-none mt-2">
-                    <svg className="w-full min-w-[420px]" viewBox={`0 0 ${chartWidth} ${chartHeight}`} fill="none">
+                  <div className="w-full select-none mt-2">
+                    <svg className="w-full" viewBox={`0 0 ${chartWidth} ${chartHeight}`} fill="none" preserveAspectRatio="xMidYMid meet">
                       {/* Grid Lines */}
                       {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
                         const y = paddingY + ratio * usableHeight;
@@ -4189,17 +4392,19 @@ export default function Dashboard({
             </div>
 
             {/* Quick nav pills */}
-            <div className="flex items-center gap-2 flex-wrap bg-[#FCFAF7]/50 dark:bg-zinc-950/20 p-2 rounded-2xl border border-[#e2e8f0]/30 dark:border-zinc-800">
-              <span className="text-[9px] font-black text-[#64748b]/60 dark:text-zinc-500 uppercase tracking-widest pl-2">Jump to:</span>
-              {['Getting Started', 'App Walkthrough', 'Billing Policies', 'Tax & Compliance', 'Tips & Shortcuts'].map((label, i) => (
-                <a
-                  key={label}
-                  href={`#learn-section-${i}`}
-                  className="px-3 py-1 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-lg text-[10px] font-bold text-[#64748b] dark:text-zinc-400 hover:border-[#64748b]/50 hover:text-[#0f172a] dark:hover:text-white transition-all cursor-pointer shadow-2xs"
-                >
-                  {label}
-                </a>
-              ))}
+            <div className="w-full overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-2 bg-[#FCFAF7]/50 dark:bg-zinc-950/20 p-2 rounded-2xl border border-[#e2e8f0]/30 dark:border-zinc-800 min-w-max sm:min-w-0 sm:flex-wrap">
+                <span className="text-[9px] font-black text-[#64748b]/60 dark:text-zinc-500 uppercase tracking-widest pl-2 shrink-0">Jump to:</span>
+                {['Getting Started', 'App Walkthrough', 'Billing Policies', 'Tax & Compliance', 'Tips & Shortcuts'].map((label, i) => (
+                  <a
+                    key={label}
+                    href={`#learn-section-${i}`}
+                    className="px-3 py-1 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-lg text-[10px] font-bold text-[#64748b] dark:text-zinc-400 hover:border-[#64748b]/50 hover:text-[#0f172a] dark:hover:text-white transition-all cursor-pointer shadow-2xs whitespace-nowrap shrink-0"
+                  >
+                    {label}
+                  </a>
+                ))}
+              </div>
             </div>
 
             {/* Asymmetric Bento Grid Section */}
@@ -4209,7 +4414,7 @@ export default function Dashboard({
               <div id="learn-section-0" className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden flex flex-col justify-between">
                 <div className="relative">
                   <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-400 via-sky-400 to-amber-500" />
-                  <div className="p-5 border-b border-[#e2e8f0]/30 dark:border-zinc-800 flex justify-between items-center bg-[#FCFAF7]/20">
+                  <div className="p-5 border-b border-[#e2e8f0]/30 dark:border-zinc-800 flex flex-wrap justify-between items-center gap-2 bg-[#FCFAF7]/20">
                     <div className="flex items-center gap-2.5">
                       <span className="px-2 py-0.5 bg-emerald-500 text-white text-[8px] font-black uppercase tracking-widest rounded">Part A</span>
                       <h2 className="text-[11px] font-black text-[#0f172a] dark:text-white uppercase tracking-wide">Structural Walkthrough</h2>
@@ -4274,8 +4479,8 @@ export default function Dashboard({
               <div id="learn-section-2" className="lg:col-span-3 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden">
                 <div className="relative">
                   <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-violet-400 via-rose-400 to-[#64748b]" />
-                  <div className="p-5 border-b border-[#e2e8f0]/30 dark:border-zinc-800 flex justify-between items-center bg-[#FCFAF7]/20">
-                    <div className="flex items-center gap-2.5">
+                  <div className="p-5 border-b border-[#e2e8f0]/30 dark:border-zinc-800 flex flex-wrap justify-between items-center gap-2 bg-[#FCFAF7]/20">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="px-2 py-0.5 bg-[#64748b] text-white text-[8px] font-black uppercase tracking-widest rounded">Part B</span>
                       <h2 className="text-[11px] font-black text-[#0f172a] dark:text-white uppercase tracking-wide">Corporate Billing Regulations & Terms</h2>
                     </div>
@@ -4310,7 +4515,7 @@ export default function Dashboard({
 
             </div>
             <div className="flex items-start gap-3 px-4 py-3.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/40 dark:border-zinc-800 rounded-xl text-[10.5px] text-[#64748b]/80 dark:text-zinc-500">
-              <Info className="w-4 h-4 text-[#64748b] flex-shrink-0 mt-0.5" />
+              <Info className="w-4 h-4 text-[#64748b] flex-shrink-0 mt-0.5 hidden sm:block" />
               <span>This documentation applies to MakInvoices v1.2. For technical support, open the <strong className="text-[#0f172a] dark:text-zinc-300">Help & Support</strong> page from the profile menu. Policies are subject to periodic updates — last revised July 2025.</span>
             </div>
 
@@ -4615,7 +4820,7 @@ export default function Dashboard({
                   return TEMPLATE_PRESETS[0];
                 })();
 
-                const previewScale = 0.78;
+                const previewScale = dashPreviewScale;
                 return (
                   <div className="w-full bg-slate-100/50 p-2 sm:p-6 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-x-auto flex justify-center no-scrollbar">
                     <div style={{ width: `${794 * previewScale}px`, height: `${1123 * previewScale}px` }} className="shrink-0 relative">
