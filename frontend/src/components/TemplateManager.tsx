@@ -528,10 +528,10 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
             if (e.target === e.currentTarget) setSelectedTemplateForModal(null);
           }}
         >
-          <div className="relative w-full max-w-5xl bg-[#f8fafc] dark:bg-zinc-950 rounded-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden my-auto max-h-none lg:max-h-[90vh]">
+          <div className="relative w-full max-w-5xl bg-[#f8fafc] dark:bg-zinc-950 rounded-2xl shadow-2xl flex flex-col-reverse lg:flex-row overflow-hidden my-auto max-h-none lg:max-h-[90vh]">
             
             {/* Left side: Large SVG Preview */}
-            <div className="w-full lg:w-[60%] bg-[#FCFAF7] dark:bg-zinc-900 border-b lg:border-b-0 lg:border-r border-[#e2e8f0]/60 dark:border-zinc-800 p-4 sm:p-8 flex items-center justify-center lg:min-h-[60vh]">
+            <div className="w-full lg:w-[60%] bg-[#FCFAF7] dark:bg-zinc-900 border-t lg:border-t-0 lg:border-r border-[#e2e8f0]/60 dark:border-zinc-800 p-4 sm:p-8 flex items-center justify-center lg:min-h-[60vh]">
               <div className="w-full max-w-[450px] aspect-[794/1123] shadow-lg rounded overflow-hidden relative bg-white">
                 <svg viewBox="0 0 794 1123" className="w-full h-full pointer-events-none" preserveAspectRatio="xMidYMid meet">
                   <foreignObject width="794" height="1123">
