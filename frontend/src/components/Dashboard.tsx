@@ -1694,7 +1694,28 @@ export default function Dashboard({
   };
   
   // Dialog overlay for live preview
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activePreviewInvoice, setActivePreviewInvoice] = useState<Invoice | null>(null);
+  const [templateUpdateTick, setTemplateUpdateTick] = useState(0);
+
+  useEffect(() => {
+    const handleTemplateUpdate = () => {
+      setTemplateUpdateTick(prev => prev + 1);
+    };
+    window.addEventListener('custom_templates_local_update', handleTemplateUpdate);
+    window.addEventListener('custom_templates_updated_from_cloud', handleTemplateUpdate);
+    const storageHandler = (e: StorageEvent) => {
+      if (e.key === 'makbills_custom_templates' || e.key === 'makbills_global_default_template') {
+        handleTemplateUpdate();
+      }
+    };
+    window.addEventListener('storage', storageHandler);
+    return () => {
+      window.removeEventListener('custom_templates_local_update', handleTemplateUpdate);
+      window.removeEventListener('custom_templates_updated_from_cloud', handleTemplateUpdate);
+      window.removeEventListener('storage', storageHandler);
+    };
+  }, []);
   const [previewDataUri, setPreviewDataUri] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
@@ -4806,6 +4827,7 @@ export default function Dashboard({
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-100/50 dark:bg-slate-950/80 no-scrollbar">
               {(() => {
                 const resolvedTemplate = (() => {
+                  const _tick = templateUpdateTick; // Force re-render on tick
                   const templateId = activePreviewInvoice.selectedCustomTemplateId || localStorage.getItem('makbills_global_default_template');
                   const savedCustom = localStorage.getItem('makbills_custom_templates');
                   if (savedCustom) {

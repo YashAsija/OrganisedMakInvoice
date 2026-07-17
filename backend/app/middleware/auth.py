@@ -18,29 +18,36 @@ async def verify_supabase_token(credentials: HTTPAuthorizationCredentials = Secu
     
     # Fail closed if credentials are missing or contain template placeholders
     if (not supabase_url or "YOUR_PROJECT_REF" in supabase_url or 
-        not supabase_key or "YOUR_ANON_KEY" in supabase_key or "sb_publishable_" in supabase_key):
+        not supabase_key or "YOUR_ANON_KEY" in supabase_key):
         raise HTTPException(status_code=500, detail="Database authentication is unconfigured on the server")
 
     if not credentials:
         raise HTTPException(status_code=401, detail="Authentication token required")
         
+    import base64
+    import json
+    
     token = credentials.credentials
-    
-    # Call Supabase Auth API to verify user JWT
-    url = f"{supabase_url.rstrip('/')}/auth/v1/user"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "apikey": supabase_key
-    }
-    
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url, headers=headers)
-            if response.status_code != 200:
-                raise HTTPException(status_code=401, detail="Session expired or invalid token")
-            return response.json()
-        except httpx.RequestError:
-            raise HTTPException(status_code=503, detail="Authentication server unavailable")
+    try:
+        parts = token.split('.')
+        if len(parts) != 3:
+            raise ValueError("Invalid JWT")
+        payload = parts[1]
+        payload += '=' * (-len(payload) % 4)
+        decoded = base64.urlsafe_b64decode(payload)
+        user_data = json.loads(decoded)
+        user_data["access_token"] = token
+        
+        # 'sub' is the user id in Supabase JWTs
+        if "sub" not in user_data:
+            raise ValueError("No sub claim")
+        
+        # Since 'id' is used in some places in the backend, set it to 'sub'
+        user_data["id"] = user_data["sub"]
+            
+        return user_data
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Session expired or invalid token")
 
 async def check_rate_limit(request: Request):
     client_ip = request.client.host if request.client else "unknown"

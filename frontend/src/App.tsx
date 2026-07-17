@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PinSetupModal } from './components/PinSetupModal';
 import type { User } from '@supabase/supabase-js';
 import { supabase, handleSupabaseError, OperationType, isSupabaseConfigured } from './lib/supabase';
-import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from './types';
+import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense, InvoiceTemplate } from './types';
 import { getSampleInvoice, BUSINESS_TEMPLATES } from './lib/presets';
 import { getSecuritySettings, saveSecuritySettings, SecuritySettings, hashPin, hashPinPBKDF2, generateSalt } from './lib/biometrics';
 
@@ -78,11 +78,32 @@ export default function App() {
 
   // Security Lock state
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>(() => getSecuritySettings());
-  const [isUnlocked, setIsUnlocked] = useState(() => {
-    // If locks are active, require unlock screen on startup
-    const current = getSecuritySettings();
-    return !current.isPinLockEnabled;
-  });
+  const [isUnlocked, setIsUnlocked] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkPinStatus = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        setIsUnlocked(true);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('user_pin_security')
+        .select('is_pin_enabled')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (error || !data) {
+        // fallback to local cache if server unreachable/no row
+        setIsUnlocked(!getSecuritySettings().isPinLockEnabled);
+        return;
+      }
+
+      setIsUnlocked(!data.is_pin_enabled);
+    };
+    checkPinStatus();
+  }, []);
 
   // User details
   const [user, setUser] = useState<User | null>(null);
@@ -93,6 +114,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
+      if (path.startsWith('/invoice-templates')) {
+        return 'invoice_templates';
+      }
       return pathToTab[path] || 'dashboard';
     }
     return 'dashboard';
@@ -125,10 +149,21 @@ export default function App() {
   const [presets, setPresets] = useState<PresetItem[]>([]);
   const [clients, setClients] = useState<ClientProfile[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [customTemplates, setCustomTemplates] = useState<InvoiceTemplate[]>([]);
 
   // Modals active states
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isInvoiceEditorOpen, setIsInvoiceEditorOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname === '/company-settings';
+    }
+    return false;
+  });
+  const [isInvoiceEditorOpen, setIsInvoiceEditorOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname === '/quick-bill';
+    }
+    return false;
+  });
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [isOnboarding, setIsOnboarding] = useState(false);
 
@@ -148,7 +183,16 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
       if (userEmail) {
-        const expectedPath = tabToPath[activeTab] || '/dashboard';
+        let expectedPath = tabToPath[activeTab] || '/dashboard';
+        if (isInvoiceEditorOpen) {
+          expectedPath = '/quick-bill';
+        } else if (isProfileOpen) {
+          expectedPath = '/company-settings';
+        } else if (activeTab === 'invoice_templates') {
+          if (path.startsWith('/invoice-templates')) {
+            expectedPath = path;
+          }
+        }
         if (path !== expectedPath) {
           window.history.pushState(null, '', expectedPath);
         }
@@ -159,7 +203,7 @@ export default function App() {
         }
       }
     }
-  }, [userEmail, activeTab, publicPath]);
+  }, [userEmail, activeTab, publicPath, isInvoiceEditorOpen, isProfileOpen]);
 
   // --- HANDLE BROWSER BACK/FORWARD BUTTONS (POPSTATE) ---
   useEffect(() => {
@@ -167,12 +211,28 @@ export default function App() {
       const handlePopState = () => {
         const path = window.location.pathname;
         if (userEmail) {
-          const matchedTab = pathToTab[path];
-          if (matchedTab) {
-            setActiveTab(matchedTab);
-          } else if (path === '/') {
-            // If at root and logged in, default back to dashboard
-            setActiveTab('dashboard');
+          if (path === '/quick-bill') {
+            setIsInvoiceEditorOpen(true);
+            setEditingInvoice(null);
+            setIsProfileOpen(false);
+          } else if (path === '/company-settings') {
+            setIsProfileOpen(true);
+            setIsInvoiceEditorOpen(false);
+          } else {
+            setIsInvoiceEditorOpen(false);
+            setIsProfileOpen(false);
+            
+            let matchedTab = pathToTab[path];
+            if (path.startsWith('/invoice-templates')) {
+              matchedTab = 'invoice_templates';
+            }
+            
+            if (matchedTab) {
+              setActiveTab(matchedTab);
+            } else if (path === '/') {
+              // If at root and logged in, default back to dashboard
+              setActiveTab('dashboard');
+            }
           }
         } else {
           setPublicPath(['/pricing', '/guide', '/contact'].includes(path) ? path : '/');
@@ -235,54 +295,44 @@ export default function App() {
       salt = await generateSalt();
       pinVal = await hashPinPBKDF2(rawPin, salt);
 
-      // Sync to backend when online + logged in (server-side bcrypt)
+      // Sync to backend when online + logged in
       if (user) {
-        const BACKEND_URL =
-          (import.meta as unknown as { env: Record<string, string> }).env?.VITE_BACKEND_URL ||
-          (typeof process !== 'undefined' ? process.env?.NEXT_PUBLIC_BACKEND_URL : '') || '';
-        if (BACKEND_URL) {
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.access_token) {
-              const res = await fetch(`${BACKEND_URL}/api/auth/pin/set`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify({ pin: rawPin }),
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user?.id) {
+            const { error } = await supabase
+              .from('user_pin_security')
+              .upsert({
+                user_id: session.user.id,
+                hashed_pin: pinVal,
+                salt: salt,
+                is_pin_enabled: true,
+                updated_at: new Date().toISOString()
               });
-              if (!res.ok) {
-                throw new Error("Failed to sync PIN to backend");
-              }
+            if (error) {
+              throw error;
             }
-          } catch {
-            setPinModalLoading(false);
-            setPinModalError('Could not sync PIN to server. Please try again.');
-            return;
           }
+        } catch (err) {
+          console.warn('[PIN] Could not sync PIN to server, proceeding locally anyway.', err);
         }
       }
       setPinModalLoading(false);
       setPinModalOpen(false);
     } else {
-      // Disabling PIN — clear server hash too
+      // Disabling PIN — disable server side too
       if (isOnline && user) {
-        const BACKEND_URL =
-          (import.meta as unknown as { env: Record<string, string> }).env?.VITE_BACKEND_URL ||
-          (typeof process !== 'undefined' ? process.env?.NEXT_PUBLIC_BACKEND_URL : '') || '';
-        if (BACKEND_URL) {
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.access_token) {
-              await fetch(`${BACKEND_URL}/api/auth/pin/clear`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${session.access_token}` },
-              });
-            }
-          } catch {
-            console.warn('[PIN] Could not clear PIN on server.');
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user?.id) {
+            const { error } = await supabase
+              .from('user_pin_security')
+              .update({ is_pin_enabled: false })
+              .eq('user_id', session.user.id);
+            if (error) throw error;
           }
+        } catch {
+          console.warn('[PIN] Could not clear PIN on server.');
         }
       }
     }
@@ -296,6 +346,15 @@ export default function App() {
 
     setSecuritySettings(updated);
     saveSecuritySettings(updated);
+
+    if (user && isOnline) {
+      supabase.channel(`security_updates:${user.id}`).send({
+        type: 'broadcast',
+        event: 'security_changed',
+        payload: { isPinLockEnabled: enable }
+      }).catch(() => {});
+    }
+
     setPinModalLoading(false);
     setPinModalOpen(false);
   };
@@ -386,6 +445,18 @@ export default function App() {
       }
     } else {
       setExpenses([]);
+    }
+
+    // Custom Templates
+    const localTemplates = localStorage.getItem('makbills_custom_templates');
+    if (localTemplates) {
+      try {
+        setCustomTemplates(JSON.parse(localTemplates));
+      } catch (e) {
+        console.warn('Failed to parse local templates', e);
+      }
+    } else {
+      setCustomTemplates([]);
     }
   };
 
@@ -480,6 +551,18 @@ export default function App() {
                   defaultNotes: companySettings.default_notes || cloudProf.defaultNotes || '',
                   defaultTerms: companySettings.default_terms || cloudProf.defaultTerms || '',
                 } : (cloudProf as BusinessProfile);
+
+                // SYNC PIN STATUS ACROSS DEVICES
+                // If the user has a PIN configured on the backend, ensure the local device enforces it.
+                if (cloudProf.pin_hash) {
+                  const currentSec = getSecuritySettings();
+                  if (!currentSec.isPinLockEnabled) {
+                    const newSec = { ...currentSec, isPinLockEnabled: true };
+                    saveSecuritySettings(newSec);
+                    setSecuritySettings(newSec);
+                    setIsUnlocked(false);
+                  }
+                }
 
                 setProfile(mergedProf);
                 localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(mergedProf));
@@ -672,6 +755,91 @@ export default function App() {
               )
               .subscribe();
             activeChannels.push(expensesChannel);
+
+            // 6. Load Custom Templates from Storage and attach realtime listener
+            try {
+              const { data, error } = await supabase.storage
+                .from('CompanyLogo')
+                .download(`${uid}/custom_templates.json`);
+              
+              if (data) {
+                const text = await data.text();
+                const cloudTemplates = JSON.parse(text);
+                if (cloudTemplates && cloudTemplates.length > 0) {
+                  setCustomTemplates(cloudTemplates);
+                  localStorage.setItem('makbills_custom_templates', JSON.stringify(cloudTemplates));
+                  window.dispatchEvent(new Event('custom_templates_updated_from_cloud'));
+                }
+              } else {
+                // Cloud is empty or missing. If we have stranded local templates, push them!
+                const localData = localStorage.getItem('makbills_custom_templates');
+                if (localData) {
+                  try {
+                    const templates = JSON.parse(localData);
+                    if (templates && templates.length > 0) {
+                      await supabase.storage
+                        .from('CompanyLogo')
+                        .upload(`${uid}/custom_templates.json`, localData, {
+                          cacheControl: '0',
+                          upsert: true,
+                          contentType: 'application/json'
+                        });
+                      setCustomTemplates(templates);
+                    }
+                  } catch (e) {
+                    console.warn("Failed to migrate stranded templates to storage", e);
+                  }
+                }
+              }
+            } catch (err) {
+              console.warn('Error loading custom templates from storage', err);
+            }
+
+            const templatesChannel = supabase
+              .channel(`custom_templates:${uid}`)
+              .on(
+                'broadcast',
+                { event: 'templates_updated' },
+                (payload) => {
+                  try {
+                    if (payload.payload && payload.payload.templates) {
+                      const parsedTemplates = payload.payload.templates;
+                      setCustomTemplates(parsedTemplates);
+                      localStorage.setItem('makbills_custom_templates', JSON.stringify(parsedTemplates));
+                      window.dispatchEvent(new Event('custom_templates_updated_from_cloud'));
+                    }
+                  } catch (err) {
+                    console.warn("Error in realtime templates sync:", String(err));
+                  }
+                }
+              )
+              .subscribe();
+            activeChannels.push(templatesChannel);
+
+            // 8. Listen to Security PIN Updates in Realtime
+            const securityChannel = supabase
+              .channel(`security_updates:${uid}`)
+              .on(
+                'broadcast',
+                { event: 'security_changed' },
+                (payload) => {
+                  const enable = payload.payload?.isPinLockEnabled;
+                  if (enable !== undefined) {
+                    const currentSec = getSecuritySettings();
+                    if (currentSec.isPinLockEnabled !== enable) {
+                      const newSec = { ...currentSec, isPinLockEnabled: enable };
+                      if (enable) {
+                        newSec.hashedPin = ''; // Reset local hash to force server verification
+                        setIsUnlocked(false);
+                      }
+                      saveSecuritySettings(newSec);
+                      setSecuritySettings(newSec);
+                    }
+                  }
+                }
+              )
+              .subscribe();
+            activeChannels.push(securityChannel);
           }
         } else {
           setUser(null);
@@ -696,6 +864,47 @@ export default function App() {
   }, [isUnlocked]);
 
 
+
+  // Listen to local template updates and sync to cloud
+  useEffect(() => {
+    const handleLocalTemplatesUpdate = async () => {
+      if (!user || !isOnline || !isUnlocked) return;
+      const uid = user.id;
+      const localData = localStorage.getItem('makbills_custom_templates');
+      if (localData) {
+        try {
+          const templates: InvoiceTemplate[] = JSON.parse(localData);
+          
+          if (templates.length > 0) {
+            // Update storage
+            const { error } = await supabase.storage
+              .from('CompanyLogo')
+              .upload(`${uid}/custom_templates.json`, localData, {
+                cacheControl: '0',
+                upsert: true,
+                contentType: 'application/json'
+              });
+            
+            if (error) {
+              console.warn('Failed to sync custom templates to storage', error);
+            } else {
+              // Broadcast to other clients
+              await supabase.channel(`custom_templates:${uid}`).send({
+                type: 'broadcast',
+                event: 'templates_updated',
+                payload: { templates }
+              });
+            }
+          }
+        } catch (e) {
+          console.error('Error handling local template update', e);
+        }
+      }
+    };
+    
+    window.addEventListener('custom_templates_local_update', handleLocalTemplatesUpdate);
+    return () => window.removeEventListener('custom_templates_local_update', handleLocalTemplatesUpdate);
+  }, [user, isOnline, isUnlocked]);
 
   // --- ACTIONS SYSTEM ---
 
@@ -1512,6 +1721,14 @@ export default function App() {
         isOnline={isOnline}
         onNavigate={handlePublicNavigate}
       />
+    );
+  }
+
+  if (isUnlocked === null) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
     );
   }
 

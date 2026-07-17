@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { InvoiceTemplate, BusinessProfile } from '../../types';
 import { Layout, Zap, Settings, ArrowLeft } from 'lucide-react';
 import AdvancedStudio from './AdvancedStudio';
@@ -12,7 +12,32 @@ interface TemplateCreationHubProps {
 }
 
 export default function TemplateCreationHub({ initialTemplate, businessProfile, onSave, onCancel }: TemplateCreationHubProps) {
-  const [mode, setMode] = useState<'selection' | 'quick' | 'advanced'>(initialTemplate ? 'advanced' : 'selection');
+  const [mode, setMode] = useState<'selection' | 'quick' | 'advanced'>(() => {
+    if (initialTemplate) return 'advanced';
+    if (typeof window !== 'undefined') {
+      if (window.location.pathname === '/invoice-templates/quick-builder') {
+        return 'quick';
+      }
+      if (window.location.pathname === '/invoice-templates/advanced-builder') {
+        return 'advanced';
+      }
+    }
+    return 'selection';
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      let expectedPath = '/invoice-templates';
+      if (mode === 'quick') {
+        expectedPath = '/invoice-templates/quick-builder';
+      } else if (mode === 'advanced') {
+        expectedPath = '/invoice-templates/advanced-builder';
+      }
+      if (window.location.pathname !== expectedPath) {
+        window.history.pushState(null, '', expectedPath);
+      }
+    }
+  }, [mode]);
 
   if (mode === 'advanced') {
     return <AdvancedStudio initialTemplate={initialTemplate} businessProfile={businessProfile} onSave={onSave} onCancel={onCancel} />;

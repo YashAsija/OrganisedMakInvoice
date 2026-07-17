@@ -91,6 +91,18 @@ export default function InvoiceModal({
   const [date, setDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [clientName, setClientName] = useState('');
+  const [showClientNameError, setShowClientNameError] = useState(false);
+
+  useEffect(() => {
+    if (clientName && clientName.trim() !== '') {
+      setShowClientNameError(false);
+    }
+  }, [clientName]);
+
+  const [showLineItemsError, setShowLineItemsError] = useState(false);
+  const [freightCharges, setFreightCharges] = useState<number>(0);
+  const [isFreightAdded, setIsFreightAdded] = useState<boolean>(false);
+
   const [clientEmail, setClientEmail] = useState('');
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [pdfZoom, setPdfZoom] = useState<number>(100);
@@ -157,8 +169,13 @@ export default function InvoiceModal({
   const [recurringEndDate, setRecurringEndDate] = useState('');
   const [endOption, setEndOption] = useState<'indefinite' | 'date'>('indefinite');
 
-  // Pricing models
   const [items, setItems] = useState<InvoiceItem[]>([]);
+
+  useEffect(() => {
+    if (items && items.length > 0) {
+      setShowLineItemsError(false);
+    }
+  }, [items]);
   const [discountType, setDiscountType] = useState<DiscountType>('none');
   const [discountValue, setDiscountValue] = useState(0);
 
@@ -285,8 +302,17 @@ export default function InvoiceModal({
         loadDefaultTemplate();
       }
     };
+    const handleCustomUpdate = () => {
+      loadDefaultTemplate();
+    };
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('custom_templates_local_update', handleCustomUpdate);
+    window.addEventListener('custom_templates_updated_from_cloud', handleCustomUpdate);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('custom_templates_local_update', handleCustomUpdate);
+      window.removeEventListener('custom_templates_updated_from_cloud', handleCustomUpdate);
+    };
   }, [loadDefaultTemplate]);
 
   useEffect(() => {
@@ -297,6 +323,8 @@ export default function InvoiceModal({
 
   // Auto initialize values when editing or creating
   useEffect(() => {
+    setShowClientNameError(false);
+    setShowLineItemsError(false);
     if (invoice) {
       setInvoiceNumber(invoice.invoiceNumber);
       setDate(invoice.date);
@@ -311,6 +339,8 @@ export default function InvoiceModal({
       setItems(invoice.items);
       setDiscountType(invoice.discountType || 'none');
       setDiscountValue(invoice.discountValue || 0);
+      setFreightCharges((invoice as any).freightCharges || 0);
+      setIsFreightAdded((invoice as any).isFreightAdded || ((invoice as any).freightCharges || 0) > 0);
 
       // Extract new fields if they exist, or set safe defaults
       setInvoiceType(invoice.invoiceType || 'invoice');
@@ -392,6 +422,7 @@ export default function InvoiceModal({
       setItems([]);
       setDiscountType('none');
       setDiscountValue(0);
+      setFreightCharges(0);
 
       // Advanced and custom default settings
       setInvoiceType('invoice');
@@ -818,8 +849,20 @@ export default function InvoiceModal({
     return sum + (itemTaxBase * (activeTaxPct / 100));
   }, 0) : 0;
 
-  const roundedTaxTotal = parseFloat(calculatedTaxTotal.toFixed(2));
-  const calculatedGrandTotal = parseFloat(Math.max(0, (finalDiscountedSubtotal + roundedTaxTotal)).toFixed(2));
+  let freightTaxRate = 0;
+  if (hasTaxColActive) {
+    if (taxClassification.type === 'custom') {
+      freightTaxRate = (customTaxPercentage || 0) + additionalTaxes.reduce((acc, t) => acc + t.rate, 0);
+    } else if (taxClassification.zeroTax) {
+      freightTaxRate = 0;
+    } else {
+      freightTaxRate = defaultTaxRate || 0;
+    }
+  }
+  const freightTax = hasTaxColActive ? freightCharges * (freightTaxRate / 100) : 0;
+
+  const roundedTaxTotal = parseFloat((calculatedTaxTotal + freightTax).toFixed(2));
+  const calculatedGrandTotal = parseFloat(Math.max(0, (finalDiscountedSubtotal + roundedTaxTotal + freightCharges)).toFixed(2));
 
 
   const buildTempInvoice = (silent = false): Invoice | null => {
@@ -836,16 +879,16 @@ export default function InvoiceModal({
       userId: invoice ? invoice.userId : 'local',
       invoiceType,
       invoiceNumber,
-      referenceNumber: referenceNumber.trim() || undefined,
-      poNumber: poNumber.trim() || undefined,
-        deliveryNote: deliveryNote.trim() || undefined,
+      referenceNumber: silent ? referenceNumber : (referenceNumber.trim() || undefined),
+      poNumber: silent ? poNumber : (poNumber.trim() || undefined),
+      deliveryNote: silent ? deliveryNote : (deliveryNote.trim() || undefined),
       selectedTemplateStyle,
       selectedCustomTemplateId: activeTemplate.id,
-      qrCodeTriggerUrl: qrCodeTriggerUrl.trim() || undefined,
+      qrCodeTriggerUrl: silent ? qrCodeTriggerUrl : (qrCodeTriggerUrl.trim() || undefined),
       date,
       dueDate,
       clientName: silent 
-        ? clientName.trim()
+        ? clientName
         : (invoiceType === 'estimate' 
             ? (clientName.trim() || 'Quote / Estimate') 
             : (clientName.trim() || (() => {
@@ -854,14 +897,17 @@ export default function InvoiceModal({
                 const guestId = `Guest-${Math.floor(1000 + Math.random() * 9000)}`;
                 return `${guestId} (${formattedDate})`;
               })())),
-      clientEmail: invoiceType === 'estimate' ? '' : clientEmail.trim(),
-      clientPhone: invoiceType === 'estimate' ? '' : clientPhone.trim(),
-      clientAddress: invoiceType === 'estimate' ? '' : clientAddress.trim(),
-      notes: notes.trim(),
+      freightCharges,
+      isFreightAdded,
+      clientEmail: invoiceType === 'estimate' ? '' : (silent ? clientEmail : clientEmail.trim()),
+      clientPhone: invoiceType === 'estimate' ? '' : (silent ? clientPhone : clientPhone.trim()),
+      clientAddress: invoiceType === 'estimate' ? '' : (silent ? clientAddress : clientAddress.trim()),
+      notes: silent ? notes : notes.trim(),
       subtotal: parseFloat(calculatedSubtotal.toFixed(2)),
       discountType,
       discountValue: Number(discountValue),
       discountTotal: parseFloat((totalItemDiscounts + calculatedDiscountTotal).toFixed(2)),
+      freightCharges: Number(freightCharges),
       taxTotal: roundedTaxTotal,
       grandTotal: calculatedGrandTotal,
       status,
@@ -887,23 +933,23 @@ export default function InvoiceModal({
       customTaxType,
       additionalTaxes,
       invoiceTerms,
-      clientGstin: clientGstin.trim() || undefined,
-      clientPan: clientPan.trim() || undefined,
-      placeOfSupply: placeOfSupply.trim() || undefined,
-      grRrNo: grRrNo.trim() || undefined,
-      transport: transport.trim() || undefined,
-      vehicleNo: vehicleNo.trim() || undefined,
-      driverMobile: driverMobile.trim() || undefined,
-      station: station.trim() || undefined,
-      ewayBillNo: ewayBillNo.trim() || undefined,
-      shippedToName: shippedToName.trim() || undefined,
-      shippedToPhone: shippedToPhone.trim() || undefined,
-      shippedToEmail: shippedToEmail.trim() || undefined,
-      shippedToPan: shippedToPan.trim() || undefined,
-      shippedToState: shippedToState.trim() || undefined,
-      shippedToCountry: shippedToCountry.trim() || undefined,
-      shippedToGstin: shippedToGstin.trim() || undefined,
-      shippedToAddress: shippedToAddress.trim() || undefined,
+      clientGstin: silent ? clientGstin : (clientGstin.trim() || undefined),
+      clientPan: silent ? clientPan : (clientPan.trim() || undefined),
+      placeOfSupply: silent ? placeOfSupply : (placeOfSupply.trim() || undefined),
+      grRrNo: silent ? grRrNo : (grRrNo.trim() || undefined),
+      transport: silent ? transport : (transport.trim() || undefined),
+      vehicleNo: silent ? vehicleNo : (vehicleNo.trim() || undefined),
+      driverMobile: silent ? driverMobile : (driverMobile.trim() || undefined),
+      station: silent ? station : (station.trim() || undefined),
+      ewayBillNo: silent ? ewayBillNo : (ewayBillNo.trim() || undefined),
+      shippedToName: silent ? shippedToName : (shippedToName.trim() || undefined),
+      shippedToPhone: silent ? shippedToPhone : (shippedToPhone.trim() || undefined),
+      shippedToEmail: silent ? shippedToEmail : (shippedToEmail.trim() || undefined),
+      shippedToPan: silent ? shippedToPan : (shippedToPan.trim() || undefined),
+      shippedToState: silent ? shippedToState : (shippedToState.trim() || undefined),
+      shippedToCountry: silent ? shippedToCountry : (shippedToCountry.trim() || undefined),
+      shippedToGstin: silent ? shippedToGstin : (shippedToGstin.trim() || undefined),
+      shippedToAddress: silent ? shippedToAddress : (shippedToAddress.trim() || undefined),
       customTaxCols
     } as Invoice;
   };
@@ -990,8 +1036,15 @@ export default function InvoiceModal({
   const handleSaveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!clientName || !clientName.trim()) {
+      setShowClientNameError(true);
+      emitNotification('Validation Error', 'Client Name is required to build the invoice.', 'error');
+      return;
+    }
+
     if (items.length === 0) {
-      alert('Please add at least one line item to build the bill.');
+      setShowLineItemsError(true);
+      emitNotification('Validation Error', 'Please add at least one line item to build the bill.', 'error');
       return;
     }
 
@@ -1222,12 +1275,31 @@ export default function InvoiceModal({
           </button>
         </div>
 
+        {/* Scrollable Contents */}
+        <form onSubmit={handleSaveSubmit} className="flex-1 overflow-hidden p-3 sm:p-4 md:p-6 text-sans text-sm pb-6 sm:pb-8 flex flex-col">
+          
+          {/* Client Name Required Error Banner (shows on both mobile and desktop when saved without name) */}
+          {showClientNameError && !clientName?.trim() && (
+            <div className="mx-1 mb-4 p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-zinc-900/60 dark:to-zinc-900/40 border border-amber-250 dark:border-amber-900/50 rounded-2xl flex items-center gap-2.5 shadow-xs shrink-0">
+              <AlertCircle className="w-4.5 h-4.5 shrink-0 text-amber-500" />
+              <span className="text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                Client Name Required
+              </span>
+            </div>
+          )}
 
-                 {/* Scrollable Contents */}
-          <form onSubmit={handleSaveSubmit} className="flex-1 overflow-hidden p-3 sm:p-4 md:p-6 text-sans text-sm pb-6 sm:pb-8 flex flex-col">
-            
-            {/* Wrapper for the two panes */}
-            <div className="flex-1 overflow-y-auto xl:overflow-hidden xl:flex xl:flex-row-reverse xl:gap-6">
+          {/* Line Items Required Error Banner (shows on both mobile and desktop when saved without line items) */}
+          {showLineItemsError && items.length === 0 && (
+            <div className="mx-1 mb-4 p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-zinc-900/60 dark:to-zinc-900/40 border border-amber-250 dark:border-amber-900/50 rounded-2xl flex items-center gap-2.5 shadow-xs shrink-0">
+              <AlertCircle className="w-4.5 h-4.5 shrink-0 text-amber-500" />
+              <span className="text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                Please add at least one line item to build the bill.
+              </span>
+            </div>
+          )}
+
+          {/* Wrapper for the two panes */}
+          <div className="flex-1 overflow-y-auto xl:overflow-hidden xl:flex xl:flex-row-reverse xl:gap-6">
             
             {/* Advanced Settings Column */}
             <div className={`xl:w-[45%] xl:block xl:overflow-y-auto xl:pl-2 xl:pr-4 ${activeMode === 'edit' ? 'block' : 'hidden'}`}>
@@ -1398,7 +1470,6 @@ export default function InvoiceModal({
               <input 
                 id="col-client-name"
                 type="text" 
-                required
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="Client Name *"
@@ -1920,6 +1991,33 @@ export default function InvoiceModal({
             <h3 className="text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-1">Tax Adjustments & Discounts</h3>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-50 dark:border-slate-905">
+              <div className="sm:col-span-2 border-b border-slate-100 dark:border-slate-900 pb-3">
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="freight-charges" className="block text-[10px] font-medium text-slate-500 uppercase">Freight Charges ({currencySymbol})</label>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setIsFreightAdded(!isFreightAdded);
+                      if (isFreightAdded) setFreightCharges(0);
+                    }} 
+                    className="text-[10px] font-bold uppercase text-sky-600 hover:text-sky-700 bg-sky-50 px-2 py-0.5 rounded cursor-pointer transition-colors"
+                  >
+                    {isFreightAdded ? 'Remove' : 'Add'}
+                  </button>
+                </div>
+                {isFreightAdded && (
+                <input 
+                  id="freight-charges"
+                  type="number" 
+                  min="0"
+                  value={freightCharges || ''}
+                  onChange={(e) => setFreightCharges(parseFloat(e.target.value) || 0)}
+                  placeholder="0"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-900 dark:text-white font-medium font-mono text-xs focus:outline-none focus:ring-1 focus:ring-sky-500"
+                />
+                )}
+              </div>
+
               <div>
                 <label htmlFor="discount-type" className="block text-[10px] font-medium text-slate-500 uppercase">Discount Code / Type</label>
                 <select 
@@ -2222,6 +2320,13 @@ export default function InvoiceModal({
                 <span>{currencySymbol}{calculatedSubtotal.toFixed(2)}</span>
               </div>
               
+              {freightCharges > 0 && (
+                <div className="flex justify-between text-slate-500 dark:text-slate-400 font-medium">
+                  <span>Freight Charges</span>
+                  <span>+{currencySymbol}{freightCharges.toFixed(2)}</span>
+                </div>
+              )}
+
               {discountType !== 'none' && (
                 <div className="flex justify-between text-rose-500 font-medium">
                   <span>Subtotal Discount ({discountType === 'percent' ? `${discountValue}%` : 'Flat'})</span>
@@ -2341,6 +2446,14 @@ export default function InvoiceModal({
                      if(field==='discountValue') {
                        const parsed = parseFloat(val);
                        setDiscountValue(!isNaN(parsed) ? parsed : 0);
+                     }
+                     if(field==='freightCharges') {
+                       const parsed = parseFloat(val);
+                       setFreightCharges(!isNaN(parsed) ? parsed : 0);
+                     }
+                     if(field==='isFreightAdded') {
+                       setIsFreightAdded(val === 'true');
+                       if (val === 'false') setFreightCharges(0);
                      }
                   }}
                  onInteractiveAddItem={handleAddItem}

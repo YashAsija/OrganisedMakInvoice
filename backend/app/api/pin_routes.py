@@ -75,14 +75,22 @@ def _clear_tracker(user_id: str) -> None:
     _tracker[user_id] = {"attempts": 0, "locked_until": 0.0}
 
 
-def _supabase_headers() -> dict:
+def _supabase_headers(token: str = None) -> dict:
     url = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL", "")
+    # Default to anon key if no token provided
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY", "")
-    return url.rstrip("/"), {
+    
+    headers = {
         "apikey": key,
-        "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
     }
+    
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    else:
+        headers["Authorization"] = f"Bearer {key}"
+        
+    return url.rstrip("/"), headers
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +123,7 @@ async def set_pin(req: PinSetRequest, user: dict = Depends(verify_supabase_token
         raise HTTPException(status_code=401, detail="Cannot determine user identity from token.")
 
     pin_hash = pwd_context.hash(req.pin)  # bcrypt — includes its own random salt
-    base_url, headers = _supabase_headers()
+    base_url, headers = _supabase_headers(user.get("access_token"))
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         res = await client.patch(
@@ -150,7 +158,7 @@ async def verify_pin(req: PinVerifyRequest, user: dict = Depends(verify_supabase
     # Check lockout before touching the DB
     _check_lockout(user_id)
 
-    base_url, headers = _supabase_headers()
+    base_url, headers = _supabase_headers(user.get("access_token"))
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         res = await client.get(
@@ -198,7 +206,7 @@ async def clear_pin(user: dict = Depends(verify_supabase_token)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Cannot determine user identity from token.")
 
-    base_url, headers = _supabase_headers()
+    base_url, headers = _supabase_headers(user.get("access_token"))
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         await client.patch(

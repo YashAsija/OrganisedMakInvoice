@@ -47,29 +47,46 @@ export function saveSecuritySettings(settings: SecuritySettings): void {
 // Uses Web Crypto API (no npm dependency).
 // 100,000 iterations of PBKDF2-SHA256 with a random 16-byte salt.
 // ---------------------------------------------------------------------------
+const PBKDF2_ITERATIONS = 100000;
+const PBKDF2_HASH = 'SHA-256';
+const PBKDF2_KEY_LENGTH = 256; // bits
+
+// Generates a random salt, returned as a hex string (fixed, storable format)
 export async function generateSalt(): Promise<string> {
-  const bytes = window.crypto.getRandomValues(new Uint8Array(16));
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  const saltBytes = window.crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(saltBytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
+// Pure deterministic hash: same pin + same salt = same output, always
 export async function hashPinPBKDF2(pin: string, saltHex: string): Promise<string> {
   const encoder = new TextEncoder();
-  const pinBuffer = encoder.encode(pin);
-  const saltBuffer = new Uint8Array(
-    (saltHex.match(/.{2}/g) ?? []).map(h => parseInt(h, 16))
+  const saltBytes = new Uint8Array(
+    saltHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
   );
 
   const keyMaterial = await window.crypto.subtle.importKey(
-    'raw', pinBuffer, 'PBKDF2', false, ['deriveBits']
+    'raw',
+    encoder.encode(pin),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
   );
+
   const derivedBits = await window.crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt: saltBuffer, iterations: 100_000, hash: 'SHA-256' },
+    {
+      name: 'PBKDF2',
+      salt: saltBytes,
+      iterations: PBKDF2_ITERATIONS,
+      hash: PBKDF2_HASH,
+    },
     keyMaterial,
-    256
+    PBKDF2_KEY_LENGTH
   );
-  return Array.from(new Uint8Array(derivedBits))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+
+  const hashArray = Array.from(new Uint8Array(derivedBits));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 // ---------------------------------------------------------------------------

@@ -46,6 +46,7 @@ const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, option
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
     if (e.key === 'Enter' && type !== 'textarea') {
       e.preventDefault();
       ref.current?.blur();
@@ -79,6 +80,7 @@ const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, option
           type="text"
           value={value || ''}
           onChange={(e) => onSave(e.target.value)}
+          onKeyDown={(e) => e.stopPropagation()}
           placeholder={placeholder}
           list={list}
           className="w-full bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-inherit font-inherit"
@@ -97,7 +99,7 @@ const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, option
       onKeyDown={handleKeyDown}
       data-placeholder={placeholder}
       className={`editable-placeholder bg-slate-50 outline-dashed outline-1 outline-sky-300/80 hover:bg-slate-200/50 hover:outline-sky-400 focus:bg-white focus:outline-solid focus:outline-2 focus:outline-sky-500 cursor-text transition-all print:outline-none print:bg-transparent print:border-none min-w-[30px] max-w-full inline-block px-0.5 -ml-0.5 py-0 rounded ${type === 'textarea' ? '' : 'truncate'}`}
-      style={{ whiteSpace: type === 'textarea' ? 'pre-wrap' : 'nowrap', wordBreak: type === 'textarea' ? 'break-word' : 'normal', outlineOffset: '0px', verticalAlign: 'middle' }}
+      style={{ whiteSpace: type === 'textarea' ? 'pre-wrap' : 'pre', wordBreak: type === 'textarea' ? 'break-word' : 'normal', outlineOffset: '0px', verticalAlign: 'middle' }}
     />
   );
 };
@@ -478,12 +480,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const isTaxPresent = hasTaxCol && isTaxEngineVisible;
 
   const taxAmount = isTaxPresent
-    ? (invoiceData?.taxTotal !== undefined ? invoiceData.taxTotal : (subTotal * taxRate) / 100)
+    ? (invoiceData?.taxTotal !== undefined ? invoiceData.taxTotal : ((subTotal + (invoiceData?.freightCharges || 0)) * taxRate) / 100)
     : 0;
 
   const grandTotal = invoiceData?.grandTotal !== undefined
     ? invoiceData.grandTotal
-    : Math.max(0, subTotal - (invoiceData?.discountTotal || 0) + (isTaxPresent ? taxAmount : 0));
+    : Math.max(0, subTotal - (invoiceData?.discountTotal || 0) + (isTaxPresent ? taxAmount : 0) + (invoiceData?.freightCharges || 0));
 
   const renderInvoiceContent = (
     currentItems?: any[],
@@ -1212,6 +1214,42 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         <span>{subTotal.toFixed(2)}</span>
                       </div>
                     )}
+                    {/* Freight Charges Row */}
+                    {isInteractive ? (
+                      <div className="flex justify-between text-gray-600 mb-1">
+                        <span
+                          style={{ cursor: 'pointer', textDecoration: 'underline dashed', textUnderlineOffset: '2px' }}
+                          onClick={() => {
+                            if (onUpdateField) {
+                              const hasFreight = invoiceData?.isFreightAdded;
+                              if (hasFreight) {
+                                onUpdateField('isFreightAdded', 'false');
+                              } else {
+                                onUpdateField('isFreightAdded', 'true');
+                                onUpdateField('freightCharges', '50');
+                              }
+                            }
+                          }}
+                          title="Click to toggle Freight Charges"
+                        >
+                          Freight {invoiceData?.isFreightAdded ? '(Remove)' : '(Add)'}
+                        </span>
+                        {invoiceData?.isFreightAdded && (
+                          <span className="font-semibold text-gray-800">
+                            {currencySymbol} {renderInteractive(invoiceData?.freightCharges || 0, 'freightCharges', 'text', 'Freight')}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      invoiceData?.isFreightAdded && (
+                        <div className="flex justify-between text-gray-600 mb-1">
+                          <span>Freight Charges</span>
+                          <span className="font-semibold text-gray-800">
+                            {currencySymbol} {invoiceData.freightCharges.toFixed(2)}
+                          </span>
+                        </div>
+                      )
+                    )}
                     {/* Discount row - always visible for every template */}
                     {((invoiceData?.discountTotal || 0) > 0 || isInteractive) && (
                       <div className="flex justify-between" style={{ color: '#e11d48' }}>
@@ -1229,7 +1267,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                           Discount {invoiceData?.discountType === 'percent' ? '(%)' : invoiceData?.discountType === 'flat' ? '(Flat)' : '(Add)'}
                         </span>
                         {invoiceData?.discountType !== 'none' && (
-                          <span>-{currencySymbol} {renderInteractive(invoiceData?.discountValue || 0, 'discountValue', 'text', 'Amount')}</span>
+                          <span>
+                            {invoiceData?.discountType === 'percent' ? '- %' : `- ${currencySymbol}`} {renderInteractive(invoiceData?.discountValue || 0, 'discountValue', 'text', 'Amount')}
+                          </span>
                         )}
                       </div>
                     )}
@@ -1270,33 +1310,75 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 </div>
               );
             }
+            const freightChargesRow = (
+              isInteractive ? (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', color: '#475569' }}>
+                  <span
+                    style={{ cursor: 'pointer', textDecoration: 'underline dashed', textUnderlineOffset: '2px' }}
+                    onClick={() => {
+                      if (onUpdateField) {
+                        const hasFreight = invoiceData?.isFreightAdded;
+                        if (hasFreight) {
+                          onUpdateField('isFreightAdded', 'false');
+                        } else {
+                          onUpdateField('isFreightAdded', 'true');
+                          onUpdateField('freightCharges', '50');
+                        }
+                      }
+                    }}
+                    title="Click to toggle Freight Charges"
+                  >
+                    Freight {invoiceData?.isFreightAdded ? '(Remove)' : '(Add)'}
+                  </span>
+                  {invoiceData?.isFreightAdded && (
+                    <span style={{ display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
+                      {currencySymbol} {renderInteractive(invoiceData?.freightCharges || 0, 'freightCharges', 'text', 'Freight')}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                invoiceData?.isFreightAdded && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', color: '#475569' }}>
+                    <span>Freight Charges</span>
+                    <span style={{ fontWeight: 'bold' }}>
+                      {currencySymbol} {invoiceData.freightCharges.toFixed(2)}
+                    </span>
+                  </div>
+                )
+              )
+            );
+
+            const discountRow = (
+              ((invoiceData?.discountTotal || 0) > 0 || isInteractive) && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', color: '#e11d48' }}>
+                  <span
+                    style={isInteractive ? { cursor: 'pointer', textDecoration: 'underline dashed', textUnderlineOffset: '2px' } : {}}
+                    onClick={() => {
+                      if (isInteractive && onUpdateField) {
+                        const nextType = invoiceData?.discountType === 'none' ? 'percent' : invoiceData?.discountType === 'percent' ? 'flat' : 'none';
+                        onUpdateField('discountType', nextType);
+                        if (nextType === 'none') onUpdateField('discountValue', '0');
+                      }
+                    }}
+                    title={isInteractive ? 'Click to toggle discount type (None, %, Flat)' : ''}
+                  >
+                    Discount {invoiceData?.discountType === 'percent' ? '(%)' : invoiceData?.discountType === 'flat' ? '(Flat)' : '(Add)'}
+                  </span>
+                  {invoiceData?.discountType !== 'none' && (
+                    <span style={{ display: 'flex', alignItems: 'center' }}>
+                      {invoiceData?.discountType === 'percent' ? '- %' : `- ${currencySymbol}`} {renderInteractive(invoiceData?.discountValue || 0, 'discountValue', 'text', 'Amount')}
+                    </span>
+                  )}
+                </div>
+              )
+            );
+
             return (
               <div id="section-taxEngine" key="taxEngine" style={getSectionStyle('taxEngine')}>
-                {/* Discount row - always visible regardless of tax breakdown setting */}
-                {((invoiceData?.discountTotal || 0) > 0 || isInteractive) && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', color: '#e11d48' }}>
-                    <span
-                      style={isInteractive ? { cursor: 'pointer', textDecoration: 'underline dashed', textUnderlineOffset: '2px' } : {}}
-                      onClick={() => {
-                        if (isInteractive && onUpdateField) {
-                          const nextType = invoiceData?.discountType === 'none' ? 'percent' : invoiceData?.discountType === 'percent' ? 'flat' : 'none';
-                          onUpdateField('discountType', nextType);
-                          if (nextType === 'none') onUpdateField('discountValue', '0');
-                        }
-                      }}
-                      title={isInteractive ? 'Click to toggle discount type (None, %, Flat)' : ''}
-                    >
-                      Discount {invoiceData?.discountType === 'percent' ? '(%)' : invoiceData?.discountType === 'flat' ? '(Flat)' : '(Add)'}
-                    </span>
-                    {invoiceData?.discountType !== 'none' && (
-                      <span style={{ display: 'flex', alignItems: 'center' }}>
-                        -{currencySymbol} {renderInteractive(invoiceData?.discountValue || 0, 'discountValue', 'text', 'Amount')}
-                      </span>
-                    )}
-                  </div>
-                )}
                 {config.tax.enableTaxBreakdown && (
                   <div style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: getBorderRadius(), border: '1px solid #e2e8f0', width: '100%' }}>
+                    {freightChargesRow}
+                    {discountRow}
                     {config.tax.showTaxableAmount && <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}><span>Taxable Amount:</span> <span>{currencySymbol} {subTotal.toFixed(2)}</span></div>}
                     {hasTaxCol && (
                       isCustomTax ? (
@@ -1320,9 +1402,13 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   </div>
                 )}
                 {!config.tax.enableTaxBreakdown && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #e2e8f0', fontSize: '14px', fontWeight: 'bold', color: styleConfig.primaryColor }}>
-                    <span>Grand Total:</span>
-                    <span>{currencySymbol} {grandTotal.toFixed(2)}</span>
+                  <div style={{ width: '100%' }}>
+                    {freightChargesRow}
+                    {discountRow}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #e2e8f0', fontSize: '14px', fontWeight: 'bold', color: styleConfig.primaryColor }}>
+                      <span>Grand Total:</span>
+                      <span>{currencySymbol} {grandTotal.toFixed(2)}</span>
+                    </div>
                   </div>
                 )}
               </div>

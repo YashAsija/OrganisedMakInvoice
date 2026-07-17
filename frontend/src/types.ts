@@ -47,6 +47,7 @@ export interface Invoice {
   discountType: DiscountType;
   discountValue: number;
   discountTotal: number;
+  freightCharges?: number;
   taxTotal: number;
   grandTotal: number;
   status: InvoiceStatus;

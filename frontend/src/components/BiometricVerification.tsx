@@ -9,6 +9,7 @@ import {
   MAX_PIN_ATTEMPTS,
   hashPin,
   hashPinPBKDF2,
+  generateSalt,
 } from '../lib/biometrics';
 import { supabase } from '../lib/supabase';
 
@@ -18,7 +19,7 @@ interface BiometricVerificationProps {
 
 const BACKEND_URL =
   (import.meta as unknown as { env: Record<string, string> }).env?.VITE_BACKEND_URL ||
-  (typeof process !== 'undefined' ? process.env?.NEXT_PUBLIC_BACKEND_URL : '') ||
+  (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_BACKEND_URL : '') ||
   '';
 
 type Screen = 'unlock' | 'forgot' | 'forgotSent';
@@ -74,30 +75,30 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
 
   const verifyWithServer = async (
     enteredPin: string,
-    token: string,
     userId: string
   ): Promise<true | false | null> => {
-    if (!BACKEND_URL) return null;
     try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/pin/verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ pin: enteredPin, user_id: userId }),
-        signal: AbortSignal.timeout(5000),
-      });
-      if (res.status === 200) return true;
-      if (res.status === 429) {
-        const body = await res.json().catch(() => ({}));
-        setError(body.detail || 'Too many attempts. Try again later.');
-        setLockoutSeconds(60);
-        return false;
+      const { data: row, error: fetchErr } = await supabase
+        .from('user_pin_security')
+        .select('salt, hashed_pin, is_pin_enabled')
+        .eq('user_id', userId)
+        .single();
+
+      if (fetchErr) {
+        console.error('PIN fetch error:', fetchErr); // <-- log the real reason
+        return null;
       }
-      if (res.status === 404) return null;
-      return false;
-    } catch {
+      if (!row || !row.is_pin_enabled) {
+        console.warn('No pin row or pin disabled for user:', userId);
+        return null;
+      }
+
+      const hashedInput = await hashPinPBKDF2(enteredPin, row.salt);
+      console.log('Hash check:', { computed: hashedInput, stored: row.hashed_pin });
+
+      return hashedInput === row.hashed_pin;
+    } catch (err) {
+      console.error('verifyWithServer threw:', err); // <-- this tells us if RPC/table access is broken
       return null;
     }
   };
@@ -131,12 +132,25 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
-      if (session?.access_token && session?.user?.id) {
-        const serverResult = await verifyWithServer(newPin, session.access_token, session.user.id);
+      if (session?.user?.id) {
+        const serverResult = await verifyWithServer(newPin, session.user.id);
 
         if (serverResult === true) {
           // Server confirmed correct PIN
           verified = true;
+          
+          // [NEW] SYNC LOCAL HASH SO OFFLINE WORKS ON NEW DEVICES
+          const isLocallyVerified = await verifyLocally(newPin);
+          if (!isLocallyVerified) {
+            try {
+              const currentSettings = getSecuritySettings();
+              const salt = await generateSalt();
+              const newHash = await hashPinPBKDF2(newPin, salt);
+              saveSecuritySettings({ ...currentSettings, isPinLockEnabled: true, hashedPin: newHash, salt });
+            } catch (e) {
+              console.warn("Could not cache PIN locally for offline use.", e);
+            }
+          }
         } else if (serverResult === false) {
           // Server confirmed wrong PIN
           verified = false;
@@ -189,6 +203,13 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
           method: 'DELETE',
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
+
+        // Broadcast removal to other active tabs
+        supabase.channel(`security_updates:${session.user.id}`).send({
+          type: 'broadcast',
+          event: 'security_changed',
+          payload: { isPinLockEnabled: false }
+        }).catch(() => {});
       }
       // Disable PIN locally
       const current = getSecuritySettings();

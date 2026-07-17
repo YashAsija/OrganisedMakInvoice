@@ -37,6 +37,19 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     return [];
   });
   
+  useEffect(() => {
+    const handleCloudUpdate = () => {
+      const saved = localStorage.getItem('makbills_custom_templates');
+      if (saved) {
+        try {
+          setTemplates(JSON.parse(saved));
+        } catch (e) {}
+      }
+    };
+    window.addEventListener('custom_templates_updated_from_cloud', handleCloudUpdate);
+    return () => window.removeEventListener('custom_templates_updated_from_cloud', handleCloudUpdate);
+  }, []);
+  
   const [globalDefaultId, setGlobalDefaultId] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const savedGlobalDefault = localStorage.getItem('makbills_global_default_template');
@@ -54,8 +67,39 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     return 'preset_modal_classic';
   });
   
-  const [isBuilding, setIsBuilding] = useState(false);
+  const [isBuilding, setIsBuilding] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname.startsWith('/invoice-templates/');
+    }
+    return false;
+  });
   const [editingTemplate, setEditingTemplate] = useState<InvoiceTemplate | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (!isBuilding) {
+        if (window.location.pathname.startsWith('/invoice-templates/')) {
+          window.history.pushState(null, '', '/invoice-templates');
+        }
+      }
+    }
+  }, [isBuilding]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handlePop = () => {
+        const path = window.location.pathname;
+        if (path === '/invoice-templates') {
+          setIsBuilding(false);
+          setEditingTemplate(null);
+        } else if (path.startsWith('/invoice-templates/')) {
+          setIsBuilding(true);
+        }
+      };
+      window.addEventListener('popstate', handlePop);
+      return () => window.removeEventListener('popstate', handlePop);
+    }
+  }, []);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
@@ -77,6 +121,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
         }));
         setTemplates(updated);
         localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
+        window.dispatchEvent(new Event('custom_templates_local_update'));
       }
       setGlobalDefaultId(newDefaultId);
       localStorage.setItem('makbills_global_default_template', newDefaultId);
@@ -102,6 +147,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     
     setTemplates(updated);
     localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
+    window.dispatchEvent(new Event('custom_templates_local_update'));
     setIsBuilding(false);
     setEditingTemplate(null);
   };
@@ -121,15 +167,18 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
           }));
           setTemplates(markedUpdated);
           localStorage.setItem('makbills_custom_templates', JSON.stringify(markedUpdated));
+          window.dispatchEvent(new Event('custom_templates_local_update'));
         } else {
           setTemplates(updated);
           localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
+          window.dispatchEvent(new Event('custom_templates_local_update'));
         }
         setGlobalDefaultId(newDefaultId);
         localStorage.setItem('makbills_global_default_template', newDefaultId);
       } else {
         setTemplates(updated);
         localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
+        window.dispatchEvent(new Event('custom_templates_local_update'));
       }
     }
   };
@@ -144,6 +193,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     }));
     setTemplates(updated);
     localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
+    window.dispatchEvent(new Event('custom_templates_local_update'));
   };
   
   const handleDuplicate = (template: InvoiceTemplate) => {
@@ -157,6 +207,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     const updated = [dupe, ...templates];
     setTemplates(updated);
     localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
+    window.dispatchEvent(new Event('custom_templates_local_update'));
   };
   
   const handleExportPDF = async (template: InvoiceTemplate) => {
@@ -310,7 +361,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
         {/* Accent bar */}
         <div className="h-1 bg-gradient-to-r from-[#e2e8f0] via-[#C6A87D] to-[#64748b]" />
 
-        <div className="flex border-b border-[#e2e8f0]/45 dark:border-zinc-800 px-2 bg-[#FCFAF7]/30 dark:bg-zinc-950/10">
+        <div className="flex overflow-x-auto no-scrollbar w-full border-b border-[#e2e8f0]/45 dark:border-zinc-800 px-2 bg-[#FCFAF7]/30 dark:bg-zinc-950/10">
           {[
             { key: 'my_templates', label: 'My Templates', count: templates.length, activeColor: 'border-amber-500 text-[#0f172a]', countBg: 'bg-amber-100 text-amber-800' },
             { key: 'system', label: 'System Presets', count: TEMPLATE_PRESETS.length, activeColor: 'border-sky-500 text-[#0f172a]', countBg: 'bg-sky-100 text-sky-800' },
@@ -318,7 +369,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
             <button
               key={tab.key}
               onClick={() => setActiveLibraryTab(tab.key as any)}
-              className={`flex items-center gap-2 px-5 py-3.5 text-[11px] font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-5 py-3.5 text-[11px] font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 activeLibraryTab === tab.key
                   ? `${tab.activeColor} dark:text-white`
                   : 'border-transparent text-[#64748b]/70 dark:text-zinc-500 hover:text-[#0f172a] dark:hover:text-zinc-300'
