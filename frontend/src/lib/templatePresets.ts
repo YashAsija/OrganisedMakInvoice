@@ -71,7 +71,7 @@ const generateBaseTemplate = (id: string, name: string, category: InvoiceTemplat
 export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
   {
     ...generateBaseTemplate('preset_modal_classic', 'MakInvoices Original', 'Default'),
-    description: 'The exact original structured layout from the Add New Invoice screen.',
+    description: 'The exact original structured layout from the Add New Invoice screen. It features a comprehensive, traditional design perfectly suited for detailed service or product billing.',
     isDefault: true,
     layout: {
       type: 'Modal Classic',
@@ -199,7 +199,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
   },
   {
     ...generateBaseTemplate('preset_user', 'Personal & Simple', 'User'),
-    description: 'A deeply customized, clean layout for personal or custom use.',
+    description: 'A deeply customized, clean layout for personal or custom use. It removes complex shipping or tax details, focusing purely on item descriptions and totals for a clean, simple look.',
     sections: {
       ...generateBaseTemplate('preset_user', 'Personal & Simple', 'User').sections,
       shipTo: { id: 'shipTo', visible: false, order: 5, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
@@ -233,7 +233,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
   },
   {
     ...generateBaseTemplate('preset_gst', 'GST Exhaustive', 'GST'),
-    description: 'Strictly compliant Indian GST layout with full tax breakdown and HSN.',
+    description: 'Strictly compliant Indian GST layout with full tax breakdown and HSN. This layout provides all required fields for B2B transactions including IGST, CGST, SGST, and transportation details.',
     sections: {
       ...generateBaseTemplate('preset_gst', 'GST Exhaustive', 'GST').sections,
       shipTo: { id: 'shipTo', visible: true, order: 5, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
@@ -261,7 +261,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
   },
   {
     ...generateBaseTemplate('preset_retail', 'Retail Shop', 'Retail'),
-    description: 'Fast, compact layout suitable for retail counters or point of sale.',
+    description: 'Fast, compact layout suitable for retail counters or point of sale. Designed to be printed quickly with minimal shipping and tax overhead, keeping the focus entirely on products.',
     layout: { ...generateBaseTemplate('preset_retail', 'Retail Shop', 'Retail').layout, type: 'Modern' },
     sections: {
       ...generateBaseTemplate('preset_retail', 'Retail Shop', 'Retail').sections,
@@ -295,7 +295,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
   },
   {
     ...generateBaseTemplate('preset_corporate', 'Corporate Professional', 'Default'),
-    description: 'Traditional, exhaustive corporate layout for compliance and B2B billing.',
+    description: 'Traditional, exhaustive corporate layout for compliance and B2B billing. It includes heavy borders and dark table headers, giving a very strict, highly professional corporate impression.',
     sections: {
       ...generateBaseTemplate('preset_corporate', 'Corporate Professional', 'Default').sections,
       shipTo: { id: 'shipTo', visible: true, order: 5, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
@@ -332,7 +332,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
   },
   {
     ...generateBaseTemplate('preset_minimalist_tech', 'Minimalist Tech', 'Service'),
-    description: 'Ultra-clean, modern layout with tech-forward fonts and no borders.',
+    description: 'Ultra-clean, modern layout with tech-forward fonts and no borders. Perfect for digital agencies and freelancers, presenting services in a borderless, wide-spaced minimalist design.',
     layout: { ...generateBaseTemplate('preset_minimalist_tech', 'Minimalist Tech', 'Service').layout, type: 'Minimal' },
     sections: {
       ...generateBaseTemplate('preset_minimalist_tech', 'Minimalist Tech', 'Service').sections,
@@ -364,7 +364,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
   },
   {
     ...generateBaseTemplate('preset_b2b_export', 'B2B Export Invoice', 'GST'),
-    description: 'International export invoice with detailed shipping and terms.',
+    description: 'International export invoice with detailed shipping and terms. Includes all necessary fields for cross-border trade, customs compliance, and international banking instructions.',
     layout: { ...generateBaseTemplate('preset_b2b_export', 'B2B Export Invoice', 'GST').layout, type: 'Classic' },
     sections: {
       ...generateBaseTemplate('preset_b2b_export', 'B2B Export Invoice', 'GST').sections,
