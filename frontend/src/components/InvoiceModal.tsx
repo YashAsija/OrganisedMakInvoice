@@ -1032,11 +1032,6 @@ export default function InvoiceModal({
     }
   };
 
-  const draftStateRef = useRef({ clientName, items, notes, invoice });
-  useEffect(() => {
-    draftStateRef.current = { clientName, items, notes, invoice };
-  }, [clientName, items, notes, invoice]);
-
   const buildTempInvoiceRef = useRef(buildTempInvoice);
   useEffect(() => {
     buildTempInvoiceRef.current = buildTempInvoice;
@@ -1044,12 +1039,23 @@ export default function InvoiceModal({
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      const { clientName, items, notes, invoice } = draftStateRef.current;
-      if (clientName.trim() !== '' || items.length > 0 || notes.trim() !== '') {
-        const draftInvoice = buildTempInvoiceRef.current(true);
-        if (draftInvoice) {
+      const draftInvoice = buildTempInvoiceRef.current(true);
+      if (draftInvoice) {
+        const isDefaultClientName = draftInvoice.clientName === 'Quote / Estimate' || draftInvoice.clientName?.startsWith('Guest-');
+        
+        const hasData = 
+          !isDefaultClientName ||
+          (draftInvoice.items && draftInvoice.items.length > 0) ||
+          !!draftInvoice.notes || !!draftInvoice.invoiceTerms ||
+          !!draftInvoice.referenceNumber || !!draftInvoice.poNumber || !!draftInvoice.deliveryNote ||
+          !!draftInvoice.clientEmail || !!draftInvoice.clientPhone || !!draftInvoice.clientAddress ||
+          !!draftInvoice.shippedToName || !!draftInvoice.transport || !!draftInvoice.vehicleNo || !!draftInvoice.ewayBillNo;
+
+        if (hasData) {
           draftInvoice.status = 'draft';
-          if (!invoice) draftInvoice.id = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
+          if (!invoice) {
+             draftInvoice.id = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
+          }
           try {
             const existingInvoicesStr = localStorage.getItem('makbills_invoices');
             const existingInvoices = existingInvoicesStr ? JSON.parse(existingInvoicesStr) : [];
@@ -1068,10 +1074,23 @@ export default function InvoiceModal({
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
+  }, [invoice]);
 
   const handleSaveAsDraft = (e: React.MouseEvent) => {
     e.preventDefault();
+
+    if (!clientName || !clientName.trim()) {
+      setShowClientNameError(true);
+      emitNotification('Validation Error', 'Client Name is required to build the invoice.', 'error');
+      return;
+    }
+
+    if (items.length === 0) {
+      setShowLineItemsError(true);
+      emitNotification('Validation Error', 'Please add at least one line item to build the bill.', 'error');
+      return;
+    }
+
     const draftInvoice = buildTempInvoice(true);
     if (!draftInvoice) return;
     
