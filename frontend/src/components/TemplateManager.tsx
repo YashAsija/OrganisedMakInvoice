@@ -514,16 +514,32 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
                     </div>
                   </div>
                   
-                  {/* Name banner below preview always visible */}
-                  <div className="p-3 bg-white dark:bg-zinc-950 border-t border-[#e2e8f0]/60 dark:border-zinc-800 text-center flex items-center justify-center gap-2">
-                     <h3 className="text-[11px] font-black text-[#0f172a] dark:text-white truncate" title={template.name}>
-                       {template.name}
-                     </h3>
-                     {activeLibraryTab === 'system' && (
-                       <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black uppercase tracking-wider shrink-0">
-                         Preset
-                       </span>
-                     )}
+                  {/* Name banner & Details */}
+                  <div className="p-3 bg-white dark:bg-zinc-950 border-t border-[#e2e8f0]/60 dark:border-zinc-800 flex flex-col">
+                     <div className="flex items-center justify-center md:justify-between gap-2">
+                       <h3 className="text-[11px] font-black text-[#0f172a] dark:text-white truncate" title={template.name}>
+                         {template.name}
+                       </h3>
+                       {activeLibraryTab === 'system' && (
+                         <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black uppercase tracking-wider shrink-0">
+                           Preset
+                         </span>
+                       )}
+                     </div>
+                     
+                     <div className="hidden md:flex flex-col gap-1.5 mt-2">
+                       <div className="flex flex-wrap items-center gap-1.5">
+                         <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black uppercase tracking-wider">
+                           {template.category}
+                         </span>
+                         <span className="px-1.5 py-0.5 bg-sky-50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 border border-sky-200/60 dark:border-sky-800/40 rounded text-[9px] font-black uppercase tracking-wider">
+                           {template.layout.type}
+                         </span>
+                       </div>
+                       <p className="text-[9.5px] text-[#64748b]/80 dark:text-zinc-500 line-clamp-2 leading-relaxed min-h-[28px]">
+                         {template.description || 'No description provided.'}
+                       </p>
+                     </div>
                   </div>
                 </div>
               ))}
