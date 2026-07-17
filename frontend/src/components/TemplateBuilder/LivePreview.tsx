@@ -1245,7 +1245,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         <div className="flex justify-between text-gray-600 mb-1">
                           <span>Freight Charges</span>
                           <span className="font-semibold text-gray-800">
-                            {currencySymbol} {invoiceData.freightCharges.toFixed(2)}
+                            {currencySymbol} {(invoiceData.freightCharges || 0).toFixed(2)}
                           </span>
                         </div>
                       )
@@ -1341,7 +1341,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', color: '#475569' }}>
                     <span>Freight Charges</span>
                     <span style={{ fontWeight: 'bold' }}>
-                      {currencySymbol} {invoiceData.freightCharges.toFixed(2)}
+                      {currencySymbol} {(invoiceData.freightCharges || 0).toFixed(2)}
                     </span>
                   </div>
                 )

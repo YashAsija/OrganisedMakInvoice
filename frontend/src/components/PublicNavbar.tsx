@@ -181,49 +181,62 @@ export default function PublicNavbar({ theme, onNavigate, activePath }: PublicNa
                   animate={{ x: 0 }}
                   exit={{ x: '100%' }}
                   transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-                  className="fixed inset-y-4 right-4 z-[70] w-64 bg-white dark:bg-neutral-955 border border-slate-200/50 dark:border-neutral-800/80 shadow-2xl rounded-2xl p-5 flex flex-col justify-between"
+                  className="fixed inset-y-0 right-0 z-[70] w-[280px] bg-white dark:bg-[#0a0a0a] shadow-[rgba(0,0,0,0.1)_0px_4px_24px] dark:shadow-[rgba(0,0,0,0.5)_0px_4px_24px] border-l border-slate-200/80 dark:border-white/10 p-6 flex flex-col h-[100dvh]"
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-100 dark:border-neutral-850">
-                      <span className="text-xs font-black uppercase tracking-wider text-slate-400">Navigation</span>
-                      <button type="button" onClick={() => setIsMobileNavOpen(false)} className="p-1 text-slate-400 hover:text-rose-500 transition-colors">
+                    <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-white/10">
+                      <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Navigation</span>
+                      <button type="button" onClick={() => setIsMobileNavOpen(false)} className="p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/20 transition-colors cursor-pointer">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
 
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-3">
                       {navItems.map((item) => {
                         const isActive = activePath === item.path || (item.path.startsWith('/#') && activePath === item.path);
-                        const activeClass = "bg-sky-500/10";
-                        const inactiveClass = "hover:bg-slate-50 dark:hover:bg-neutral-900";
+                        const isFeatures = item.name === 'Features';
+                        const isGuide = item.name === 'Guide';
+                        const isPricing = item.name === 'Pricing';
+                        const isFAQ = item.name === 'FAQ';
+                        const isContact = item.name === 'Contact';
                         
+                        let bgClass = "bg-sky-100 dark:bg-sky-500/20";
+                        let textClass = "text-sky-600 dark:text-sky-400";
+                        
+                        if (isGuide) { bgClass = "bg-indigo-100 dark:bg-indigo-500/20"; textClass = "text-indigo-600 dark:text-indigo-400"; }
+                        if (isPricing) { bgClass = "bg-emerald-100 dark:bg-emerald-500/20"; textClass = "text-emerald-600 dark:text-emerald-400"; }
+                        if (isFAQ) { bgClass = "bg-amber-100 dark:bg-amber-500/20"; textClass = "text-amber-600 dark:text-amber-400"; }
+                        if (isContact) { bgClass = "bg-rose-100 dark:bg-rose-500/20"; textClass = "text-rose-600 dark:text-rose-400"; }
+
                         return (
                           <button
                             key={item.name}
                             type="button"
                             onClick={() => { onNavigate(item.path); setIsMobileNavOpen(false); }}
-                            className={"flex items-center gap-2.5 p-2 rounded-xl transition-all text-left w-full " + (isActive ? activeClass : inactiveClass)}
+                            className={`flex items-center gap-3 p-3.5 rounded-xl transition-all text-left w-full cursor-pointer group ${isActive ? 'bg-slate-100 dark:bg-white/10 border-slate-300 dark:border-white/20 shadow-sm' : 'bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border-slate-200/60 dark:border-white/5'} border`}
                           >
-                            <item.icon className={"w-4 h-4 " + (isActive ? 'text-sky-550' : 'text-slate-400')} />
-                            <span className={"text-xs font-bold " + (isActive ? 'text-sky-600 dark:text-sky-400' : 'text-slate-700 dark:text-slate-300')}>{item.name}</span>
+                            <div className={`w-8 h-8 rounded-lg ${bgClass} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                              <item.icon className={`w-4 h-4 ${textClass}`} />
+                            </div>
+                            <span className="text-[13px] font-bold text-slate-700 dark:text-slate-200">{item.name}</span>
                           </button>
                         );
                       })}
                     </div>
                   </div>
 
-                  <div className="space-y-2 mt-auto">
+                  <div className="space-y-3 mt-auto pb-4">
                     <button
                       type="button"
                       onClick={() => { window.location.href = '/login'; setIsMobileNavOpen(false); }}
-                      className="w-full py-2.5 text-center text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-neutral-900 border border-slate-200/50 dark:border-neutral-800/80 rounded-xl"
+                      className="w-full py-3 text-center text-[13px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-white/10 border border-transparent hover:bg-slate-200 dark:hover:bg-white/20 rounded-xl cursor-pointer transition-colors"
                     >
                       Log In
                     </button>
                     <button
                       type="button"
                       onClick={() => { window.location.href = '/signup'; setIsMobileNavOpen(false); }}
-                      className="w-full py-2.5 text-center text-xs font-bold text-white bg-sky-600 rounded-xl shadow-md"
+                      className="w-full py-3 text-center text-[13px] font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-md cursor-pointer transition-colors"
                     >
                       Sign Up
                     </button>

@@ -1,12 +1,5 @@
 export interface SecuritySettings {
   isPinLockEnabled: boolean;
-  hashedPin: string;
-  /**
-   * Hex-encoded 16-byte random salt used for PBKDF2 hashing.
-   * Present  → PBKDF2 path (new users / after PIN change)
-   * Absent   → legacy SHA-256 path (existing users, migrated on next PIN change)
-   */
-  salt?: string;
 }
 
 export interface AttemptState {
@@ -25,16 +18,14 @@ export const LOCKOUT_DURATION_MS = 60_000; // 60 seconds
 // ---------------------------------------------------------------------------
 export function getSecuritySettings(): SecuritySettings {
   const data = localStorage.getItem(STORAGE_KEY);
-  if (!data) return { isPinLockEnabled: false, hashedPin: '' };
+  if (!data) return { isPinLockEnabled: false };
   try {
     const parsed = JSON.parse(data);
     return {
       isPinLockEnabled: !!parsed.isPinLockEnabled,
-      hashedPin: parsed.hashedPin || '',
-      salt: parsed.salt || undefined,
     };
   } catch {
-    return { isPinLockEnabled: false, hashedPin: '' };
+    return { isPinLockEnabled: false };
   }
 }
 

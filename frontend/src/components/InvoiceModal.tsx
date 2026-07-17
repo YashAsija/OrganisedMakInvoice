@@ -897,7 +897,6 @@ export default function InvoiceModal({
                 const guestId = `Guest-${Math.floor(1000 + Math.random() * 9000)}`;
                 return `${guestId} (${formattedDate})`;
               })())),
-      freightCharges,
       isFreightAdded,
       clientEmail: invoiceType === 'estimate' ? '' : (silent ? clientEmail : clientEmail.trim()),
       clientPhone: invoiceType === 'estimate' ? '' : (silent ? clientPhone : clientPhone.trim()),

@@ -103,17 +103,7 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
     }
   };
 
-  const verifyLocally = async (enteredPin: string): Promise<boolean> => {
-    const s = getSecuritySettings();
-    if (!s.isPinLockEnabled || !s.hashedPin) return false;
-    let currentHash = '';
-    if (s.salt) {
-      currentHash = await hashPinPBKDF2(enteredPin, s.salt);
-    } else {
-      currentHash = await hashPin(enteredPin);
-    }
-    return currentHash === s.hashedPin;
-  };
+
 
   const triggerShake = () => {
     setShakeError(true);
@@ -138,33 +128,24 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
         if (serverResult === true) {
           // Server confirmed correct PIN
           verified = true;
-          
-          // [NEW] SYNC LOCAL HASH SO OFFLINE WORKS ON NEW DEVICES
-          const isLocallyVerified = await verifyLocally(newPin);
-          if (!isLocallyVerified) {
-            try {
-              const currentSettings = getSecuritySettings();
-              const salt = await generateSalt();
-              const newHash = await hashPinPBKDF2(newPin, salt);
-              saveSecuritySettings({ ...currentSettings, isPinLockEnabled: true, hashedPin: newHash, salt });
-            } catch (e) {
-              console.warn("Could not cache PIN locally for offline use.", e);
-            }
-          }
         } else if (serverResult === false) {
           // Server confirmed wrong PIN
           verified = false;
         } else {
-          // serverResult === null → server unreachable / no hash on server yet → fall back to local
-          verified = await verifyLocally(newPin);
+          // serverResult === null → server unreachable / no hash on server yet 
+          // Since we no longer save PIN hashes locally, verification fails offline
+          verified = false;
+          setError('Network error: Cannot verify PIN offline');
         }
       } else {
-        // No supabase session (offline / local-only mode) → fall back to local hash
-        verified = await verifyLocally(newPin);
+        // No supabase session (offline / local-only mode) → Since no local hash, verification fails
+        verified = false;
+        setError('Cannot verify PIN without an active session');
       }
     } catch {
-      // Any unexpected error → try local as last resort
-      verified = await verifyLocally(newPin);
+      // Any unexpected error → fail securely
+      verified = false;
+      setError('An error occurred during verification');
     }
 
     if (verified) {
@@ -213,7 +194,7 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
       }
       // Disable PIN locally
       const current = getSecuritySettings();
-      saveSecuritySettings({ ...current, isPinLockEnabled: false, hashedPin: '' });
+      saveSecuritySettings({ ...current, isPinLockEnabled: false });
       clearAttempts();
       setScreen('forgotSent');
     } catch {

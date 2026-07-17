@@ -100,6 +100,13 @@ export default function App() {
         return;
       }
 
+      const localSettings = getSecuritySettings();
+      if (localSettings.isPinLockEnabled !== data.is_pin_enabled) {
+        const updatedSettings = { ...localSettings, isPinLockEnabled: data.is_pin_enabled };
+        setSecuritySettings(updatedSettings);
+        localStorage.setItem('invoice_maker_security', JSON.stringify(updatedSettings));
+      }
+
       setIsUnlocked(!data.is_pin_enabled);
     };
     checkPinStatus();
@@ -340,8 +347,6 @@ export default function App() {
     const updated: SecuritySettings = {
       ...current,
       isPinLockEnabled: enable,
-      hashedPin: pinVal,
-      ...(salt ? { salt } : {}),
     };
 
     setSecuritySettings(updated);
@@ -829,7 +834,6 @@ export default function App() {
                     if (currentSec.isPinLockEnabled !== enable) {
                       const newSec = { ...currentSec, isPinLockEnabled: enable };
                       if (enable) {
-                        newSec.hashedPin = ''; // Reset local hash to force server verification
                         setIsUnlocked(false);
                       }
                       saveSecuritySettings(newSec);
