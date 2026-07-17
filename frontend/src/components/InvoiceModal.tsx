@@ -1032,6 +1032,56 @@ export default function InvoiceModal({
     }
   };
 
+  const draftStateRef = useRef({ clientName, items, notes, invoice });
+  useEffect(() => {
+    draftStateRef.current = { clientName, items, notes, invoice };
+  }, [clientName, items, notes, invoice]);
+
+  const buildTempInvoiceRef = useRef(buildTempInvoice);
+  useEffect(() => {
+    buildTempInvoiceRef.current = buildTempInvoice;
+  });
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const { clientName, items, notes, invoice } = draftStateRef.current;
+      if (clientName.trim() !== '' || items.length > 0 || notes.trim() !== '') {
+        const draftInvoice = buildTempInvoiceRef.current(true);
+        if (draftInvoice) {
+          draftInvoice.status = 'draft';
+          if (!invoice) draftInvoice.id = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
+          try {
+            const existingInvoicesStr = localStorage.getItem('makbills_invoices');
+            const existingInvoices = existingInvoicesStr ? JSON.parse(existingInvoicesStr) : [];
+            const existingIdx = existingInvoices.findIndex((inv: any) => inv.id === draftInvoice.id);
+            if (existingIdx > -1) {
+              existingInvoices[existingIdx] = draftInvoice;
+            } else {
+              existingInvoices.push(draftInvoice);
+            }
+            localStorage.setItem('makbills_invoices', JSON.stringify(existingInvoices));
+          } catch (err) {
+            console.error('Failed to autosave draft on unload', err);
+          }
+        }
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
+  const handleSaveAsDraft = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const draftInvoice = buildTempInvoice(true);
+    if (!draftInvoice) return;
+    
+    onSave({
+      ...draftInvoice,
+      status: 'draft',
+      id: invoice ? invoice.id : `inv_${Math.random().toString(36).substr(2, 9)}`,
+    });
+  };
+
   const handleSaveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -2498,6 +2548,15 @@ export default function InvoiceModal({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <span>Export PDF Direct</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveAsDraft}
+              className="hidden sm:flex px-5 py-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-medium items-center gap-1.5 transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
+              title="Save as Draft"
+            >
+              <Save className="w-4 h-4 text-slate-500" />
+              <span>Save as Draft</span>
             </button>
             <button
               type="submit"
