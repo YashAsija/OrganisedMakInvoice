@@ -483,7 +483,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
                   )}
 
                   {/* Thumbnail preview */}
-                  <div className="w-full h-44 sm:h-52 bg-[#FCFAF7] dark:bg-zinc-900 relative overflow-hidden border-b border-[#e2e8f0]/40 dark:border-zinc-800 pointer-events-none">
+                  <div className="w-full h-[260px] sm:h-52 bg-[#FCFAF7] dark:bg-zinc-900 relative overflow-hidden border-b border-[#e2e8f0]/40 dark:border-zinc-800 pointer-events-none">
                     <svg viewBox="0 0 794 1123" className="w-full h-auto origin-top" preserveAspectRatio="xMidYMin slice">
                       <foreignObject width="794" height="1123">
                         <div className="w-[794px] h-[1123px] bg-white flex flex-col">
