@@ -105,6 +105,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [activeLibraryTab, setActiveLibraryTab] = useState<'my_templates' | 'system'>('my_templates');
   const [sortBy, setSortBy] = useState<'latest' | 'oldest' | 'detailed' | 'less_detailed'>('latest');
+  const [selectedTemplateForModal, setSelectedTemplateForModal] = useState<InvoiceTemplate | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -467,106 +468,50 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
               {sortedTemplates.map(template => (
                 <div
                   key={template.id}
-                  className={`flex flex-col bg-white dark:bg-zinc-950 border rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all group relative ${
+                  onClick={() => setSelectedTemplateForModal(template)}
+                  className={`flex flex-col bg-white dark:bg-zinc-950 border rounded-2xl overflow-hidden shadow-xs hover:shadow-lg transition-all group relative cursor-pointer ${
                     template.isDefault
                       ? 'border-emerald-500 dark:border-emerald-600 ring-2 ring-emerald-500/20'
-                      : 'border-[#e2e8f0]/60 dark:border-zinc-800 hover:border-[#64748b]/35'
+                      : 'border-[#e2e8f0]/60 dark:border-zinc-800 hover:border-violet-300 dark:hover:border-violet-700'
                   }`}
                 >
                   {/* Default badge */}
                   {template.isDefault && (
-                    <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden z-10 pointer-events-none">
+                    <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden z-20 pointer-events-none">
                       <div className="absolute top-4 -right-5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[8px] font-black py-0.5 px-6 transform rotate-45 shadow-xs tracking-widest uppercase">
                         DEFAULT
                       </div>
                     </div>
                   )}
 
-                  {/* Thumbnail preview */}
-                  <div className="w-full h-[260px] sm:h-52 bg-[#FCFAF7] dark:bg-zinc-900 relative overflow-hidden border-b border-[#e2e8f0]/40 dark:border-zinc-800 pointer-events-none">
-                    <svg viewBox="0 0 794 1123" className="w-full h-auto origin-top" preserveAspectRatio="xMidYMin slice">
+                  {/* Full Thumbnail preview */}
+                  <div className="w-full aspect-[794/1123] bg-[#FCFAF7] dark:bg-zinc-900 relative overflow-hidden pointer-events-none">
+                    <svg viewBox="0 0 794 1123" className="w-full h-full origin-top" preserveAspectRatio="xMidYMid meet">
                       <foreignObject width="794" height="1123">
                         <div className="w-[794px] h-[1123px] bg-white flex flex-col">
                           <LivePreview template={template} businessProfile={businessProfile} />
                         </div>
                       </foreignObject>
                     </svg>
+                    
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4">
+                      <span className="text-white/90 text-[10px] uppercase tracking-wider bg-black/50 px-3 py-1.5 rounded-full backdrop-blur-sm font-bold flex items-center gap-1.5">
+                        <Search className="w-3.5 h-3.5" /> View Details
+                      </span>
+                    </div>
                   </div>
-
-                  {/* Card body */}
-                  <div className="p-4 flex flex-col flex-1 justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <h3 className="text-xs font-black text-[#0f172a] dark:text-white truncate" title={template.name}>
-                          {template.name}
-                        </h3>
-                      </div>
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black uppercase tracking-wider">
-                          {template.category}
-                        </span>
-                        <span className="px-1.5 py-0.5 bg-sky-50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 border border-sky-200/60 dark:border-sky-800/40 rounded text-[9px] font-black uppercase tracking-wider">
-                          {template.layout.type}
-                        </span>
-                      </div>
-                      <p className="text-[10.5px] text-[#64748b]/75 dark:text-zinc-500 line-clamp-2 leading-relaxed min-h-[30px]">
-                        {template.description || 'No description provided.'}
-                      </p>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => {
-                            setEditingTemplate(template);
-                            setIsBuilding(true);
-                          }}
-                          className="flex-1 py-1.5 bg-violet-50 dark:bg-violet-950/20 hover:bg-violet-100 dark:hover:bg-violet-900/30 text-violet-700 dark:text-violet-300 border border-violet-200/60 dark:border-violet-800/40 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                        >
-                          <Edit2 className="w-3 h-3" />
-                          {activeLibraryTab === 'system' ? 'Use Preset' : 'Edit'}
-                        </button>
-                        <button
-                          onClick={() => handleDuplicate(template)}
-                          title="Duplicate template"
-                          className="px-2 py-1.5 bg-sky-50 dark:bg-sky-950/20 hover:bg-sky-100 dark:hover:bg-sky-900/30 text-sky-600 dark:text-sky-400 border border-sky-200/60 dark:border-sky-800/40 rounded-lg transition-colors flex items-center justify-center cursor-pointer"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleExportPDF(template)}
-                          title="Download sample PDF"
-                          className="px-2 py-1.5 bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40 rounded-lg transition-colors flex items-center justify-center cursor-pointer"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      <div className="flex items-center gap-2 pt-1.5 border-t border-[#e2e8f0]/40 dark:border-zinc-800">
-                        {!template.isDefault ? (
-                          <button
-                            onClick={() => handleSetDefault(template.id)}
-                            className="flex-1 py-1 text-[10px] font-black uppercase tracking-wider text-[#64748b] hover:text-[#0f172a] dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
-                          >
-                            Set as Default
-                          </button>
-                        ) : (
-                          <span className="flex-1 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1">
-                            <Check className="w-3 h-3" /> Active Default
-                          </span>
-                        )}
-                        {activeLibraryTab !== 'system' && (
-                          <button
-                            onClick={() => handleDelete(template.id)}
-                            title="Delete template"
-                            className="p-1 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-[#64748b]/50 hover:text-rose-500 rounded-lg transition-colors cursor-pointer ml-auto"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
+                  
+                  {/* Name banner below preview always visible */}
+                  <div className="p-3 bg-white dark:bg-zinc-950 border-t border-[#e2e8f0]/60 dark:border-zinc-800 text-center flex items-center justify-center gap-2">
+                     <h3 className="text-[11px] font-black text-[#0f172a] dark:text-white truncate" title={template.name}>
+                       {template.name}
+                     </h3>
+                     {activeLibraryTab === 'system' && (
+                       <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black uppercase tracking-wider shrink-0">
+                         Preset
+                       </span>
+                     )}
                   </div>
                 </div>
               ))}
@@ -574,6 +519,127 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
           )}
         </div>
       </div>
+      
+      {/* Template Details Modal */}
+      {selectedTemplateForModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="relative w-full max-w-5xl bg-[#f8fafc] dark:bg-zinc-950 rounded-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden my-auto max-h-[90vh]">
+            
+            {/* Left side: Large SVG Preview */}
+            <div className="w-full lg:w-[60%] bg-[#FCFAF7] dark:bg-zinc-900 border-b lg:border-b-0 lg:border-r border-[#e2e8f0]/60 dark:border-zinc-800 p-4 sm:p-8 flex items-center justify-center overflow-hidden">
+              <div className="w-full max-w-[500px] aspect-[794/1123] shadow-lg rounded overflow-hidden relative">
+                <svg viewBox="0 0 794 1123" className="w-full h-full origin-top pointer-events-none" preserveAspectRatio="xMidYMid meet">
+                  <foreignObject width="794" height="1123">
+                    <div className="w-[794px] h-[1123px] bg-white flex flex-col">
+                      <LivePreview template={selectedTemplateForModal} businessProfile={businessProfile} />
+                    </div>
+                  </foreignObject>
+                </svg>
+              </div>
+            </div>
+
+            {/* Right side: Details & Actions */}
+            <div className="w-full lg:w-[40%] flex flex-col p-6 sm:p-8 bg-white dark:bg-zinc-950">
+              
+              {/* Header / Badges */}
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black text-[#0f172a] dark:text-white mb-3">
+                    {selectedTemplateForModal.name}
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    {selectedTemplateForModal.isDefault && (
+                      <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded text-[10px] font-black uppercase tracking-wider flex items-center gap-1 border border-emerald-200 dark:border-emerald-800/50">
+                        <Check className="w-3 h-3" /> Active Default
+                      </span>
+                    )}
+                    <span className="px-2 py-1 bg-[#f1f5f9] dark:bg-zinc-900 text-[#64748b] dark:text-zinc-400 rounded text-[10px] font-black uppercase tracking-wider border border-[#e2e8f0] dark:border-zinc-800">
+                      {selectedTemplateForModal.category}
+                    </span>
+                    <span className="px-2 py-1 bg-sky-50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 rounded text-[10px] font-black uppercase tracking-wider border border-sky-200/60 dark:border-sky-800/40">
+                      {selectedTemplateForModal.layout.type} layout
+                    </span>
+                  </div>
+                </div>
+                
+                <button 
+                  onClick={() => setSelectedTemplateForModal(null)}
+                  className="p-2 -mr-2 -mt-2 text-[#64748b] hover:text-[#0f172a] dark:hover:text-white bg-[#f8fafc] hover:bg-[#e2e8f0] dark:bg-zinc-900 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+
+              {/* Description */}
+              <div className="mb-8 flex-1">
+                <h4 className="text-[10px] font-black text-[#64748b] dark:text-zinc-500 uppercase tracking-widest mb-2">Description</h4>
+                <p className="text-sm text-[#475569] dark:text-zinc-400 leading-relaxed">
+                  {selectedTemplateForModal.description || 'No description provided for this template.'}
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col gap-3 mt-auto">
+                <button
+                  onClick={() => {
+                    setEditingTemplate(selectedTemplateForModal);
+                    setIsBuilding(true);
+                    setSelectedTemplateForModal(null);
+                  }}
+                  className="w-full py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-violet-600/20"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  {activeLibraryTab === 'system' ? 'Use This Preset' : 'Edit Template'}
+                </button>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  {!selectedTemplateForModal.isDefault && (
+                    <button
+                      onClick={() => {
+                        handleSetDefault(selectedTemplateForModal.id);
+                        setSelectedTemplateForModal(null);
+                      }}
+                      className="py-2.5 bg-white dark:bg-zinc-900 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-white border border-[#e2e8f0] dark:border-zinc-700 rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Check className="w-3.5 h-3.5" /> Set Default
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => {
+                      handleDuplicate(selectedTemplateForModal);
+                      setSelectedTemplateForModal(null);
+                    }}
+                    className={`py-2.5 bg-white dark:bg-zinc-900 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-white border border-[#e2e8f0] dark:border-zinc-700 rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${selectedTemplateForModal.isDefault ? 'col-span-2' : ''}`}
+                  >
+                    <Copy className="w-3.5 h-3.5" /> Duplicate
+                  </button>
+                  
+                  <button
+                    onClick={() => handleExportPDF(selectedTemplateForModal)}
+                    className="py-2.5 bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40 rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" /> PDF
+                  </button>
+                  
+                  {activeLibraryTab !== 'system' && (
+                    <button
+                      onClick={() => {
+                        handleDelete(selectedTemplateForModal.id);
+                        setSelectedTemplateForModal(null);
+                      }}
+                      className="py-2.5 bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40 rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
