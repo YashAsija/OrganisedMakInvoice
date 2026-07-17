@@ -232,23 +232,23 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
     }
   },
   {
-    ...generateBaseTemplate('preset_gst', 'Comprehensive Tax', 'GST'),
-    description: 'Strictly compliant universal tax layout with full tax breakdown and regional codes. This layout provides all required fields for B2B transactions including detailed tax rates and transportation details.',
+    ...generateBaseTemplate('preset_gst', 'GST Exhaustive', 'GST'),
+    description: 'Strictly compliant Indian GST layout with full tax breakdown and HSN. This layout provides all required fields for B2B transactions including IGST, CGST, SGST, and transportation details.',
     sections: {
-      ...generateBaseTemplate('preset_gst', 'Comprehensive Tax', 'GST').sections,
+      ...generateBaseTemplate('preset_gst', 'GST Exhaustive', 'GST').sections,
       shipTo: { id: 'shipTo', visible: true, order: 5, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
       transport: { id: 'transport', visible: true, order: 6, gridColumnSpan: 12, customLabels: {}, customStyles: {} },
       taxEngine: { id: 'taxEngine', visible: true, order: 8, gridColumnSpan: 6, customLabels: {}, customStyles: {} }
     },
     config: {
-      ...generateBaseTemplate('preset_gst', 'Comprehensive Tax', 'GST').config,
+      ...generateBaseTemplate('preset_gst', 'GST Exhaustive', 'GST').config,
       header: { showLogo: true, logoPosition: 'Left', logoWidth: 120, logoHeight: 60, titleAlignment: 'Right', invoiceTitle: 'TAX INVOICE' },
       company: { fields: ['name', 'address', 'gstin', 'email', 'phone', 'pan'] },
       client: { fields: ['name', 'address', 'gstin'] },
       tax: { showTaxableAmount: true, showCgstSgst: true, showIgst: true, showCess: false, showDiscount: true, showRoundOff: true, showTotal: true, enableHsnSummary: true, enableGstSummary: true, enableTaxBreakdown: true }
     },
     styleConfig: {
-      ...generateBaseTemplate('preset_gst', 'Comprehensive Tax', 'GST').styleConfig,
+      ...generateBaseTemplate('preset_gst', 'GST Exhaustive', 'GST').styleConfig,
       primaryColor: '#ea580c',
       fontFamily: 'Roboto',
       borderStyle: 'Heavy',
