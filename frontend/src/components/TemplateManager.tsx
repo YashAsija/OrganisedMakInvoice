@@ -3,11 +3,13 @@ import { Plus, LayoutTemplate, FileText, Check, Trash2, Edit2, Copy, Download, U
 import { InvoiceTemplate, BusinessProfile } from '../types';
 import { LivePreview } from './TemplateBuilder/LivePreview';
 import { exportInvoicePDFAsync } from '../lib/pdfExporter';
+import { useConfirm } from './ConfirmContext';
 
 import TemplateCreationHub from './TemplateBuilder/TemplateCreationHub';
 import { TEMPLATE_PRESETS } from '../lib/templatePresets';
 
 export default function TemplateManager({ businessProfile }: { businessProfile?: BusinessProfile }) {
+  const { confirm } = useConfirm();
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('makbills_custom_templates');
@@ -165,8 +167,14 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     setEditingTemplate(null);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this custom template?')) {
+  const handleDelete = async (id: string) => {
+    const confirmed = await confirm({
+      title: 'Delete Template',
+      message: 'Are you sure you want to permanently delete this custom template?',
+      confirmText: 'Delete'
+    });
+    
+    if (confirmed) {
       const updated = templates.filter(t => t.id !== id);
       
       if (id === globalDefaultId) {

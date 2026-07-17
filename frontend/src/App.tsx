@@ -37,6 +37,7 @@ if (typeof window !== 'undefined') {
 
 // Sub-components
 import BiometricVerification from './components/BiometricVerification';
+import { useConfirm } from './components/ConfirmContext';
 import Dashboard from './components/Dashboard';
 import BusinessProfileModal from './components/BusinessProfileModal';
 import InvoiceModal from './components/InvoiceModal';
@@ -69,13 +70,14 @@ const pathToTab: Record<string, string> = Object.entries(tabToPath).reduce(
 );
 
 export default function App() {
+  const { confirm } = useConfirm();
   // Theme & Network states
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const cached = localStorage.getItem('invoice_maker_theme');
     if (cached === 'light' || cached === 'dark') return cached;
     return 'light'; // default light theme for professional premium readability
   });
-  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
 
   // Security Lock state
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>(() => getSecuritySettings());
@@ -1190,7 +1192,12 @@ export default function App() {
 
   // 4. Delete Invoice
   const handleDeleteInvoice = async (invoiceId: string) => {
-    const confirmed = window.confirm('Are you sure you want to delete this invoice?');
+    const isDraft = invoices.find(i => i.id === invoiceId)?.status === 'draft';
+    const confirmed = await confirm({
+      title: isDraft ? 'Delete Draft' : 'Delete Invoice',
+      message: `Are you sure you want to permanently delete this ${isDraft ? 'draft' : 'invoice'}? This action cannot be undone.`,
+      confirmText: 'Delete'
+    });
     if (!confirmed) return;
 
     const remaining = invoices.filter(inv => inv.id !== invoiceId);
@@ -1210,7 +1217,11 @@ export default function App() {
   // Bulk Delete Invoices
   const handleBulkDeleteInvoices = async (invoiceIds: string[]) => {
     if (invoiceIds.length === 0) return;
-    const confirmed = window.confirm(`Are you sure you want to delete the ${invoiceIds.length} selected invoices?`);
+    const confirmed = await confirm({
+      title: 'Bulk Delete Invoices',
+      message: `Are you sure you want to delete the ${invoiceIds.length} selected invoices? This action cannot be undone.`,
+      confirmText: 'Delete All'
+    });
     if (!confirmed) return;
 
     const remaining = invoices.filter(inv => !invoiceIds.includes(inv.id));
@@ -1442,7 +1453,11 @@ export default function App() {
   };
 
   const handleDeleteClient = async (clientId: string) => {
-    const confirmed = window.confirm('Are you sure you want to delete this client profile?');
+    const confirmed = await confirm({
+      title: 'Delete Client',
+      message: 'Are you sure you want to permanently delete this client profile? This action cannot be undone.',
+      confirmText: 'Delete'
+    });
     if (!confirmed) return;
 
     const clientToDelete = clients.find(c => c.id === clientId);
@@ -1483,7 +1498,11 @@ export default function App() {
   };
 
   const handleDeleteExpense = async (expenseId: string) => {
-    const confirmed = window.confirm('Are you sure you want to delete this business expense?');
+    const confirmed = await confirm({
+      title: 'Delete Expense',
+      message: 'Are you sure you want to permanently delete this business expense? This action cannot be undone.',
+      confirmText: 'Delete'
+    });
     if (!confirmed) return;
 
     const remaining = expenses.filter(e => e.id !== expenseId);

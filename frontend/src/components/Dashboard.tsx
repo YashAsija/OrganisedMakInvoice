@@ -55,8 +55,19 @@ import {
   Info,
   FileSpreadsheet,
   Percent,
-  MapPin
+  MapPin,
+  Edit2, 
+  ExternalLink, 
+  Share2, 
+  Link as LinkIcon, 
+  Unlock, 
+  Eye, 
+  Building2, 
+  HelpCircle, 
+  GripVertical, 
+  AlertTriangle 
 } from 'lucide-react';
+import { useConfirm } from './ConfirmContext';
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from '../types';
 import { BUSINESS_TEMPLATES } from '../lib/presets';
 import { exportInvoicePDFAsync, exportCollectiveReportPDF } from '../lib/pdfExporter';
@@ -135,6 +146,7 @@ export default function Dashboard({
   activeTab: propActiveTab,
   onTabChange
 }: DashboardProps) {
+  const { confirm } = useConfirm();
   // Navigation tabs: 'dashboard' | 'profile' | 'learn' | 'invoices' | 'clients' | 'reports' | 'master_vendor' ...
   const [localActiveTab, setLocalActiveTab] = useState<string>('dashboard');
   const activeTab = propActiveTab !== undefined ? propActiveTab : localActiveTab;
@@ -466,8 +478,12 @@ export default function Dashboard({
     setEditingMasterItem(null);
   };
 
-  const handleDeleteMasterItem = (id: string) => {
-    const confirmed = window.confirm('Are you sure you want to delete this record?');
+  const handleDeleteMasterItem = async (id: string) => {
+    const confirmed = await confirm({
+      title: 'Delete Record',
+      message: 'Are you sure you want to permanently delete this record? This action cannot be undone.',
+      confirmText: 'Delete'
+    });
     if (!confirmed) return;
 
     let list: any[] = [];

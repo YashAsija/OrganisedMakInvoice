@@ -2,6 +2,7 @@ import React, {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { ConfirmProvider } from './components/ConfirmContext';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -58,7 +59,9 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <ConfirmProvider>
+        <App />
+      </ConfirmProvider>
     </ErrorBoundary>
   </StrictMode>,
 );

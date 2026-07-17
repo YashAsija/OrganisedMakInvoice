@@ -1057,7 +1057,11 @@ export default function InvoiceModal({
              draftInvoice.id = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
           }
           try {
-            const existingInvoicesStr = localStorage.getItem('makbills_invoices');
+            const userEmail = localStorage.getItem('makbills_custom_email');
+            const suffix = userEmail ? `_${userEmail}` : '';
+            const storageKey = `invoice_maker_invoices${suffix}`;
+            
+            const existingInvoicesStr = localStorage.getItem(storageKey);
             const existingInvoices = existingInvoicesStr ? JSON.parse(existingInvoicesStr) : [];
             const existingIdx = existingInvoices.findIndex((inv: any) => inv.id === draftInvoice.id);
             if (existingIdx > -1) {
@@ -1065,7 +1069,7 @@ export default function InvoiceModal({
             } else {
               existingInvoices.push(draftInvoice);
             }
-            localStorage.setItem('makbills_invoices', JSON.stringify(existingInvoices));
+            localStorage.setItem(storageKey, JSON.stringify(existingInvoices));
           } catch (err) {
             console.error('Failed to autosave draft on unload', err);
           }
