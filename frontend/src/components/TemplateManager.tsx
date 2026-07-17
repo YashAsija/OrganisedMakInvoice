@@ -464,7 +464,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               {sortedTemplates.map(template => (
                 <div
                   key={template.id}
@@ -522,12 +522,17 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
       
       {/* Template Details Modal */}
       {selectedTemplateForModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
-          <div className="relative w-full max-w-5xl bg-[#f8fafc] dark:bg-zinc-950 rounded-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden my-auto max-h-[90vh]">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedTemplateForModal(null);
+          }}
+        >
+          <div className="relative w-full max-w-5xl bg-[#f8fafc] dark:bg-zinc-950 rounded-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden my-auto max-h-none lg:max-h-[90vh]">
             
             {/* Left side: Large SVG Preview */}
-            <div className="w-full lg:w-[60%] bg-[#FCFAF7] dark:bg-zinc-900 border-b lg:border-b-0 lg:border-r border-[#e2e8f0]/60 dark:border-zinc-800 p-4 sm:p-8 flex items-center justify-center overflow-hidden">
-              <div className="w-full max-w-[500px] aspect-[794/1123] shadow-lg rounded overflow-hidden relative">
+            <div className="w-full lg:w-[60%] bg-[#FCFAF7] dark:bg-zinc-900 border-b lg:border-b-0 lg:border-r border-[#e2e8f0]/60 dark:border-zinc-800 p-4 sm:p-8 flex items-center justify-center overflow-hidden h-[50vh] lg:h-auto">
+              <div className="h-full lg:w-full lg:h-auto max-w-[500px] aspect-[794/1123] shadow-lg rounded overflow-hidden relative">
                 <svg viewBox="0 0 794 1123" className="w-full h-full origin-top pointer-events-none" preserveAspectRatio="xMidYMid meet">
                   <foreignObject width="794" height="1123">
                     <div className="w-[794px] h-[1123px] bg-white flex flex-col">
@@ -539,7 +544,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
             </div>
 
             {/* Right side: Details & Actions */}
-            <div className="w-full lg:w-[40%] flex flex-col p-6 sm:p-8 bg-white dark:bg-zinc-950">
+            <div className="w-full lg:w-[40%] flex flex-col p-5 sm:p-8 bg-white dark:bg-zinc-950 overflow-y-auto">
               
               {/* Header / Badges */}
               <div className="flex items-start justify-between mb-4">
