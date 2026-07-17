@@ -516,7 +516,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
                   
                   {/* Name banner below preview always visible */}
                   <div className="p-3 bg-white dark:bg-zinc-950 border-t border-[#e2e8f0]/60 dark:border-zinc-800 text-center flex items-center justify-center gap-2">
-                     <h3 className="text-[11px] font-black text-[#0f172a] dark:text-white truncate" title={template.name}>
+                     <h3 className="text-[11px] font-black text-black dark:text-white truncate" title={template.name}>
                        {template.name}
                      </h3>
                      {activeLibraryTab === 'system' && (
@@ -561,8 +561,8 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
               {/* Header / Badges */}
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mb-3">
-                    {selectedTemplateForModal.name || 'Untitled Template'}
+                  <h2 className="text-xl sm:text-2xl font-black text-black dark:text-white mb-3">
+                    {selectedTemplateForModal.name}
                   </h2>
                   <div className="flex flex-wrap items-center gap-2 mb-4">
                     {selectedTemplateForModal.isDefault && (
@@ -631,7 +631,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
                     setIsBuilding(true);
                     setSelectedTemplateForModal(null);
                   }}
-                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-slate-900/20"
+                  className="w-full py-3 bg-[#6d28d9] hover:bg-[#6d28d9] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-violet-600/20"
                 >
                   <Edit2 className="w-4 h-4" />
                   {activeLibraryTab === 'system' ? 'Use This Preset' : 'Edit Template'}
