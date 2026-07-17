@@ -561,8 +561,8 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
               {/* Header / Badges */}
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-black text-[#0f172a] dark:text-white mb-3">
-                    {selectedTemplateForModal.name}
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mb-3">
+                    {selectedTemplateForModal.name || 'Untitled Template'}
                   </h2>
                   <div className="flex flex-wrap items-center gap-2 mb-4">
                     {selectedTemplateForModal.isDefault && (
@@ -631,7 +631,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
                     setIsBuilding(true);
                     setSelectedTemplateForModal(null);
                   }}
-                  className="w-full py-3 bg-[#0f172a] hover:bg-[#1e293b] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#0f172a]/20"
+                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-slate-900/20"
                 >
                   <Edit2 className="w-4 h-4" />
                   {activeLibraryTab === 'system' ? 'Use This Preset' : 'Edit Template'}
