@@ -1051,10 +1051,19 @@ export default function InvoiceModal({
   const [resumableDraft, setResumableDraft] = useState<{ id: string; clientName: string; updatedAt: string } | null>(null);
   const [resumeBannerDismissed, setResumeBannerDismissed] = useState(false);
 
-  // On modal open for a NEW invoice — check localStorage for a recent draft to offer resuming
+  // On modal open for a NEW invoice — check for a reload-triggered draft to offer resuming.
+  // The banner ONLY shows if a previous reload actually saved a draft (flag set by buildAndSave).
   useEffect(() => {
     if (!isOpen || invoice) return; // only for new invoices
     setResumeBannerDismissed(false);
+    setResumableDraft(null);
+
+    // Only show banner if buildAndSave() wrote this flag on the last reload/unload
+    const pendingDraftId = localStorage.getItem('makbills_pending_resume_draft');
+    if (!pendingDraftId) return;
+
+    // Clear the flag immediately — banner should only show once per reload
+    localStorage.removeItem('makbills_pending_resume_draft');
 
     const userEmail = localStorage.getItem('makbills_custom_email');
     const suffix = userEmail ? `_${encodeURIComponent(userEmail)}` : '';
@@ -1063,13 +1072,15 @@ export default function InvoiceModal({
       const raw = localStorage.getItem(storageKey);
       if (!raw) return;
       const all = JSON.parse(raw) as any[];
-      // Find the most-recent draft that's not a submitted invoice
-      const drafts = all
-        .filter(i => i.status === 'draft' && i.id?.startsWith('inv_draft_'))
-        .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
-      if (drafts.length > 0) {
-        const d = drafts[0];
-        setResumableDraft({ id: d.id, clientName: d.clientName || 'Unnamed', updatedAt: d.updatedAt });
+      // Find the specific draft that was saved on unload
+      const d = all.find(i =>
+        i.id === pendingDraftId &&
+        i.status === 'draft' &&
+        i.clientName && i.clientName.trim() !== '' &&
+        Array.isArray(i.items) && i.items.length > 0
+      );
+      if (d) {
+        setResumableDraft({ id: d.id, clientName: d.clientName, updatedAt: d.updatedAt });
       }
     } catch { /* ignore */ }
   }, [isOpen, invoice]);
@@ -1115,15 +1126,18 @@ export default function InvoiceModal({
       const draft = buildTempInvoiceRef.current(true);
       if (!draft) return;
 
-      // Check if there's any real data to save
-      const isDefaultClient = draft.clientName === 'Quote / Estimate' || draft.clientName?.startsWith('Guest-');
-      const hasData =
-        !isDefaultClient ||
-        (draft.items && draft.items.length > 0) ||
-        !!draft.notes || !!draft.referenceNumber || !!draft.poNumber ||
-        !!draft.clientEmail || !!draft.clientPhone || !!draft.clientAddress;
+      // Only autosave if BOTH conditions are met:
+      // 1. A real client name is entered
+      // 2. At least 1 line item exists
+      const hasRealClientName =
+        draft.clientName &&
+        draft.clientName.trim() !== '' &&
+        draft.clientName !== 'Quote / Estimate' &&
+        !draft.clientName.startsWith('Guest-');
 
-      if (!hasData) return;
+      const hasItems = Array.isArray(draft.items) && draft.items.length > 0;
+
+      if (!hasRealClientName || !hasItems) return;
 
       const draftToSave = {
         ...draft,
@@ -1163,16 +1177,18 @@ export default function InvoiceModal({
       const draft = buildTempInvoiceRef.current(true);
       if (!draft) return;
 
-      const isDefaultClient = draft.clientName === 'Quote / Estimate' || draft.clientName?.startsWith('Guest-');
-      const hasData =
-        !isDefaultClient ||
-        (draft.items && draft.items.length > 0) ||
-        !!draft.notes || !!draft.invoiceTerms ||
-        !!draft.referenceNumber || !!draft.poNumber || !!draft.deliveryNote ||
-        !!draft.clientEmail || !!draft.clientPhone || !!draft.clientAddress ||
-        !!draft.shippedToName || !!draft.transport || !!draft.vehicleNo || !!draft.ewayBillNo;
+      // Only save draft on reload if BOTH conditions are met:
+      // 1. Client name is actually filled (not empty/default)
+      // 2. At least 1 line item exists
+      const hasRealClientName =
+        draft.clientName &&
+        draft.clientName.trim() !== '' &&
+        draft.clientName !== 'Quote / Estimate' &&
+        !draft.clientName.startsWith('Guest-');
 
-      if (!hasData) return;
+      const hasItems = Array.isArray(draft.items) && draft.items.length > 0;
+
+      if (!hasRealClientName || !hasItems) return;
 
       const draftToSave = {
         ...draft,
@@ -1183,6 +1199,9 @@ export default function InvoiceModal({
 
       // Synchronous localStorage write (always works in unload)
       saveDraftToLocalStorage(draftToSave);
+
+      // Set a flag so the resume banner shows ONLY on the next Quick Bill open after this reload
+      localStorage.setItem('makbills_pending_resume_draft', draftToSave.id);
 
       // sendBeacon to backend (fire-and-forget, survives unload)
       try {
@@ -1233,11 +1252,16 @@ export default function InvoiceModal({
     const draftInvoice = buildTempInvoice(true);
     if (!draftInvoice) return;
     
+    const draftId = invoice ? invoice.id : `inv_${Math.random().toString(36).substr(2, 9)}`;
+
     onSave({
       ...draftInvoice,
       status: 'draft',
-      id: invoice ? invoice.id : `inv_${Math.random().toString(36).substr(2, 9)}`,
+      id: draftId,
     });
+
+    emitNotification('Draft Saved', `Invoice draft for ${clientName} has been saved.`, 'success');
+    onClose();
   };
 
   const handleSaveSubmit = (e: React.FormEvent) => {
