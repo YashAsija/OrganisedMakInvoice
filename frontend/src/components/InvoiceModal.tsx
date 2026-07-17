@@ -1032,53 +1032,188 @@ export default function InvoiceModal({
     }
   };
 
+  // ─── Draft Auto-Save System ────────────────────────────────────────────────
+
+  // A stable ID for this WIP invoice. Generated once on first edit, reused.
+  // If we're editing an existing invoice, use its ID; otherwise generate a new one.
+  const draftIdRef = useRef<string>(invoice?.id ?? `inv_draft_${Math.random().toString(36).substr(2, 9)}`);
+
+  // Reset draftId when the modal opens for a brand-new invoice
+  useEffect(() => {
+    if (isOpen && !invoice) {
+      draftIdRef.current = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
+    } else if (isOpen && invoice) {
+      draftIdRef.current = invoice.id;
+    }
+  }, [isOpen, invoice]);
+
+  // Resume draft banner state
+  const [resumableDraft, setResumableDraft] = useState<{ id: string; clientName: string; updatedAt: string } | null>(null);
+  const [resumeBannerDismissed, setResumeBannerDismissed] = useState(false);
+
+  // On modal open for a NEW invoice — check localStorage for a recent draft to offer resuming
+  useEffect(() => {
+    if (!isOpen || invoice) return; // only for new invoices
+    setResumeBannerDismissed(false);
+
+    const userEmail = localStorage.getItem('makbills_custom_email');
+    const suffix = userEmail ? `_${encodeURIComponent(userEmail)}` : '';
+    const storageKey = `invoice_maker_invoices${suffix}`;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return;
+      const all = JSON.parse(raw) as any[];
+      // Find the most-recent draft that's not a submitted invoice
+      const drafts = all
+        .filter(i => i.status === 'draft' && i.id?.startsWith('inv_draft_'))
+        .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
+      if (drafts.length > 0) {
+        const d = drafts[0];
+        setResumableDraft({ id: d.id, clientName: d.clientName || 'Unnamed', updatedAt: d.updatedAt });
+      }
+    } catch { /* ignore */ }
+  }, [isOpen, invoice]);
+
+  // Helper: get the correct storage key for this user
+  const getStorageKey = useCallback(() => {
+    const userEmail = localStorage.getItem('makbills_custom_email');
+    const suffix = userEmail ? `_${encodeURIComponent(userEmail)}` : '';
+    return `invoice_maker_invoices${suffix}`;
+  }, []);
+
+  // Core save-to-localStorage function (synchronous, safe for unload)
+  const saveDraftToLocalStorage = useCallback((draftInvoice: any) => {
+    try {
+      const storageKey = getStorageKey();
+      const raw = localStorage.getItem(storageKey);
+      const all = raw ? JSON.parse(raw) : [];
+      const idx = all.findIndex((i: any) => i.id === draftInvoice.id);
+      if (idx > -1) all[idx] = draftInvoice;
+      else all.push(draftInvoice);
+      localStorage.setItem(storageKey, JSON.stringify(all));
+    } catch (err) {
+      console.error('[draft] localStorage save failed', err);
+    }
+  }, [getStorageKey]);
+
+  // Keep a ref to buildTempInvoice so unload listeners (closures) always call the latest version
   const buildTempInvoiceRef = useRef(buildTempInvoice);
   useEffect(() => {
     buildTempInvoiceRef.current = buildTempInvoice;
   });
 
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      const draftInvoice = buildTempInvoiceRef.current(true);
-      if (draftInvoice) {
-        const isDefaultClientName = draftInvoice.clientName === 'Quote / Estimate' || draftInvoice.clientName?.startsWith('Guest-');
-        
-        const hasData = 
-          !isDefaultClientName ||
-          (draftInvoice.items && draftInvoice.items.length > 0) ||
-          !!draftInvoice.notes || !!draftInvoice.invoiceTerms ||
-          !!draftInvoice.referenceNumber || !!draftInvoice.poNumber || !!draftInvoice.deliveryNote ||
-          !!draftInvoice.clientEmail || !!draftInvoice.clientPhone || !!draftInvoice.clientAddress ||
-          !!draftInvoice.shippedToName || !!draftInvoice.transport || !!draftInvoice.vehicleNo || !!draftInvoice.ewayBillNo;
+  // ─── Debounced autosave while typing (3 s after last change) ───────────────
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-        if (hasData) {
-          draftInvoice.status = 'draft';
-          if (!invoice) {
-             draftInvoice.id = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
-          }
-          try {
-            const userEmail = localStorage.getItem('makbills_custom_email');
-            const suffix = userEmail ? `_${userEmail}` : '';
-            const storageKey = `invoice_maker_invoices${suffix}`;
-            
-            const existingInvoicesStr = localStorage.getItem(storageKey);
-            const existingInvoices = existingInvoicesStr ? JSON.parse(existingInvoicesStr) : [];
-            const existingIdx = existingInvoices.findIndex((inv: any) => inv.id === draftInvoice.id);
-            if (existingIdx > -1) {
-              existingInvoices[existingIdx] = draftInvoice;
-            } else {
-              existingInvoices.push(draftInvoice);
-            }
-            localStorage.setItem(storageKey, JSON.stringify(existingInvoices));
-          } catch (err) {
-            console.error('Failed to autosave draft on unload', err);
-          }
+  // Watch all key form fields — debounce the save
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+    debounceTimerRef.current = setTimeout(async () => {
+      const draft = buildTempInvoiceRef.current(true);
+      if (!draft) return;
+
+      // Check if there's any real data to save
+      const isDefaultClient = draft.clientName === 'Quote / Estimate' || draft.clientName?.startsWith('Guest-');
+      const hasData =
+        !isDefaultClient ||
+        (draft.items && draft.items.length > 0) ||
+        !!draft.notes || !!draft.referenceNumber || !!draft.poNumber ||
+        !!draft.clientEmail || !!draft.clientPhone || !!draft.clientAddress;
+
+      if (!hasData) return;
+
+      const draftToSave = {
+        ...draft,
+        id: draftIdRef.current,
+        status: 'draft' as const,
+        updatedAt: new Date().toISOString(),
+      };
+
+      // 1. Always save to localStorage immediately
+      saveDraftToLocalStorage(draftToSave);
+
+      // 2. If online, also persist to Supabase
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await supabase.from('invoices').upsert({ ...draftToSave, userId: session.user.id });
         }
+      } catch (err) {
+        console.warn('[draft] Supabase debounced save failed (offline?)', err);
+      }
+    }, 3000);
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isOpen, clientName, clientEmail, clientPhone, clientAddress, notes, invoiceTerms,
+    items, discountType, discountValue, referenceNumber, poNumber, deliveryNote,
+    shippedToName, shippedToPhone, shippedToEmail, shippedToAddress,
+    transport, vehicleNo, driverMobile, station, ewayBillNo, grRrNo, placeOfSupply,
+  ]);
+
+  // ─── Unload handlers: beforeunload + visibilitychange ──────────────────────
+  useEffect(() => {
+    const buildAndSave = () => {
+      const draft = buildTempInvoiceRef.current(true);
+      if (!draft) return;
+
+      const isDefaultClient = draft.clientName === 'Quote / Estimate' || draft.clientName?.startsWith('Guest-');
+      const hasData =
+        !isDefaultClient ||
+        (draft.items && draft.items.length > 0) ||
+        !!draft.notes || !!draft.invoiceTerms ||
+        !!draft.referenceNumber || !!draft.poNumber || !!draft.deliveryNote ||
+        !!draft.clientEmail || !!draft.clientPhone || !!draft.clientAddress ||
+        !!draft.shippedToName || !!draft.transport || !!draft.vehicleNo || !!draft.ewayBillNo;
+
+      if (!hasData) return;
+
+      const draftToSave = {
+        ...draft,
+        id: draftIdRef.current,
+        status: 'draft',
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Synchronous localStorage write (always works in unload)
+      saveDraftToLocalStorage(draftToSave);
+
+      // sendBeacon to backend (fire-and-forget, survives unload)
+      try {
+        const sessionStr = localStorage.getItem('sb-ncxtkcykoftdxwtxqjlx-auth-token');
+        const session = sessionStr ? JSON.parse(sessionStr) : null;
+        const accessToken = session?.access_token ?? null;
+
+        const payload = JSON.stringify({ draft: draftToSave, accessToken });
+        const beaconSent = navigator.sendBeacon('/api/save-draft', new Blob([payload], { type: 'application/json' }));
+        if (!beaconSent) {
+          console.warn('[draft] sendBeacon returned false — beacon queue may be full');
+        }
+      } catch (err) {
+        console.warn('[draft] sendBeacon failed', err);
       }
     };
+
+    const handleBeforeUnload = () => buildAndSave();
+
+    // visibilitychange catches mobile tab-switches and background transitions
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') buildAndSave();
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [invoice]);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [invoice, saveDraftToLocalStorage]);
 
   const handleSaveAsDraft = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -1270,6 +1405,24 @@ export default function InvoiceModal({
       shippedToAddress: shippedToAddress.trim() || undefined
     });
 
+    // ─── Draft cleanup on successful submit ────────────────────────────────
+    // Remove the draft from localStorage so it doesn't show as resumable
+    try {
+      const storageKey = getStorageKey();
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const all = JSON.parse(raw) as any[];
+        const filtered = all.filter((i: any) => i.id !== draftIdRef.current);
+        localStorage.setItem(storageKey, JSON.stringify(filtered));
+      }
+    } catch { /* ignore */ }
+    // Also clean up from Supabase if online
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user && draftIdRef.current.startsWith('inv_draft_')) {
+        supabase.from('invoices').delete().eq('id', draftIdRef.current).then(() => {});
+      }
+    });
+
     emitNotification(
       invoice ? 'Invoice Updated' : 'Invoice Created',
       `Invoice #${invoiceNumber} for ${clientName || 'Unknown Client'} has been saved successfully.`,
@@ -1288,6 +1441,109 @@ export default function InvoiceModal({
           className="w-full h-full md:h-auto md:max-h-[96dvh] max-w-full md:max-w-4xl lg:max-w-5xl xl:max-w-[95vw] 2xl:max-w-[1700px] bg-white dark:bg-slate-900 rounded-none md:rounded-3xl overflow-hidden shadow-2xl flex flex-col border-none md:border md:border-slate-100 dark:md:border-slate-800 transition-all duration-300 md:my-auto"
         >
         
+        {/* ─── Resume Draft Banner ─────────────────────────────────────────── */}
+        {resumableDraft && !resumeBannerDismissed && !invoice && (() => {
+          const timeAgo = (() => {
+            const ms = Date.now() - new Date(resumableDraft.updatedAt).getTime();
+            const mins = Math.floor(ms / 60000);
+            if (mins < 1) return 'just now';
+            if (mins < 60) return `${mins}m ago`;
+            const hrs = Math.floor(mins / 60);
+            if (hrs < 24) return `${hrs}h ago`;
+            return `${Math.floor(hrs / 24)}d ago`;
+          })();
+          return (
+            <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800/40 text-amber-800 dark:text-amber-300 text-xs font-medium hide-on-print">
+              <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
+                <Save className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <span className="flex-1 min-w-0">
+                <span className="font-semibold text-amber-900 dark:text-amber-200">Unsaved draft</span>
+                {' '}for <span className="font-semibold">{resumableDraft.clientName}</span> — saved {timeAgo}
+              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Restore draft into form
+                    const storageKey = getStorageKey();
+                    try {
+                      const raw = localStorage.getItem(storageKey);
+                      if (!raw) return;
+                      const all = JSON.parse(raw) as any[];
+                      const d = all.find((i: any) => i.id === resumableDraft.id);
+                      if (!d) return;
+                      // Reuse the draft's id so future saves update the same record
+                      draftIdRef.current = d.id;
+                      // Repopulate form
+                      setClientName(d.clientName || '');
+                      setClientEmail(d.clientEmail || '');
+                      setClientPhone(d.clientPhone || '');
+                      setClientAddress(d.clientAddress || '');
+                      setNotes(d.notes || '');
+                      setInvoiceTerms(d.invoiceTerms || '');
+                      setItems(d.items || []);
+                      setDiscountType(d.discountType || 'none');
+                      setDiscountValue(d.discountValue || 0);
+                      setReferenceNumber(d.referenceNumber || '');
+                      setPoNumber(d.poNumber || '');
+                      setDeliveryNote(d.deliveryNote || '');
+                      setInvoiceType(d.invoiceType || 'invoice');
+                      setClientGstin(d.clientGstin || '');
+                      setClientPan(d.clientPan || '');
+                      setPlaceOfSupply(d.placeOfSupply || '');
+                      setTransport(d.transport || '');
+                      setVehicleNo(d.vehicleNo || '');
+                      setDriverMobile(d.driverMobile || '');
+                      setStation(d.station || '');
+                      setEwayBillNo(d.ewayBillNo || '');
+                      setGrRrNo(d.grRrNo || '');
+                      setShippedToName(d.shippedToName || '');
+                      setShippedToPhone(d.shippedToPhone || '');
+                      setShippedToEmail(d.shippedToEmail || '');
+                      setShippedToAddress(d.shippedToAddress || '');
+                      setShippedToGstin(d.shippedToGstin || '');
+                      setShippedToPan(d.shippedToPan || '');
+                      setShippedToState(d.shippedToState || '');
+                      setShippedToCountry(d.shippedToCountry || '');
+                      setClientState(d.clientState || '');
+                      setClientCountry(d.clientCountry || 'India');
+                      if (d.hasTransport !== undefined) setHasTransport(d.hasTransport);
+                      setResumableDraft(null);
+                      emitNotification('Draft Restored', 'Your previous draft has been loaded.', 'success');
+                    } catch { /* ignore */ }
+                  }}
+                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
+                >
+                  Resume
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    // Discard: remove from localStorage + Supabase
+                    try {
+                      const storageKey = getStorageKey();
+                      const raw = localStorage.getItem(storageKey);
+                      if (raw) {
+                        const all = JSON.parse(raw) as any[];
+                        localStorage.setItem(storageKey, JSON.stringify(all.filter((i: any) => i.id !== resumableDraft.id)));
+                      }
+                    } catch { /* ignore */ }
+                    try {
+                      await supabase.from('invoices').delete().eq('id', resumableDraft.id);
+                    } catch { /* ignore */ }
+                    setResumableDraft(null);
+                    setResumeBannerDismissed(true);
+                  }}
+                  className="px-3 py-1.5 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer"
+                >
+                  Discard
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Header */}
         <div className="px-5 py-4 md:px-6 border-b border-slate-200/70 dark:border-slate-800/80 flex items-center justify-between bg-white dark:bg-zinc-950 relative overflow-hidden">
           {/* Subtle background glow effect */}
