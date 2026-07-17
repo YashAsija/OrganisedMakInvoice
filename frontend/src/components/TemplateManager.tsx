@@ -103,7 +103,19 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
   
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
-  const [activeLibraryTab, setActiveLibraryTab] = useState<'my_templates' | 'system'>('my_templates');
+  const [activeLibraryTab, setActiveLibraryTab] = useState<'my_templates' | 'system'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('makbills_custom_templates');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.length > 0) return 'my_templates';
+        } catch (e) {}
+      }
+      return 'system';
+    }
+    return 'my_templates';
+  });
   const [sortBy, setSortBy] = useState<'latest' | 'oldest' | 'detailed' | 'less_detailed'>('latest');
   const [selectedTemplateForModal, setSelectedTemplateForModal] = useState<InvoiceTemplate | null>(null);
   
