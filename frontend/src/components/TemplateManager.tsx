@@ -514,32 +514,16 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
                     </div>
                   </div>
                   
-                  {/* Name banner & Details */}
-                  <div className="p-3 bg-white dark:bg-zinc-950 border-t border-[#e2e8f0]/60 dark:border-zinc-800 flex flex-col">
-                     <div className="flex items-center justify-center md:justify-between gap-2">
-                       <h3 className="text-[11px] font-black text-[#0f172a] dark:text-white truncate" title={template.name}>
-                         {template.name}
-                       </h3>
-                       {activeLibraryTab === 'system' && (
-                         <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black uppercase tracking-wider shrink-0">
-                           Preset
-                         </span>
-                       )}
-                     </div>
-                     
-                     <div className="hidden md:flex flex-col gap-1.5 mt-2">
-                       <div className="flex flex-wrap items-center gap-1.5">
-                         <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black uppercase tracking-wider">
-                           {template.category}
-                         </span>
-                         <span className="px-1.5 py-0.5 bg-sky-50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 border border-sky-200/60 dark:border-sky-800/40 rounded text-[9px] font-black uppercase tracking-wider">
-                           {template.layout.type}
-                         </span>
-                       </div>
-                       <p className="text-[9.5px] text-[#64748b]/80 dark:text-zinc-500 line-clamp-2 leading-relaxed min-h-[28px]">
-                         {template.description || 'No description provided.'}
-                       </p>
-                     </div>
+                  {/* Name banner below preview always visible */}
+                  <div className="p-3 bg-white dark:bg-zinc-950 border-t border-[#e2e8f0]/60 dark:border-zinc-800 text-center flex items-center justify-center gap-2">
+                     <h3 className="text-[11px] font-black text-[#0f172a] dark:text-white truncate" title={template.name}>
+                       {template.name}
+                     </h3>
+                     {activeLibraryTab === 'system' && (
+                       <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black uppercase tracking-wider shrink-0">
+                         Preset
+                       </span>
+                     )}
                   </div>
                 </div>
               ))}
@@ -604,11 +588,39 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
               </div>
 
               {/* Description */}
-              <div className="mb-8 flex-1">
+              <div className="mb-6">
                 <h4 className="text-[10px] font-black text-[#64748b] dark:text-zinc-500 uppercase tracking-widest mb-2">Description</h4>
                 <p className="text-sm text-[#475569] dark:text-zinc-400 leading-relaxed">
                   {selectedTemplateForModal.description || 'No description provided for this template.'}
                 </p>
+              </div>
+
+              {/* Desktop Only Template Specs */}
+              <div className="hidden lg:block mb-8 flex-1">
+                <h4 className="text-[10px] font-black text-[#64748b] dark:text-zinc-500 uppercase tracking-widest mb-3">Template Specifications</h4>
+                <div className="bg-[#f8fafc] dark:bg-zinc-900/50 rounded-xl p-4 border border-[#e2e8f0] dark:border-zinc-800/50">
+                  <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm">
+                    <div>
+                      <span className="block text-[10px] font-bold text-[#94a3b8] dark:text-zinc-500 uppercase tracking-wider mb-1">Theme Color</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3.5 h-3.5 rounded-full border border-black/10 dark:border-white/10" style={{ backgroundColor: selectedTemplateForModal.styleConfig.primaryColor }} />
+                        <span className="text-[#475569] dark:text-zinc-300 capitalize font-medium text-xs">{selectedTemplateForModal.styleConfig.primaryColor}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-bold text-[#94a3b8] dark:text-zinc-500 uppercase tracking-wider mb-1">Typography</span>
+                      <span className="text-[#475569] dark:text-zinc-300 capitalize font-medium text-xs">{selectedTemplateForModal.styleConfig.fontFamily}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-bold text-[#94a3b8] dark:text-zinc-500 uppercase tracking-wider mb-1">Page Size</span>
+                      <span className="text-[#475569] dark:text-zinc-300 font-medium text-xs">{selectedTemplateForModal.layout.pageSize} ({selectedTemplateForModal.layout.orientation})</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-bold text-[#94a3b8] dark:text-zinc-500 uppercase tracking-wider mb-1">Margins</span>
+                      <span className="text-[#475569] dark:text-zinc-300 font-medium text-xs">{selectedTemplateForModal.layout.margins}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Actions */}
