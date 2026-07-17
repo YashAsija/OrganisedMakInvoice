@@ -535,16 +535,17 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
       {/* Template Details Modal */}
       {selectedTemplateForModal && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-md overflow-y-auto"
           onClick={(e) => {
             if (e.target === e.currentTarget) setSelectedTemplateForModal(null);
           }}
         >
-          <div className="relative w-full max-w-5xl bg-[#f8fafc] dark:bg-zinc-950 rounded-2xl shadow-2xl flex flex-col-reverse lg:flex-row overflow-hidden my-auto max-h-none lg:max-h-[90vh]">
+          <div className="relative w-full max-w-5xl bg-white dark:bg-zinc-950 rounded-3xl shadow-2xl flex flex-col-reverse lg:flex-row overflow-hidden my-auto max-h-none lg:max-h-[90vh] ring-1 ring-black/5 dark:ring-white/10">
             
             {/* Left side: Large SVG Preview */}
-            <div className="w-full lg:w-[60%] bg-[#FCFAF7] dark:bg-zinc-900 border-t lg:border-t-0 lg:border-r border-[#e2e8f0]/60 dark:border-zinc-800 p-4 sm:p-8 flex items-center justify-center lg:min-h-[60vh]">
-              <div className="w-full max-w-[450px] aspect-[794/1123] shadow-lg rounded overflow-hidden relative bg-white">
+            <div className="w-full lg:w-[60%] bg-gradient-to-br from-slate-50 via-white to-slate-50/50 dark:from-zinc-900 dark:via-zinc-900/50 dark:to-zinc-900 border-t lg:border-t-0 lg:border-r border-[#e2e8f0]/60 dark:border-zinc-800 p-4 sm:p-8 flex items-center justify-center lg:min-h-[60vh] relative overflow-hidden">
+              <div className="absolute inset-0 opacity-[0.4] mix-blend-multiply dark:mix-blend-overlay" style={{ backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+              <div className="w-full max-w-[450px] aspect-[794/1123] shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded overflow-hidden relative bg-white ring-1 ring-black/5 dark:ring-white/10 z-10 transition-transform duration-500 hover:scale-[1.02]">
                 <svg viewBox="0 0 794 1123" className="w-full h-full pointer-events-none" preserveAspectRatio="xMidYMid meet">
                   <foreignObject width="794" height="1123">
                     <div className="w-[794px] h-[1123px] flex flex-col bg-white">
@@ -556,25 +557,25 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
             </div>
 
             {/* Right side: Details & Actions */}
-            <div className="w-full lg:w-[40%] flex flex-col p-5 sm:p-8 bg-white dark:bg-zinc-950 overflow-y-auto">
+            <div className="w-full lg:w-[40%] flex flex-col p-6 sm:p-10 bg-white dark:bg-zinc-950 overflow-y-auto relative z-10">
               
               {/* Header / Badges */}
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-5">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-black text-[#0f172a] dark:text-white mb-3">
+                  <h2 className="text-2xl sm:text-3xl font-black text-[#0f172a] dark:text-white mb-4 tracking-tight">
                     {selectedTemplateForModal.name}
                   </h2>
                   <div className="flex flex-wrap items-center gap-2 mb-4">
                     {selectedTemplateForModal.isDefault && (
-                      <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded text-[10px] font-black uppercase tracking-wider flex items-center gap-1 border border-emerald-200 dark:border-emerald-800/50">
+                      <span className="px-2.5 py-1 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 dark:from-emerald-400/10 dark:to-teal-400/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border border-emerald-500/20 shadow-sm">
                         <Check className="w-3 h-3" /> Active Default
                       </span>
                     )}
-                    <span className="px-2 py-1 bg-[#f1f5f9] dark:bg-zinc-900 text-[#64748b] dark:text-zinc-400 rounded text-[10px] font-black uppercase tracking-wider border border-[#e2e8f0] dark:border-zinc-800">
+                    <span className="px-2.5 py-1 bg-slate-50 dark:bg-zinc-800/50 text-slate-600 dark:text-zinc-400 rounded-full text-[10px] font-bold uppercase tracking-widest border border-slate-200 dark:border-zinc-700 shadow-sm">
                       {selectedTemplateForModal.category}
                     </span>
-                    <span className="px-2 py-1 bg-sky-50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 rounded text-[10px] font-black uppercase tracking-wider border border-sky-200/60 dark:border-sky-800/40">
-                      {selectedTemplateForModal.layout.type} layout
+                    <span className="px-2.5 py-1 bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400 rounded-full text-[10px] font-bold uppercase tracking-widest border border-sky-200/50 dark:border-sky-800/30 shadow-sm">
+                      {selectedTemplateForModal.layout.type}
                     </span>
                   </div>
                 </div>
@@ -624,14 +625,14 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
               </div>
 
               {/* Actions */}
-              <div className="flex flex-col gap-3 mt-auto">
+              <div className="flex flex-col gap-3 mt-auto pt-6 border-t border-slate-100 dark:border-zinc-800/50">
                 <button
                   onClick={() => {
                     setEditingTemplate(selectedTemplateForModal);
                     setIsBuilding(true);
                     setSelectedTemplateForModal(null);
                   }}
-                  className="w-full py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-violet-600/20"
+                  className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-200 active:scale-[0.98] hover:shadow-xl hover:shadow-violet-600/20 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Edit2 className="w-4 h-4" />
                   {activeLibraryTab === 'system' ? 'Use This Preset' : 'Edit Template'}
@@ -644,7 +645,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
                         handleSetDefault(selectedTemplateForModal.id);
                         setSelectedTemplateForModal(null);
                       }}
-                      className="py-2.5 bg-white dark:bg-zinc-900 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-white border border-[#e2e8f0] dark:border-zinc-700 rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="py-3 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 active:scale-[0.98] hover:shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <Check className="w-3.5 h-3.5" /> Set Default
                     </button>
@@ -655,7 +656,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
                       handleDuplicate(selectedTemplateForModal);
                       setSelectedTemplateForModal(null);
                     }}
-                    className={`py-2.5 bg-white dark:bg-zinc-900 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-white border border-[#e2e8f0] dark:border-zinc-700 rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${selectedTemplateForModal.isDefault ? 'col-span-2' : ''}`}
+                    className={`py-3 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 active:scale-[0.98] hover:shadow-md flex items-center justify-center gap-1.5 cursor-pointer ${selectedTemplateForModal.isDefault ? 'col-span-2' : ''}`}
                   >
                     <Copy className="w-3.5 h-3.5" /> Duplicate
                   </button>
