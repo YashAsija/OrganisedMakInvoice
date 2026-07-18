@@ -24,7 +24,7 @@ interface AuthScreenProps {
 }
 
 export default function AuthScreen({ defaultMode }: AuthScreenProps) {
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>(defaultMode);
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot-password'>(defaultMode);
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone' | 'google'>('email');
   
   const [formData, setFormData] = useState({
@@ -179,6 +179,8 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
         if (!formData.password.trim()) return setFormErrors({ email: 'Please enter a Password.' });
         if (formData.password.length < 6) return setFormErrors({ email: 'Password must be at least 6 characters long.' });
         if (formData.password !== formData.confirmPassword) return setFormErrors({ email: 'Passwords do not match.' });
+      } else if (authMode === 'forgot-password') {
+        if (!formData.email.trim()) return setFormErrors({ email: 'Please enter your Registered Email Address.' });
       } else {
         if (!formData.email.trim()) return setFormErrors({ email: 'Please enter your Registered Email Address.' });
         if (!formData.password.trim()) return setFormErrors({ email: 'Please enter your Password.' });
@@ -231,6 +233,16 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
             window.location.href = '/';
           }, 1500);
         }
+      } else if (authMode === 'forgot-password') {
+        if (!isSupabaseConfigured) {
+          throw new Error("Supabase is not configured. Service unavailable.");
+        }
+        const { error } = await supabase.auth.resetPasswordForEmail(formData.email.trim(), {
+          redirectTo: window.location.origin + '/reset-password',
+        });
+        if (error) throw error;
+        setSuccessMsg("Password reset link sent to your email!");
+        setIsLoading(false);
       } else {
         if (loginMethod === 'email') {
           if (!isSupabaseConfigured) {
@@ -357,17 +369,29 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
               : 'bg-white border-slate-200/50'
           }`}>
             
-            {/* Header */}            <div className="text-center pt-8 pb-5 border-b border-slate-100 dark:border-neutral-800/40">
+            {/* Header */}            <div className="text-center pt-8 pb-5 border-b border-slate-100 dark:border-neutral-800/40">
               <h2 className="text-base font-extrabold text-slate-805 uppercase tracking-wider">
-                {authMode === 'signup' ? 'Create Workspace' : 'Welcome Back'}
+                {authMode === 'signup' ? 'Create Workspace' : authMode === 'forgot-password' ? 'Reset Password' : 'Welcome Back'}
               </h2>
               <p className="text-[9.5px] text-slate-600 dark:text-slate-500 mt-1 uppercase tracking-widest font-bold">
-                {authMode === 'signup' ? 'Get started for free' : 'Access your billing portal'}
+                {authMode === 'signup' ? 'Get started for free' : authMode === 'forgot-password' ? 'Enter your email to reset' : 'Access your billing portal'}
               </p>
             </div>
 
             <div className="p-6 sm:p-8">
               {/* Form Toggle Bar */}
+              {authMode === 'forgot-password' ? (
+                <div className="flex bg-slate-100/60 dark:bg-neutral-900/55 p-1 rounded-xl mb-6 border border-slate-200/10">
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode('login'); setOtpSent(false); setSuccessMsg(''); }}
+                    className="flex-1 py-1.5 text-center text-[10.5px] font-extrabold uppercase tracking-wide rounded-lg transition-all cursor-pointer bg-white dark:bg-neutral-800 text-slate-600 dark:text-slate-300 shadow-xs hover:text-sky-600 dark:hover:text-sky-400"
+                  >
+                    Back to Login
+                  </button>
+                </div>
+              ) : (
+              <>
               <div className="flex bg-slate-100/60 dark:bg-neutral-900/55 p-1 rounded-xl mb-6 border border-slate-200/10">
                 <button
                   type="button"
@@ -432,6 +456,8 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                   <span className="text-[8px] uppercase tracking-widest font-black">Google</span>
                 </button>
               </div>
+              </>
+              )}
 
               {/* Toast Messages */}
               {successMsg && (
@@ -503,7 +529,18 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                   )}
 
                   <div>
-                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Email Address</label>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Email Address</label>
+                      {authMode === 'login' && (
+                        <button
+                          type="button"
+                          onClick={() => { setAuthMode('forgot-password'); setFormErrors({}); setSuccessMsg(''); }}
+                          className="text-[10px] font-bold text-sky-500 hover:text-sky-600 dark:text-sky-400 dark:hover:text-sky-300 transition-colors"
+                        >
+                          Forgot Password?
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="email"
                       required
@@ -514,6 +551,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                     />
                   </div>
 
+                  {authMode !== 'forgot-password' && (
                   <div>
                     <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Password</label>
                     <div className="relative">
@@ -552,6 +590,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                       </div>
                     )}
                   </div>
+                  )}
 
                   {authMode === 'signup' && (
                     <div>
@@ -590,7 +629,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
                     ) : (
                       <>
                         <Mail className="w-3.5 h-3.5" />
-                        <span>{authMode === 'signup' ? 'Create Account' : 'Log In'}</span>
+                        <span>{authMode === 'signup' ? 'Create Account' : authMode === 'forgot-password' ? 'Send Reset Link' : 'Log In'}</span>
                       </>
                     )}
                   </button>

@@ -24,6 +24,7 @@ import {
   CheckCircle2,
   LogIn,
   ArrowLeft,
+  MessageSquare,
   LogOut,
   Sparkle,
   Notebook,
@@ -76,6 +77,7 @@ import { TEMPLATE_PRESETS } from '../lib/templatePresets';
 import { LivePreview } from './TemplateBuilder/LivePreview';
 import SettingsPage from './SettingsPage';
 import SupportPage from './SupportPage';
+import SupportChatPage from './SupportChatPage';
 
 export interface MasterVendor { id: string; name?: string; company?: string; email?: string; phone?: string; address?: string; category?: string; [key: string]: any; }
 export interface MasterHsnCode { id: string; code?: string; description?: string; gstRate?: number; [key: string]: any; }
@@ -684,6 +686,15 @@ export default function Dashboard({
               <span>Material Catalog</span>
             </div>
           </button>
+          
+          <div className="pt-2 mt-2 border-t border-[#e2e8f0]/60 dark:border-zinc-800/80">
+            <button onClick={() => handleTabClick('support-chat')} className={`${navItemClass('support-chat')} text-[#0ea5e9] dark:text-[#38bdf8]`}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'support-chat', 'bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400')}><MessageSquare className="w-3.5 h-3.5" /></div>
+                <span>Live Support</span>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -4856,7 +4867,19 @@ export default function Dashboard({
 
         {/* ------------------ TAB: SUPPORT ------------------ */}
         {activeTab === 'support' && (
-          <SupportPage />
+          <SupportPage onChatClick={() => setActiveTab('support-chat')} />
+        )}
+
+        {/* ------------------ TAB: SUPPORT CHAT ------------------ */}
+        {activeTab === 'support-chat' && (
+          <SupportChatPage 
+            userEmail={userEmail} 
+            onBack={() => setActiveTab('support')} 
+            onEscalate={(sub, desc) => {
+              setActiveTab('support');
+              // Optionally trigger some toast or prefill support page logic
+            }} 
+          />
         )}
 
         {/* ------------------ TAB 7: DYNAMIC REGISTRIES HANDLER ------------------ */}

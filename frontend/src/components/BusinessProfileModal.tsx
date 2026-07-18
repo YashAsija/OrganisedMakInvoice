@@ -15,7 +15,36 @@ interface BusinessProfileModalProps {
 
 export default function BusinessProfileModal({ profile, isOpen, isOnboarding = false, onClose, onSave }: BusinessProfileModalProps) {
   // Tabs State: 'company' | 'banking' | 'billing' | 'subscription' | 'tax'
-  const [activeTab, setActiveTab] = useState<'company' | 'banking' | 'billing' | 'subscription' | 'tax'>('company');
+  type TabType = 'company' | 'banking' | 'billing' | 'subscription' | 'tax';
+  const validTabs: TabType[] = ['company', 'banking', 'billing', 'subscription', 'tax'];
+
+  const [activeTab, setActiveTabState] = useState<TabType>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '') as TabType;
+      if (validTabs.includes(hash)) {
+        return hash;
+      }
+    }
+    return 'company';
+  });
+
+  const setActiveTab = (tab: TabType) => {
+    setActiveTabState(tab);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', window.location.pathname + '#' + tab);
+    }
+  };
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '') as TabType;
+      if (validTabs.includes(hash)) {
+        setActiveTabState(hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
   const [showErrors, setShowErrors] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -361,7 +390,16 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   useEffect(() => {
     if (!isOpen) return;
 
-    setActiveTab('company');
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '') as typeof activeTab;
+      if (['company', 'banking', 'billing', 'subscription', 'tax'].includes(hash)) {
+        setActiveTab(hash);
+      } else {
+        setActiveTab('company');
+      }
+    } else {
+      setActiveTab('company');
+    }
 
     const loadData = async () => {
       try {

@@ -1,0 +1,295 @@
+import fs from 'fs';
+
+const knowledgeBase = [
+  // GLOBAL & NAV
+  {
+    topic: "Dashboard Home",
+    route: "/dashboard",
+    summary: "The main dashboard overview showing quick actions and recent business metrics.",
+    steps: [
+      "Click 'Dashboard' in the sidebar to view your business summary.",
+      "Use the 'Quick Actions' section to rapidly create invoices or clients.",
+      "View your recent invoice list and top clients."
+    ],
+    keywords: ["home", "dashboard", "main page", "overview", "metrics", "stats", "charts", "summary", "landing", "start"],
+    related_topics: ["Reports", "Create Invoice"],
+    not_this: "Not for detailed financial reports or ledger views."
+  },
+  {
+    topic: "PIN Lock Security",
+    route: "/settings",
+    summary: "Enable or disable a numeric PIN lock or biometric authentication for app security.",
+    steps: [
+      "Navigate to 'Settings' from the sidebar.",
+      "Locate the 'Security' section.",
+      "Click 'Enable' under 'App PIN Lock' to set a new PIN.",
+      "Use 'Disable' to remove the PIN lock requirement."
+    ],
+    keywords: ["pin", "password", "security", "lock", "unlock", "biometrics", "fingerprint", "face id", "secure app", "protect data", "passcode"],
+    related_topics: ["Security Settings", "Reset PIN"],
+    not_this: "Not for changing your account login password or email."
+  },
+  
+  // INVOICES
+  {
+    topic: "Create New Invoice",
+    route: "/invoices",
+    summary: "Create a new invoice, add client details, items, and taxes, and save it.",
+    steps: [
+      "Click 'Invoices' in the sidebar or 'Create Invoice' from the Dashboard.",
+      "Select an existing client or enter new client details.",
+      "Click '+ Add Item' to add products or services to the bill.",
+      "Select GST rates and add any transport charges if applicable.",
+      "Click 'Save' to finalize the invoice."
+    ],
+    keywords: ["create invoice", "make a bill", "new invoice", "generate bill", "raise invoice", "billing", "add invoice", "create bill", "tax invoice"],
+    related_topics: ["Edit Invoice", "Add Item", "GST Config"],
+    not_this: "Not for creating draft estimates or proforma invoices unless saved as draft."
+  },
+  {
+    topic: "Add Items to Invoice",
+    route: "/invoices",
+    summary: "Add line items, products, or services to an active invoice.",
+    steps: [
+      "While creating or editing an invoice, click '+ Add Item'.",
+      "Enter the item description, quantity, and rate.",
+      "Select the applicable tax (GST) slab.",
+      "The total amount will auto-calculate."
+    ],
+    keywords: ["add item", "add product", "line item", "services", "goods", "add row", "add to bill"],
+    related_topics: ["Create New Invoice", "GST Config"],
+    not_this: "Not for adding clients or transport details."
+  },
+  {
+    topic: "Transport & Shipping Details",
+    route: "/invoices",
+    summary: "Add e-way bill numbers, vehicle numbers, and transport charges to your invoice.",
+    steps: [
+      "In the invoice editor, locate the 'Transport & Shipping' section.",
+      "Click 'Add' next to Freight/Transport Charges if applicable.",
+      "Enter the E-way Bill No., Vehicle No., and Mode of Transport.",
+      "Enter the Shipping Address if different from the billing address."
+    ],
+    keywords: ["transport", "shipping", "freight", "delivery charge", "e-way bill", "eway bill", "vehicle number", "dispatch", "courier", "transportation"],
+    related_topics: ["Create New Invoice"],
+    not_this: "Not for basic client address details."
+  },
+  {
+    topic: "Edit Invoice",
+    route: "/invoices",
+    summary: "Modify an existing invoice that has already been saved.",
+    steps: [
+      "Go to the 'Invoices' tab.",
+      "Find the invoice in the list and click the 'Edit' (pencil) icon.",
+      "Make necessary changes to items, client, or taxes.",
+      "Click 'Save Changes'."
+    ],
+    keywords: ["edit invoice", "change bill", "modify invoice", "update bill", "correct invoice", "edit bill"],
+    related_topics: ["Create New Invoice", "Delete Invoice"],
+    not_this: "Not for creating a completely new invoice from scratch."
+  },
+  {
+    topic: "Download or Print Invoice",
+    route: "/invoices",
+    summary: "Export an invoice as a PDF file or print it directly.",
+    steps: [
+      "Go to the 'Invoices' tab and select the invoice you want.",
+      "Click the 'Download' icon to save as PDF.",
+      "Alternatively, click the 'Print' icon to open the print dialog."
+    ],
+    keywords: ["download", "pdf", "print", "export", "save as pdf", "get pdf", "generate pdf", "print bill", "download invoice"],
+    related_topics: ["Share Invoice", "Invoice Templates"],
+    not_this: "Not for exporting all invoices in bulk to Excel/CSV."
+  },
+
+  // COMPANY SETTINGS (Business Profile Modal)
+  {
+    topic: "Company Profile",
+    route: "/company-settings",
+    summary: "Update your core business details like Business Name, Owner Name, Address, and Contact Info.",
+    steps: [
+      "Click 'Settings' in the sidebar and select 'Company Profile', or click your business name at the top.",
+      "Update the 'Business Name', 'Owner Name', 'Email', and 'Mobile Number'.",
+      "Update your business 'Address', 'State', and 'Country'.",
+      "Click 'Save' to apply changes."
+    ],
+    keywords: ["company name", "business details", "owner name", "change address", "update profile", "business info", "change mobile", "company address"],
+    related_topics: ["Company Logo", "Tax Config", "Bank Details"],
+    not_this: "Not for changing bank account details or tax registration numbers."
+  },
+  {
+    topic: "Bank Details",
+    route: "/company-settings#banking",
+    summary: "Add or update your banking information and UPI ID for receiving payments on invoices.",
+    steps: [
+      "Open Company Settings and click the 'Bank Details' tab.",
+      "Enter your 'Account Number' and 'IFSC Code'.",
+      "Enter your 'UPI ID' (e.g., name@bank).",
+      "Click 'Verify' to ensure the details are correct.",
+      "Click 'Save' to apply changes."
+    ],
+    keywords: ["bank account", "ifsc", "upi id", "payment details", "add bank", "update bank", "banking", "qr code details", "account number"],
+    related_topics: ["Company Profile", "Billing Settings"],
+    not_this: "Not for processing payments within the app; this only prints on invoices."
+  },
+  {
+    topic: "Tax Config (GST)",
+    route: "/company-settings#tax",
+    summary: "Configure your GSTIN, PAN, and default tax rates for invoices.",
+    steps: [
+      "Open Company Settings and go to the 'Tax Config' tab.",
+      "Enter your business 'GSTIN' and 'PAN Number'.",
+      "Select your 'Default Tax Rate' (e.g., 18%).",
+      "Choose your 'Default Currency'.",
+      "Click 'Save'."
+    ],
+    keywords: ["gstin", "gst number", "pan card", "tax rate", "default gst", "tax config", "taxes", "currency", "add gst"],
+    related_topics: ["Create New Invoice", "Company Profile"],
+    not_this: "Not for filing GST returns or calculating overall tax liability."
+  },
+  {
+    topic: "Billing Settings",
+    route: "/company-settings#billing",
+    summary: "Customize your invoice numbering format, prefixes, and terms & conditions.",
+    steps: [
+      "Open Company Settings and go to the 'Billing Settings' tab.",
+      "Set your 'Invoice Prefix' (e.g., INV-2024-).",
+      "Set the 'Next Invoice Number' to resume from a specific sequence.",
+      "Update the default 'Terms & Conditions' printed on all invoices.",
+      "Click 'Save'."
+    ],
+    keywords: ["invoice prefix", "invoice number", "next number", "terms and conditions", "t&c", "sequence", "billing config", "numbering"],
+    related_topics: ["Create New Invoice"],
+    not_this: "Not for managing your app subscription billing."
+  },
+  {
+    topic: "Company Logo",
+    route: "/company-settings#company",
+    summary: "Upload or change the business logo that appears on your invoices.",
+    steps: [
+      "Open Company Settings and stay on the 'Company Profile' tab.",
+      "Locate the Logo section and click 'Upload Logo'.",
+      "Select an image file, use the cropping tool to adjust it, and click 'Save'.",
+      "Click 'Save' at the bottom of the modal."
+    ],
+    keywords: ["logo", "upload logo", "change logo", "business logo", "brand image", "add logo", "picture"],
+    related_topics: ["Signature", "Invoice Templates"],
+    not_this: "Not for changing the app's overall theme or appearance."
+  },
+  {
+    topic: "Digital Signature",
+    route: "/company-settings#company",
+    summary: "Add a digital signature to your invoices by drawing, typing, or uploading an image.",
+    steps: [
+      "Open Company Settings and stay on the 'Company Profile' tab.",
+      "Scroll to the 'Digital Signature' section.",
+      "Choose 'Draw', 'Type', or 'Upload' to create your signature.",
+      "Click 'Save' at the bottom of the modal."
+    ],
+    keywords: ["signature", "sign", "digital signature", "draw signature", "type signature", "upload signature", "sign bill"],
+    related_topics: ["Company Logo"],
+    not_this: "Not for legally binding e-signatures (like Aadhaar eSign)."
+  },
+  {
+    topic: "Subscription",
+    route: "/company-settings#subscription",
+    summary: "View your current MakInvoices plan, features, and upgrade options.",
+    steps: [
+      "Open Company Settings and go to the 'Subscription' tab.",
+      "View your current plan tier (e.g., Free, Pro).",
+      "Review the features included in your plan.",
+      "Click 'Upgrade' to change your plan."
+    ],
+    keywords: ["subscription", "plan", "upgrade", "billing", "premium", "pro plan", "free tier", "pricing", "cost"],
+    related_topics: ["Billing Settings"],
+    not_this: "Not for configuring invoice prefixes or numbering."
+  },
+
+  // CLIENTS & CATALOG
+  {
+    topic: "Manage Clients",
+    route: "/clients",
+    summary: "View, add, edit, or delete saved client profiles.",
+    steps: [
+      "Click 'Clients' in the sidebar.",
+      "Click 'Add Client' to create a new profile.",
+      "To edit, click the pencil icon next to an existing client.",
+      "To delete, click the trash icon."
+    ],
+    keywords: ["clients", "customers", "add client", "manage customers", "edit client", "delete client", "client list", "address book"],
+    related_topics: ["Create New Invoice"],
+    not_this: "Not for managing your own company profile."
+  },
+  {
+    topic: "Manage Products & Materials",
+    route: "/catalog-material",
+    summary: "Save commonly used products or services to your catalog for quick invoicing.",
+    steps: [
+      "Click 'Materials' or 'Catalog' in the sidebar.",
+      "Click 'Add New' to create a new product/service entry.",
+      "Enter the item name, default rate, and default GST slab.",
+      "Click 'Save'."
+    ],
+    keywords: ["materials", "products", "services", "catalog", "items list", "inventory", "add product", "save item"],
+    related_topics: ["Add Items to Invoice"],
+    not_this: "Not for managing stock levels or complex inventory tracking."
+  },
+  
+  // SUPPORT & MISC
+  {
+    topic: "Data Export & Backup",
+    route: "/settings",
+    summary: "Export your business data for backup or accounting purposes.",
+    steps: [
+      "Navigate to 'Settings' in the sidebar.",
+      "Scroll down to 'Data Management'.",
+      "Click 'Export Data' to download a backup file containing your invoices and clients."
+    ],
+    keywords: ["export", "backup", "download data", "save data", "excel export", "csv", "data management"],
+    related_topics: ["Cloud Sync"],
+    not_this: "Not for downloading a single PDF invoice."
+  },
+  {
+    topic: "Cloud Sync",
+    route: "/settings",
+    summary: "Ensure your data is safely backed up to the cloud and available across devices.",
+    steps: [
+      "Navigate to 'Settings' in the sidebar.",
+      "Look at the 'Sync Status' section.",
+      "If you are logged in and online, sync happens automatically.",
+      "You can manually click 'Sync Now' to push pending changes."
+    ],
+    keywords: ["sync", "cloud", "backup to cloud", "save online", "sync data", "upload data", "cross device"],
+    related_topics: ["Data Export & Backup"],
+    not_this: "Not for exporting data to a local file."
+  },
+  {
+    topic: "Dark Mode / Theme",
+    route: "/settings",
+    summary: "Switch the application appearance between light and dark mode.",
+    steps: [
+      "Look for the Sun/Moon icon in the top header, OR go to 'Settings'.",
+      "Click the icon or select the 'Appearance' option to toggle Dark Mode."
+    ],
+    keywords: ["dark mode", "light mode", "theme", "appearance", "colors", "display", "night mode", "ui"],
+    related_topics: ["Company Logo"],
+    not_this: "Not for changing the colors of printed invoices."
+  },
+  {
+    topic: "Invoice Templates",
+    route: "/invoice-templates",
+    summary: "Choose from different professional layouts and designs for your invoices.",
+    steps: [
+      "Click 'Templates' in the sidebar.",
+      "Browse the available template designs (e.g., Professional, Modern, Classic).",
+      "Select a template to preview it with your data.",
+      "Click 'Set as Default' to use it for future invoices."
+    ],
+    keywords: ["templates", "invoice design", "layout", "colors", "professional template", "change look", "invoice style"],
+    related_topics: ["Company Logo", "Billing Settings"],
+    not_this: "Not for changing app themes (dark/light mode)."
+  }
+];
+
+fs.writeFileSync('knowledge-base.json', JSON.stringify(knowledgeBase, null, 2));
+console.log('knowledge-base.json generated with ' + knowledgeBase.length + ' entries.');

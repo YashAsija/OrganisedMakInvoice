@@ -62,6 +62,7 @@ const tabToPath: Record<string, string> = {
   catalog_category: '/catalog-category',
   settings: '/settings',
   support: '/support',
+  'support-chat': '/support-chat',
 };
 
 const pathToTab: Record<string, string> = Object.entries(tabToPath).reduce(
@@ -622,8 +623,17 @@ export default function App() {
                 .order('date', { ascending: false });
 
               if (cloudInvoices) {
-                setInvoices(cloudInvoices as Invoice[]);
-                localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(cloudInvoices));
+                // Merge: keep local drafts that aren't yet persisted to cloud
+                const localRaw = localStorage.getItem(`invoice_maker_invoices${suffix}`);
+                const localAll: Invoice[] = localRaw ? JSON.parse(localRaw) : [];
+                const localDraftsOnly = localAll.filter(
+                  (loc: Invoice) =>
+                    loc.status === 'draft' &&
+                    !cloudInvoices.some((c: any) => c.id === loc.id)
+                );
+                const merged = [...localDraftsOnly, ...(cloudInvoices as Invoice[])];
+                setInvoices(merged);
+                localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(merged));
               }
             } catch (err) {
               handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
@@ -642,8 +652,17 @@ export default function App() {
                       .eq('userId', uid)
                       .order('date', { ascending: false });
                     if (data) {
-                      setInvoices(data as Invoice[]);
-                      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(data));
+                      // Merge: preserve local-only drafts on realtime sync
+                      const localRaw2 = localStorage.getItem(`invoice_maker_invoices${suffix}`);
+                      const localAll2: Invoice[] = localRaw2 ? JSON.parse(localRaw2) : [];
+                      const localDraftsOnly2 = localAll2.filter(
+                        (loc: Invoice) =>
+                          loc.status === 'draft' &&
+                          !data.some((c: any) => c.id === loc.id)
+                      );
+                      const merged2 = [...localDraftsOnly2, ...(data as Invoice[])];
+                      setInvoices(merged2);
+                      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(merged2));
                     }
                   } catch (err) {
                     console.warn("Error in realtime invoice sync:", String(err));

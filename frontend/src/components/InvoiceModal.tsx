@@ -1038,6 +1038,15 @@ export default function InvoiceModal({
   // If we're editing an existing invoice, use its ID; otherwise generate a new one.
   const draftIdRef = useRef<string>(invoice?.id ?? `inv_draft_${Math.random().toString(36).substr(2, 9)}`);
 
+  // Tracks the real authenticated userId — updated whenever the session is available.
+  // Used by buildAndSave() so sendBeacon payloads always carry the correct userId.
+  const userIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user?.id) userIdRef.current = data.session.user.id;
+    });
+  }, []);
+
   // Reset draftId when the modal opens for a brand-new invoice
   useEffect(() => {
     if (isOpen && !invoice) {
@@ -1195,6 +1204,8 @@ export default function InvoiceModal({
         id: draftIdRef.current,
         status: 'draft',
         updatedAt: new Date().toISOString(),
+        // Always use the real authenticated userId so the draft syncs across devices
+        ...(userIdRef.current ? { userId: userIdRef.current } : {}),
       };
 
       // Synchronous localStorage write (always works in unload)
@@ -1205,9 +1216,17 @@ export default function InvoiceModal({
 
       // sendBeacon to backend (fire-and-forget, survives unload)
       try {
-        const sessionStr = localStorage.getItem('sb-ncxtkcykoftdxwtxqjlx-auth-token');
-        const session = sessionStr ? JSON.parse(sessionStr) : null;
-        const accessToken = session?.access_token ?? null;
+        // Find the Supabase access token from localStorage (key pattern varies by project ref)
+        let accessToken: string | null = null;
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.includes('-auth-token')) {
+            try {
+              const parsed = JSON.parse(localStorage.getItem(key) || '');
+              if (parsed?.access_token) { accessToken = parsed.access_token; break; }
+            } catch { /* ignore */ }
+          }
+        }
 
         const payload = JSON.stringify({ draft: draftToSave, accessToken });
         const beaconSent = navigator.sendBeacon('/api/save-draft', new Blob([payload], { type: 'application/json' }));
@@ -2832,41 +2851,40 @@ export default function InvoiceModal({
 
             </div> {/* End Wrapper */}
 
-          {/* Triggers */}
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between sm:justify-end gap-2.5 sm:gap-3.5 bg-white dark:bg-slate-900 hide-on-print w-full shrink-0 mt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer text-center"
+              className="flex-1 sm:flex-none px-3 sm:px-5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer text-center"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleDirectExportPDF}
-              className="hidden sm:flex px-5 py-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-medium items-center gap-1.5 transition-all cursor-pointer"
+              className="flex px-3 sm:px-5 py-2.5 sm:py-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-medium items-center justify-center gap-1.5 transition-all cursor-pointer"
               title="Download PDF directly without saving yet"
             >
-              <svg className="w-4 h-4 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-4 h-4 text-rose-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <span>Export PDF Direct</span>
+              <span className="hidden sm:inline">Export PDF Direct</span>
             </button>
             <button
               type="button"
               onClick={handleSaveAsDraft}
-              className="hidden sm:flex px-5 py-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-medium items-center gap-1.5 transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
+              className="flex px-3 sm:px-5 py-2.5 sm:py-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-medium items-center justify-center gap-1.5 transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
               title="Save as Draft"
             >
-              <Save className="w-4 h-4 text-slate-500" />
-              <span>Save as Draft</span>
+              <Save className="w-4 h-4 text-slate-500 shrink-0" />
+              <span className="hidden sm:inline">Save as Draft</span>
             </button>
             <button
               type="submit"
-              className="flex-1 sm:flex-none justify-center px-4 sm:px-6 py-2.5 sm:py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-sky-950/20 active:scale-95 cursor-pointer"
+              className="flex-1 sm:flex-none justify-center px-3 sm:px-6 py-2.5 sm:py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-sky-950/20 active:scale-95 cursor-pointer"
             >
-              <Check className="w-4 h-4" />
-              Save Invoice
+              <Check className="w-4 h-4 shrink-0" />
+              <span className="whitespace-nowrap">Save Invoice</span>
             </button>
           </div>
 

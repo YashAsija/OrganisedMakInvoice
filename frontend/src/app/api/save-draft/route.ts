@@ -3,9 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 
 // This route is the sendBeacon target — used when the page is unloading.
 // sendBeacon cannot use the Supabase JS client directly (no cookies in unload context),
-// so we use the anon key here. RLS on the invoices table must allow upsert for authenticated users.
+// so we accept the client's access_token and use it to authenticate the request.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,7 +22,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid draft payload' }, { status: 400 });
     }
 
-    // Use the auth token from the client if provided (authenticated save)
+    // Resolve the correct userId from the access token
+    let resolvedUserId: string | null = null;
+
+    if (accessToken) {
+      try {
+        // Use service role client to verify the user from the JWT
+        const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+          auth: { persistSession: false },
+        });
+        const { data: { user }, error: authError } = await adminClient.auth.getUser(accessToken);
+        if (!authError && user?.id) {
+          resolvedUserId = user.id;
+        }
+      } catch {
+        // Fall through — will try anon upsert below
+      }
+    }
+
+    // Build the final draft record — always override userId with the verified value
+    const draftRecord = {
+      ...draft,
+      status: 'draft',
+      updatedAt: new Date().toISOString(),
+      ...(resolvedUserId ? { userId: resolvedUserId } : {}),
+    };
+
+    // Use the auth token from the client for RLS
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: accessToken
         ? { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -31,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     const { error } = await supabase
       .from('invoices')
-      .upsert({ ...draft, status: 'draft', updatedAt: new Date().toISOString() });
+      .upsert(draftRecord);
 
     if (error) {
       console.error('[save-draft] Supabase upsert error:', error);

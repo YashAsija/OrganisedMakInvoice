@@ -39,7 +39,11 @@ const faqs = [
   },
 ];
 
-export default function SupportPage() {
+interface SupportPageProps {
+  onChatClick?: () => void;
+}
+
+export default function SupportPage({ onChatClick }: SupportPageProps) {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [ticketCategory, setTicketCategory] = useState<TicketCategory>('technical');
   const [ticketSubject, setTicketSubject] = useState('');
@@ -87,10 +91,14 @@ export default function SupportPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { icon: <Mail className="w-5 h-5" />, label: 'Email Support', value: 'support@makinvoices.com', sub: 'Response within 24h', color: 'text-sky-500', bg: 'bg-sky-50 dark:bg-sky-950/30' },
-          { icon: <MessageCircle className="w-5 h-5" />, label: 'Live Chat', value: 'Available 9am–6pm IST', sub: 'Mon–Fri on web app', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-950/30' },
+          { icon: <MessageCircle className="w-5 h-5" />, label: 'Live Chat', value: 'Available 9am–6pm IST', sub: 'Mon–Fri on web app', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-950/30', isChat: true },
           { icon: <FileText className="w-5 h-5" />, label: 'Documentation', value: 'docs.makinvoices.com', sub: 'Full guides & API', color: 'text-violet-500', bg: 'bg-violet-50 dark:bg-violet-950/30' },
         ].map(ch => (
-          <div key={ch.label} className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-4 flex items-start gap-3 shadow-xs hover:border-[#64748b]/40 transition-colors cursor-pointer group">
+          <div 
+            key={ch.label} 
+            onClick={() => { if (ch.isChat && onChatClick) onChatClick(); }}
+            className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-4 flex items-start gap-3 shadow-xs hover:border-[#64748b]/40 transition-colors cursor-pointer group"
+          >
             <div className={`w-9 h-9 rounded-xl ${ch.bg} flex items-center justify-center flex-shrink-0 ${ch.color}`}>
               {ch.icon}
             </div>
