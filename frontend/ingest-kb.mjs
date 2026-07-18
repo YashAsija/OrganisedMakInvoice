@@ -16,27 +16,47 @@ if (!supabaseUrl || !supabaseKey || !geminiApiKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 const genAI = new GoogleGenAI({ apiKey: geminiApiKey });
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 async function main() {
   try {
-    const kbPath = path.join(process.cwd(), '../knowledge-base.json');
+    const kbPath = path.join(process.cwd(), 'src/data/knowledge-base.json');
     const kbData = JSON.parse(fs.readFileSync(kbPath, 'utf8'));
 
+    let successCount = 0;
     for (const entry of kbData) {
       console.log(`Processing topic: ${entry.topic}`);
       
       const content = `Topic: ${entry.topic}\nSource File: ${entry.source_file}\nSummary: ${entry.summary}\nSteps:\n${entry.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}\nKeywords: ${entry.keywords.join(', ')}`;
       
-      const embeddingResponse = await genAI.models.embedContent({
-        model: 'gemini-embedding-001',
-        contents: content,
-        config: {
-          outputDimensionality: 768,
+      let embedding = null;
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          const embeddingResponse = await genAI.models.embedContent({
+            model: 'gemini-embedding-001',
+            contents: content,
+            config: {
+              outputDimensionality: 768,
+            }
+          });
+          embedding = embeddingResponse.embeddings?.[0]?.values;
+          break; // success
+        } catch (err) {
+          console.error(`Gemini API error for ${entry.topic}: ${err.message}`);
+          if (err.message && err.message.includes('429')) {
+             console.log(`Rate limited on ${entry.topic}, retrying in 5 seconds... (${retries} left)`);
+             await sleep(5000);
+             retries--;
+          } else {
+             break; // non-rate limit error
+          }
         }
-      });
-      
-      const embedding = embeddingResponse.embeddings?.[0]?.values;
+      }
+
       if (!embedding) {
-        throw new Error(`Failed to generate embedding for ${entry.topic}`);
+        console.error(`Skipping ${entry.topic} due to failed embedding.`);
+        continue;
       }
 
       const metadata = {
@@ -64,9 +84,13 @@ async function main() {
         console.error(`Error inserting ${entry.topic}:`, error);
       } else {
         console.log(`Successfully ingested: ${entry.topic}`);
+        successCount++;
       }
+      
+      // Delay to avoid hitting rate limits too quickly
+      await sleep(2000);
     }
-    console.log('Knowledge Base ingestion complete.');
+    console.log(`Knowledge Base ingestion complete. Successfully ingested ${successCount}/${kbData.length} entries.`);
   } catch (error) {
     console.error('Ingestion failed:', error);
   }

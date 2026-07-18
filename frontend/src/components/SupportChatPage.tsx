@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, ArrowLeft, MoreVertical, Loader2, Bot, User as UserIcon, AlertTriangle, ArrowRight } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { supabase } from '../lib/supabase';
+import { useRouter } from 'next/navigation';
 
 interface Message {
   id: string;
@@ -54,6 +55,7 @@ interface SupportChatPageProps {
 }
 
 export default function SupportChatPage({ userEmail, onBack, onEscalate }: SupportChatPageProps) {
+  const router = useRouter();
   const [language, setLanguage] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -302,8 +304,7 @@ export default function SupportChatPage({ userEmail, onBack, onEscalate }: Suppo
                         <button
                           key={idx}
                           onClick={() => {
-                            window.history.pushState(null, '', feature.route);
-                            window.dispatchEvent(new Event('popstate'));
+                            router.push(feature.route);
                           }}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-[#0f172a] text-white hover:bg-[#5C5043] transition-colors cursor-pointer w-fit"
                         >
@@ -335,7 +336,7 @@ export default function SupportChatPage({ userEmail, onBack, onEscalate }: Suppo
 
         {isFirstAssistantMsg && messages.length > 0 && !isLoading && (
           <div className="flex flex-wrap gap-2 mt-4 ml-8">
-            {SUGGESTED_FAQS.map(faq => (
+            {(SUGGESTED_FAQS[language || 'en'] || []).map(faq => (
               <button
                 key={faq}
                 onClick={() => handleSend(undefined, faq)}

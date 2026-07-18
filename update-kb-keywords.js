@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const kbPath = path.join(__dirname, 'knowledge-base.json');
+const kbPath = path.join(__dirname, 'frontend', 'src', 'data', 'knowledge-base.json');
 const kbData = JSON.parse(fs.readFileSync(kbPath, 'utf8'));
 
 // Define the keyword updates

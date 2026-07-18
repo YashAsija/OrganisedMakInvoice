@@ -34,7 +34,7 @@ export async function GET(request: Request) {
       .eq('session_id', sessionData.id)
       .order('created_at', { ascending: true });
 
-    let formattedMessages = [];
+    let formattedMessages: any[] = [];
     if (messages) {
       formattedMessages = messages.map((m: any) => {
         let content = m.content;

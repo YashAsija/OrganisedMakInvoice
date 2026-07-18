@@ -291,5 +291,5 @@ const knowledgeBase = [
   }
 ];
 
-fs.writeFileSync('knowledge-base.json', JSON.stringify(knowledgeBase, null, 2));
-console.log('knowledge-base.json generated with ' + knowledgeBase.length + ' entries.');
+fs.writeFileSync('src/data/knowledge-base.json', JSON.stringify(knowledgeBase, null, 2));
+console.log('src/data/knowledge-base.json generated with ' + knowledgeBase.length + ' entries.');

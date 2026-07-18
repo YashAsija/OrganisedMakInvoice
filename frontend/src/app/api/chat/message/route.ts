@@ -1,25 +1,29 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenAI } from '@google/genai';
-import fs from 'fs';
-import path from 'path';
+import kbData from '../../../../data/knowledge-base.json';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 );
 
-// We need an API key for Gemini. If not available, we can't use it.
-const genAI = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
+// We will initialize Gemini inside the route handler to ensure fresh env vars
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
+  let similarity = 0;
+  let topMatch: any = null;
   try {
     const body = await request.json();
     const { message, sessionId, userId, language } = body;
 
-    if (!genAI) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
       return NextResponse.json({ reply: "I'm sorry, my AI backend is not configured yet (missing GEMINI_API_KEY)." }, { status: 500 });
     }
+    const genAI = new GoogleGenAI({ apiKey });
 
     if (!message) {
       return NextResponse.json({ error: "Message is required." }, { status: 400 });
@@ -31,7 +35,7 @@ export async function POST(request: Request) {
     
     const { data: quotaData, error: quotaError } = await supabase
       .from('gemini_quota_tracking')
-      .select('requests')
+      .select('requests, input_tokens, output_tokens')
       .eq('date', todayStr)
       .single();
 
@@ -95,8 +99,6 @@ export async function POST(request: Request) {
 
     // 4. Vector search in Supabase using the match_kb_chunks RPC
     let kbContext = "";
-    let similarity = 0;
-    let topMatch: any = null;
     const { data: matchedChunks, error: matchError } = await supabase.rpc('match_kb_chunks', {
       query_embedding: embedding,
       match_threshold: 0.0,
@@ -116,8 +118,8 @@ export async function POST(request: Request) {
       console.log("[BUCKET] HIGH - Zero API calls");
       
       const contentStr = topMatch.content || "";
-      const summaryMatch = contentStr.match(/Summary:\s*(.*?)(?=\nSteps:|$)/s);
-      const stepsMatch = contentStr.match(/Steps:\n(.*?)(?=\nKeywords:|$)/s);
+      const summaryMatch = contentStr.match(/Summary:\s*([\s\S]*?)(?=\nSteps:|$)/);
+      const stepsMatch = contentStr.match(/Steps:\n([\s\S]*?)(?=\nKeywords:|$)/);
       
       const summary = summaryMatch ? summaryMatch[1].trim() : "Here is the information you requested.";
       // Use direct short description instead of detailed steps
@@ -151,9 +153,6 @@ export async function POST(request: Request) {
     // Load the FULL website logic as context instead of just local matches
     let globalKbContext = kbContext;
     try {
-      const kbPath = path.join(process.cwd(), '../knowledge-base.json');
-      const kbRaw = fs.readFileSync(kbPath, 'utf8');
-      const kbData = JSON.parse(kbRaw);
       globalKbContext = kbData.map((entry: any) => 
         `Topic: ${entry.topic}\nRoute: ${entry.route || 'None'}\nSummary: ${entry.summary}\nSteps:\n${(entry.steps || []).map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}`
       ).join('\n\n---\n\n');
@@ -206,8 +205,8 @@ RECENT HISTORY:
 ${historyContext}
 `;
 
-    // 7. Call Gemini, with cascading fallback for quota limits
-    const modelsToTry = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+    // 7. Call Gemini, prioritizing gemini-1.5-flash which has 1500 req/day quota
+    const modelsToTry = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
     let generateResponse: any = null;
     let lastError = null;
 
@@ -271,8 +270,8 @@ ${historyContext}
         .upsert({ 
           date: todayStr, 
           requests: currentRequests + 1,
-          input_tokens: (quotaData?.input_tokens || 0) + inputTokens,
-          output_tokens: (quotaData?.output_tokens || 0) + outputTokens
+          input_tokens: ((quotaData as any)?.input_tokens || 0) + inputTokens,
+          output_tokens: ((quotaData as any)?.output_tokens || 0) + outputTokens
         });
       
       if (upsertError) console.error("Quota tracking error", upsertError);
@@ -308,8 +307,8 @@ ${historyContext}
        if (similarity >= 0.58 && topMatch) {
          console.log("[BUCKET] MEDIUM (QUOTA EXHAUSTED) - Serving local fallback!");
          const contentStr = topMatch.content || "";
-         const summaryMatch = contentStr.match(/Summary:\s*(.*?)(?=\nSteps:|$)/s);
-         const stepsMatch = contentStr.match(/Steps:\n(.*?)(?=\nKeywords:|$)/s);
+         const summaryMatch = contentStr.match(/Summary:\s*([\s\S]*?)(?=\nSteps:|$)/);
+         const stepsMatch = contentStr.match(/Steps:\n([\s\S]*?)(?=\nKeywords:|$)/);
          
          const summary = summaryMatch ? summaryMatch[1].trim() : "Here is the information you requested.";
          // Use direct short description instead of detailed steps

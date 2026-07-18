@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const kbPath = path.join(__dirname, 'knowledge-base.json');
+const kbPath = path.join(__dirname, 'frontend', 'src', 'data', 'knowledge-base.json');
 let kbData = JSON.parse(fs.readFileSync(kbPath, 'utf8'));
 
 // 1. Remove Auth/Login/Signup entries

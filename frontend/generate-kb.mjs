@@ -121,7 +121,7 @@ ${combinedSource}
   }
 
   // Deduplicate by route/topic if needed, but a simple write is fine for now
-  const outPath = path.join(process.cwd(), '../knowledge-base.json');
+  const outPath = path.join(process.cwd(), 'src/data/knowledge-base.json');
   fs.writeFileSync(outPath, JSON.stringify(allEntries, null, 2), 'utf8');
   console.log(`Successfully saved ${allEntries.length} total entries to ${outPath}`);
 }
