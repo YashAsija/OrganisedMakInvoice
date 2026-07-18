@@ -205,8 +205,8 @@ RECENT HISTORY:
 ${historyContext}
 `;
 
-    // 7. Call Gemini, prioritizing gemini-1.5-flash which has 1500 req/day quota
-    const modelsToTry = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
+    // 7. Call Gemini, with cascading fallback
+    const modelsToTry = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
     let generateResponse: any = null;
     let lastError = null;
 

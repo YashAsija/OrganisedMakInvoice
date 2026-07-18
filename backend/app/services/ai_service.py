@@ -27,7 +27,7 @@ def generate_description_cached(name: str) -> str:
     prompt = f'Write a professional, concise, polished invoice line item description for the service/product named: "{name}". Keep it to 15-25 words. Make it sound appealing to a professional corporate client. Do not use quotation marks around the answer.'
     try:
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model="gemini-2.5-flash-lite",
             contents=prompt,
             config=types.GenerateContentConfig(temperature=0.7)
         )
@@ -101,7 +101,7 @@ Use standard fallback fields for today's date {today} and a due date exactly 14 
 
     try:
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model="gemini-2.5-flash-lite",
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
