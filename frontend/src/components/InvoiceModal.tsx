@@ -154,7 +154,7 @@ export default function InvoiceModal({
   const [referenceNumber, setReferenceNumber] = useState('');
   const [poNumber, setPoNumber] = useState('');
   const [deliveryNote, setDeliveryNote] = useState('');
-  const [selectedTemplateStyle, setSelectedTemplateStyle] = useState<'minimal' | 'professional' | 'modern' | 'startup' | 'agency' | 'enterprise'>('professional');
+  const [selectedTemplateStyle, setSelectedTemplateStyle] = useState<string>('professional');
   const [qrCodeTriggerUrl, setQrCodeTriggerUrl] = useState('');
 
   // AI Assist States
