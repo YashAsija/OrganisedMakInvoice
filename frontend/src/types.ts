@@ -58,8 +58,9 @@ export interface Invoice {
   paidDate?: string;
   recurringSettings?: RecurringSettings; // Optional recurring invoice setup
   parentInvoiceId?: string; // Tracks which recurring series this was auto-generated from
-  selectedTemplateStyle?: 'minimal' | 'professional' | 'modern' | 'startup' | 'agency' | 'enterprise'; // Selected visual invoice layout style
+  selectedTemplateStyle?: string; // Selected visual invoice layout style
   selectedCustomTemplateId?: string; // Tracks which template was specifically chosen or defaulted for this invoice
+  embeddedTemplate?: any; // The snapshotted template for this invoice
   qrCodeTriggerUrl?: string; // Optional custom payment link (UPI, PayPal, Stripe etc)
   companyState?: string;
   companyCountry?: string;
