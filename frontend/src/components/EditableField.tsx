@@ -57,7 +57,7 @@ export function EditableField({
       {type === 'textarea' ? (
         <textarea
           ref={textareaRef}
-          value={editingValue}
+          value={editingValue || ''}
           onChange={(e) => setEditingValue(e.target.value)}
           onBlur={handleBlur}
           placeholder={placeholder}

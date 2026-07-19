@@ -312,7 +312,7 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
         </div>
         <div>
           <label className="text-xs font-bold text-slate-700 mb-1 block">Custom Payment Note</label>
-          <textarea value={config.payment.customNote} onChange={e => updateConfig('payment', { customNote: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm h-20" />
+          <textarea value={config.payment.customNote || ''} onChange={e => updateConfig('payment', { customNote: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm h-20" />
         </div>
       </div>
     );
@@ -404,7 +404,7 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
         </div>
         <div>
           <label className="text-xs font-bold text-slate-700 mb-1 block">Terms & Conditions</label>
-          <textarea value={config.terms.customText} onChange={e => updateConfig('terms', { customText: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm h-32" />
+          <textarea value={config.terms.customText || ''} onChange={e => updateConfig('terms', { customText: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm h-32" />
         </div>
       </div>
     );

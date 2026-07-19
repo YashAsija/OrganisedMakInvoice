@@ -631,7 +631,18 @@ export default function App() {
                     loc.status === 'draft' &&
                     !cloudInvoices.some((c: any) => c.id === loc.id)
                 );
-                const merged = [...localDraftsOnly, ...(cloudInvoices as Invoice[])];
+                const parsedCloudInvoices = (cloudInvoices as Invoice[]).map(inv => {
+                  if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
+                    try {
+                      inv.embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
+                      inv.selectedCustomTemplateId = inv.embeddedTemplate?.id;
+                    } catch (e) {
+                      // fallback if parsing fails
+                    }
+                  }
+                  return inv;
+                });
+                const merged = [...localDraftsOnly, ...parsedCloudInvoices];
                 setInvoices(merged);
                 localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(merged));
               }
@@ -660,7 +671,16 @@ export default function App() {
                           loc.status === 'draft' &&
                           !data.some((c: any) => c.id === loc.id)
                       );
-                      const merged2 = [...localDraftsOnly2, ...(data as Invoice[])];
+                      const parsedCloudInvoices2 = (data as Invoice[]).map(inv => {
+                        if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
+                          try {
+                            inv.embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
+                            inv.selectedCustomTemplateId = inv.embeddedTemplate?.id;
+                          } catch (e) { }
+                        }
+                        return inv;
+                      });
+                      const merged2 = [...localDraftsOnly2, ...parsedCloudInvoices2];
                       setInvoices(merged2);
                       localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(merged2));
                     }
@@ -1200,6 +1220,17 @@ export default function App() {
     if (isOnline && user) {
       // Propagate directly to Cloud
       const updatedInvoiceData = { ...invoice, userId: user.id };
+      
+      // SUPABASE COMPATIBILITY: Supabase rejects unknown columns. 
+      // We store the embedded template JSON inside the legacy selectedTemplateStyle column for cloud sync.
+      if (updatedInvoiceData.embeddedTemplate) {
+        updatedInvoiceData.selectedTemplateStyle = JSON.stringify(updatedInvoiceData.embeddedTemplate);
+        delete updatedInvoiceData.embeddedTemplate; // Remove so Supabase doesn't reject
+      }
+      
+      // Remove selectedCustomTemplateId as well to avoid schema errors, since its ID is inside embeddedTemplate
+      delete updatedInvoiceData.selectedCustomTemplateId;
+      
       const path = `invoices[id=${invoice.id}]`;
       try {
         await supabase.from('invoices').upsert(updatedInvoiceData);

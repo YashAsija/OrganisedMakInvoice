@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = JSON.parse(body);
-    const { draft, accessToken } = payload as { draft: Record<string, unknown>; accessToken?: string };
+    const { draft, accessToken, userId: payloadUserId } = payload as { draft: Record<string, unknown>; accessToken?: string; userId?: string };
 
     if (!draft || !draft.id) {
       return NextResponse.json({ error: 'Invalid draft payload' }, { status: 400 });
@@ -40,12 +40,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Fallback to the payload's userId if the token couldn't be resolved
+    const finalUserId = resolvedUserId || payloadUserId || draft.userId;
+
+    // Ensure we NEVER attempt to save with 'local' as userId which breaks foreign key constraint
+    if (finalUserId === 'local') {
+      return NextResponse.json({ error: 'Missing valid userId' }, { status: 400 });
+    }
+
     // Build the final draft record — always override userId with the verified value
     const draftRecord = {
       ...draft,
       status: 'draft',
       updatedAt: new Date().toISOString(),
-      ...(resolvedUserId ? { userId: resolvedUserId } : {}),
+      userId: finalUserId
     };
 
     // Use the auth token from the client for RLS

@@ -1760,7 +1760,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     <label htmlFor="company-address" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Full Office Address</label>
                     <textarea 
                       id="company-address"
-                      value={address}
+                      value={address || ''}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="e.g. 123 Business Rd, City Centre"
                       rows={2}
@@ -2291,7 +2291,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     <label htmlFor="billing-notes" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Default Notes</label>
                     <textarea 
                       id="billing-notes"
-                      value={defaultNotes}
+                      value={defaultNotes || ''}
                       onChange={(e) => setDefaultNotes(e.target.value)}
                       placeholder="Thank you for your business."
                       rows={2}
@@ -2303,7 +2303,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     <label htmlFor="billing-terms" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Default Terms & Conditions</label>
                     <textarea 
                       id="billing-terms"
-                      value={defaultTerms}
+                      value={defaultTerms || ''}
                       onChange={(e) => setDefaultTerms(e.target.value)}
                       placeholder="Goods once sold will not be taken back or exchanged."
                       rows={2}

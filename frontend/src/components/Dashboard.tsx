@@ -4939,6 +4939,20 @@ export default function Dashboard({
               {(() => {
                 const resolvedTemplate = (() => {
                   const _tick = templateUpdateTick; // Force re-render on tick
+                  if (activePreviewInvoice.embeddedTemplate) {
+                    return activePreviewInvoice.embeddedTemplate;
+                  }
+                  
+                  // For very old invoices that didn't have selectedCustomTemplateId, map their selectedTemplateStyle
+                  if (!activePreviewInvoice.selectedCustomTemplateId && activePreviewInvoice.selectedTemplateStyle) {
+                    const style = activePreviewInvoice.selectedTemplateStyle.toLowerCase();
+                    if (style === 'minimal') return TEMPLATE_PRESETS.find(t => t.id === 'preset_barebones') || TEMPLATE_PRESETS[0];
+                    if (style === 'modern') return TEMPLATE_PRESETS.find(t => t.id === 'preset_medical') || TEMPLATE_PRESETS[0];
+                    if (style === 'professional') return TEMPLATE_PRESETS.find(t => t.id === 'preset_corporate') || TEMPLATE_PRESETS[0];
+                    if (style === 'startup' || style === 'agency') return TEMPLATE_PRESETS.find(t => t.id === 'preset_user') || TEMPLATE_PRESETS[0];
+                    if (style === 'enterprise') return TEMPLATE_PRESETS.find(t => t.id === 'preset_gst') || TEMPLATE_PRESETS[0];
+                  }
+
                   const templateId = activePreviewInvoice.selectedCustomTemplateId || localStorage.getItem('makbills_global_default_template');
                   const savedCustom = localStorage.getItem('makbills_custom_templates');
                   if (savedCustom) {
@@ -5109,7 +5123,7 @@ export default function Dashboard({
                 <label htmlFor="cl_ad" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Billing Address</label>
                 <textarea
                   id="cl_ad"
-                  value={clientAddress}
+                  value={clientAddress || ''}
                   onChange={(e) => setClientAddress(e.target.value)}
                   placeholder="e.g. Building 10, Redwood Ave, CA"
                   rows={2}
@@ -5218,7 +5232,7 @@ export default function Dashboard({
                 <label htmlFor="exp_desc" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Expenditure Description</label>
                 <textarea
                   id="exp_desc"
-                  value={expenseDesc}
+                  value={expenseDesc || ''}
                   onChange={(e) => setExpenseDesc(e.target.value)}
                   placeholder="e.g. AWS Multi-Region Node Cloud charges"
                   rows={2}

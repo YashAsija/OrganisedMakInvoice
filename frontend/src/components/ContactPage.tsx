@@ -176,7 +176,7 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
                       <textarea 
                         required 
                         rows={4} 
-                        value={contactForm.message} 
+                        value={contactForm.message || ''} 
                         onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
                         placeholder="Tell us how we can help you..."
                         className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-955 text-slate-805 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none transition-all resize-none"

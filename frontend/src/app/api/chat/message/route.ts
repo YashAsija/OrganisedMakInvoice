@@ -35,14 +35,24 @@ export async function POST(request: Request) {
     
     const { data: quotaData, error: quotaError } = await supabase
       .from('gemini_quota_tracking')
-      .select('requests, input_tokens, output_tokens')
-      .eq('date', todayStr)
-      .single();
+      .select('model_name, requests, input_tokens, output_tokens')
+      .eq('date', todayStr);
 
-    // If quota tracking row doesn't exist, requests is effectively 0
-    let currentRequests = quotaData?.requests || 0;
+    let totalRequests = 0;
+    let modelUsage: Record<string, number> = {
+      'gemini-2.5-flash-lite': 0,
+      'gemini-2.5-flash': 0
+    };
+    
+    if (quotaData) {
+      for (const row of quotaData) {
+        totalRequests += (row.requests || 0);
+        modelUsage[row.model_name] = row.requests || 0;
+      }
+    }
 
-    if (currentRequests >= 20) {
+    // Two models * 20 limit each = 40 total
+    if (modelUsage['gemini-2.5-flash-lite'] >= 20 && modelUsage['gemini-2.5-flash'] >= 20) {
       return NextResponse.json({ 
         reply: "I've reached my daily limit of questions for today — please try again tomorrow, or click 'Talk to a human' to get help right now.", 
         route: null 
@@ -69,7 +79,7 @@ export async function POST(request: Request) {
     // 3. Cache Check: Did we answer this very recently?
     const { data: cachedMatch, error: cacheError } = await supabase.rpc('match_chat_cache', {
       query_embedding: embedding,
-      match_threshold: 0.92,
+      match_threshold: 0.90, // LOWERED threshold for better cache hit rate
       recent_days: 30,
     });
 
@@ -113,7 +123,7 @@ export async function POST(request: Request) {
       ).join("\n\n");
     }
 
-    if (similarity > 0.79) {
+    if (similarity > 0.74) {
       // HIGH SIMILARITY: Skip Gemini, parse KB directly
       console.log("[BUCKET] HIGH - Zero API calls");
       
@@ -135,7 +145,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ reply, features });
     }
 
-    if (currentRequests >= 18) {
+    if (modelUsage['gemini-2.5-flash-lite'] + modelUsage['gemini-2.5-flash'] >= 38) {
       console.log("[BUCKET] MEDIUM (DEGRADED) - Zero API calls. Limit reached.");
       const reply = "I've almost reached my daily limit and don't have enough context to answer this accurately right now. Please click 'Talk to a human' for further assistance.";
       const features: any[] = [];
@@ -184,10 +194,11 @@ Your task is to answer user queries politely and accurately. You have been provi
 CRITICAL INSTRUCTIONS:
 1. Search through the entire provided Global Context to find the most relevant feature(s) for the user's question.
 2. ONLY describe information that appears VERBATIM in the provided context.
-3. If the user's question can be answered by the provided logic, you MUST provide a short, direct answer (1-2 sentences max) summarizing the feature. Do NOT provide a detailed list of steps.
-4. Never provide help regarding login, signup, or authentication, as the user is already logged in. If asked about these, politely explain that they are already authenticated.
-5. If the query is genuinely outside the website logic (like account deletion, billing disputes, bugs), briefly acknowledge you can't help directly and suggest they click "Talk to a human".
-6. Please reply in ${language === 'hi' ? 'Hindi' : 'English'}, but maintain professional formatting (Markdown).
+3. If the user asks a specific question about a feature, you MUST provide a short, direct answer (1-2 sentences max) summarizing that feature. Do NOT provide a detailed list of steps.
+4. IMPORTANT: If the user asks a broad or general question about the app (e.g., "What is this app?", "Tell me about the app", "What features do you have?", "I want to know about app"), you MUST provide a comprehensive overview explaining EVERY major feature listed in the Global Context. Do not restrict this overview to 1-2 sentences; explain the app fully to give them a complete understanding of all capabilities.
+5. Never provide help regarding login, signup, or authentication, as the user is already logged in. If asked about these, politely explain that they are already authenticated.
+6. If the query is genuinely outside the website logic (like account deletion, billing disputes, bugs), briefly acknowledge you can't help directly and suggest they click "Talk to a human".
+7. Please reply in ${language === 'hi' ? 'Hindi' : language === 'hi-en' ? 'Hinglish (a conversational mix of Hindi and English)' : language === 'es' ? 'Spanish' : language === 'fr' ? 'French' : language === 'de' ? 'German' : 'English'}, but maintain professional formatting (Markdown).
 
 IMPORTANT: You MUST respond with a valid JSON object in the following format (and NOTHING ELSE, NO markdown codeblocks):
 {
@@ -207,16 +218,17 @@ ${historyContext}
 
     const modelsToTry = [
       'gemini-2.5-flash-lite', 
-      'gemini-2.5-flash',
-      'gemini-2.0-flash-lite-preview-02-05',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-8b'
+      'gemini-2.5-flash'
     ];
     let generateResponse: any = null;
     let lastError = null;
 
+    let usedModel = '';
     for (const modelName of modelsToTry) {
+      if (modelUsage[modelName] >= 20) {
+        console.log(`Model ${modelName} is at its individual quota limit, skipping...`);
+        continue;
+      }
       try {
         console.log(`Attempting generation with model: ${modelName}`);
         generateResponse = await genAI.models.generateContent({
@@ -233,6 +245,7 @@ ${historyContext}
         
         // Success! Break out of the loop
         console.log(`Successfully generated response using ${modelName}`);
+        usedModel = modelName;
         break;
       } catch (err: any) {
         lastError = err;
@@ -270,13 +283,17 @@ ${historyContext}
       const inputTokens = generateResponse.usageMetadata?.promptTokenCount || 0;
       const outputTokens = generateResponse.usageMetadata?.candidatesTokenCount || 0;
       
+      // Upsert tracking for the specific model
+      const existingModelRow = quotaData?.find((r: any) => r.model_name === usedModel);
+      
       const { error: upsertError } = await supabase
         .from('gemini_quota_tracking')
         .upsert({ 
           date: todayStr, 
-          requests: currentRequests + 1,
-          input_tokens: ((quotaData as any)?.input_tokens || 0) + inputTokens,
-          output_tokens: ((quotaData as any)?.output_tokens || 0) + outputTokens
+          model_name: usedModel,
+          requests: (existingModelRow?.requests || 0) + 1,
+          input_tokens: (existingModelRow?.input_tokens || 0) + inputTokens,
+          output_tokens: (existingModelRow?.output_tokens || 0) + outputTokens
         });
       
       if (upsertError) console.error("Quota tracking error", upsertError);

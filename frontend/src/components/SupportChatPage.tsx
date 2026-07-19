@@ -14,7 +14,10 @@ interface Message {
 const LANGUAGES = [
   { id: 'en', label: 'English' },
   { id: 'hi', label: 'Hindi (हिंदी)' },
+  { id: 'hi-en', label: 'Hinglish' },
   { id: 'es', label: 'Español' },
+  { id: 'fr', label: 'Français' },
+  { id: 'de', label: 'Deutsch' },
 ];
 
 const SUGGESTED_FAQS: Record<string, string[]> = {
@@ -32,19 +35,43 @@ const SUGGESTED_FAQS: Record<string, string[]> = {
     "क्या मैं अपना डेटा निर्यात कर सकता हूँ?",
     "पिन लॉक कैसे सक्षम करें?"
   ],
+  'hi-en': [
+    "Invoice kaise banaye?",
+    "Cloud sync kaise kaam karta hai?",
+    "Invoice me GST kaise add karein?",
+    "Data bulk me kaise export karein?",
+    "PIN lock kaise enable karein?"
+  ],
   'es': [
     "¿Cómo creo una factura?",
     "¿Cómo funciona la sincronización en la nube?",
     "¿Cómo agrego GST a las facturas?",
     "¿Puedo exportar mis datos en masa?",
     "¿Cómo habilito el bloqueo por PIN?"
+  ],
+  'fr': [
+    "Comment créer une facture ?",
+    "Comment fonctionne la synchronisation cloud ?",
+    "Comment ajouter la TPS aux factures ?",
+    "Puis-je exporter mes données en vrac ?",
+    "Comment activer le verrouillage par code PIN ?"
+  ],
+  'de': [
+    "Wie erstelle ich eine Rechnung?",
+    "Wie funktioniert die Cloud-Synchronisation?",
+    "Wie füge ich Rechnungen GST hinzu?",
+    "Kann ich meine Daten massenhaft exportieren?",
+    "Wie aktiviere ich die PIN-Sperre?"
   ]
 };
 
 const GREETINGS: Record<string, string> = {
   'en': "Hello! I'm your MakInvoices support assistant. How can I help you today?",
   'hi': "नमस्ते! मैं आपका MakInvoices सहायता सहायक हूँ। मैं आज आपकी कैसे मदद कर सकता हूँ?",
-  'es': "¡Hola! Soy tu asistente de soporte de MakInvoices. ¿Cómo puedo ayudarte hoy?"
+  'hi-en': "Hello! Main aapka MakInvoices support assistant hoon. Aaj main aapki kaise madad kar sakta hoon?",
+  'es': "¡Hola! Soy tu asistente de soporte de MakInvoices. ¿Cómo puedo ayudarte hoy?",
+  'fr': "Bonjour ! Je suis votre assistant de support MakInvoices. Comment puis-je vous aider aujourd'hui ?",
+  'de': "Hallo! Ich bin Ihr MakInvoices-Support-Assistent. Wie kann ich Ihnen heute helfen?"
 };
 
 interface SupportChatPageProps {

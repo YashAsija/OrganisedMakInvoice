@@ -133,7 +133,7 @@ export interface BusinessProfile {
   invoiceLayout?: 'modern' | 'minimal' | 'agency' | 'professional' | 'startup' | 'enterprise';
   updatedAt: string;
   ownerName?: string;
-  
+
   // New Fields for customized profile setup
   companyCode?: string;
   state?: string;
@@ -156,7 +156,7 @@ export interface BusinessProfile {
   materialCategorization?: 'Optional' | 'Required';
   defaultNotes?: string;
   defaultTerms?: string;
-  
+
   // Tax Configuration Tab
   taxMode?: 'dynamic' | 'custom';
   customTaxName?: string;
@@ -192,7 +192,7 @@ export interface InvoiceTemplate {
   description: string;
   isDefault?: boolean;
   category: 'Default' | 'GST' | 'Service' | 'Retail' | 'User';
-  
+
   layout: {
     type: 'Classic' | 'Modern' | 'Minimal' | 'Corporate' | 'GST Standard' | 'Retail' | 'Fully Custom' | 'Modal Classic';
     pageSize: 'A4' | 'Letter';
@@ -208,22 +208,22 @@ export interface InvoiceTemplate {
   };
 
   sections: Record<TemplateSectionId, TemplateSection>;
-  
+
   config: {
-    header: { showLogo: boolean; logoPosition: 'Left'|'Center'|'Right'; logoWidth: number; logoHeight: number; titleAlignment: 'Left'|'Center'|'Right'; invoiceTitle: string; };
+    header: { showLogo: boolean; logoPosition: 'Left' | 'Center' | 'Right'; logoWidth: number; logoHeight: number; titleAlignment: 'Left' | 'Center' | 'Right'; invoiceTitle: string; };
     company: { fields: string[]; };
-    invoiceInfo: { fields: string[]; customFields: { id: string; label: string; type: string; value: string; }[]; position: 'Left'|'Center'|'Right'; };
+    invoiceInfo: { fields: string[]; customFields: { id: string; label: string; type: string; value: string; }[]; position: 'Left' | 'Center' | 'Right'; };
     client: { fields: string[]; };
     shipping: { fields: string[]; sameAsBilling: boolean; };
     transport: { fields: string[]; };
     table: {
-      columns: { id: string; visible: boolean; label: string; type: 'Text'|'Number'|'Currency'|'Percentage'|'Formula'; formula?: string; width?: string; order: number; }[];
+      columns: { id: string; visible: boolean; label: string; type: 'Text' | 'Number' | 'Currency' | 'Percentage' | 'Formula'; formula?: string; width?: string; order: number; }[];
     };
     tax: { showTaxableAmount: boolean; showCgstSgst: boolean; showIgst: boolean; showCess: boolean; showDiscount: boolean; showRoundOff: boolean; showTotal: boolean; enableHsnSummary: boolean; enableGstSummary: boolean; enableTaxBreakdown: boolean; };
     payment: { generateQrCode: boolean; enableInstructions: boolean; customNote: string; };
     amountInWords: { format: 'Indian' | 'International'; enabled: boolean; };
     terms: { presetId: string; customText: string; notesText?: string; };
-    signature: { showSignature: boolean; showStamp: boolean; position: 'Left'|'Center'|'Right'; width: number; height: number; signatoryName: string; designation: string; };
+    signature: { showSignature: boolean; showStamp: boolean; position: 'Left' | 'Center' | 'Right'; width: number; height: number; signatoryName: string; designation: string; };
     footer: { message: string; thankYouNote: string; supportContact: string; website: string; showPageNumbers: boolean; showGeneratedBy: boolean; customText: string; showContact?: boolean; showWebsite?: boolean; };
   };
 

@@ -227,7 +227,7 @@ export default function SupportPage({ onChatClick }: SupportPageProps) {
                 <div>
                   <label className="block text-[9.5px] font-extrabold uppercase tracking-widest text-[#64748b] mb-1.5">Detailed Description *</label>
                   <textarea
-                    value={ticketBody}
+                    value={ticketBody || ''}
                     onChange={e => setTicketBody(e.target.value)}
                     required
                     rows={5}

@@ -385,7 +385,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
 
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-wider text-[#64748b] mb-1.5 block">Description</label>
-                  <textarea value={template.description} onChange={e => updateTemplate({...template, description: e.target.value})} className="w-full p-2.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white h-24 focus:outline-none focus:border-[#64748b] resize-none" />
+                  <textarea value={template.description || ''} onChange={e => updateTemplate({...template, description: e.target.value})} className="w-full p-2.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white h-24 focus:outline-none focus:border-[#64748b] resize-none" />
                 </div>
               </div>
             )}
