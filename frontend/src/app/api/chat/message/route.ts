@@ -205,8 +205,14 @@ RECENT HISTORY:
 ${historyContext}
 `;
 
-    // 7. Call Gemini, with cascading fallback
-    const modelsToTry = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
+    const modelsToTry = [
+      'gemini-2.5-flash-lite', 
+      'gemini-2.5-flash',
+      'gemini-2.0-flash-lite-preview-02-05',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-8b'
+    ];
     let generateResponse: any = null;
     let lastError = null;
 
@@ -232,9 +238,8 @@ ${historyContext}
         lastError = err;
         console.error(`Model ${modelName} failed:`, err.message);
         
-        // Only fallback if it's a 429 Quota Exceeded error
-        if (err.message && err.message.includes("429") && err.message.includes("Quota exceeded")) {
-           console.log(`Quota exhausted for ${modelName}, falling back to next available model...`);
+        if (err.message && err.message.includes("429")) {
+           console.log(`Rate limit or Quota exhausted for ${modelName}, falling back to next available model...`);
            continue;
         } else {
            // If it's a different error (e.g. invalid prompt, context too large), throw immediately
@@ -301,10 +306,9 @@ ${historyContext}
   } catch (err: any) {
     console.error("Chat API Error:", err);
     
-    // Catch Google GenAI 429 quota errors and degrade gracefully
-    if (err.message && err.message.includes("429") && err.message.includes("Quota exceeded")) {
-       // If we have a medium-confidence local match, serve it instead of failing!
-       if (similarity >= 0.58 && topMatch) {
+    if (err.message && err.message.includes("429")) {
+       // If we have a decent local match, serve it instead of failing!
+       if (similarity >= 0.45 && topMatch) {
          console.log("[BUCKET] MEDIUM (QUOTA EXHAUSTED) - Serving local fallback!");
          const contentStr = topMatch.content || "";
          const summaryMatch = contentStr.match(/Summary:\s*([\s\S]*?)(?=\nSteps:|$)/);
