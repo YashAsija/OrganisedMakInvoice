@@ -924,6 +924,12 @@ export default function App() {
     const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        
+        // If there is an OAuth hash, DO NOT end loading. Wait for SIGNED_IN event.
+        if (typeof window !== 'undefined' && (window.location.hash.includes('access_token=') || window.location.hash.includes('type=recovery'))) {
+          return;
+        }
+
         if (!session) {
           setIsAuthLoading(false);
         }
