@@ -78,7 +78,6 @@ export default function App() {
     if (cached === 'light' || cached === 'dark') return cached;
     return 'light'; // default light theme for professional premium readability
   });
-  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
 
   // Security Lock state
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>(() => getSecuritySettings());
@@ -146,7 +145,7 @@ export default function App() {
 
   // Main Business state
   const [profile, setProfile] = useState<BusinessProfile>({
-    uid: 'local',
+    uid: '',
     name: '',
     email: '',
     phone: '',
@@ -259,16 +258,7 @@ export default function App() {
 
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+    return () => {    };
   }, []);
 
   // --- PIN SETUP MODAL STATE ---
@@ -335,7 +325,7 @@ export default function App() {
       setPinModalOpen(false);
     } else {
       // Disabling PIN — disable server side too
-      if (isOnline && user) {
+      if (user) {
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user?.id) {
@@ -359,7 +349,7 @@ export default function App() {
     setSecuritySettings(updated);
     saveSecuritySettings(updated);
 
-    if (user && isOnline) {
+    if (user) {
       supabase.channel(`security_updates:${user.id}`).send({
         type: 'broadcast',
         event: 'security_changed',
@@ -384,10 +374,21 @@ export default function App() {
         setProfile(JSON.parse(localProfile));
       } catch (e) {
         console.warn('Failed to parse local profile, using default', e);
+        setProfile({
+          uid: user?.id || '',
+          name: '',
+          email: activeEmail || '',
+          phone: '',
+          address: '',
+          taxId: '',
+          currency: 'INR',
+          defaultTaxRate: 18,
+          updatedAt: new Date().toISOString()
+        });
       }
     } else {
       setProfile({
-        uid: activeEmail || 'local',
+        uid: user?.id || '',
         name: '',
         email: activeEmail || '',
         phone: '',
@@ -425,7 +426,7 @@ export default function App() {
       // Load standard freelance templates catalog
       const standardTemplateItems = BUSINESS_TEMPLATES[0].items.map(it => ({
         id: it.id,
-        userId: activeEmail || 'local',
+        userId: user?.id || '',
         name: it.name,
         rate: it.rate,
         taxPercentage: it.taxPercentage,
@@ -522,7 +523,7 @@ export default function App() {
           // Only load cloud data if unlocked (PIN gate for data protection)
           if (!isUnlocked) return;
 
-          if (isOnline) {
+          if (true) {
             // --- SYNC / RESOLVE FROM CLOUD ---
             const uid = currentUser.id;
 
@@ -920,7 +921,7 @@ export default function App() {
             localStorage.removeItem('makbills_last_user');
           }
           setProfile({
-            uid: 'local',
+            uid: '',
             name: '',
             email: '',
             phone: '',
@@ -963,7 +964,7 @@ export default function App() {
       authSubscription.unsubscribe();
       cleanupActiveListeners();
     };
-  }, [isOnline, isUnlocked]);
+  }, [isUnlocked]);
 
   // Load local data when unlocked (PIN gate for offline data)
   useEffect(() => {
@@ -976,7 +977,7 @@ export default function App() {
   // Listen to local template updates and sync to cloud
   useEffect(() => {
     const handleLocalTemplatesUpdate = async () => {
-      if (!user || !isOnline || !isUnlocked) return;
+      if (!user || !isUnlocked) return;
       const uid = user.id;
       const localData = localStorage.getItem('makbills_custom_templates');
       if (localData) {
@@ -1012,7 +1013,7 @@ export default function App() {
     
     window.addEventListener('custom_templates_local_update', handleLocalTemplatesUpdate);
     return () => window.removeEventListener('custom_templates_local_update', handleLocalTemplatesUpdate);
-  }, [user, isOnline, isUnlocked]);
+  }, [user, isUnlocked]);
 
   // --- ACTIONS SYSTEM ---
 
@@ -1201,7 +1202,7 @@ export default function App() {
     setProfile(updatedProfile);
     localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(updatedProfile));
 
-    if (isOnline && user) {
+    if (user) {
       const path = `users[uid=${user.id}]`;
       try {
         await supabase.from('users').upsert({ ...updatedProfile, uid: user.id });
@@ -1235,7 +1236,7 @@ export default function App() {
       // Create new independent client record
       const clientToSave: ClientProfile = {
         id: crypto.randomUUID(),
-        userId: user ? user.id : '',
+        userId: user?.id || '',
         name: n,
         companyName: n,
         address: a,
@@ -1259,7 +1260,7 @@ export default function App() {
       setClients(updatedClients);
       localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(updatedClients));
 
-      if (isOnline && user) {
+      if (user) {
         try {
           const clientsWithUser = clientsToUpsert.map(c => ({ ...c, userId: user.id }));
           await supabase.from('clients').upsert(clientsWithUser);
@@ -1279,7 +1280,7 @@ export default function App() {
     setInvoices(matchesList);
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(matchesList));
 
-    if (isOnline && user) {
+    if (user) {
       // Propagate directly to Cloud
       const updatedInvoiceData = { ...invoice, userId: user.id };
       
@@ -1316,7 +1317,7 @@ export default function App() {
     setInvoices(remaining);
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
 
-    if (isOnline && user) {
+    if (user) {
       const path = `invoices[id=${invoiceId}]`;
       try {
         await supabase.from('invoices').delete().eq('id', invoiceId).eq('userId', user.id);
@@ -1340,7 +1341,7 @@ export default function App() {
     setInvoices(remaining);
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
 
-    if (isOnline && user) {
+    if (user) {
       try {
         await supabase.from('invoices').delete().in('id', invoiceIds).eq('userId', user.id);
       } catch (error) {
@@ -1365,7 +1366,7 @@ export default function App() {
     setInvoices(updated);
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
 
-    if (isOnline && user) {
+    if (user) {
       try {
         const bulkUpdates = invoiceIds.map(invoiceId => {
           const inv = invoices.find(i => i.id === invoiceId);
@@ -1385,7 +1386,7 @@ export default function App() {
 
     // Load business details
     const cleanProfile: BusinessProfile = {
-      uid: user ? user.id : 'local',
+      uid: user?.id || '',
       name: template.defaultProfile.name || '',
       email: template.defaultProfile.email || '',
       phone: template.defaultProfile.phone || '',
@@ -1402,7 +1403,7 @@ export default function App() {
     // Seed preset catalog items
     const seededPresets: PresetItem[] = template.items.map((it) => ({
       id: it.id,
-      userId: user ? user.id : 'local',
+      userId: user?.id || '',
       name: it.name,
       rate: it.rate,
       taxPercentage: it.taxPercentage,
@@ -1413,11 +1414,11 @@ export default function App() {
     localStorage.setItem(`invoice_maker_presets${suffix}`, JSON.stringify(seededPresets));
 
     // Clear and seed an initial example bill matching template
-    const sample = getSampleInvoice(templateId, user ? user.id : 'local');
+    const sample = getSampleInvoice(templateId, user?.id || '');
     setInvoices([sample]);
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify([sample]));
 
-    if (isOnline && user) {
+    if (user) {
       // Sync seeded configurations to Supabase
       try {
         await supabase.from('users').upsert({ ...cleanProfile, uid: user.id });
@@ -1437,7 +1438,7 @@ export default function App() {
 
   // 6. Sync local unsynced invoices up to cloud (Triggered upon login)
   const handleSyncLocalInvoices = async () => {
-    if (!user || !isOnline) return;
+    if (!user) return;
 
     // Load guest/offline data from localStorage (suffix is '')
     const localInvoicesStr = localStorage.getItem('invoice_maker_invoices');
@@ -1452,7 +1453,7 @@ export default function App() {
       if (localInvoicesStr) {
         const localInvoices: Invoice[] = JSON.parse(localInvoicesStr);
         const toSync = localInvoices
-          .filter(inv => inv.userId === 'local' || !inv.userId)
+          .filter(inv => !inv.userId)
           .map(inv => ({
             ...inv,
             userId: user.id,
@@ -1469,7 +1470,7 @@ export default function App() {
       if (localClientsStr) {
         const localClients: ClientProfile[] = JSON.parse(localClientsStr);
         const toSync = localClients
-          .filter(c => c.userId === 'local' || !c.userId)
+          .filter(c => !c.userId)
           .map(c => ({
             ...c,
             userId: user.id,
@@ -1485,7 +1486,7 @@ export default function App() {
       if (localExpensesStr) {
         const localExpenses: Expense[] = JSON.parse(localExpensesStr);
         const toSync = localExpenses
-          .filter(e => e.userId === 'local' || !e.userId)
+          .filter(e => !e.userId)
           .map(e => ({
             ...e,
             userId: user.id,
@@ -1501,7 +1502,7 @@ export default function App() {
       if (localPresetsStr) {
         const localPresets: PresetItem[] = JSON.parse(localPresetsStr);
         const toSync = localPresets
-          .filter(p => p.userId === 'local' || !p.userId)
+          .filter(p => !p.userId)
           .map(p => ({
             ...p,
             userId: user.id,
@@ -1516,7 +1517,7 @@ export default function App() {
       // 5. Sync Business Profile
       if (localProfileStr) {
         const localProfile: BusinessProfile = JSON.parse(localProfileStr);
-        if (localProfile.uid === 'local' || !localProfile.uid) {
+        if (!localProfile.uid) {
           const updatedProfile = {
             ...localProfile,
             uid: user.id,
@@ -1554,7 +1555,7 @@ export default function App() {
     setClients(updated);
     localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(updated));
 
-    if (isOnline && user) {
+    if (user) {
       const clientWithUser = { ...client, userId: user.id };
       try {
         await supabase.from('clients').upsert(clientWithUser);
@@ -1582,7 +1583,7 @@ export default function App() {
     setClients(remaining);
     localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(remaining));
 
-    if (isOnline && user) {
+    if (user) {
       try {
         // Delete all duplicate rows by name matching case-insensitively in Supabase
         await supabase.from('clients').delete().eq('userId', user.id).ilike('name', clientToDelete.name.trim());
@@ -1599,7 +1600,7 @@ export default function App() {
     setExpenses(updated);
     localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(updated));
 
-    if (isOnline && user) {
+    if (user) {
       const expenseWithUser = { ...expense, userId: user.id };
       try {
         await supabase.from('expenses').upsert(expenseWithUser);
@@ -1621,7 +1622,7 @@ export default function App() {
     setExpenses(remaining);
     localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(remaining));
 
-    if (isOnline && user) {
+    if (user) {
       try {
         await supabase.from('expenses').delete().eq('id', expenseId).eq('userId', user.id);
       } catch (err) {
@@ -1746,7 +1747,7 @@ export default function App() {
         nextInvoices = [ch, ...nextInvoices];
       });
 
-      if (isOnline && user) {
+      if (user) {
         const allToSync = [
           ...updatedParents.map(up => ({ ...up, userId: user.id })),
           ...newSpawned.map(ch => ({ ...ch, userId: user.id })),
@@ -1759,7 +1760,7 @@ export default function App() {
       setInvoices(nextInvoices);
       localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(nextInvoices));
     }
-  }, [invoices.length, user, isOnline]);
+  }, [invoices.length, user]);
 
   const handleOpenInvoiceEditor = (invoice: Invoice | null) => {
     setEditingInvoice(invoice);
@@ -1862,7 +1863,6 @@ export default function App() {
         onGoogleLogin={handleLogin}
         onCustomSignup={handleCustomSignup}
         onCustomLogin={handleCustomLogin}
-        isOnline={isOnline}
         onNavigate={handlePublicNavigate}
       />
     );
@@ -1884,7 +1884,6 @@ export default function App() {
         presets={presets}
         clients={clients}
         expenses={expenses}
-        isOnline={isOnline}
         theme={theme}
         toggleTheme={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
         userEmail={userEmail}
