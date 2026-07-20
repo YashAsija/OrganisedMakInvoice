@@ -118,6 +118,7 @@ export default function App() {
 
   // User details
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [userEmail, setUserEmail] = useState<string | null>(() => {
     return localStorage.getItem('makbills_custom_email') || null;
   });
@@ -192,6 +193,8 @@ export default function App() {
   // --- SYNC BROWSER URL PATH WITH DASHBOARD STATE ---
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      if (isAuthLoading) return;
+      
       const path = window.location.pathname;
       if (userEmail) {
         let expectedPath = tabToPath[activeTab] || '/dashboard';
@@ -214,7 +217,7 @@ export default function App() {
         }
       }
     }
-  }, [userEmail, activeTab, publicPath, isInvoiceEditorOpen, isProfileOpen]);
+  }, [userEmail, activeTab, publicPath, isInvoiceEditorOpen, isProfileOpen, isAuthLoading]);
 
   // --- HANDLE BROWSER BACK/FORWARD BUTTONS (POPSTATE) ---
   useEffect(() => {
@@ -502,6 +505,8 @@ export default function App() {
           const activeEmail = currentUser.email ?? currentUser.phone ?? null;
           setUserEmail(activeEmail);
           const suffix = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
+
+          setIsAuthLoading(false);
 
           // Only load cloud data if unlocked (PIN gate for data protection)
           if (!isUnlocked) return;
@@ -886,10 +891,17 @@ export default function App() {
               )
               .subscribe();
             activeChannels.push(securityChannel);
+            setIsAuthLoading(false);
           }
         } else {
+          // If no user, clear everything
           setUser(null);
           setUserEmail(null);
+          setInvoices([]);
+          setExpenses([]);
+          setPresets([]);
+          setProfile(null);
+          setIsAuthLoading(false);
         }
         } catch (globalAuthErr) {
           console.warn("Unhandled error in auth state change listener:", String(globalAuthErr));
@@ -949,7 +961,10 @@ export default function App() {
     };
     
     window.addEventListener('custom_templates_local_update', handleLocalTemplatesUpdate);
-    return () => window.removeEventListener('custom_templates_local_update', handleLocalTemplatesUpdate);
+    return () => {
+      window.removeEventListener('custom_templates_local_update', handleLocalTemplatesUpdate);
+      authSubscription.unsubscribe();
+    };
   }, [user, isOnline, isUnlocked]);
 
   // --- ACTIONS SYSTEM ---
@@ -1757,6 +1772,14 @@ export default function App() {
   };
 
   // --- RENDERING CONFIGURATION ---
+  if (isAuthLoading || isUnlocked === null) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
   if (!userEmail) {
     if (publicPath === '/pricing') {
       return (
@@ -1798,13 +1821,7 @@ export default function App() {
     );
   }
 
-  if (isUnlocked === null) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
+
 
   if (!isUnlocked) {
     return <BiometricVerification onSuccess={() => setIsUnlocked(true)} />;
