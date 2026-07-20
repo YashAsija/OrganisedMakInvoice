@@ -156,7 +156,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
         
         setSuccessMsg('Successfully authenticated! Redirecting...');
         setTimeout(() => {
-          window.location.href = '/';
+          window.location.href = '/dashboard';
         }, 1500);
       }
     } catch (err: any) {
@@ -230,7 +230,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
           localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(initProf));
           setSuccessMsg('Welcome aboard! Redirecting...');
           setTimeout(() => {
-            window.location.href = '/';
+            window.location.href = '/dashboard';
           }, 1500);
         }
       } else if (authMode === 'forgot-password') {
@@ -255,7 +255,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
           if (error) throw error;
           setSuccessMsg('Welcome back! Redirecting...');
           setTimeout(() => {
-            window.location.href = '/';
+            window.location.href = '/dashboard';
           }, 1500);
         }
       }
@@ -274,7 +274,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: window.location.origin + '/dashboard',
         },
       });
       if (error) throw error;
