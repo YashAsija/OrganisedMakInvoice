@@ -899,8 +899,18 @@ export default function App() {
           setUserEmail(null);
           setInvoices([]);
           setExpenses([]);
+          setProfile({
+            uid: 'local',
+            name: '',
+            email: '',
+            phone: '',
+            address: '',
+            taxId: '',
+            currency: 'INR',
+            defaultTaxRate: 18,
+            updatedAt: new Date().toISOString()
+          });
           setPresets([]);
-          setProfile(null);
           setIsAuthLoading(false);
         }
         } catch (globalAuthErr) {
@@ -961,10 +971,7 @@ export default function App() {
     };
     
     window.addEventListener('custom_templates_local_update', handleLocalTemplatesUpdate);
-    return () => {
-      window.removeEventListener('custom_templates_local_update', handleLocalTemplatesUpdate);
-      authSubscription.unsubscribe();
-    };
+    return () => window.removeEventListener('custom_templates_local_update', handleLocalTemplatesUpdate);
   }, [user, isOnline, isUnlocked]);
 
   // --- ACTIONS SYSTEM ---
