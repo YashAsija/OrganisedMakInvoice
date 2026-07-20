@@ -501,8 +501,19 @@ export default function App() {
         const currentUser = session?.user ?? null;
 
         if (currentUser) {
-          setUser(currentUser);
           const activeEmail = currentUser.email ?? currentUser.phone ?? null;
+          const lastUser = typeof window !== 'undefined' ? localStorage.getItem('makbills_last_user') : null;
+          
+          if (activeEmail && lastUser && activeEmail !== lastUser) {
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('makbills_custom_templates');
+            }
+          }
+          if (activeEmail && typeof window !== 'undefined') {
+            localStorage.setItem('makbills_last_user', activeEmail);
+          }
+
+          setUser(currentUser);
           setUserEmail(activeEmail);
           const suffix = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
 
@@ -821,6 +832,10 @@ export default function App() {
                   setCustomTemplates(cloudTemplates);
                   localStorage.setItem('makbills_custom_templates', JSON.stringify(cloudTemplates));
                   window.dispatchEvent(new Event('custom_templates_updated_from_cloud'));
+                } else {
+                  setCustomTemplates([]);
+                  localStorage.setItem('makbills_custom_templates', '[]');
+                  window.dispatchEvent(new Event('custom_templates_updated_from_cloud'));
                 }
               } else {
                 // Cloud is empty or missing. If we have stranded local templates, push them!
@@ -899,6 +914,11 @@ export default function App() {
           setUserEmail(null);
           setInvoices([]);
           setExpenses([]);
+          setCustomTemplates([]);
+          if (typeof window !== 'undefined' && event === 'SIGNED_OUT') {
+            localStorage.removeItem('makbills_custom_templates');
+            localStorage.removeItem('makbills_last_user');
+          }
           setProfile({
             uid: 'local',
             name: '',
