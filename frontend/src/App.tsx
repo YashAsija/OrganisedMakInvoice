@@ -911,13 +911,27 @@ export default function App() {
             updatedAt: new Date().toISOString()
           });
           setPresets([]);
-          setIsAuthLoading(false);
+          if (event !== 'INITIAL_SESSION') {
+            setIsAuthLoading(false);
+          }
         }
         } catch (globalAuthErr) {
           console.warn("Unhandled error in auth state change listener:", String(globalAuthErr));
         }
       }
     );
+
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setIsAuthLoading(false);
+        }
+      } catch (err) {
+        setIsAuthLoading(false);
+      }
+    };
+    checkSession();
 
     return () => {
       authSubscription.unsubscribe();
