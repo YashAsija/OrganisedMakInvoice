@@ -1,12 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  'https://placeholder.supabase.co'; // replaced at runtime by real env var
-
-const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  'placeholder-anon-key'; // replaced at runtime by real env var
+import { createClient } from './supabase/client';
 
 export const isSupabaseConfigured =
   !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -16,13 +8,7 @@ export const isSupabaseConfigured =
   !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('placeholder') &&
   !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('YOUR_ANON_KEY');
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
+export const supabase = createClient();
 
 
 // --- Operation type enum (mirrors former Firebase enum) ---
