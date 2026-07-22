@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown } from 'lucide-react';
+import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown, Loader2 } from 'lucide-react';
 import { Invoice, TaxClassification, InvoiceItem, InvoiceStatus, DiscountType, PresetItem, ClientProfile, RecurringInterval, BusinessProfile, InvoiceTemplate } from '../types';
 import { EditableField } from './EditableField';
 import { exportInvoicePDFAsync } from '../lib/pdfExporter';
@@ -10,6 +10,7 @@ import { Country, State } from 'country-state-city';
 import { TEMPLATE_PRESETS } from '../lib/templatePresets';
 import { supabase } from '../lib/supabase';
 import { emitNotification } from '../lib/notifications';
+import { scanActiveTemplate } from '../lib/templateScanner';
 
 interface InvoiceModalProps {
   invoice: Invoice | null; // null means create new
@@ -129,6 +130,8 @@ export default function InvoiceModal({
   const [shippedToGstin, setShippedToGstin] = useState('');
   const [shippedToAddress, setShippedToAddress] = useState('');
 
+
+  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
 
   // Active Template
   const [activeTemplate, setActiveTemplate] = useState<InvoiceTemplate>(TEMPLATE_PRESETS[0]);
@@ -688,54 +691,270 @@ export default function InvoiceModal({
   };
 
   // --- AI ASSIST ENDPOINT CLIENTS ---
-  const handleAIParseInvoice = async () => {
-    if (!aiPromptText.trim()) {
-      alert('Please enter a natural language prompt first');
-      return;
+  // PHASE 3 — APPLY TO FORM STATE (FILL ONLY, NEVER RESTRUCTURE TEMPLATE)
+  const applyExtractedDataToForm = (data: any, schema: ReturnType<typeof scanActiveTemplate>, promptText: string) => {
+    if (!data) return;
+
+    const updatedFieldNames = new Set<string>();
+    const isRedoPrompt = /\b(?:reset|redo|fresh|start over|clear)\b/i.test(promptText);
+
+    if (isRedoPrompt) {
+      setClientName('');
+      setClientEmail('');
+      setClientPhone('');
+      setClientAddress('');
+      setClientGstin('');
+      setClientPan('');
+      setItems([]);
+      setDiscountValue(0);
+      setFreightCharges(0);
     }
+
+    // 1. Client Details & Vendor Registry Lookup
+    if (data.clientName) {
+      const lowerName = String(data.clientName).toLowerCase();
+      if (!lowerName.includes('ship to') && !lowerName.includes('bill to') && !lowerName.includes('same as') && !lowerName.includes('copy bill') && !lowerName.includes('details same')) {
+        const toTitleCase = (str: string) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+        const cleanName = toTitleCase(data.clientName);
+        setClientName(cleanName);
+        updatedFieldNames.add('clientName');
+
+        // Master Vendor Registry Auto-fill
+        const foundClient = registryClients.find((c: any) => 
+          c.name?.toLowerCase() === cleanName.toLowerCase() ||
+          cleanName.toLowerCase().includes(c.name?.toLowerCase()) ||
+          c.name?.toLowerCase().includes(cleanName.toLowerCase())
+        );
+
+        if (foundClient) {
+          if (foundClient.email && !data.clientEmail) { setClientEmail(foundClient.email); updatedFieldNames.add('clientEmail'); }
+          if (foundClient.phone && !data.clientPhone) { setClientPhone(foundClient.phone); updatedFieldNames.add('clientPhone'); }
+          if (foundClient.address && !data.clientAddress) { setClientAddress(foundClient.address); updatedFieldNames.add('clientAddress'); }
+          if (foundClient.gstin && !data.clientGstin) { setClientGstin(foundClient.gstin); updatedFieldNames.add('clientGstin'); }
+          if (foundClient.pan && !data.clientPan) { setClientPan(foundClient.pan); updatedFieldNames.add('clientPan'); }
+          if (foundClient.state && !data.clientState) { setClientState(foundClient.state); updatedFieldNames.add('clientState'); }
+          if (foundClient.country && !data.clientCountry) { setClientCountry(foundClient.country); updatedFieldNames.add('clientCountry'); }
+        }
+      }
+    }
+
+    if (data.clientEmail) { setClientEmail(data.clientEmail); updatedFieldNames.add('clientEmail'); }
+    if (data.clientPhone) { setClientPhone(data.clientPhone); updatedFieldNames.add('clientPhone'); }
+    if (data.clientAddress) { setClientAddress(data.clientAddress); updatedFieldNames.add('clientAddress'); }
+    if (data.clientGstin) { setClientGstin(data.clientGstin); updatedFieldNames.add('clientGstin'); }
+    if (data.clientPan) { setClientPan(data.clientPan); updatedFieldNames.add('clientPan'); }
+    if (data.clientState) { setClientState(data.clientState); updatedFieldNames.add('clientState'); }
+    if (data.clientCountry) { setClientCountry(data.clientCountry); updatedFieldNames.add('clientCountry'); }
+
+    // 2. Shipping Details & Copy Logic
+    const isCopyPrompt = data.copyBillingToShipping || /same as (?:bill|billing)|copy (?:bill|billing) to ship|ship to (?:details )?same/i.test(promptText);
+    if (isCopyPrompt) {
+      const validClientName = (data.clientName && !/ship to|bill to|same as/i.test(data.clientName)) ? data.clientName : clientName;
+      if (validClientName) { setShippedToName(validClientName); updatedFieldNames.add('shippedToName'); }
+      if (data.clientEmail || clientEmail) { setShippedToEmail(data.clientEmail || clientEmail); updatedFieldNames.add('shippedToEmail'); }
+      if (data.clientPhone || clientPhone) { setShippedToPhone(data.clientPhone || clientPhone); updatedFieldNames.add('shippedToPhone'); }
+      if (data.clientAddress || clientAddress) { setShippedToAddress(data.clientAddress || clientAddress); updatedFieldNames.add('shippedToAddress'); }
+      if (data.clientGstin || clientGstin) { setShippedToGstin(data.clientGstin || clientGstin); updatedFieldNames.add('shippedToGstin'); }
+      if (data.clientPan || clientPan) { setShippedToPan(data.clientPan || clientPan); updatedFieldNames.add('shippedToPan'); }
+      if (data.clientState || clientState) { setShippedToState(data.clientState || clientState); updatedFieldNames.add('shippedToState'); }
+      if (data.clientCountry || clientCountry) { setShippedToCountry(data.clientCountry || clientCountry); updatedFieldNames.add('shippedToCountry'); }
+    }
+
+    if (data.shippedToName) { setShippedToName(data.shippedToName); updatedFieldNames.add('shippedToName'); }
+    if (data.shippedToPhone) { setShippedToPhone(data.shippedToPhone); updatedFieldNames.add('shippedToPhone'); }
+    if (data.shippedToEmail) { setShippedToEmail(data.shippedToEmail); updatedFieldNames.add('shippedToEmail'); }
+    if (data.shippedToAddress) { setShippedToAddress(data.shippedToAddress); updatedFieldNames.add('shippedToAddress'); }
+    if (data.shippedToGstin) { setShippedToGstin(data.shippedToGstin); updatedFieldNames.add('shippedToGstin'); }
+    if (data.shippedToPan) { setShippedToPan(data.shippedToPan); updatedFieldNames.add('shippedToPan'); }
+    if (data.shippedToState) { setShippedToState(data.shippedToState); updatedFieldNames.add('shippedToState'); }
+    if (data.shippedToCountry) { setShippedToCountry(data.shippedToCountry); updatedFieldNames.add('shippedToCountry'); }
+
+    // 3. Document Meta & Dates
+    if (data.invoiceNumber) { setInvoiceNumber(data.invoiceNumber); updatedFieldNames.add('invoiceNumber'); }
+    if (data.date) { setDate(data.date); updatedFieldNames.add('date'); }
+    if (data.dueDate) { setDueDate(data.dueDate); updatedFieldNames.add('dueDate'); }
+    if (data.poNumber) { setPoNumber(data.poNumber); updatedFieldNames.add('poNumber'); }
+    if (data.referenceNumber) { setReferenceNumber(data.referenceNumber); updatedFieldNames.add('referenceNumber'); }
+    if (data.deliveryNote) { setDeliveryNote(data.deliveryNote); updatedFieldNames.add('deliveryNote'); }
+    if (data.notes) { setNotes(prev => prev ? `${prev}\n${data.notes}` : data.notes); updatedFieldNames.add('notes'); }
+    if (data.invoiceTerms) { setInvoiceTerms(data.invoiceTerms); updatedFieldNames.add('invoiceTerms'); }
+
+    // 4. Transport & Vehicle Details
+    const parsedVehicleNo = data.vehicleNo || data.vehicleNumber || data.vehicle || data.vehicle_no || data.vehicle_number || '';
+    if (data.placeOfSupply) { setPlaceOfSupply(data.placeOfSupply); updatedFieldNames.add('placeOfSupply'); }
+    if (data.transport) { setTransport(data.transport); updatedFieldNames.add('transport'); }
+    if (parsedVehicleNo) { setVehicleNo(parsedVehicleNo); updatedFieldNames.add('vehicleNo'); }
+    if (data.grRrNo) { setGrRrNo(data.grRrNo); updatedFieldNames.add('grRrNo'); }
+    if (data.driverMobile) { setDriverMobile(data.driverMobile); updatedFieldNames.add('driverMobile'); }
+    if (data.station) { setStation(data.station); updatedFieldNames.add('station'); }
+    if (data.ewayBillNo) { setEwayBillNo(data.ewayBillNo); updatedFieldNames.add('ewayBillNo'); }
+    if (data.transport || parsedVehicleNo || data.ewayBillNo || data.grRrNo || data.placeOfSupply || data.station || data.driverMobile) {
+      setHasTransport(true);
+    }
+
+    // 5. Financials, Discounts & Charges
+    const parsedDiscountVal = data.discountValue !== undefined ? data.discountValue : data.discount;
+    if (parsedDiscountVal !== undefined) {
+      const val = Number(parsedDiscountVal) || 0;
+      setDiscountValue(val);
+      updatedFieldNames.add('discountValue');
+      if (val > 0) {
+        const dt = data.discountType ? String(data.discountType).toLowerCase() : (promptText.includes('%') ? 'percent' : 'flat');
+        setDiscountType(dt.includes('percent') || dt === '%' ? 'percent' : 'flat');
+      }
+    }
+    const parsedFreight = data.freightCharges !== undefined ? data.freightCharges :
+                          data.freight !== undefined ? data.freight :
+                          data.transportCharges !== undefined ? data.transportCharges :
+                          data.shippingCharges !== undefined ? data.shippingCharges : undefined;
+
+    if (parsedFreight !== undefined) {
+      const val = Number(parsedFreight) || 0;
+      setFreightCharges(val);
+      setIsFreightAdded(val > 0);
+      updatedFieldNames.add('freightCharges');
+    }
+
+    // 6. Advanced Settings
+    if (data.invoiceType) { setInvoiceType(data.invoiceType.toLowerCase() === 'estimate' ? 'estimate' : 'invoice'); updatedFieldNames.add('invoiceType'); }
+    if (data.status) { setStatus(data.status.toLowerCase() as InvoiceStatus); updatedFieldNames.add('status'); }
+    if (data.taxMode) { setTaxMode(data.taxMode.toLowerCase() === 'custom' ? 'custom' : 'dynamic'); updatedFieldNames.add('taxMode'); }
+    if (data.customTaxName) { setCustomTaxName(data.customTaxName); updatedFieldNames.add('customTaxName'); }
+    if (data.customTaxPercentage !== undefined) { setCustomTaxPercentage(Number(data.customTaxPercentage) || 0); updatedFieldNames.add('customTaxPercentage'); }
+    if (data.isRecurring !== undefined) { setIsRecurring(Boolean(data.isRecurring)); updatedFieldNames.add('isRecurring'); }
+    if (data.recurringInterval) { setRecurringInterval(data.recurringInterval.toLowerCase() as RecurringInterval); updatedFieldNames.add('recurringInterval'); }
+
+    // 7. Line Items & Product Preset Lookup
+    if (data.items && data.items.length > 0) {
+      const validItems = data.items.filter((it: any) => {
+        const nameLower = String(it.name || '').toLowerCase();
+        return !/freight|transport charge|shipping charge|delivery charge/i.test(nameLower) && !/discount/i.test(nameLower);
+      });
+
+      if (validItems.length > 0) {
+        const parsedItems = validItems.map((it: any) => {
+          const cleanItemName = String(it.name || '').trim();
+          const foundPreset = (presets || []).find((p: any) => p.name?.toLowerCase() === cleanItemName.toLowerCase());
+
+          const initialCustomTaxes: Record<string, number> = {};
+          customTaxCols.forEach(col => { initialCustomTaxes[col] = 0; });
+
+          return {
+            id: `item_${Math.random().toString(36).substr(2, 5)}`,
+            name: foundPreset ? foundPreset.name : (it.name || 'AI Product Service'),
+            rate: Number(it.rate) || (foundPreset ? Number(foundPreset.rate) : 0),
+            quantity: Number(it.quantity) || 1,
+            quantityType: it.quantityType || it.unit || (foundPreset ? (foundPreset as any).quantityType : '') || '',
+            taxPercentage: it.taxPercentage !== undefined ? Number(it.taxPercentage) : (foundPreset ? Number(foundPreset.taxPercentage) : defaultTaxRate),
+            description: it.description || (foundPreset ? foundPreset.description : ''),
+            hsnCode: it.hsnCode || (foundPreset ? (foundPreset as any).hsnCode : '') || '',
+            discountPercentage: Number(it.discountPercentage) || 0,
+            customTaxes: initialCustomTaxes
+          };
+        });
+
+        setItems(prev => isRedoPrompt ? parsedItems : [...prev, ...parsedItems]);
+        updatedFieldNames.add('items');
+      }
+    }
+
+            setAiFilledFields(updatedFieldNames);
+
+    // Auto-enable populated client & section fields in active template layout schema for live canvas rendering
+    setActiveTemplate(prev => {
+      const currentFields = new Set(prev.config?.client?.fields || ['name', 'address']);
+      if (data.clientName) currentFields.add('name');
+      if (data.clientAddress) currentFields.add('address');
+      if (data.clientGstin) currentFields.add('gstin');
+      if (data.clientPhone) currentFields.add('phone');
+      if (data.clientEmail) currentFields.add('email');
+      if (data.clientPan) currentFields.add('pan');
+      if (data.clientState) currentFields.add('state');
+      if (data.clientCountry) currentFields.add('country');
+
+      const hasHsn = data.items?.some((it: any) => Boolean(it.hsnCode));
+      const hasDisc = data.items?.some((it: any) => Number(it.discountPercentage) > 0);
+
+      return {
+        ...prev,
+        sections: {
+          ...prev.sections,
+          ...(data.shippedToName || data.shippedToAddress || data.shippedToGstin ? { shipTo: { ...prev.sections.shipTo, visible: true } } : {}),
+          ...(data.transport || parsedVehicleNo || data.ewayBillNo ? { transport: { ...prev.sections.transport, visible: true } } : {}),
+          ...(data.invoiceTerms || data.notes ? { terms: { ...prev.sections.terms, visible: true } } : {})
+        },
+        config: {
+          ...prev.config,
+          client: {
+            ...prev.config?.client,
+            fields: Array.from(currentFields)
+          },
+          ...(hasHsn || hasDisc ? {
+            table: {
+              ...prev.config.table,
+              columns: prev.config.table.columns.map(c => {
+                if (c.id === 'hsn' && hasHsn) return { ...c, visible: true };
+                if (c.id === 'discount' && hasDisc) return { ...c, visible: true };
+                return c;
+              })
+            }
+          } : {})
+        }
+      };
+    });
+
+    const count = updatedFieldNames.size;
+    emitNotification('AI Smart Billing', `Auto-filled ${count} field${count === 1 ? '' : 's'} into existing template input boxes.`, 'success');
+  };
+
+  const handleAIParseInvoice = async () => {
+    if (!aiPromptText.trim()) return;
     setIsAiLoading(true);
+
     try {
+      // PHASE 1 — TEMPLATE SCHEMA SCANNER (READ-ONLY)
+      const fieldSchema = scanActiveTemplate(activeTemplate);
+      const allowedFieldPaths = fieldSchema.visibleFields.map(f => f.path);
+
       const sessionRes = await supabase.auth.getSession();
       const token = sessionRes.data.session?.access_token;
+      
+      const currentInvoicePayload = {
+        clientName, clientEmail, clientPhone, clientAddress, clientGstin, clientPan, clientState, clientCountry,
+        shippedToName, shippedToPhone, shippedToEmail, shippedToAddress, shippedToGstin, shippedToPan, shippedToState, shippedToCountry,
+        invoiceNumber, date, dueDate, poNumber, referenceNumber, deliveryNote, notes, invoiceTerms, placeOfSupply, transport, vehicleNo,
+        grRrNo, driverMobile, station, ewayBillNo, discountType, discountValue, freightCharges, taxMode, customTaxName, customTaxPercentage, items
+      };
 
+      // PHASE 2 — CONSTRAINED AI EXTRACTION
       const response = await fetch('/api/ai/parse-invoice', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ prompt: aiPromptText })
+        body: JSON.stringify({
+          prompt: aiPromptText,
+          current_invoice: currentInvoicePayload,
+          allowed_fields: allowedFieldPaths
+        })
       });
+      
       const data = await response.json();
-      if (data.error) {
-        alert(data.error);
+      
+      if (!response.ok) {
+        const msg = data.detail || data.error || 'Failed to parse invoice';
+        console.warn('AI Parsing Note:', msg);
+        emitNotification('AI Smart Billing', msg, 'info');
         return;
       }
 
-      // Auto-populate based on returned AI JSON!
-      if (data.clientName) setClientName(data.clientName);
-      if (data.clientEmail) setClientEmail(data.clientEmail || '');
-      if (data.currency) {
-        // Option to alert or trigger currency change
-      }
-      if (data.notes) setNotes(data.notes);
+      // PHASE 3 — APPLY TO FORM STATE (FILL ONLY, NEVER RESTRUCTURE TEMPLATE)
+      applyExtractedDataToForm(data, fieldSchema, aiPromptText);
 
-      if (data.items && data.items.length > 0) {
-        const parsedItems = data.items.map((it: any) => ({
-          id: `item_${Math.random().toString(36).substr(2, 5)}`,
-          name: it.name || 'AI Product Service',
-          rate: Number(it.rate) || 120,
-          quantity: Number(it.quantity) || 1,
-          taxPercentage: Number(it.taxPercentage) !== undefined ? Number(it.taxPercentage) : defaultTaxRate,
-          description: it.description || ''
-        }));
-        setItems(parsedItems);
-      }
-
-      alert('🌟 Beautiful! AI Assistant successfully analyzed your guidelines and pre-filled this draft invoice.');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Could not complete AI parse request. Running in offline fallback mode.');
+      emitNotification('AI Smart Billing', 'Could not process AI billing request.', 'info');
     } finally {
       setIsAiLoading(false);
     }
@@ -1663,7 +1882,76 @@ export default function InvoiceModal({
         </div>
 
         {/* Scrollable Contents */}
-        <form onSubmit={handleSaveSubmit} className="flex-1 overflow-hidden p-3 sm:p-4 md:p-6 text-sans text-sm pb-6 sm:pb-8 flex flex-col">
+        <form onSubmit={handleSaveSubmit} className="flex-1 overflow-hidden p-3 sm:p-4 md:p-6 text-sans text-sm pb-6 sm:pb-8 flex flex-col relative">
+
+          {/* Premium AI Loading Overlay */}
+          {isAiLoading && (
+            <div className="absolute inset-0 z-50 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 transition-all duration-300">
+              <div className="bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900/60 rounded-3xl p-8 max-w-md w-full shadow-2xl flex flex-col items-center text-center space-y-5 relative overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 animate-pulse" />
+                <div className="relative flex items-center justify-center my-2">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 animate-ping absolute inset-0" />
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 relative">
+                    <Sparkles className="w-8 h-8 text-white animate-spin" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <h2 className="text-xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    AI Generation in Progress...
+                  </h2>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed">
+                    Analyzing instructions, populating line items, units, client metadata, and updating invoice details.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 px-3.5 py-2 bg-indigo-50 dark:bg-indigo-950/60 rounded-full border border-indigo-100 dark:border-indigo-900/40 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 dark:text-indigo-400" />
+                  <span>Scanning template schema & extracting data</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* AI Smart Billing Prompt Box */}
+          <div className="mx-1 mb-4 p-4 bg-gradient-to-br from-indigo-50/80 to-purple-50/80 dark:from-slate-950 dark:to-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl shadow-xs shrink-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm">
+                <Sparkles className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-950 dark:text-indigo-200">
+                AI Smart Billing
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 ml-auto">
+                Constrained Mode
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mb-2.5 font-medium">
+              Describe your bill in plain English. AI scans your active template and populates all visible input boxes automatically.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <input
+                type="text"
+                value={aiPromptText}
+                onChange={(e) => setAiPromptText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAIParseInvoice();
+                  }
+                }}
+                placeholder="e.g. Bill ABC Corp ₹50000 for laptop, GST 18%, vehicle DL14SV7995, due in 2 weeks..."
+                className="flex-1 px-3.5 py-2.5 text-sm font-semibold rounded-xl border-2 border-indigo-300 dark:border-indigo-700 bg-white dark:bg-slate-900 text-slate-950 dark:text-slate-50 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all"
+              />
+              <button
+                type="button"
+                onClick={handleAIParseInvoice}
+                disabled={isAiLoading}
+                className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-md shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer active:scale-95"
+              >
+                {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Sparkles className="w-4 h-4 text-white" />}
+                <span>Generate with AI</span>
+              </button>
+            </div>
+          </div>
 
           {/* Client Name Required Error Banner (shows on both mobile and desktop when saved without name) */}
           {showClientNameError && !clientName?.trim() && (

@@ -273,7 +273,7 @@ export default function App() {
     const current = getSecuritySettings();
     const enable = !current.isPinLockEnabled;
 
-    if (enable && !isOnline) {
+    if (enable && !navigator.onLine) {
       setPinModalError('You must be online to set or enable a PIN lock.');
     }
 
@@ -290,7 +290,7 @@ export default function App() {
     let pinVal = '';
     let salt: string | undefined;
     if (enable) {
-      if (!isOnline) {
+      if (!navigator.onLine) {
         setPinModalLoading(false);
         setPinModalError('You must be online to set or enable a PIN lock.');
         return;
@@ -1019,7 +1019,7 @@ export default function App() {
 
   // 1. Google OAuth login trigger via Supabase
   const handleLogin = async () => {
-    if (!isOnline) {
+    if (!navigator.onLine) {
       alert('You are currently offline. Please reconnect to sign in and sync to the cloud.');
       return;
     }
@@ -1859,6 +1859,7 @@ export default function App() {
 
     return (
       <Homepage
+        isOnline={typeof navigator !== 'undefined' ? navigator.onLine : true}
         theme={theme}
         onGoogleLogin={handleLogin}
         onCustomSignup={handleCustomSignup}
@@ -1879,6 +1880,7 @@ export default function App() {
       <style>{getDynamicCustomizationStyle()}</style>
       {/* Visual Workspace Dashboard */}
       <Dashboard
+        isOnline={typeof navigator !== 'undefined' ? navigator.onLine : true}
         invoices={invoices}
         profile={profile}
         presets={presets}

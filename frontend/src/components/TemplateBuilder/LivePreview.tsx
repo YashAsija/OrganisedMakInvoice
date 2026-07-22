@@ -1118,14 +1118,15 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
           if (section.id === 'transport') {
             const bothAdded = !!(sections.billTo?.visible && sections.shipTo?.visible);
+            const vehicleNo = (invoiceData as any)?.vehicleNo || (isInteractive ? "" : "N/A");
+            const driverMobile = (invoiceData as any)?.driverMobileNo || (invoiceData as any)?.driverMobile || (isInteractive ? "" : "N/A");
+            const station = (invoiceData as any)?.station || (isInteractive ? "" : "N/A");
+            const ewayBillNo = (invoiceData as any)?.eWayBillNo || (invoiceData as any)?.ewayBillNo || (isInteractive ? "" : "N/A");
+            const transportName = (invoiceData as any)?.transportName || (invoiceData as any)?.transport || (isInteractive ? "" : "N/A");
+            const poNumber = invoiceData?.poNumber || (isInteractive ? "" : "N/A");
 
             if (layout.type === 'Modal Classic') {
 
-              const vehicleNo = (invoiceData as any)?.vehicleNo || (isInteractive ? "" : "N/A");
-              const driverMobile = (invoiceData as any)?.driverMobileNo || (isInteractive ? "" : "N/A");
-              const station = (invoiceData as any)?.station || (isInteractive ? "" : "N/A");
-              const ewayBillNo = (invoiceData as any)?.eWayBillNo || (isInteractive ? "" : "N/A");
-              const poNumber = invoiceData?.poNumber || (isInteractive ? "" : "N/A");
               const amigoIndex = orderedSections.filter(s => ['billTo', 'shipTo', 'transport'].includes(s.id)).findIndex(a => a.id === 'transport');
               const isSecondCol = amigoIndex === 1;
               const isVertical = amigoIndex !== 2;
@@ -1133,7 +1134,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               return (
                 <div key="transport" style={{ ...getSectionStyle('transport'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginBottom: '0px', marginTop: amigoIndex === 2 ? '-1px' : '5px' }}>
                   <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${isVertical ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
-                    <div className={`flex justify-between items-center ${isVertical ? 'mb-1' : 'w-full mb-0'}`}>
+                    <div className="flex items-center justify-between w-full">
                       <h3 className={`font-bold text-[11px] text-gray-800 uppercase`}>TRANSPORT</h3>
                       {isInteractive && onUpdateHasTransport && (
                         <button
@@ -1145,32 +1146,32 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         </button>
                       )}
                     </div>
-                    {config.transport.fields.includes('vehicleNo') && (
+                    {(vehicleNo || !config.transport?.fields || config.transport.fields.includes('vehicleNo')) && (
                       isVertical ?
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Vehicle No.</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(vehicleNo, 'vehicleNo', 'text', 'Vehicle No')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Vehicle No:</span><span className="text-gray-900 font-bold">{renderInteractive(vehicleNo, 'vehicleNo', 'text', 'Vehicle No')}</span></div>
                     )}
-                    {config.transport.fields.includes('poNumber') && (
+                    {config.transport.fields?.includes('poNumber') && (
                       isVertical ?
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">PO Number</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(poNumber, 'poNumber', 'text', 'PO Number')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">PO Number:</span><span className="text-gray-900 font-bold">{renderInteractive(poNumber, 'poNumber', 'text', 'PO Number')}</span></div>
                     )}
-                    {config.transport.fields.includes('transport') && (
+                    {(transportName || !config.transport?.fields || config.transport.fields.includes('transport')) && (
                       isVertical ?
-                        <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Transport Name</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive((invoiceData as any)?.transportName || (isInteractive ? '' : 'N/A'), 'transport', 'text', 'Transporter Name')}</span></div> :
-                        <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Transport Name:</span><span className="text-gray-900 font-bold">{renderInteractive((invoiceData as any)?.transportName || (isInteractive ? '' : 'N/A'), 'transport', 'text', 'Transporter Name')}</span></div>
+                        <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Transport Name</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(transportName, 'transport', 'text', 'Transporter Name')}</span></div> :
+                        <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Transport Name:</span><span className="text-gray-900 font-bold">{renderInteractive(transportName, 'transport', 'text', 'Transporter Name')}</span></div>
                     )}
-                    {config.transport.fields.includes('driverMobile') && (
+                    {(driverMobile || !config.transport?.fields || config.transport.fields.includes('driverMobile')) && (
                       isVertical ?
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Driver Mobile</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(driverMobile, 'driverMobile', 'text', 'Driver Mobile')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Driver Mobile:</span><span className="text-gray-900 font-bold">{renderInteractive(driverMobile, 'driverMobile', 'text', 'Driver Mobile')}</span></div>
                     )}
-                    {config.transport.fields.includes('station') && (
+                    {(station || !config.transport?.fields || config.transport.fields.includes('station')) && (
                       isVertical ?
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Station</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(station, 'station', 'text', 'Station')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Station:</span><span className="text-gray-900 font-bold">{renderInteractive(station, 'station', 'text', 'Station')}</span></div>
                     )}
-                    {config.transport.fields.includes('ewayBillNo') && (
+                    {(ewayBillNo || !config.transport?.fields || config.transport.fields.includes('ewayBillNo')) && (
                       isVertical ?
                         <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">E-Way Bill No.</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(ewayBillNo, 'ewayBillNo', 'text', 'E-Way Bill No')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">E-Way Bill No:</span><span className="text-gray-900 font-bold">{renderInteractive(ewayBillNo, 'ewayBillNo', 'text', 'E-Way Bill No')}</span></div>
@@ -1184,12 +1185,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               <div key="transport" style={getSectionStyle('transport')}>
                 <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '5px' }}>Transport Details</h4>
                 <div style={bothAdded ? { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', columnGap: '24px', rowGap: '6px', alignItems: 'center' } : { display: 'flex', flexDirection: 'column', rowGap: '4px' }}>
-                  {config.transport.fields.includes('vehicleNo') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Vehicle No:</strong> {renderInteractive((invoiceData as any)?.vehicleNo || (isInteractive ? '' : 'MH 12 AB 1234'), 'vehicleNo', 'text', 'Vehicle No')}</div>}
-                  {config.transport.fields.includes('poNumber') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>PO Number:</strong> {renderInteractive((invoiceData as any)?.poNumber || (isInteractive ? '' : 'N/A'), 'poNumber', 'text', 'PO Number')}</div>}
-                  {config.transport.fields.includes('transport') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Transporter:</strong> {renderInteractive((invoiceData as any)?.transportName || (isInteractive ? '' : 'Fast Logistics'), 'transport', 'text', 'Transporter Name')}</div>}
-                  {config.transport.fields.includes('ewayBillNo') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>E-Way Bill No:</strong> {renderInteractive((invoiceData as any)?.eWayBillNo || (isInteractive ? '' : '123456789012'), 'ewayBillNo', 'text', 'E-Way Bill No')}</div>}
-                  {config.transport.fields.includes('station') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Station:</strong> {renderInteractive((invoiceData as any)?.station || (isInteractive ? '' : 'Mumbai HQ'), 'station', 'text', 'Station')}</div>}
-                  {config.transport.fields.includes('driverMobile') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Driver Mobile No:</strong> {renderInteractive((invoiceData as any)?.driverMobileNo || (isInteractive ? '' : '+91 9876543210'), 'driverMobile', 'text', 'Driver Mobile')}</div>}
+                  {(vehicleNo || !config.transport?.fields || config.transport.fields.includes('vehicleNo')) && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Vehicle No:</strong> {renderInteractive(vehicleNo || (isInteractive ? '' : 'MH 12 AB 1234'), 'vehicleNo', 'text', 'Vehicle No')}</div>}
+                  {config.transport.fields?.includes('poNumber') && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>PO Number:</strong> {renderInteractive((invoiceData as any)?.poNumber || (isInteractive ? '' : 'N/A'), 'poNumber', 'text', 'PO Number')}</div>}
+                  {(!config.transport?.fields || config.transport.fields.includes('transport')) && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Transporter:</strong> {renderInteractive((invoiceData as any)?.transportName || (invoiceData as any)?.transport || (isInteractive ? '' : 'Fast Logistics'), 'transport', 'text', 'Transporter Name')}</div>}
+                  {(ewayBillNo || !config.transport?.fields || config.transport.fields.includes('ewayBillNo')) && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>E-Way Bill No:</strong> {renderInteractive(ewayBillNo || (isInteractive ? '' : '123456789012'), 'ewayBillNo', 'text', 'E-Way Bill No')}</div>}
+                  {(station || !config.transport?.fields || config.transport.fields.includes('station')) && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Station:</strong> {renderInteractive(station || (isInteractive ? '' : 'Mumbai HQ'), 'station', 'text', 'Station')}</div>}
+                  {(driverMobile || !config.transport?.fields || config.transport.fields.includes('driverMobile')) && <div style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><strong>Driver Mobile No:</strong> {renderInteractive(driverMobile || (isInteractive ? '' : '+91 9876543210'), 'driverMobile', 'text', 'Driver Mobile')}</div>}
                 </div>
               </div>
             );
@@ -1221,9 +1222,10 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                           style={{ cursor: 'pointer', textDecoration: 'underline dashed', textUnderlineOffset: '2px' }}
                           onClick={() => {
                             if (onUpdateField) {
-                              const hasFreight = invoiceData?.isFreightAdded;
+                              const hasFreight = invoiceData?.isFreightAdded || (invoiceData?.freightCharges || 0) > 0;
                               if (hasFreight) {
                                 onUpdateField('isFreightAdded', 'false');
+                                onUpdateField('freightCharges', '0');
                               } else {
                                 onUpdateField('isFreightAdded', 'true');
                                 onUpdateField('freightCharges', '50');
@@ -1232,26 +1234,26 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                           }}
                           title="Click to toggle Freight Charges"
                         >
-                          Freight {invoiceData?.isFreightAdded ? '(Remove)' : '(Add)'}
+                          Freight {(invoiceData?.isFreightAdded || (invoiceData?.freightCharges || 0) > 0) ? '(Remove)' : '(Add)'}
                         </span>
-                        {invoiceData?.isFreightAdded && (
+                        {(invoiceData?.isFreightAdded || (invoiceData?.freightCharges || 0) > 0) && (
                           <span className="font-semibold text-gray-800">
                             {currencySymbol} {renderInteractive(invoiceData?.freightCharges || 0, 'freightCharges', 'text', 'Freight')}
                           </span>
                         )}
                       </div>
                     ) : (
-                      invoiceData?.isFreightAdded && (
+                      (invoiceData?.isFreightAdded || (invoiceData?.freightCharges || 0) > 0) && (
                         <div className="flex justify-between text-gray-600 mb-1">
                           <span>Freight Charges</span>
                           <span className="font-semibold text-gray-800">
-                            {currencySymbol} {(invoiceData.freightCharges || 0).toFixed(2)}
+                            {currencySymbol} {(invoiceData?.freightCharges || 0).toFixed(2)}
                           </span>
                         </div>
                       )
                     )}
                     {/* Discount row - always visible for every template */}
-                    {((invoiceData?.discountTotal || 0) > 0 || isInteractive) && (
+                    {((invoiceData?.discountTotal || 0) > 0 || (invoiceData?.discountValue || 0) > 0 || isInteractive) && (
                       <div className="flex justify-between" style={{ color: '#e11d48' }}>
                         <span
                           style={isInteractive ? { cursor: 'pointer', textDecoration: 'underline dashed', textUnderlineOffset: '2px' } : {}}
@@ -1266,9 +1268,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         >
                           Discount {invoiceData?.discountType === 'percent' ? '(%)' : invoiceData?.discountType === 'flat' ? '(Flat)' : '(Add)'}
                         </span>
-                        {invoiceData?.discountType !== 'none' && (
+                        {(invoiceData?.discountType !== 'none' || (invoiceData?.discountValue || 0) > 0) && (
                           <span>
-                            {invoiceData?.discountType === 'percent' ? '- %' : `- ${currencySymbol}`} {renderInteractive(invoiceData?.discountValue || 0, 'discountValue', 'text', 'Amount')}
+                            {invoiceData?.discountType === 'percent' ? `${invoiceData?.discountValue}%` : `- ${currencySymbol}`} {renderInteractive(invoiceData?.discountValue || 0, 'discountValue', 'text', 'Amount')}
                           </span>
                         )}
                       </div>
@@ -1317,9 +1319,10 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                     style={{ cursor: 'pointer', textDecoration: 'underline dashed', textUnderlineOffset: '2px' }}
                     onClick={() => {
                       if (onUpdateField) {
-                        const hasFreight = invoiceData?.isFreightAdded;
+                        const hasFreight = invoiceData?.isFreightAdded || (invoiceData?.freightCharges || 0) > 0;
                         if (hasFreight) {
                           onUpdateField('isFreightAdded', 'false');
+                          onUpdateField('freightCharges', '0');
                         } else {
                           onUpdateField('isFreightAdded', 'true');
                           onUpdateField('freightCharges', '50');
@@ -1328,20 +1331,20 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                     }}
                     title="Click to toggle Freight Charges"
                   >
-                    Freight {invoiceData?.isFreightAdded ? '(Remove)' : '(Add)'}
+                    Freight {(invoiceData?.isFreightAdded || (invoiceData?.freightCharges || 0) > 0) ? '(Remove)' : '(Add)'}
                   </span>
-                  {invoiceData?.isFreightAdded && (
+                  {(invoiceData?.isFreightAdded || (invoiceData?.freightCharges || 0) > 0) && (
                     <span style={{ display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
                       {currencySymbol} {renderInteractive(invoiceData?.freightCharges || 0, 'freightCharges', 'text', 'Freight')}
                     </span>
                   )}
                 </div>
               ) : (
-                invoiceData?.isFreightAdded && (
+                (invoiceData?.isFreightAdded || (invoiceData?.freightCharges || 0) > 0) && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', color: '#475569' }}>
                     <span>Freight Charges</span>
                     <span style={{ fontWeight: 'bold' }}>
-                      {currencySymbol} {(invoiceData.freightCharges || 0).toFixed(2)}
+                      {currencySymbol} {(invoiceData?.freightCharges || 0).toFixed(2)}
                     </span>
                   </div>
                 )
@@ -1349,7 +1352,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             );
 
             const discountRow = (
-              ((invoiceData?.discountTotal || 0) > 0 || isInteractive) && (
+              ((invoiceData?.discountTotal || 0) > 0 || (invoiceData?.discountValue || 0) > 0 || isInteractive) && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', color: '#e11d48' }}>
                   <span
                     style={isInteractive ? { cursor: 'pointer', textDecoration: 'underline dashed', textUnderlineOffset: '2px' } : {}}
@@ -1364,9 +1367,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   >
                     Discount {invoiceData?.discountType === 'percent' ? '(%)' : invoiceData?.discountType === 'flat' ? '(Flat)' : '(Add)'}
                   </span>
-                  {invoiceData?.discountType !== 'none' && (
+                  {(invoiceData?.discountType !== 'none' || (invoiceData?.discountValue || 0) > 0) && (
                     <span style={{ display: 'flex', alignItems: 'center' }}>
-                      {invoiceData?.discountType === 'percent' ? '- %' : `- ${currencySymbol}`} {renderInteractive(invoiceData?.discountValue || 0, 'discountValue', 'text', 'Amount')}
+                      {invoiceData?.discountType === 'percent' ? `${invoiceData?.discountValue}%` : `- ${currencySymbol}`} {renderInteractive(invoiceData?.discountValue || 0, 'discountValue', 'text', 'Amount')}
                     </span>
                   )}
                 </div>

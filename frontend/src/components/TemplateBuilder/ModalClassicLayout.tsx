@@ -293,6 +293,18 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
                   <span>{subTotal.toFixed(2)}</span>
                 </div>
               )}
+              {(invoiceData?.isFreightAdded || (invoiceData?.freightCharges || 0) > 0) && (
+                <div className="flex justify-between text-gray-600">
+                  <span>Freight Charges</span>
+                  <span>+{currencySymbol}{(invoiceData?.freightCharges || 0).toFixed(2)}</span>
+                </div>
+              )}
+              {(invoiceData?.discountType !== 'none' || (invoiceData?.discountValue || 0) > 0) && (
+                <div className="flex justify-between text-rose-500 font-medium">
+                  <span>Discount {invoiceData?.discountType === 'percent' ? `(${invoiceData?.discountValue}%)` : '(Flat)'}</span>
+                  <span>-{currencySymbol}{(invoiceData?.discountTotal || invoiceData?.discountValue || 0).toFixed(2)}</span>
+                </div>
+              )}
               {isCustomTax ? (
                 <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
                   <span>{taxName} ({taxRate}%)</span>

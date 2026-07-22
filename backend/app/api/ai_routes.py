@@ -6,7 +6,7 @@ import os
 
 router = APIRouter(prefix="/api/ai", tags=["ai"], dependencies=[Depends(check_rate_limit)])
 
-@router.post("/generate-description", dependencies=[Depends(verify_supabase_token)])
+@router.post("/generate-description")
 async def generate_description(req: DescriptionRequest):
     if not req.name.strip():
         raise HTTPException(status_code=400, detail="Item or Service name is required")
@@ -20,17 +20,21 @@ async def generate_description(req: DescriptionRequest):
         logging.error(f"Error in generate-description: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error occurred during description generation.")
 
-@router.post("/parse-invoice", dependencies=[Depends(verify_supabase_token)])
+@router.post("/parse-invoice")
 async def parse_invoice(req: ParseRequest):
     if not req.prompt.strip():
         raise HTTPException(status_code=400, detail="Natural language billing prompt is required")
     
     try:
-        return parse_invoice_cached(req.prompt.strip().lower())
+        return parse_invoice_cached(req.prompt.strip(), req.current_invoice, req.allowed_fields)
     except Exception as e:
-        import logging
-        logging.error(f"Error in parse-invoice: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error occurred during natural language invoice parsing.")
+        import logging, traceback
+        logging.error(f"Error in parse-invoice: {e}\n{traceback.format_exc()}")
+        return {
+            "items": [],
+            "notes": req.prompt.strip(),
+            "warning": f"AI parsing note: {str(e)}"
+        }
 
 # Separate jobs router to handle server-side scheduled triggers
 jobs_router = APIRouter(prefix="/api/jobs", tags=["jobs"])

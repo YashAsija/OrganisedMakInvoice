@@ -696,41 +696,41 @@ export default function Homepage({
             </p>
 
             {/* Feature Highlights Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2 text-sm max-w-2xl">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 p-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-405 rounded-xl shrink-0 border border-emerald-500/10">
-                  <CheckCircle className="w-4 h-4" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6 pt-2 text-sm max-w-2xl">
+              <div className="flex items-start gap-3.5">
+                <div className="mt-0.5 p-2 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-full shrink-0 border border-sky-500/10">
+                  <BarChart3 className="w-5 h-5" />
                 </div>
-                <div>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-205 block">Offline-First Safety</span>
-                  <span className="text-slate-500 dark:text-slate-400 text-xs leading-normal">Work seamlessly without internet; your data is encrypted & cached locally.</span>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 p-1.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-405 rounded-xl shrink-0 border border-indigo-500/10">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-205 block">AI Smart Billing</span>
-                  <span className="text-slate-500 dark:text-slate-400 text-xs leading-normal">Describe your bill in simple English and let our AI compile the invoice.</span>
+                <div className="flex-1">
+                  <span className="font-extrabold text-slate-800 dark:text-slate-205 block text-[15px] mb-1">Intelligent Dashboard</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-[13px] leading-snug block">Track revenue, manage expenses, and view interactive financial charts in real-time.</span>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 p-1.5 bg-sky-500/10 text-sky-650 dark:text-sky-405 rounded-xl shrink-0 border border-sky-500/10">
-                  <CheckCircle className="w-4 h-4" />
+              <div className="flex items-start gap-3.5">
+                <div className="mt-0.5 p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full shrink-0 border border-indigo-500/10">
+                  <Sparkles className="w-5 h-5" />
                 </div>
-                <div>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-205 block">GST Compliance Split</span>
-                  <span className="text-slate-500 dark:text-slate-400 text-xs leading-normal">Auto-calculates CGST, SGST, & IGST splits based on client registry states.</span>
+                <div className="flex-1">
+                  <span className="font-extrabold text-slate-800 dark:text-slate-205 block text-[15px] mb-1">AI-Powered Invoicing</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-[13px] leading-snug block">Generate professional invoices instantly from natural language descriptions.</span>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 p-1.5 bg-purple-500/10 text-purple-650 dark:text-purple-405 rounded-xl shrink-0 border border-purple-500/10">
-                  <CheckCircle className="w-4 h-4" />
+              <div className="flex items-start gap-3.5">
+                <div className="mt-0.5 p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full shrink-0 border border-emerald-500/10">
+                  <CheckCircle className="w-5 h-5" />
                 </div>
-                <div>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-205 block">Bespoke Design Studio</span>
-                  <span className="text-slate-500 dark:text-slate-400 text-xs leading-normal">Custom branding themes, margins, watermarks, and drawn stylus signatures.</span>
+                <div className="flex-1">
+                  <span className="font-extrabold text-slate-800 dark:text-slate-205 block text-[15px] mb-1">Advanced Tax & GST</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-[13px] leading-snug block">Automated calculation of CGST, SGST & IGST splits with master HSN registry.</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-3.5">
+                <div className="mt-0.5 p-2 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-full shrink-0 border border-purple-500/10">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <span className="font-extrabold text-slate-800 dark:text-slate-205 block text-[15px] mb-1">Custom Template Studio</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-[13px] leading-snug block">Customize layouts, themes, watermarks, and add your hand-drawn signature.</span>
                 </div>
               </div>
             </div>
