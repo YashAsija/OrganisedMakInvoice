@@ -3,6 +3,7 @@ import { InvoiceTemplate } from '../../types';
 import { QuickBuilderState, generateTemplateFromQuickState } from '../../lib/ConfigurationEngine';
 import { ArrowLeft, ArrowRight, Save, CheckCircle2, Layout, Type, Settings, Image as ImageIcon, ZoomIn, ZoomOut } from 'lucide-react';
 import { LivePreview } from './LivePreview';
+import { emitNotification } from '../../lib/notifications';
 
 interface QuickBuilderProps {
   onSave: (template: InvoiceTemplate) => void;
@@ -179,10 +180,10 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
             <div className="space-y-4 animate-in fade-in duration-200">
               <h3 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wide">Document Purpose</h3>
               <div className="grid grid-cols-2 gap-3">
-                {['Invoice', 'Estimate', 'Proforma', 'Credit Note'].map((type, idx) => {
+                {['Invoice', 'Estimate', 'Proforma', 'Credit Note', 'Debit Note'].map((type, idx) => {
                   const active = state.invoiceType === type;
-                  const borderColors = ['border-emerald-400', 'border-sky-400', 'border-amber-400', 'border-violet-400'];
-                  const textColors = ['text-emerald-500', 'text-sky-500', 'text-amber-500', 'text-violet-500'];
+                  const borderColors = ['border-emerald-400', 'border-sky-400', 'border-amber-400', 'border-violet-400', 'border-rose-400'];
+                  const textColors = ['text-emerald-500', 'text-sky-500', 'text-amber-500', 'text-violet-500', 'text-rose-500'];
                   return (
                     <button
                       key={type}
@@ -402,7 +403,10 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
             </button>
           ) : (
             <button 
-              onClick={() => onSave(template)} 
+              onClick={() => {
+                emitNotification('Quick Builder Generated', `Generated ${state.invoiceType} template successfully.`, 'success');
+                onSave(template);
+              }} 
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer shadow-sm"
             >
               Finish <CheckCircle2 className="w-3.5 h-3.5" />

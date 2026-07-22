@@ -7,6 +7,7 @@ import { useConfirm } from './ConfirmContext';
 
 import TemplateCreationHub from './TemplateBuilder/TemplateCreationHub';
 import { TEMPLATE_PRESETS } from '../lib/templatePresets';
+import { emitNotification } from '../lib/notifications';
 
 export default function TemplateManager({ businessProfile }: { businessProfile?: BusinessProfile }) {
   const { confirm } = useConfirm();
@@ -321,8 +322,32 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     );
   }
 
-  const categories = ['All', 'Default', 'GST', 'Service', 'Retail', 'User'];
-  
+  const categories = ['All', 'Invoice', 'Proforma Invoice', 'Debit Note', 'Credit Note', 'Quote'];
+
+  const matchesDocumentCategory = (t: InvoiceTemplate, category: string) => {
+    if (category === 'All') return true;
+
+    const title = (t.config?.header?.invoiceTitle || '').toLowerCase();
+    const name = (t.name || '').toLowerCase();
+    const id = (t.id || '').toLowerCase();
+    const desc = (t.description || '').toLowerCase();
+
+    const isProforma = title.includes('proforma') || name.includes('proforma') || id.includes('proforma') || desc.includes('proforma');
+    const isDebit = title.includes('debit') || name.includes('debit') || id.includes('debit') || desc.includes('debit');
+    const isCredit = title.includes('credit') || name.includes('credit') || id.includes('credit') || desc.includes('credit');
+    const isQuote = title.includes('quote') || title.includes('estimate') || title.includes('quotation') || name.includes('quote') || name.includes('estimate') || name.includes('quotation') || id.includes('quote') || id.includes('quotation') || id.includes('estimate');
+
+    if (category === 'Proforma Invoice') return isProforma;
+    if (category === 'Debit Note') return isDebit;
+    if (category === 'Credit Note') return isCredit;
+    if (category === 'Quote') return isQuote;
+    if (category === 'Invoice') {
+      return !isProforma && !isDebit && !isCredit && !isQuote;
+    }
+
+    return t.category === category;
+  };
+
   const rawTemplates = activeLibraryTab === 'my_templates' ? templates : TEMPLATE_PRESETS;
   const sourceTemplates = rawTemplates.map(t => ({
     ...t,
@@ -330,8 +355,9 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
   }));
   
   const filteredTemplates = sourceTemplates.filter(t => {
-    const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = activeCategory === 'All' || t.category === activeCategory;
+    const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (t.description || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = matchesDocumentCategory(t, activeCategory);
     return matchesSearch && matchesCategory;
   });
 
@@ -427,12 +453,12 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
               <Filter className="w-3.5 h-3.5 text-[#64748b]/60 flex-shrink-0" />
               {(() => {
                 const catStyles: Record<string, { active: string; inactive: string }> = {
-                  All:     { active: 'bg-[#0f172a] text-white border-[#0f172a]', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-[#64748b]/50' },
-                  Default: { active: 'bg-amber-500 text-white border-amber-500', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-amber-400/50 hover:text-amber-600' },
-                  GST:     { active: 'bg-emerald-600 text-white border-emerald-600', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-emerald-400/50 hover:text-emerald-600' },
-                  Service: { active: 'bg-sky-600 text-white border-sky-600', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-sky-400/50 hover:text-sky-600' },
-                  Retail:  { active: 'bg-violet-600 text-white border-violet-600', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-violet-400/50 hover:text-violet-600' },
-                  User:    { active: 'bg-rose-500 text-white border-rose-500', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-rose-400/50 hover:text-rose-500' },
+                  All:                { active: 'bg-[#0f172a] text-white border-[#0f172a]', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-[#64748b]/50' },
+                  'Invoice':          { active: 'bg-emerald-600 text-white border-emerald-600', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-emerald-400/50 hover:text-emerald-600' },
+                  'Proforma Invoice': { active: 'bg-sky-600 text-white border-sky-600', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-sky-400/50 hover:text-sky-600' },
+                  'Debit Note':       { active: 'bg-indigo-600 text-white border-indigo-600', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-indigo-400/50 hover:text-indigo-600' },
+                  'Credit Note':      { active: 'bg-violet-600 text-white border-violet-600', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-violet-400/50 hover:text-violet-600' },
+                  'Quote':            { active: 'bg-teal-600 text-white border-teal-600', inactive: 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-teal-400/50 hover:text-teal-600' },
                 };
                 return categories.map(cat => (
                   <button
@@ -650,6 +676,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
                     <button
                       onClick={() => {
                         handleSetDefault(selectedTemplateForModal.id);
+                        emitNotification('Default Template Set', `'${selectedTemplateForModal.name}' is now set as global default template.`, 'success');
                         setSelectedTemplateForModal(null);
                       }}
                       className="py-2.5 bg-white dark:bg-zinc-900 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-white border border-[#e2e8f0] dark:border-zinc-700 rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"

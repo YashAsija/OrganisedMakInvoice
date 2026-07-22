@@ -248,11 +248,81 @@ button:active,
   }
 }
 
+/* ── Toast Notification Animations ── */
+
+/* Enter: slides in from right + fades in + subtle scale-up */
+@keyframes toastSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(calc(100% + 24px)) scale(0.92);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(-6px) scale(1.01);
+  }
+  80% {
+    transform: translateX(3px) scale(0.995);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Exit: slides out to right + fades out + subtle scale-down */
+@keyframes toastSlideOut {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    max-height: 200px;
+    margin-bottom: 0px;
+  }
+  40% {
+    opacity: 0;
+    transform: translateX(calc(100% + 24px)) scale(0.94);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(calc(100% + 24px)) scale(0.94);
+    max-height: 0px;
+    margin-bottom: -10px;
+  }
+}
+
+/* Progress bar: uses scaleX on transform-origin left (no layout reflow) */
+@keyframes toastProgress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* Applied classes */
+.toast-enter {
+  animation: toastSlideIn 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.toast-exit {
+  animation: toastSlideOut 0.38s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+  will-change: transform, opacity, max-height;
+  pointer-events: none;
+}
+
+.toast-progress-bar {
+  transform-origin: left center;
+  animation: toastProgress 6s linear forwards;
+  will-change: transform;
+}
+
+
+/* Global keyboard accessibility */
 .animate-slide-in-left {
   animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Global keyboard accessibility */
 *:focus-visible {
   outline: 2px solid var(--color-sky-500, #0ea5e9);
   outline-offset: 2px;
@@ -350,4 +420,73 @@ section::-webkit-scrollbar {
   /* slate-400 */
   opacity: 0.7 !important;
   display: inline-block !important;
+}
+
+/* ===========================================================================
+   AI SMART BILLING INPUT — High contrast, crystal clear text visibility
+   =========================================================================== */
+.smart-billing-prompt-input {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  caret-color: #4f46e5 !important;
+  -webkit-text-fill-color: #0f172a !important;
+}
+
+.smart-billing-prompt-input::placeholder {
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
+  opacity: 1 !important;
+}
+
+.dark .smart-billing-prompt-input,
+[data-theme="dark"] .smart-billing-prompt-input {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  caret-color: #818cf8 !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.dark .smart-billing-prompt-input::placeholder,
+[data-theme="dark"] .smart-billing-prompt-input::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+/* ===========================================================================
+   RESUME DRAFT BANNER — High contrast, crystal clear text visibility
+   =========================================================================== */
+.resume-draft-banner {
+  background-color: #fef3c7 !important;
+  border-bottom: 1px solid #fde68a !important;
+  color: #78350f !important;
+}
+
+.resume-draft-banner .client-name {
+  color: #451a03 !important;
+  -webkit-text-fill-color: #451a03 !important;
+}
+
+.resume-draft-banner .time-text {
+  color: #92400e !important;
+  -webkit-text-fill-color: #92400e !important;
+}
+
+.dark .resume-draft-banner,
+[data-theme="dark"] .resume-draft-banner {
+  background-color: #451a03 !important;
+  border-bottom: 1px solid #78350f !important;
+  color: #fef3c7 !important;
+}
+
+.dark .resume-draft-banner .client-name,
+[data-theme="dark"] .resume-draft-banner .client-name {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.dark .resume-draft-banner .time-text,
+[data-theme="dark"] .resume-draft-banner .time-text {
+  color: #fde68a !important;
+  -webkit-text-fill-color: #fde68a !important;
 }

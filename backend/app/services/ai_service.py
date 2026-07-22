@@ -3,6 +3,9 @@ import json
 import re
 from datetime import datetime, timedelta
 from functools import lru_cache
+from dotenv import load_dotenv
+
+load_dotenv()
 
 try:
     from google import genai
@@ -13,7 +16,7 @@ except ImportError:
 def get_ai_client():
     if not genai:
         return None
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY_BILLING") or os.getenv("GEMINI_API_KEY")
     if api_key:
         return genai.Client(api_key=api_key)
     return None
@@ -37,38 +40,9 @@ def generate_description_cached(name: str) -> str:
         raise Exception("Failed to generate AI description")
 
 def parse_invoice_cached(prompt: str, current_invoice: dict | None = None, allowed_fields: list[str] | None = None) -> dict:
-    pre_parsed = {}
     client = get_ai_client()
     today = datetime.now().strftime('%Y-%m-%d')
     due_date = (datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d')
-
-    if not client:
-        guessed_amount = 1500.0
-        match = re.search(r'(?:[\$\€\£\₹]|\bUSD|\bINR)\s*([\d,]+)', prompt, re.IGNORECASE)
-        if match:
-            guessed_amount = float(match.group(1).replace(',', ''))
-        
-        client_name = "ABC Enterprises"
-        if "company" in prompt.lower():
-            client_name = "Company Inc."
-            
-        return {
-            "clientName": client_name,
-            "date": today,
-            "dueDate": due_date,
-            "currency": "INR" if "₹" in prompt or "inr" in prompt.lower() else "USD",
-            "items": [
-                {
-                    "name": "Consultancy & General Business Solutions",
-                    "rate": guessed_amount,
-                    "quantity": 1,
-                    "taxPercentage": 10,
-                    "description": "AI-parsed standard billing service category item description details."
-                }
-            ],
-            "notes": "Parsed from context: " + prompt,
-            "isMock": True
-        }
 
     current_context_str = ""
     if current_invoice:
@@ -177,17 +151,20 @@ Use standard fallback fields for today's date {today} and a due date exactly 14 
     pre_parsed = {}
     lower_prompt = prompt.lower()
 
+    pre_parsed = {}
+    lower_prompt = prompt.lower()
+
     # 1. Copy Billing to Shipping Intent
     if any(phrase in lower_prompt for phrase in ["same as bill", "same as billing", "copy bill", "copy billing", "ship to details same", "ship to same", "same consignee"]):
         pre_parsed["copyBillingToShipping"] = True
 
-    # 2. Client / Buyer / Customer Name Intent (e.g. "client name is Reliance", "change client to Tata", "buyer Acme", "party John")
-    client_m = re.search(r'(?:client|customer|buyer|party|consignee|bill to|billed to|change client|set client|set customer)\s*(?:name)?\s*(?:is|as|=|:|\s)\s*([A-Za-z0-9\s&\.\,]{3,35})', prompt, re.IGNORECASE)
+    # 2. Client / Buyer / Customer Name Intent (e.g. "Bill Sharma Traders", "client name is Reliance", "change client to Tata", "buyer Acme", "party John")
+    client_m = re.search(r'(?:bill\s+to|billed\s+to|bill|client|customer|buyer|party|consignee|invoice)\s*(?:name)?\s*(?:is|as|=|:|\s)\s*([A-Za-z0-9\s&\.\,]{2,35})', prompt, re.IGNORECASE)
     if client_m:
         cn = client_m.group(1).strip()
-        cn = re.split(r'\b(?:and|vehicle|truck|driver|gstin|pan|email|phone|address|state|country|place|transport|discount|freight)\b', cn, flags=re.IGNORECASE)[0].strip()
-        if cn and not any(bad in cn.lower() for bad in ["ship to", "bill to", "same as", "copy bill"]):
-            pre_parsed["clientName"] = cn
+        cn = re.split(r'\b(?:for|and|with|vehicle|truck|driver|gstin|pan|email|phone|address|state|country|place|transport|discount|freight|hsn|gst|due|date|items?|products?|rs\.?|₹|\$|\d+)\b', cn, flags=re.IGNORECASE)[0].strip()
+        if cn and len(cn) >= 2 and not any(bad in cn.lower() for bad in ["ship to", "same as", "copy bill"]):
+            pre_parsed["clientName"] = cn.title()
 
     # 3. GSTIN / Tax ID Intent (e.g. "gstin 07AAAAA0000A1Z5", "gst no 27AAAAA0000A1Z5", "tax id 07AAAAA0000A1Z5")
     gst_m = re.search(r'(?:gstin|gst|gst no|gst number|tax id|gst code)\s*(?:is|=|:|\s)\s*([0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}[1-9A-Za-z]{1}[Zz][0-9A-Za-z]{1})', prompt, re.IGNORECASE)
@@ -201,13 +178,14 @@ Use standard fallback fields for today's date {today} and a due date exactly 14 
         if st_val.lower() not in ["same", "bill", "ship", "and"]:
             pre_parsed["clientState"] = st_val.capitalize()
 
-    country_m = re.search(r'(?:country|client country)\s*(?:is|=|:|\s)\s*([A-Za-z\s]{3,20})', prompt, re.IGNORECASE)
+    country_m = re.search(r'(?:country|client country|change country|set country|country to)\s*(?:is|=|:|\s)\s*([A-Za-z\s]{2,30})', prompt, re.IGNORECASE)
     if country_m:
-        co_val = country_m.group(1).strip().split(',')[0].split()[0]
-        if co_val.lower() not in ["same", "bill", "ship", "and"]:
-            pre_parsed["clientCountry"] = co_val.capitalize()
+        co_val = country_m.group(1).strip().split(',')[0]
+        co_val = re.split(r'\b(?:and|vehicle|truck|driver|gstin|pan|email|phone|address|state|place|transport|discount|freight)\b', co_val, flags=re.IGNORECASE)[0].strip()
+        if co_val and co_val.lower() not in ["same", "bill", "ship", "to", "is", "as"]:
+            pre_parsed["clientCountry"] = co_val.title()
 
-    # 5. Vehicle / Truck / Lorry Number Intent (e.g. "vehicle no DL14SV7995", "truck MH-12-AB-1234", "lorry 1234")
+    # 5. Vehicle / Truck / Lorry Number Intent (e.g. "vehicle no DL14SV7995", "vehicle DL9SAK2211", "truck MH-12-AB-1234")
     v_match = re.search(r'(?:vehicle|truck|lorry|car|auto|vessel|reg)\s*(?:no\.?|number|num|id)?\s*(?:is|=|:|\s)?\s*([a-zA-Z0-9\-]{4,16})', prompt, re.IGNORECASE)
     if v_match:
         v_num = v_match.group(1).strip()
@@ -215,47 +193,73 @@ Use standard fallback fields for today's date {today} and a due date exactly 14 
             pre_parsed["vehicleNo"] = v_num.upper()
 
     # 6. Transport / Courier / Dispatch Intent
-    t_match = re.search(r'(?:transport|transporter|courier|carrier|shipping mode|dispatch via|shipped via)\s*(?:is|=|:|\s)\s*([A-Za-z0-9\s]{3,25})', prompt, re.IGNORECASE)
+    t_match = re.search(r'(?:transport|transporter|courier|carrier|shipping mode|dispatch via|shipped via)\s*(?:name|mode|via)?\s*(?:is|=|:|\s)\s*([A-Za-z0-9\s]{3,25})', prompt, re.IGNORECASE)
     if t_match:
         t_val = t_match.group(1).strip().split('\n')[0].split(',')[0]
-        t_val = re.split(r'\b(?:and|vehicle|truck|driver|station|eway|po|place)\b', t_val, flags=re.IGNORECASE)[0].strip()
-        if t_val and not any(stop in t_val.lower() for stop in ["same", "bill", "ship"]):
+        t_val = re.split(r'\b(?:and|vehicle|truck|driver|station|eway|po|place|charge|charges|cost|fee|amount|rs|inr|\$)\b', t_val, flags=re.IGNORECASE)[0].strip()
+        if t_val and not any(stop in t_val.lower() for stop in ["same", "bill", "ship", "charge", "charges", "cost", "fee", "amount", "add"]):
             pre_parsed["transport"] = t_val
 
-    # 7. Product Item Intent (e.g. "add product Laptop for 50000", "item Chair 1500")
-    item_m = re.search(r'(?:add\s+)?(?:item|product|service)\s+([A-Za-z0-9\s]+?)\s+(?:for|at|rate|price|cost|=|:|\s)\s*(?:rs\.?|₹|\$)?\s*([\d,]+(?:\.\d+)?)', prompt, re.IGNORECASE)
-    if item_m:
-        p_name = item_m.group(1).strip()
-        if p_name and not any(bad in p_name.lower() for bad in ["freight", "transport", "shipping", "discount"]):
-            try:
-                p_rate = float(item_m.group(2).replace(',', ''))
-                pre_parsed["items"] = [{
-                    "name": p_name.capitalize(),
-                    "rate": p_rate,
-                    "quantity": 1,
-                    "taxPercentage": 18
-                }]
-            except ValueError:
-                pass
+    # 7. Tax Rate & HSN extraction
+    tax_m = re.search(r'(?:gst|tax|vat)\s*(?:@|=|:|\s)?\s*(\d+(?:\.\d+)?)\s*%', prompt, re.IGNORECASE)
+    hsn_m = re.search(r'hsn\s*(?:code|no\.?|=|:|\s)?\s*(\d{4,8})', prompt, re.IGNORECASE)
 
-    # 8. Place of Supply Intent
+    # 8. Product Item Intent
+    # Pattern A: [amount] for [qty] [name] e.g. "45000 for 5 laptops"
+    item_a = re.search(r'(?:(?:rs\.?|₹|\$)\s*)?([\d,]+(?:\.\d+)?)\s+for\s+(\d+)\s+([A-Za-z0-9\s]+)', prompt, re.IGNORECASE)
+    if item_a:
+        try:
+            tot = float(item_a.group(1).replace(',', ''))
+            qty = int(item_a.group(2))
+            pname = re.split(r'\b(?:hsn|gst|tax|vehicle|due|date|with|and|by)\b', item_a.group(3), flags=re.IGNORECASE)[0].strip()
+            rate = tot / qty if qty > 0 else tot
+            it_obj = {"name": pname.title(), "rate": rate, "quantity": qty}
+            if tax_m: it_obj["taxPercentage"] = float(tax_m.group(1))
+            if hsn_m: it_obj["hsnCode"] = hsn_m.group(1)
+            pre_parsed["items"] = [it_obj]
+        except (ValueError, TypeError):
+            pass
+    elif not pre_parsed.get("items"):
+        item_b = re.search(r'(?:add\s+)?(?:item|product|service)\s+([A-Za-z0-9\s]+?)\s+(?:for|at|rate|price|cost|=|:|\s)\s*(?:rs\.?|₹|\$)?\s*([\d,]+(?:\.\d+)?)', prompt, re.IGNORECASE)
+        if item_b:
+            p_name = item_b.group(1).strip()
+            if p_name and not any(bad in p_name.lower() for bad in ["freight", "transport", "shipping", "discount"]):
+                try:
+                    p_rate = float(item_b.group(2).replace(',', ''))
+                    it_obj = {"name": p_name.capitalize(), "rate": p_rate, "quantity": 1}
+                    if tax_m: it_obj["taxPercentage"] = float(tax_m.group(1))
+                    if hsn_m: it_obj["hsnCode"] = hsn_m.group(1)
+                    pre_parsed["items"] = [it_obj]
+                except ValueError:
+                    pass
+
+    # 9. Due Date Intent (e.g. "due in 30 days", "net 30")
+    due_m = re.search(r'(?:due\s+in|net)\s*(\d+)\s*(?:days)?', prompt, re.IGNORECASE)
+    if due_m:
+        try:
+            days = int(due_m.group(1))
+            pre_parsed["dueDate"] = (datetime.now() + timedelta(days=days)).strftime('%Y-%m-%d')
+        except ValueError:
+            pass
+
+    # 10. Place of Supply Intent
     pos_match = re.search(r'place of supply\s*(?:is|=|:|\s)\s*([A-Za-z\s]{3,25})', prompt, re.IGNORECASE)
     if pos_match:
         pos_val = pos_match.group(1).strip().split(',')[0]
         pos_val = re.split(r'\b(?:and|vehicle|driver|eway|po|transport)\b', pos_val, flags=re.IGNORECASE)[0].strip()
         pre_parsed["placeOfSupply"] = pos_val
 
-    # 9. Terms & Conditions Intent
+    # 11. Terms & Conditions Intent
     terms_match = re.search(r'(?:terms|conditions)\s*(?:is|=|:|\s)\s*(.+)', prompt, re.IGNORECASE)
     if terms_match:
         pre_parsed["invoiceTerms"] = terms_match.group(1).strip()
 
-    # 10. Notes Intent
+    # 12. Notes Intent
     notes_match = re.search(r'(?:notes|note|comment|comments)\s*(?:is|=|:|\s)\s*(.+)', prompt, re.IGNORECASE)
     if notes_match:
         pre_parsed["notes"] = notes_match.group(1).strip()
 
-    # 11. Transport / Freight / Delivery Charges Intent
+    # 13. Transport / Freight / Delivery Charges Intent
     freight_match = re.search(r'(?:freight|transport|shipping|delivery)\s*(?:charge|charges|cost|fee|amount)?\s*(?:as|=|:|\s)?\s*(?:rs\.?|₹|\$)?\s*([\d,]+(?:\.\d+)?)', prompt, re.IGNORECASE)
     if freight_match:
         try:
@@ -264,7 +268,7 @@ Use standard fallback fields for today's date {today} and a due date exactly 14 
         except ValueError:
             pass
 
-    # 12. Discount Intent
+    # 14. Discount Intent
     disc_val = None
     disc_type = None
     m_a = re.search(r'(?:rs\.?|₹|\$)?\s*([\d,]+(?:\.\d+)?)\s*(%)?\s*(?:flat|percent|percentage)?\s*discount', prompt, re.IGNORECASE)
@@ -289,24 +293,12 @@ Use standard fallback fields for today's date {today} and a due date exactly 14 
         pre_parsed["discountType"] = disc_type
 
     parsed_result = {}
-    try:
-        model_name = "gemini-2.5-flash-lite"
+    if client:
         try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    response_mime_type="application/json",
-                    response_schema=schema
-                )
-            )
-            parsed_result = json.loads(response.text.strip()) if response.text else {}
-        except Exception as api_err:
-            print(f"Gemini {model_name} Error: {api_err}. Trying fallback model gemini-2.5-flash...")
+            model_name = "gemini-2.5-flash-lite"
             try:
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model=model_name,
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         system_instruction=system_instruction,
@@ -315,12 +307,25 @@ Use standard fallback fields for today's date {today} and a due date exactly 14 
                     )
                 )
                 parsed_result = json.loads(response.text.strip()) if response.text else {}
-            except Exception as fallback_err:
-                print(f"Gemini fallback model Error: {fallback_err}")
-                parsed_result = {}
-    except Exception as e:
-        print(f"AI Parse Invoice Error: {e}")
-        parsed_result = {}
+            except Exception as api_err:
+                print(f"Gemini {model_name} Error: {api_err}. Trying fallback model gemini-2.5-flash...")
+                try:
+                    response = client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_instruction,
+                            response_mime_type="application/json",
+                            response_schema=schema
+                        )
+                    )
+                    parsed_result = json.loads(response.text.strip()) if response.text else {}
+                except Exception as fallback_err:
+                    print(f"Gemini fallback model Error: {fallback_err}")
+                    parsed_result = {}
+        except Exception as e:
+            print(f"AI Parse Invoice Error: {e}")
+            parsed_result = {}
 
     final_result = {**parsed_result, **pre_parsed}
 
@@ -329,6 +334,12 @@ Use standard fallback fields for today's date {today} and a due date exactly 14 
         c_name_lower = str(final_result["clientName"]).lower()
         if any(bad in c_name_lower for bad in ["ship to", "bill to", "same as", "copy bill", "copying", "details same"]):
             del final_result["clientName"]
+
+    # Sanitize transport field — carrier name only, NOT transport charges
+    if "transport" in final_result and final_result["transport"]:
+        t_lower = str(final_result["transport"]).lower()
+        if any(bad in t_lower for bad in ["charge", "charges", "cost", "fee", "amount", "freight", "shipping", "delivery", "add transport"]):
+            del final_result["transport"]
 
     # Filter out items that are actually freight or discounts masquerading as line items
     if "items" in final_result and isinstance(final_result["items"], list):

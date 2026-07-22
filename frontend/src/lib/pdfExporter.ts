@@ -4,7 +4,8 @@ import { toPng } from 'html-to-image';
 import { createRoot } from 'react-dom/client';
 import React from 'react';
 import { LivePreview } from '../components/TemplateBuilder/LivePreview';
-import { TEMPLATE_PRESETS } from './templatePresets';
+import { TEMPLATE_PRESETS, getDefaultTemplatePreset } from './templatePresets';
+import { emitNotification } from './notifications';
 
 
 // ─── CURRENCY HELPER ────────────────────────────────────────────────────────
@@ -183,6 +184,7 @@ export function exportCollectiveReportPDF(
   }
 
   doc.save(`ledger_${periodName.toLowerCase().replace(/\s+/g, '_')}.pdf`);
+  emitNotification('Ledger PDF Downloaded', `Ledger statement report (${periodName}) downloaded as PDF.`, 'success');
 }
 
 import { InvoiceTemplate } from '../types';
@@ -205,7 +207,7 @@ export function resolveTaxMode(invoice: Invoice, profile: BusinessProfile): 'cgs
 export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessProfile, action: 'save' | 'datauri' | 'blob' = 'save', templateOverride?: InvoiceTemplate): Promise<string | Blob | void> {
   // Use the provided template override if available (exact instance from modal = no race condition)
   // Otherwise fall back to the global default from localStorage
-  let activeTemplate: InvoiceTemplate = templateOverride || TEMPLATE_PRESETS[0];
+  let activeTemplate: InvoiceTemplate = templateOverride || getDefaultTemplatePreset();
 
   if (!templateOverride) {
     if (invoice.embeddedTemplate) {
@@ -463,6 +465,7 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
 
     if (action === 'save') {
       pdf.save(`${invoice.invoiceNumber}.pdf`);
+      emitNotification('PDF Downloaded', `${invoice.invoiceNumber}.pdf downloaded successfully.`, 'success');
     } else if (action === 'datauri') {
       return pdf.output('datauristring');
     } else if (action === 'blob') {

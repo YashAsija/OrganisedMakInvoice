@@ -350,7 +350,8 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
                       value={
                         template.config?.header?.invoiceTitle?.toUpperCase().includes('CREDIT') ? 'Credit Note' :
                         template.config?.header?.invoiceTitle?.toUpperCase().includes('DEBIT') ? 'Debit Note' :
-                        template.config?.header?.invoiceTitle?.toUpperCase().includes('QUOTATION') || template.config?.header?.invoiceTitle?.toUpperCase().includes('ESTIMATE') ? 'Quotation / Estimate' :
+                        template.config?.header?.invoiceTitle?.toUpperCase().includes('PROFORMA') ? 'Proforma Invoice' :
+                        template.config?.header?.invoiceTitle?.toUpperCase().includes('QUOTATION') || template.config?.header?.invoiceTitle?.toUpperCase().includes('ESTIMATE') || template.config?.header?.invoiceTitle?.toUpperCase().includes('QUOTE') ? 'Quotation / Estimate' :
                         'Invoice'
                       }
                       onChange={e => {
@@ -359,6 +360,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
                         if (type === 'Invoice') newTitle = 'TAX INVOICE';
                         if (type === 'Credit Note') newTitle = 'CREDIT NOTE';
                         if (type === 'Debit Note') newTitle = 'DEBIT NOTE';
+                        if (type === 'Proforma Invoice') newTitle = 'PROFORMA INVOICE';
                         if (type === 'Quotation / Estimate') newTitle = 'QUOTATION / ESTIMATE';
                         
                         updateTemplate({
@@ -374,10 +376,11 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
                       }}
                       className="w-full p-2.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b] cursor-pointer"
                     >
-                      <option value="Invoice">Invoice</option>
+                      <option value="Invoice">Invoice (Tax Invoice)</option>
                       <option value="Credit Note">Credit Note</option>
                       <option value="Debit Note">Debit Note</option>
-                      <option value="Quotation / Estimate">Quotation / Estimate</option>
+                      <option value="Proforma Invoice">Proforma Invoice</option>
+                      <option value="Quotation / Estimate">Quote / Estimate</option>
                     </select>
                   </div>
                   <p className="text-[10px] text-[#64748b]/80 mt-1">Updates the main header title on generated PDF bills.</p>

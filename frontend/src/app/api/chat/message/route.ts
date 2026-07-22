@@ -19,9 +19,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { message, sessionId, userId, language } = body;
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY_CHAT || process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ reply: "I'm sorry, my AI backend is not configured yet (missing GEMINI_API_KEY)." }, { status: 500 });
+      return NextResponse.json({ reply: "I'm sorry, my AI backend is not configured yet (missing GEMINI_API_KEY_CHAT or GEMINI_API_KEY)." }, { status: 500 });
     }
     const genAI = new GoogleGenAI({ apiKey });
 

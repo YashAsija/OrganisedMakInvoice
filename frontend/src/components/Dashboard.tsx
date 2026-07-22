@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { 
   Plus, 
@@ -73,7 +73,8 @@ import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Exp
 import { BUSINESS_TEMPLATES } from '../lib/presets';
 import { exportInvoicePDFAsync, exportCollectiveReportPDF } from '../lib/pdfExporter';
 import TemplateManager from './TemplateManager';
-import { TEMPLATE_PRESETS } from '../lib/templatePresets';
+import { emitNotification } from '../lib/notifications';
+import { TEMPLATE_PRESETS, getDefaultTemplatePreset } from '../lib/templatePresets';
 import { LivePreview } from './TemplateBuilder/LivePreview';
 import SettingsPage from './SettingsPage';
 import SupportPage from './SupportPage';
@@ -181,6 +182,38 @@ export default function Dashboard({
   
   // App Notifications Global State
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifCategoryTab, setNotifCategoryTab] = useState<'all' | 'billing' | 'system' | 'alerts'>('all');
+
+  const getNotifCategory = (notif: any): 'billing' | 'system' | 'alerts' => {
+    const t = (notif.title || '').toLowerCase();
+    // Alerts first — type always wins over content keywords
+    if (
+      notif.type === 'error' || notif.type === 'warning' ||
+      t.includes('error') || t.includes('failed') || t.includes('validation') ||
+      t.includes('alert') || t.includes('invalid')
+    ) {
+      return 'alerts';
+    }
+    const m = (notif.message || '').toLowerCase();
+    if (
+      t.includes('bill') || m.includes('bill') ||
+      t.includes('invoice') || m.includes('invoice') ||
+      t.includes('draft') || m.includes('draft') ||
+      t.includes('pdf') || m.includes('pdf') ||
+      t.includes('payment') || m.includes('payment') ||
+      t.includes('proforma') || m.includes('proforma') ||
+      t.includes('credit note') || m.includes('credit note') ||
+      t.includes('debit note') || m.includes('debit note') ||
+      t.includes('quote') || m.includes('quote') ||
+      t.includes('word document') || m.includes('word document') ||
+      t.includes('bulk pdfs') || m.includes('bulk pdfs') ||
+      t.includes('excel csv') || m.includes('excel csv')
+    ) {
+      return 'billing';
+    }
+    return 'system';
+  };
+
   const [notifications, setNotifications] = useState<any[]>(() => {
     const cached = localStorage.getItem('makbills_notifications');
     if (cached) {
@@ -193,18 +226,101 @@ export default function Dashboard({
     localStorage.setItem('makbills_notifications', JSON.stringify(notifications));
   }, [notifications]);
 
+  interface ActiveToast {
+    id: string;
+    title: string;
+    message: string;
+    type: 'success' | 'info' | 'warning' | 'error';
+    actionLabel?: string;
+    actionTab?: string;
+    timestamp: string;
+  }
+
+  const [activeToasts, setActiveToasts] = useState<ActiveToast[]>([]);
+  const [exitingToastIds, setExitingToastIds] = useState<Set<string>>(new Set());
+
+  // Smoothly animate-out a toast, then remove it from DOM after animation ends
+  const dismissToast = (id: string) => {
+    setExitingToastIds(prev => new Set(prev).add(id));
+    setTimeout(() => {
+      setActiveToasts(prev => prev.filter(t => t.id !== id));
+      setExitingToastIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+    }, 400); // matches toastSlideOut duration (0.38s + tiny buffer)
+  };
+
   useEffect(() => {
     const handleNotification = (e: any) => {
       const { title, message, type } = e.detail;
+      const notifId = Date.now().toString() + Math.random().toString().slice(2, 6);
       const newNotif = {
-        id: Date.now().toString() + Math.random().toString(),
+        id: notifId,
         title,
         message,
-        type,
+        type: type || 'info',
         timestamp: new Date().toISOString(),
         read: false
       };
       setNotifications(prev => [newNotif, ...prev]);
+
+      let actionLabel: string | undefined = undefined;
+      let actionTab: string | undefined = undefined;
+
+      const lowerTitle = (title || '').toLowerCase();
+
+      // Only add navigation for notifications that lead to a genuinely useful page
+      if (
+        lowerTitle.includes('invoice created') || lowerTitle.includes('invoice updated') ||
+        lowerTitle.includes('proforma') || lowerTitle.includes('credit note') ||
+        lowerTitle.includes('debit note') || lowerTitle.includes('quote created') ||
+        lowerTitle.includes('quote updated') || lowerTitle.includes('pdf downloaded') ||
+        lowerTitle.includes('ledger pdf') || lowerTitle.includes('excel csv') ||
+        lowerTitle.includes('bulk pdfs') || lowerTitle.includes('word document') ||
+        lowerTitle.includes('draft saved')
+      ) {
+        // Invoice Ledger — all document/export actions
+        actionLabel = 'View Ledger';
+        actionTab = 'invoices';
+      } else if (lowerTitle.includes('default template set')) {
+        // Template manager — only when a default template is set (navigates to a different page)
+        actionLabel = 'View Templates';
+        actionTab = 'invoice_templates';
+      } else if (lowerTitle.includes('profile') || lowerTitle.includes('preference') || lowerTitle.includes('setting') || lowerTitle.includes('pin') || lowerTitle.includes('subscription')) {
+        // Settings page
+        actionLabel = 'View Settings';
+        actionTab = 'settings';
+      } else if (lowerTitle.includes('bulk upload complete')) {
+        // Bulk upload: infer the correct registry tab from the message body
+        const lowerMsg = (message || '').toLowerCase();
+        if (lowerMsg.includes('client database')) { actionLabel = 'Client Database'; actionTab = 'master_vendor'; }
+        else if (lowerMsg.includes('hsn registry')) { actionLabel = 'HSN Registry'; actionTab = 'master_hsn'; }
+        else if (lowerMsg.includes('transport database')) { actionLabel = 'Transport Database'; actionTab = 'master_transport'; }
+        else if (lowerMsg.includes('material catalog')) { actionLabel = 'Material Catalog'; actionTab = 'catalog_material'; }
+        else if (lowerMsg.includes('product category')) { actionLabel = 'Product Category'; actionTab = 'catalog_category'; }
+        // If context unclear, no navigation
+      }
+      // No navigation for: Template Downloaded (CSV file), individual registry CRUD (already on page),
+      // Validation Errors, Draft Restored, GL Accounts, Download Failed
+
+      const toastItem: ActiveToast = {
+        id: notifId,
+        title,
+        message,
+        type: type || 'info',
+        actionLabel,
+        actionTab,
+        timestamp: new Date().toISOString()
+      };
+
+      setActiveToasts(prev => [toastItem, ...prev].slice(0, 3));
+
+      // Auto-dismiss: trigger exit animation at 5.6s, remove DOM at 6s
+      setTimeout(() => {
+        setExitingToastIds(prev => new Set(prev).add(notifId));
+      }, 5600);
+      setTimeout(() => {
+        setActiveToasts(prev => prev.filter(t => t.id !== notifId));
+        setExitingToastIds(prev => { const s = new Set(prev); s.delete(notifId); return s; });
+      }, 6050);
     };
     window.addEventListener('mak_notification', handleNotification);
     return () => window.removeEventListener('mak_notification', handleNotification);
@@ -416,6 +532,19 @@ export default function Dashboard({
     let key = '';
     let setter: any = null;
 
+    const tabLabels: Record<string, string> = {
+      master_vendor: 'Client Database',
+      master_transport: 'Transport Database',
+      master_hsn: 'HSN Registry',
+      master_gl: 'GL Accounts',
+      catalog_material: 'Material Catalog',
+      catalog_category: 'Product Category',
+      catalog_sub_category: 'Sub-Category',
+      catalog_mapping: 'GL Mapping',
+      catalog_packing_unit: 'Packing Units',
+      catalog_measurement_unit: 'UOM Registry',
+    };
+
     switch (activeTab) {
       case 'master_vendor':
         list = vendors;
@@ -478,6 +607,17 @@ export default function Dashboard({
     localStorage.setItem(key, JSON.stringify(updated));
     setIsMasterModalOpen(false);
     setEditingMasterItem(null);
+
+    // Emit notification
+    const label = tabLabels[activeTab] || 'Registry';
+    const itemName = item.name || item.code || item.vehicleNo || 'Record';
+    emitNotification(
+      exists ? `${label} Updated` : `${label} Record Added`,
+      exists
+        ? `"${itemName}" has been updated in the ${label}.`
+        : `"${itemName}" has been added to the ${label}.`,
+      exists ? 'success' : 'info'
+    );
   };
 
   const handleDeleteMasterItem = async (id: string) => {
@@ -491,6 +631,19 @@ export default function Dashboard({
     let list: any[] = [];
     let key = '';
     let setter: any = null;
+
+    const tabLabels: Record<string, string> = {
+      master_vendor: 'Client Database',
+      master_transport: 'Transport Database',
+      master_hsn: 'HSN Registry',
+      master_gl: 'GL Accounts',
+      catalog_material: 'Material Catalog',
+      catalog_category: 'Product Category',
+      catalog_sub_category: 'Sub-Category',
+      catalog_mapping: 'GL Mapping',
+      catalog_packing_unit: 'Packing Units',
+      catalog_measurement_unit: 'UOM Registry',
+    };
 
     switch (activeTab) {
       case 'master_vendor':
@@ -547,9 +700,19 @@ export default function Dashboard({
 
     if (!setter) return;
 
+    const deletedItem = list.find(i => i.id === id);
     const updated = list.filter(i => i.id !== id);
     setter(updated);
     localStorage.setItem(key, JSON.stringify(updated));
+
+    // Emit notification for deletion
+    const label = tabLabels[activeTab] || 'Registry';
+    const itemName = deletedItem?.name || deletedItem?.code || deletedItem?.vehicleNo || 'Record';
+    emitNotification(
+      `${label} Record Removed`,
+      `"${itemName}" has been permanently deleted from the ${label}.`,
+      'warning'
+    );
   };
 
   const renderNavMenuContent = (isMobileView: boolean = false) => {
@@ -680,21 +843,12 @@ export default function Dashboard({
             </div>
           </button>
 
-          <button onClick={() => handleTabClick('catalog_material')} className={`${navItemClass('catalog_material')} mb-4`}>
+          <button onClick={() => handleTabClick('catalog_material')} className={`${navItemClass('catalog_material')} mb-3 sm:mb-4`}>
             <div className="flex items-center gap-2.5">
               <div className={iconWrapper(activeTab === 'catalog_material', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Wrench className="w-3.5 h-3.5" /></div>
               <span>Material Catalog</span>
             </div>
           </button>
-          
-          <div className="pt-2 mt-2 border-t border-[#e2e8f0]/60 dark:border-zinc-800/80">
-            <button onClick={() => handleTabClick('support-chat')} className={`${navItemClass('support-chat')} text-[#0ea5e9] dark:text-[#38bdf8]`}>
-              <div className="flex items-center gap-2.5">
-                <div className={iconWrapper(activeTab === 'support-chat', 'bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400')}><MessageSquare className="w-3.5 h-3.5" /></div>
-                <span>Live Support</span>
-              </div>
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -1069,6 +1223,12 @@ export default function Dashboard({
                       document.body.appendChild(link);
                       link.click();
                       document.body.removeChild(link);
+                      // Notify download
+                      const tabLabelDl: Record<string, string> = {
+                        master_vendor: 'Client Database', master_transport: 'Transport Database',
+                        master_hsn: 'HSN Registry', catalog_material: 'Material Catalog', catalog_category: 'Product Category'
+                      };
+                      emitNotification('Template Downloaded', `${tabLabelDl[activeTab] || 'Registry'} CSV template saved — "${filename}".`, 'success');
                     }}
                     className="flex items-center gap-1.5 px-3.5 py-2 bg-[#F0E8DC] hover:bg-[#E8DDD0] dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[#0f172a] dark:text-zinc-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer border border-[#e2e8f0]/70 dark:border-zinc-700 hover:-translate-y-px active:scale-[0.98]"
                   >
@@ -1114,7 +1274,7 @@ export default function Dashboard({
                               else if (activeTab === 'master_hsn') { currentList = hsnCodes; storageKey = 'makbills_masters_hsn'; setterFn = setHsnCodes; }
                               else if (activeTab === 'catalog_material') { currentList = materials; storageKey = 'makbills_masters_materials'; setterFn = setMaterials; }
                               else if (activeTab === 'catalog_category') { currentList = categories; storageKey = 'makbills_masters_categories'; setterFn = setCategories; }
-                              if (setterFn) { const updatedList = [...finalItems, ...currentList]; setterFn(updatedList); localStorage.setItem(storageKey, JSON.stringify(updatedList)); alert(`Successfully uploaded ${finalItems.length} items!`); }
+                              if (setterFn) { const updatedList = [...finalItems, ...currentList]; setterFn(updatedList); localStorage.setItem(storageKey, JSON.stringify(updatedList)); const tabLabelUp: Record<string, string> = { master_vendor: 'Client Database', master_transport: 'Transport Database', master_hsn: 'HSN Registry', catalog_material: 'Material Catalog', catalog_category: 'Product Category' }; emitNotification('Bulk Upload Complete', `${finalItems.length} records imported into ${tabLabelUp[activeTab] || 'Registry'} successfully.`, 'info'); }
                             } catch (err: any) { alert('Error parsing file: ' + err.message); }
                           };
                           reader.readAsBinaryString(file);
@@ -1600,12 +1760,12 @@ export default function Dashboard({
   };
 
   const handleSelectAllFiltered = () => {
-    const allFilteredIds = filteredInvoices.map(inv => inv.id);
-    const isAllSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedInvoiceIds.includes(id));
+    const allFilteredIds: string[] = filteredInvoices.map((inv: any) => inv.id);
+    const isAllSelected = allFilteredIds.length > 0 && allFilteredIds.every((id: string) => selectedInvoiceIds.includes(id));
     if (isAllSelected) {
-      setSelectedInvoiceIds(prev => prev.filter(id => !allFilteredIds.includes(id)));
+      setSelectedInvoiceIds((prev: string[]) => prev.filter((id: string) => !allFilteredIds.includes(id)));
     } else {
-      setSelectedInvoiceIds(prev => {
+      setSelectedInvoiceIds((prev: string[]) => {
         const combined = Array.from(new Set([...prev, ...allFilteredIds]));
         return combined;
       });
@@ -1643,6 +1803,7 @@ export default function Dashboard({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    emitNotification('Excel CSV Exported', `Selected ${selected.length} bills exported to CSV spreadsheet.`, 'success');
   };
 
   const handleBulkExportPDF = async () => {
@@ -1654,6 +1815,7 @@ export default function Dashboard({
         await exportInvoicePDFAsync(selected[i], profile);
         await new Promise(r => setTimeout(r, 250));
     }
+    emitNotification('Bulk PDFs Exported', `Selected ${selected.length} bills exported to PDF.`, 'success');
   };
 
   const handleExportAllCSV = () => {
@@ -1780,31 +1942,171 @@ export default function Dashboard({
   const [reportStartDate, setReportStartDate] = useState('');
   const [reportEndDate, setReportEndDate] = useState('');
   const [reportClientFilter, setReportClientFilter] = useState('all');
+  const [ledgerSection, setLedgerSection] = useState<'invoice' | 'proforma' | 'credit_note' | 'debit_note' | 'quote'>('invoice');
+
+  const handleSwitchLedgerSection = (section: 'invoice' | 'proforma' | 'credit_note' | 'debit_note' | 'quote') => {
+    setLedgerSection(section);
+    setStatusFilter('all');
+    if (typeof window !== 'undefined') {
+      const hashSlug = section === 'invoice' ? 'invoices' : section === 'proforma' ? 'proforma' : section === 'credit_note' ? 'credit-notes' : section === 'debit_note' ? 'debit-notes' : 'quotes';
+      window.history.replaceState(null, '', `#${hashSlug}`);
+    }
+  };
+
+  useEffect(() => {
+    const syncRouteFromLocation = () => {
+      if (typeof window === 'undefined') return;
+      const hash = (window.location.hash || '').toLowerCase().replace('#', '');
+      const searchParams = new URLSearchParams(window.location.search);
+      const paramType = (searchParams.get('section') || searchParams.get('type') || '').toLowerCase();
+      const target = hash || paramType;
+
+      if (target.includes('proforma')) {
+        setLedgerSection('proforma');
+      } else if (target.includes('credit')) {
+        setLedgerSection('credit_note');
+      } else if (target.includes('debit')) {
+        setLedgerSection('debit_note');
+      } else if (target.includes('quote') || target.includes('estimate')) {
+        setLedgerSection('quote');
+      } else if (target.includes('invoice')) {
+        setLedgerSection('invoice');
+      }
+    };
+
+    syncRouteFromLocation();
+    window.addEventListener('hashchange', syncRouteFromLocation);
+    window.addEventListener('popstate', syncRouteFromLocation);
+    return () => {
+      window.removeEventListener('hashchange', syncRouteFromLocation);
+      window.removeEventListener('popstate', syncRouteFromLocation);
+    };
+  }, []);
 
   const currencySymbol = profile.currencySymbol || getCurrencySymbol(profile.currency);
 
+  const getInvoiceDocumentType = (inv: Invoice): 'invoice' | 'proforma' | 'credit_note' | 'debit_note' | 'quote' => {
+    const rawType = (inv.invoiceType || '').toLowerCase().trim();
+    if (rawType === 'proforma' || rawType === 'proforma_invoice') return 'proforma';
+    if (rawType === 'credit_note' || rawType === 'credit') return 'credit_note';
+    if (rawType === 'debit_note' || rawType === 'debit') return 'debit_note';
+    if (rawType === 'estimate' || rawType === 'quote' || rawType === 'quotation') return 'quote';
+
+    const title = (inv.embeddedTemplate?.config?.header?.invoiceTitle || '').toLowerCase();
+    if (title.includes('proforma')) return 'proforma';
+    if (title.includes('credit')) return 'credit_note';
+    if (title.includes('debit')) return 'debit_note';
+    if (title.includes('quote') || title.includes('estimate') || title.includes('quotation')) return 'quote';
+
+    return 'invoice';
+  };
+
+  const documentTypeCounts = useMemo(() => {
+    const counts = { invoice: 0, proforma: 0, credit_note: 0, debit_note: 0, quote: 0 };
+    invoices.forEach(inv => {
+      const docType = getInvoiceDocumentType(inv);
+      counts[docType] = (counts[docType] || 0) + 1;
+    });
+    return counts;
+  }, [invoices]);
+
+  const sectionInvoices = useMemo(() => {
+    return invoices.filter(inv => getInvoiceDocumentType(inv) === ledgerSection);
+  }, [invoices, ledgerSection]);
+
   // --- STATS ENGINES ---
-  const filteredInvoices = invoices.filter(inv => {
-    const matchesSearch = inv.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredInvoices = sectionInvoices.filter(inv => {
+    const matchesSearch = (inv.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (inv.invoiceNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = statusFilter === 'all' || inv.status === statusFilter;
     return matchesSearch && matchesFilter;
   });
 
-  const totalBilled = invoices
+  const totalBilled = sectionInvoices
     .filter(inv => inv.status === 'paid')
     .reduce((sum, inv) => sum + inv.grandTotal, 0);
 
-  const totalOutstanding = invoices
+  const totalOutstanding = sectionInvoices
     .filter(inv => inv.status === 'pending')
     .reduce((sum, inv) => sum + inv.grandTotal, 0);
 
-  const totalTax = invoices
+  const totalTax = sectionInvoices
     .reduce((sum, inv) => sum + (inv.taxTotal || 0), 0);
 
-  const totalDraft = invoices
+  const totalDraft = sectionInvoices
     .filter(inv => inv.status === 'draft')
     .reduce((sum, inv) => sum + inv.grandTotal, 0);
+
+  const handleCreateDocumentForSection = (section: 'invoice' | 'proforma' | 'credit_note' | 'debit_note' | 'quote') => {
+    if (section === 'invoice') {
+      onOpenInvoiceEditor(null);
+      return;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    const prefixMap: Record<string, string> = { proforma: 'PRO', credit_note: 'CN', debit_note: 'DN', quote: 'EST' };
+    const titleMap: Record<string, string> = { proforma: 'PROFORMA INVOICE', credit_note: 'CREDIT NOTE', debit_note: 'DEBIT NOTE', quote: 'QUOTATION / ESTIMATE' };
+    const typeMap: Record<string, any> = { proforma: 'proforma', credit_note: 'credit_note', debit_note: 'debit_note', quote: 'estimate' };
+
+    const prefix = prefixMap[section] || 'INV';
+    const num = `${prefix}-${Date.now().toString().slice(-6)}`;
+
+    const draftDoc: Invoice = {
+      id: `inv_${Date.now()}`,
+      userId: 'local',
+      invoiceNumber: num,
+      date: today,
+      dueDate: today,
+      clientName: '',
+      clientEmail: '',
+      clientAddress: '',
+      clientPhone: '',
+      clientGstin: '',
+      clientState: '',
+      companyState: profile.state || '',
+      items: [
+        { id: '1', name: 'Sample Item / Service', quantity: 1, rate: 100, taxPercentage: 18 }
+      ],
+      subtotal: 100,
+      discountType: 'none',
+      discountValue: 0,
+      discountTotal: 0,
+      taxTotal: 18,
+      grandTotal: 118,
+      notes: 'Thank you for your business!',
+      status: 'pending',
+      invoiceType: typeMap[section],
+      createdAt: today,
+      updatedAt: today,
+      embeddedTemplate: {
+        ...getDefaultTemplatePreset(),
+        config: {
+          ...getDefaultTemplatePreset().config,
+          header: {
+            ...getDefaultTemplatePreset().config.header,
+            invoiceTitle: titleMap[section]
+          }
+        }
+      }
+    };
+
+    onOpenInvoiceEditor(draftDoc);
+  };
+
+  const renderDocTypeBadge = (inv: Invoice) => {
+    const docType = getInvoiceDocumentType(inv);
+    switch (docType) {
+      case 'proforma':
+        return <span className="bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Proforma</span>;
+      case 'credit_note':
+        return <span className="bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 border border-violet-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Credit Note</span>;
+      case 'debit_note':
+        return <span className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Debit Note</span>;
+      case 'quote':
+        return <span className="bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 border border-teal-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Quote / Est</span>;
+      default:
+        return <span className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Inv</span>;
+    }
+  };
 
   // --- RENDERING HELPERS ---
   const getStatusColor = (status: InvoiceStatus) => {
@@ -2003,6 +2305,7 @@ export default function Dashboard({
     a.download = `Invoice_${inv.invoiceNumber}.doc`;
     a.click();
     URL.revokeObjectURL(url);
+    emitNotification('Word Document Downloaded', `Document #${inv.invoiceNumber} exported as MS Word doc.`, 'success');
   };
 
   const triggerWhatsAppShare = async (inv: Invoice) => {
@@ -2211,7 +2514,7 @@ export default function Dashboard({
             </button>
             
             {isNotificationsOpen && (
-              <div className="absolute right-[-60px] sm:right-0 mt-3 w-[320px] sm:w-[380px] rounded-2xl bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 shadow-[0_8px_30px_rgba(136,118,92,0.12)] py-2 z-50 text-sans animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute right-[-60px] sm:right-0 mt-3 w-[320px] sm:w-[390px] rounded-2xl bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 shadow-[0_8px_30px_rgba(136,118,92,0.12)] py-2 z-50 text-sans animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="px-4 py-2.5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
                   <span className="font-bold text-[13px] text-slate-800 dark:text-white">Notifications</span>
                   <div className="flex gap-2.5 items-center">
@@ -2230,48 +2533,124 @@ export default function Dashboard({
                     </button>
                   </div>
                 </div>
+
+                {/* Bifurcated Section Category Tabs */}
+                <div className="px-3 py-2 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-950/60 flex items-center gap-1.5 overflow-x-auto text-[11px] font-bold select-none scrollbar-none">
+                  <button
+                    type="button"
+                    onClick={() => setNotifCategoryTab('all')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap font-black ${notifCategoryTab === 'all'
+                      ? 'bg-sky-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
+                  >
+                    <span className={notifCategoryTab === 'all' ? 'text-white font-extrabold' : 'text-slate-700 dark:text-zinc-300 font-bold'}>
+                      All ({notifications.length})
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNotifCategoryTab('billing')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap font-black ${notifCategoryTab === 'billing'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40'}`}
+                  >
+                    <span className={notifCategoryTab === 'billing' ? 'text-white font-extrabold' : ''}>
+                      Billing ({notifications.filter(n => getNotifCategory(n) === 'billing').length})
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNotifCategoryTab('system')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap font-black ${notifCategoryTab === 'system'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'}`}
+                  >
+                    <span className={notifCategoryTab === 'system' ? 'text-white font-extrabold' : ''}>
+                      System ({notifications.filter(n => getNotifCategory(n) === 'system').length})
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNotifCategoryTab('alerts')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap font-black ${notifCategoryTab === 'alerts'
+                      ? 'bg-rose-600 text-white shadow-xs'
+                      : 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'}`}
+                  >
+                    <span className={notifCategoryTab === 'alerts' ? 'text-white font-extrabold' : ''}>
+                      Alerts ({notifications.filter(n => getNotifCategory(n) === 'alerts').length})
+                    </span>
+                  </button>
+                </div>
                 
                 <div className="max-h-[360px] overflow-y-auto">
-                  {notifications.length === 0 ? (
-                    <div className="px-4 py-10 text-center flex flex-col items-center justify-center">
-                      <div className="w-12 h-12 bg-slate-50 dark:bg-zinc-800/50 rounded-full flex items-center justify-center mb-3">
-                        <Bell className="w-5 h-5 text-slate-300 dark:text-zinc-600" />
-                      </div>
-                      <p className="text-[13px] text-slate-500 dark:text-zinc-400 font-medium">You're all caught up!</p>
-                      <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">No new notifications at this time.</p>
-                    </div>
-                  ) : (
-                    notifications.map(notif => (
-                      <div 
-                        key={notif.id} 
-                        className={`px-4 py-3.5 border-b border-slate-50 dark:border-zinc-800/30 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors flex gap-3 cursor-pointer ${!notif.read ? 'bg-sky-50/40 dark:bg-sky-900/10' : ''}`}
-                        onClick={() => setNotifications(prev => prev.map(n => n.id === notif.id ? {...n, read: true} : n))}
-                      >
-                        <div className="mt-0.5 shrink-0">
-                          {notif.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
-                          {notif.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-500" />}
-                          {notif.type === 'error' && <AlertCircle className="w-4 h-4 text-rose-500" />}
-                          {notif.type === 'info' && <Info className="w-4 h-4 text-sky-500" />}
+                  {(() => {
+                    const displayed = notifCategoryTab === 'all'
+                      ? notifications
+                      : notifications.filter(n => getNotifCategory(n) === notifCategoryTab);
+
+                    if (displayed.length === 0) {
+                      return (
+                        <div className="px-4 py-10 text-center flex flex-col items-center justify-center">
+                          <div className="w-12 h-12 bg-slate-50 dark:bg-zinc-800/50 rounded-full flex items-center justify-center mb-3">
+                            <Bell className="w-5 h-5 text-slate-300 dark:text-zinc-600" />
+                          </div>
+                          <p className="text-[13px] text-slate-500 dark:text-zinc-400 font-medium">You're all caught up!</p>
+                          <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">No notifications in this section.</p>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-[12.5px] truncate leading-tight ${notif.read ? 'font-semibold text-slate-600 dark:text-zinc-300' : 'font-bold text-slate-800 dark:text-white'}`}>
-                            {notif.title}
-                          </p>
-                          <p className="text-[11.5px] text-slate-500 dark:text-zinc-400 mt-1 line-clamp-2 leading-snug">
-                            {notif.message}
-                          </p>
-                          <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1.5 font-medium flex items-center gap-1.5">
-                            {new Date(notif.timestamp).toLocaleString(undefined, {
-                              month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
-                            })}
-                          </p>
+                      );
+                    }
+
+                    return displayed.map(notif => {
+                      const cat = getNotifCategory(notif);
+                      return (
+                        <div 
+                          key={notif.id} 
+                          className={`px-4 py-3 border-b border-slate-50 dark:border-zinc-800/30 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors flex gap-3 cursor-pointer ${!notif.read ? 'bg-sky-50/40 dark:bg-sky-900/10' : ''}`}
+                          onClick={() => setNotifications(prev => prev.map(n => n.id === notif.id ? {...n, read: true} : n))}
+                        >
+                          <div className="mt-0.5 shrink-0">
+                            {notif.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                            {notif.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-500" />}
+                            {notif.type === 'error' && <AlertCircle className="w-4 h-4 text-rose-500" />}
+                            {notif.type === 'info' && <Info className="w-4 h-4 text-sky-500" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-0.5">
+                              <p className={`text-[12.5px] truncate leading-tight ${notif.read ? 'font-semibold text-slate-600 dark:text-zinc-300' : 'font-bold text-slate-800 dark:text-white'}`}>
+                                {notif.title}
+                              </p>
+                              {cat === 'billing' && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60 shrink-0">
+                                  Billing
+                                </span>
+                              )}
+                              {cat === 'system' && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-sky-50 dark:bg-sky-950/70 text-sky-600 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800/60 shrink-0">
+                                  System
+                                </span>
+                              )}
+                              {cat === 'alerts' && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60 shrink-0">
+                                  Alert
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11.5px] text-slate-500 dark:text-zinc-400 line-clamp-2 leading-snug">
+                              {notif.message}
+                            </p>
+                            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1 font-medium flex items-center gap-1.5">
+                              {new Date(notif.timestamp).toLocaleString(undefined, {
+                                month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                          {!notif.read && (
+                            <div className="w-2 h-2 rounded-full bg-sky-500 mt-1.5 shrink-0 shadow-[0_0_8px_rgba(14,165,233,0.5)]" />
+                          )}
                         </div>
-                        {!notif.read && (
-                          <div className="w-2 h-2 rounded-full bg-sky-500 mt-1.5 shrink-0 shadow-[0_0_8px_rgba(14,165,233,0.5)]" />
-                        )}
-                      </div>
-                    ))
-                  )}
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             )}
@@ -2343,6 +2722,97 @@ export default function Dashboard({
         </div>
       </header>
 
+      {/* ── TOP-RIGHT DYNAMIC SLIDE-IN TOAST NOTIFICATION CONTAINER ── */}
+      <div id="top-right-toast-container" className="fixed top-16 sm:top-20 right-3 sm:right-6 z-[99] flex flex-col gap-2.5 max-w-sm sm:max-w-md w-[calc(100vw-24px)] pointer-events-none">
+        {activeToasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`pointer-events-auto relative overflow-hidden p-3.5 sm:p-4 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_16px_50px_rgba(0,0,0,0.65)] border backdrop-blur-xl flex items-start gap-3.5 ${
+              exitingToastIds.has(toast.id) ? 'toast-exit' : 'toast-enter'
+            } ${
+              theme === 'dark'
+                ? 'bg-zinc-900/95 text-white border-zinc-800/90'
+                : 'bg-white/95 text-[#0f172a] border-[#e2e8f0]/90'
+            }`}
+          >
+            {/* Type Indicator Icon */}
+            <div className="shrink-0 mt-0.5">
+              {toast.type === 'success' && (
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-xs">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+              )}
+              {toast.type === 'info' && (
+                <div className="w-8 h-8 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200/60 dark:border-sky-800/60 flex items-center justify-center text-sky-600 dark:text-sky-400 shadow-xs">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+              )}
+              {toast.type === 'warning' && (
+                <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-xs">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+              )}
+              {toast.type === 'error' && (
+                <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200/60 dark:border-rose-800/60 flex items-center justify-center text-rose-600 dark:text-rose-400 shadow-xs">
+                  <AlertCircle className="w-4 h-4" />
+                </div>
+              )}
+            </div>
+
+            {/* Notification Text Details */}
+            <div className="flex-1 min-w-0 pr-1">
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="text-xs font-black uppercase tracking-wider text-[#0f172a] dark:text-white truncate">
+                  {toast.title}
+                </h4>
+                <span className="text-[9px] font-bold font-mono text-[#64748b]/70 dark:text-zinc-400 shrink-0">Just now</span>
+              </div>
+              <p className="text-[11px] font-medium text-[#475569] dark:text-zinc-300 leading-snug mt-1 break-words">
+                {toast.message}
+              </p>
+
+              {/* Action Button Navigation */}
+              {toast.actionLabel && (
+                <button
+                  onClick={() => {
+                    if (toast.actionTab) setActiveTab(toast.actionTab);
+                    dismissToast(toast.id);
+                  }}
+                  className="mt-2 text-[10px] font-extrabold uppercase tracking-wider text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 flex items-center gap-1 cursor-pointer group"
+                >
+                  <span>{toast.actionLabel}</span>
+                  <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              )}
+            </div>
+
+            {/* Close Button */}
+            <button
+              onClick={() => dismissToast(toast.id)}
+              className="shrink-0 text-slate-400 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-200 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              title="Dismiss notification"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Progress Bar Timer */}
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-100 dark:bg-zinc-800/60 overflow-hidden">
+              <div
+                className={`h-full toast-progress-bar ${
+                  toast.type === 'success'
+                    ? 'bg-emerald-500'
+                    : toast.type === 'warning'
+                    ? 'bg-amber-500'
+                    : toast.type === 'error'
+                    ? 'bg-rose-500'
+                    : 'bg-sky-500'
+                }`}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Dynamic Main Responsive Workspace - Grid layout turns dual-column on desktop */}
       <main className="w-full max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4 pt-4 md:pt-6 space-y-4 md:space-y-0 md:flex md:gap-6 lg:gap-8 md:items-start overflow-hidden">
         
@@ -2373,15 +2843,14 @@ export default function Dashboard({
         {/* ------------------ TAB 1: INVOICES ROUTE ------------------ */}
         {activeTab === 'invoices' && (
           <div className="space-y-6">
-            {/* Quick Metrics summary overview */}
-            <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border-l-4 border-l-emerald-400 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between">
+            <section className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
+              <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border-l-4 border-l-emerald-400 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between">
                 <div>
-                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Settled Funds</span>
-                  <span className="text-base font-black font-mono mt-1 text-emerald-600 dark:text-emerald-400 block">{currencySymbol}{totalBilled.toLocaleString()}</span>
+                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Settled Funds</span>
+                  <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-emerald-600 dark:text-emerald-400 block">{currencySymbol}{totalBilled.toLocaleString()}</span>
                 </div>
                 {/* Micro Sparkline */}
-                <div className="flex items-end gap-0.5 h-6 shrink-0">
+                <div className="flex items-end gap-0.5 h-5 sm:h-6 shrink-0">
                   <span className="w-1 bg-emerald-100 dark:bg-zinc-800 h-2 rounded-t" />
                   <span className="w-1 bg-emerald-200 dark:bg-zinc-800 h-3 rounded-t" />
                   <span className="w-1 bg-emerald-300 dark:bg-zinc-700 h-4 rounded-t" />
@@ -2389,13 +2858,13 @@ export default function Dashboard({
                   <span className="w-1 bg-emerald-500 h-5 rounded-t" />
                 </div>
               </div>
-              <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border-l-4 border-l-amber-400 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between">
+              <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border-l-4 border-l-amber-400 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between">
                 <div>
-                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Pending Due</span>
-                  <span className="text-base font-black font-mono mt-1 text-amber-600 dark:text-amber-400 block">{currencySymbol}{totalOutstanding.toLocaleString()}</span>
+                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Pending Due</span>
+                  <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-amber-600 dark:text-amber-400 block">{currencySymbol}{totalOutstanding.toLocaleString()}</span>
                 </div>
                 {/* Micro Sparkline */}
-                <div className="flex items-end gap-0.5 h-6 shrink-0">
+                <div className="flex items-end gap-0.5 h-5 sm:h-6 shrink-0">
                   <span className="w-1 bg-amber-100 dark:bg-zinc-800 h-4 rounded-t" />
                   <span className="w-1 bg-amber-200 dark:bg-zinc-800 h-2 rounded-t" />
                   <span className="w-1 bg-amber-300 dark:bg-zinc-700 h-3 rounded-t" />
@@ -2403,13 +2872,13 @@ export default function Dashboard({
                   <span className="w-1 bg-amber-500 h-3 rounded-t" />
                 </div>
               </div>
-              <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border-l-4 border-l-zinc-400 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between">
+              <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border-l-4 border-l-zinc-400 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between">
                 <div>
-                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Draft Bills</span>
-                  <span className="text-base font-black font-mono mt-1 text-[#0f172a] dark:text-zinc-300 block">{currencySymbol}{totalDraft.toLocaleString()}</span>
+                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Draft Bills</span>
+                  <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-[#0f172a] dark:text-zinc-300 block">{currencySymbol}{totalDraft.toLocaleString()}</span>
                 </div>
                 {/* Micro Sparkline */}
-                <div className="flex items-end gap-0.5 h-6 shrink-0">
+                <div className="flex items-end gap-0.5 h-5 sm:h-6 shrink-0">
                   <span className="w-1 bg-zinc-100 dark:bg-zinc-800 h-2 rounded-t" />
                   <span className="w-1 bg-zinc-200 dark:bg-zinc-800 h-3 rounded-t" />
                   <span className="w-1 bg-zinc-300 dark:bg-zinc-700 h-3 rounded-t" />
@@ -2419,32 +2888,64 @@ export default function Dashboard({
               </div>
             </section>
 
+            {/* Document Type Ledger Tabs Bar */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 sm:mx-0 sm:px-0 border-b border-[#e2e8f0]/60 dark:border-zinc-800">
+              {[
+                { id: 'invoice',     label: 'Tax Invoices',       count: documentTypeCounts.invoice,     activeColor: 'border-emerald-500 text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20', countBg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' },
+                { id: 'proforma',    label: 'Proforma Invoices', count: documentTypeCounts.proforma,    activeColor: 'border-sky-500 text-sky-700 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/20',             countBg: 'bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-300' },
+                { id: 'credit_note', label: 'Credit Notes',      count: documentTypeCounts.credit_note, activeColor: 'border-violet-500 text-violet-700 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-950/20', countBg: 'bg-violet-100 text-violet-800 dark:bg-violet-900/60 dark:text-violet-300' },
+                { id: 'debit_note',  label: 'Debit Notes',       count: documentTypeCounts.debit_note,  activeColor: 'border-indigo-500 text-indigo-700 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20', countBg: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300' },
+                { id: 'quote',       label: 'Quotes & Estimates',count: documentTypeCounts.quote,       activeColor: 'border-teal-500 text-teal-700 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/20',       countBg: 'bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-300' },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleSwitchLedgerSection(tab.id as any)}
+                  className={`flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer border shrink-0 ${
+                    ledgerSection === tab.id
+                      ? `${tab.activeColor} border-current shadow-xs`
+                      : 'border-transparent text-[#64748b]/80 dark:text-zinc-400 hover:text-[#0f172a] dark:hover:text-zinc-200 hover:bg-[#f8fafc] dark:hover:bg-zinc-800/50'
+                  }`}
+                >
+                  {tab.label}
+                  <span className={`px-1.5 py-0.5 sm:px-2 rounded-full text-[8.5px] sm:text-[9px] font-black ${
+                    ledgerSection === tab.id
+                      ? tab.countBg
+                      : 'bg-[#e2e8f0]/60 dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400'
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
             {/* Search, Action Header and Filters */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
               <div className="flex items-center gap-2">
-                <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wider">Invoices Ledger</h2>
-                <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black">{filteredInvoices.length} Bills</span>
+                <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wider">
+                  {ledgerSection === 'proforma' ? 'Proforma Invoices Ledger' : ledgerSection === 'credit_note' ? 'Credit Notes Ledger' : ledgerSection === 'debit_note' ? 'Debit Notes Ledger' : ledgerSection === 'quote' ? 'Quotes & Estimates Ledger' : 'Invoices Ledger'}
+                </h2>
+                <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black">{filteredInvoices.length} Documents</span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <button
                   onClick={() => setActiveTab('drafts')}
-                  className="px-4 py-1.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0] dark:border-zinc-700 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap"
+                  className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 sm:py-1.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0] dark:border-zinc-700 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap"
                 >
                   <FileText className="w-3.5 h-3.5" />
                   <span>Drafts</span>
                 </button>
                 <button
-                  onClick={() => onOpenInvoiceEditor(null)}
-                  className="px-4 py-1.5 bg-gradient-to-r from-[#0f172a] to-[#64748b] hover:from-[#5C5043] hover:to-[#0f172a] text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm shadow-[#64748b]/20 transition-all active:scale-95 whitespace-nowrap"
+                  onClick={() => handleCreateDocumentForSection(ledgerSection)}
+                  className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 sm:py-1.5 bg-gradient-to-r from-[#0f172a] to-[#64748b] hover:from-[#5C5043] hover:to-[#0f172a] text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm shadow-[#64748b]/20 transition-all active:scale-95 whitespace-nowrap"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Create Invoice</span>
+                  <span>{ledgerSection === 'proforma' ? 'Create Proforma' : ledgerSection === 'credit_note' ? 'Create Credit Note' : ledgerSection === 'debit_note' ? 'Create Debit Note' : ledgerSection === 'quote' ? 'Create Quote' : 'Create Invoice'}</span>
                 </button>
               </div>
             </div>
 
             {/* Search Input and status selection filters */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-[#FCFAF7]/60 dark:bg-zinc-950/30 p-3 rounded-2xl border border-[#e2e8f0]/40 dark:border-zinc-800">
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 sm:gap-3 bg-[#FCFAF7]/60 dark:bg-zinc-950/30 p-2.5 sm:p-3 rounded-2xl border border-[#e2e8f0]/40 dark:border-zinc-800">
               <div className="sm:col-span-8 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#64748b]/60" />
                 <input 
@@ -2452,14 +2953,14 @@ export default function Dashboard({
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search by client or invoice number..."
-                  className="w-full pl-8 pr-3 py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 focus:border-[#64748b] dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#64748b]/45 focus:outline-none transition-colors"
+                  className="w-full pl-8 pr-3 py-1.5 sm:py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 focus:border-[#64748b] dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#64748b]/45 focus:outline-none transition-colors"
                 />
               </div>
               <div className="sm:col-span-4 flex relative">
                 <select 
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as InvoiceStatus | 'all')}
-                  className="w-full pl-3 pr-7 py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]/60 cursor-pointer transition-colors"
+                  className="w-full pl-3 pr-7 py-1.5 sm:py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]/60 cursor-pointer transition-colors"
                 >
                   <option value="all">All Statuses</option>
                   <option value="paid">Paid</option>
@@ -2473,9 +2974,9 @@ export default function Dashboard({
             {/* Invoices Array List representation */}
             <div>
               {/* MOBILE ONLY SMALL SCREENS CARDS VIEW */}
-              <div className="space-y-3.5 md:hidden">
+              <div className="space-y-3 md:hidden">
                 {filteredInvoices.length === 0 ? (
-                  <div className="p-12 bg-white dark:bg-zinc-900 text-center rounded-2xl text-[#64748b]/60 border border-[#e2e8f0]/60 dark:border-zinc-800">
+                  <div className="p-8 sm:p-12 bg-white dark:bg-zinc-900 text-center rounded-2xl text-[#64748b]/60 border border-[#e2e8f0]/60 dark:border-zinc-800">
                     <FileText className="w-8 h-8 mx-auto mb-2 text-[#64748b]/40" />
                     No invoice records matching criteria.
                   </div>
@@ -2483,10 +2984,10 @@ export default function Dashboard({
                   filteredInvoices.map((inv) => (
                     <div
                       key={inv.id}
-                      className={`p-4 bg-white dark:bg-zinc-900 border rounded-2xl flex gap-3 relative shadow-xs hover:border-[#64748b]/40 transition-all cursor-pointer group ${selectedInvoiceIds.includes(inv.id) ? 'border-amber-400 bg-amber-50/5 dark:bg-amber-950/5' : 'border-[#e2e8f0]/60 dark:border-zinc-800'}`}
+                      className={`p-3.5 sm:p-4 bg-white dark:bg-zinc-900 border rounded-2xl flex gap-2.5 sm:gap-3 relative shadow-xs hover:border-[#64748b]/40 transition-all cursor-pointer group ${selectedInvoiceIds.includes(inv.id) ? 'border-amber-400 bg-amber-50/5 dark:bg-amber-950/5' : 'border-[#e2e8f0]/60 dark:border-zinc-800'}`}
                       onClick={() => setActivePreviewInvoice(inv)}
                     >
-                      <div className="flex items-center justify-center pl-1" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center pl-0.5" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedInvoiceIds.includes(inv.id)}
@@ -2494,35 +2995,27 @@ export default function Dashboard({
                           className="w-4 h-4 rounded border-[#e2e8f0] text-[#64748b] focus:ring-[#64748b] cursor-pointer"
                         />
                       </div>
-                      <div className="flex-1 flex flex-col gap-2.5">
-                        <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-3">
-                          <div>
+                      <div className="flex-1 flex flex-col gap-2">
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-[10px] font-black text-sky-600 font-mono tracking-tight">{inv.invoiceNumber}</span>
-                              {(inv.invoiceType || 'invoice') === 'estimate' ? (
-                                <span className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                  Est
-                                </span>
-                              ) : (
-                                <span className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                  Inv
-                                </span>
-                              )}
+                              {renderDocTypeBadge(inv)}
                               {inv.recurringSettings?.isRecurring && (
                                 <span className="bg-sky-50 dark:bg-sky-950/30 text-sky-600 border border-sky-200/40 text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
                                   🔄 Repeat {inv.recurringSettings.interval}
                                 </span>
                               )}
                             </div>
-                            <h4 className="text-xs font-black text-[#0f172a] dark:text-white mt-1 uppercase line-clamp-1">{inv.clientName || 'Draft Profile'}</h4>
-                            <div className="flex items-center gap-1.5 mt-0.5 text-[9px] text-[#64748b]/80 font-semibold font-mono">
+                            <h4 className="text-xs font-black text-[#0f172a] dark:text-white mt-1 uppercase truncate">{inv.clientName || 'Draft Profile'}</h4>
+                            <div className="flex items-center gap-1.5 mt-0.5 text-[9px] text-[#64748b]/80 font-semibold font-mono flex-wrap">
                               <span>Dated {inv.date}</span>
                               <span>•</span>
                               <span className="text-rose-500">Due {inv.dueDate}</span>
                             </div>
                           </div>
 
-                          <div className="text-right">
+                          <div className="text-right shrink-0">
                             <span className="text-xs font-black font-mono block text-[#0f172a] dark:text-white">{currencySymbol}{inv.grandTotal.toFixed(2)}</span>
                             <span className={`inline-block px-2 mt-1 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
                               {inv.status}
@@ -2531,15 +3024,13 @@ export default function Dashboard({
                         </div>
 
                         {/* Footer list triggers */}
-                        <div className="pt-2 border-t border-[#e2e8f0]/30 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center gap-2">
-                            <span className="flex items-center gap-1 text-[8px] font-mono font-bold tracking-tight text-[#64748b]/60">
-                              <span className={`w-1 h-1 rounded-full ${inv.userId === 'local' ? 'bg-amber-400' : 'bg-sky-400'}`} />
-                              {inv.userId === 'local' ? 'On-Device' : 'Cloud Backed'}
-                            </span>
-                          </div>
+                        <div className="pt-2 border-t border-[#e2e8f0]/30 dark:border-zinc-800 flex items-center justify-between gap-2 text-[10px] text-slate-400" onClick={(e) => e.stopPropagation()}>
+                          <span className="flex items-center gap-1 text-[8px] font-mono font-bold tracking-tight text-[#64748b]/60 shrink-0">
+                            <span className={`w-1.5 h-1.5 rounded-full ${inv.userId === 'local' ? 'bg-amber-400' : 'bg-sky-400'}`} />
+                            {inv.userId === 'local' ? 'On-Device' : 'Cloud'}
+                          </span>
 
-                          <div className="flex gap-1.5">
+                          <div className="flex items-center gap-1 shrink-0">
                             <button
                               onClick={async () => {
                                 try {
@@ -2548,25 +3039,25 @@ export default function Dashboard({
                                   alert('Failed to generate PDF: ' + (err.message || err.toString()));
                                 }
                               }}
-                              className="px-2 py-0.5 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/20 text-sky-600 dark:text-sky-400 rounded-md text-[9px] font-bold flex items-center gap-0.5 border border-sky-200/50 cursor-pointer"
+                              className="px-2 py-1 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/20 text-sky-600 dark:text-sky-400 rounded-md text-[9px] font-bold flex items-center gap-0.5 border border-sky-200/50 cursor-pointer active:scale-95"
                             >
                               <FileDown className="w-3 h-3" /> PDF
                             </button>
                             <button
                               onClick={() => handleExportMSWord(inv)}
-                              className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/20 text-blue-650 dark:text-blue-400 rounded-md text-[9px] font-bold flex items-center gap-0.5 border border-blue-200/50 cursor-pointer"
+                              className="px-2 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/20 text-blue-650 dark:text-blue-400 rounded-md text-[9px] font-bold flex items-center gap-0.5 border border-blue-200/50 cursor-pointer active:scale-95"
                             >
                               Word
                             </button>
                             <button
                               onClick={() => onOpenInvoiceEditor(inv)}
-                              className="text-[#64748b] hover:text-[#0f172a] p-1 rounded hover:bg-[#FCFAF7] dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                              className="text-[#64748b] hover:text-[#0f172a] p-1.5 rounded hover:bg-[#FCFAF7] dark:hover:bg-zinc-800 transition-colors cursor-pointer active:scale-95"
                             >
                               <PenTool className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => onDeleteInvoice(inv.id)}
-                              className="text-[#64748b]/60 hover:text-rose-500 p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
+                              className="text-[#64748b]/60 hover:text-rose-500 p-1.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer active:scale-95"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -2626,11 +3117,7 @@ export default function Dashboard({
                           <td className="px-4 py-3.5">
                             <div className="flex items-center gap-1.5">
                               <span className="font-extrabold font-mono text-sky-600 tracking-tight">{inv.invoiceNumber}</span>
-                              {(inv.invoiceType || 'invoice') === 'estimate' ? (
-                                <span className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Est</span>
-                              ) : (
-                                <span className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Inv</span>
-                              )}
+                              {renderDocTypeBadge(inv)}
                               {inv.recurringSettings?.isRecurring && (
                                 <span className="text-[10px]" title={`Auto Repeat ${inv.recurringSettings.interval}`}>🔄</span>
                               )}
@@ -2702,29 +3189,29 @@ export default function Dashboard({
 
             {/* Floating Bulk Actions Bar Overlay */}
             {selectedInvoiceIds.length > 0 && (
-              <div id="floating-bulk-actions" className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-2xl bg-neutral-950 border border-neutral-800 text-white p-3 md:p-3.5 rounded-2xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-3 animate-in slide-in-from-bottom duration-200">
-                <div className="flex items-center gap-2">
+              <div id="floating-bulk-actions" className="fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-50 w-[95%] sm:w-[92%] max-w-2xl bg-neutral-950/95 backdrop-blur-md border border-neutral-800 text-white p-2.5 sm:p-3.5 rounded-2xl shadow-2xl flex flex-row items-center justify-between gap-2 sm:gap-3 animate-in slide-in-from-bottom duration-200">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <span className="w-5 h-5 bg-sky-600 rounded-full flex items-center justify-center text-[10px] font-extrabold">{selectedInvoiceIds.length}</span>
-                  <span className="text-[11px] font-medium text-slate-200">selected bills</span>
+                  <span className="text-[10px] sm:text-[11px] font-medium text-slate-200">Selected</span>
                 </div>
                 
-                <div className="flex flex-wrap items-center justify-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
                   <button
                     onClick={handleBulkExportPDF}
-                    className="px-2.5 py-1.5 bg-sky-600 hover:bg-sky-500 rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer"
+                    className="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-sky-600 hover:bg-sky-500 rounded-xl text-[9px] sm:text-[10px] font-extrabold flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
                     title="Export selected bills sequentially to PDF"
                   >
-                    <FileDown className="w-3.5 h-3.5" />
+                    <FileDown className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                     <span>PDFs</span>
                   </button>
                   
                   <button
                     onClick={handleBulkExportExcel}
-                    className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer"
+                    className="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-[9px] sm:text-[10px] font-extrabold flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
                     title="Export selected bills ledger details to Excel CSV"
                   >
-                    <Database className="w-3.5 h-3.5" />
-                    <span>Excel CSV</span>
+                    <Database className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    <span>Excel</span>
                   </button>
 
                   <select
@@ -2735,10 +3222,10 @@ export default function Dashboard({
                       }
                     }}
                     value=""
-                    className="px-2 py-1.5 bg-neutral-800 text-white rounded-xl text-[10px] font-extrabold focus:outline-none border border-neutral-750 cursor-pointer"
+                    className="px-1.5 py-1 sm:px-2 sm:py-1.5 bg-neutral-800 text-white rounded-xl text-[9px] sm:text-[10px] font-extrabold focus:outline-none border border-neutral-750 cursor-pointer"
                     title="Change status in bulk"
                   >
-                    <option value="" disabled>Set Status...</option>
+                    <option value="" disabled>Status...</option>
                     <option value="paid">Set Paid</option>
                     <option value="pending">Set Pending</option>
                     <option value="draft">Set Draft</option>
@@ -2750,19 +3237,19 @@ export default function Dashboard({
                       onBulkDeleteInvoices(selectedInvoiceIds);
                       setSelectedInvoiceIds([]);
                     }}
-                    className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-500 rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer"
+                    className="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-rose-600 hover:bg-rose-500 rounded-xl text-[9px] sm:text-[10px] font-extrabold flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
                     title="Delete all selected bills"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                     <span>Delete</span>
                   </button>
 
                   <button
                     onClick={() => setSelectedInvoiceIds([])}
-                    className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                    className="p-1 sm:p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg transition-colors cursor-pointer"
                     title="Deselect all selected items"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </button>
                 </div>
               </div>

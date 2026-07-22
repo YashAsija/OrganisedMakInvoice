@@ -15,6 +15,23 @@ interface StepControlsProps {
 export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, updateLayout, updateConfig, updateStyle, updateFullTemplate, isEditingSystemPreset }) => {
   const { layout, config, styleConfig } = template;
 
+  const currentDocType = 
+    config.header.invoiceTitle?.toUpperCase().includes('CREDIT') ? 'Credit Note' :
+    config.header.invoiceTitle?.toUpperCase().includes('DEBIT') ? 'Debit Note' :
+    config.header.invoiceTitle?.toUpperCase().includes('PROFORMA') ? 'Proforma Invoice' :
+    config.header.invoiceTitle?.toUpperCase().includes('QUOTATION') || config.header.invoiceTitle?.toUpperCase().includes('ESTIMATE') || config.header.invoiceTitle?.toUpperCase().includes('QUOTE') ? 'Quote' :
+    'Invoice';
+
+  const handleDocTypeChange = (type: string) => {
+    let newTitle = config.header.invoiceTitle || 'TAX INVOICE';
+    if (type === 'Invoice') newTitle = 'TAX INVOICE';
+    if (type === 'Credit Note') newTitle = 'CREDIT NOTE';
+    if (type === 'Debit Note') newTitle = 'DEBIT NOTE';
+    if (type === 'Proforma Invoice') newTitle = 'PROFORMA INVOICE';
+    if (type === 'Quote') newTitle = 'QUOTATION / ESTIMATE';
+    updateConfig('header', { invoiceTitle: newTitle });
+  };
+
   if (stepId === 'layout') {
     return (
       <div className="space-y-4">
@@ -43,6 +60,22 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
             <p className="text-[10px] text-slate-500 mt-1">Warning: Changing category will reset all fields and sections to match the preset theme.</p>
           </div>
         )}
+
+        <div>
+          <label className="text-xs font-bold text-slate-700 dark:text-zinc-200 mb-1 block">Document Type</label>
+          <select
+            value={currentDocType}
+            onChange={e => handleDocTypeChange(e.target.value)}
+            className="w-full p-2.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b] cursor-pointer shadow-xs"
+          >
+            <option value="Invoice">Invoice (Tax Invoice)</option>
+            <option value="Credit Note">Credit Note</option>
+            <option value="Debit Note">Debit Note</option>
+            <option value="Proforma Invoice">Proforma Invoice</option>
+            <option value="Quote">Quote / Estimate</option>
+          </select>
+        </div>
+
         {!isEditingSystemPreset && (
           <div>
             <label className="text-xs font-bold text-slate-700 mb-1 block">Layout Type</label>
@@ -140,8 +173,8 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
           <input type="number" value={config.header.logoWidth} onChange={e => updateConfig('header', { logoWidth: parseInt(e.target.value) || 120 })} className="w-full p-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none focus:border-[#64748b]" />
         </div>
         <div>
-          <label className="text-[10px] font-black uppercase tracking-wider text-[#64748b] mb-1.5 block">Invoice Title</label>
-          <input type="text" value={config.header.invoiceTitle} onChange={e => updateConfig('header', { invoiceTitle: e.target.value })} className="w-full p-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none focus:border-[#64748b]" />
+          <label className="text-[10px] font-black uppercase tracking-wider text-[#64748b] mb-1.5 block">Invoice Title / Heading</label>
+          <input type="text" value={config.header.invoiceTitle} onChange={e => updateConfig('header', { invoiceTitle: e.target.value })} className="w-full p-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs font-bold text-[#0f172a] dark:text-white focus:outline-none focus:border-[#64748b]" />
         </div>
         <div>
           <label className="text-[10px] font-black uppercase tracking-wider text-[#64748b] mb-1.5 block">Title Alignment</label>

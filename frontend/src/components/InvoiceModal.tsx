@@ -7,10 +7,11 @@ import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { LivePreview } from './TemplateBuilder/LivePreview';
 import { Country, State } from 'country-state-city';
-import { TEMPLATE_PRESETS } from '../lib/templatePresets';
+import { TEMPLATE_PRESETS, getDefaultTemplatePreset } from '../lib/templatePresets';
 import { supabase } from '../lib/supabase';
 import { emitNotification } from '../lib/notifications';
-import { scanActiveTemplate } from '../lib/templateScanner';
+import { SmartBillingBox } from './SmartBillingBox';
+
 
 interface InvoiceModalProps {
   invoice: Invoice | null; // null means create new
@@ -131,10 +132,8 @@ export default function InvoiceModal({
   const [shippedToAddress, setShippedToAddress] = useState('');
 
 
-  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
-
   // Active Template
-  const [activeTemplate, setActiveTemplate] = useState<InvoiceTemplate>(TEMPLATE_PRESETS[0]);
+  const [activeTemplate, setActiveTemplate] = useState<InvoiceTemplate>(getDefaultTemplatePreset());
   const [activeProfile, setActiveProfile] = useState<BusinessProfile>(profile);
   const [modalPreviewScale, setModalPreviewScale] = useState(0.88);
 
@@ -161,9 +160,10 @@ export default function InvoiceModal({
   const [qrCodeTriggerUrl, setQrCodeTriggerUrl] = useState('');
 
   // AI Assist States
-  const [aiPromptText, setAiPromptText] = useState('');
-  const [isAiLoading, setIsAiLoading] = useState(false);
   const [isAiGeneratingDescription, setIsAiGeneratingDescription] = useState(false);
+  // aiExtraData: stores AI-extracted values for fields not visible in current template.
+  // When template switches, a useEffect hydrates newly visible fields from this store.
+  const [aiExtraData, setAiExtraData] = useState<Record<string, any>>({});
 
   // Recurring settings states
   const [isRecurring, setIsRecurring] = useState(false);
@@ -275,7 +275,7 @@ export default function InvoiceModal({
     }
 
     const defaultTemplateId = localStorage.getItem('makbills_global_default_template');
-    let loadedTemplate = TEMPLATE_PRESETS[0];
+    let loadedTemplate = getDefaultTemplatePreset();
 
     if (defaultTemplateId) {
       let foundCustom = false;
@@ -368,7 +368,6 @@ export default function InvoiceModal({
       setDeliveryNote((invoice as any).deliveryNote || '');
       setSelectedTemplateStyle(invoice.selectedTemplateStyle || 'professional');
       setQrCodeTriggerUrl(invoice.qrCodeTriggerUrl || '');
-      setAiPromptText('');
       setClientGstin(invoice.clientGstin || '');
       setClientPan((invoice as any).clientPan || '');
       setHasTransport(!!(invoice.placeOfSupply || invoice.transport || invoice.grRrNo || invoice.vehicleNo || invoice.driverMobile || invoice.station || invoice.ewayBillNo));
@@ -450,7 +449,6 @@ export default function InvoiceModal({
       setDeliveryNote('');
       setSelectedTemplateStyle('professional');
       setQrCodeTriggerUrl('');
-      setAiPromptText('');
       setClientGstin('');
       setClientPan('');
       setPlaceOfSupply('');
@@ -690,275 +688,6 @@ export default function InvoiceModal({
     setItems(items.map(it => it.id === id ? { ...it, quantity: newQty } : it));
   };
 
-  // --- AI ASSIST ENDPOINT CLIENTS ---
-  // PHASE 3 — APPLY TO FORM STATE (FILL ONLY, NEVER RESTRUCTURE TEMPLATE)
-  const applyExtractedDataToForm = (data: any, schema: ReturnType<typeof scanActiveTemplate>, promptText: string) => {
-    if (!data) return;
-
-    const updatedFieldNames = new Set<string>();
-    const isRedoPrompt = /\b(?:reset|redo|fresh|start over|clear)\b/i.test(promptText);
-
-    if (isRedoPrompt) {
-      setClientName('');
-      setClientEmail('');
-      setClientPhone('');
-      setClientAddress('');
-      setClientGstin('');
-      setClientPan('');
-      setItems([]);
-      setDiscountValue(0);
-      setFreightCharges(0);
-    }
-
-    // 1. Client Details & Vendor Registry Lookup
-    if (data.clientName) {
-      const lowerName = String(data.clientName).toLowerCase();
-      if (!lowerName.includes('ship to') && !lowerName.includes('bill to') && !lowerName.includes('same as') && !lowerName.includes('copy bill') && !lowerName.includes('details same')) {
-        const toTitleCase = (str: string) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
-        const cleanName = toTitleCase(data.clientName);
-        setClientName(cleanName);
-        updatedFieldNames.add('clientName');
-
-        // Master Vendor Registry Auto-fill
-        const foundClient = registryClients.find((c: any) => 
-          c.name?.toLowerCase() === cleanName.toLowerCase() ||
-          cleanName.toLowerCase().includes(c.name?.toLowerCase()) ||
-          c.name?.toLowerCase().includes(cleanName.toLowerCase())
-        );
-
-        if (foundClient) {
-          if (foundClient.email && !data.clientEmail) { setClientEmail(foundClient.email); updatedFieldNames.add('clientEmail'); }
-          if (foundClient.phone && !data.clientPhone) { setClientPhone(foundClient.phone); updatedFieldNames.add('clientPhone'); }
-          if (foundClient.address && !data.clientAddress) { setClientAddress(foundClient.address); updatedFieldNames.add('clientAddress'); }
-          if (foundClient.gstin && !data.clientGstin) { setClientGstin(foundClient.gstin); updatedFieldNames.add('clientGstin'); }
-          if (foundClient.pan && !data.clientPan) { setClientPan(foundClient.pan); updatedFieldNames.add('clientPan'); }
-          if (foundClient.state && !data.clientState) { setClientState(foundClient.state); updatedFieldNames.add('clientState'); }
-          if (foundClient.country && !data.clientCountry) { setClientCountry(foundClient.country); updatedFieldNames.add('clientCountry'); }
-        }
-      }
-    }
-
-    if (data.clientEmail) { setClientEmail(data.clientEmail); updatedFieldNames.add('clientEmail'); }
-    if (data.clientPhone) { setClientPhone(data.clientPhone); updatedFieldNames.add('clientPhone'); }
-    if (data.clientAddress) { setClientAddress(data.clientAddress); updatedFieldNames.add('clientAddress'); }
-    if (data.clientGstin) { setClientGstin(data.clientGstin); updatedFieldNames.add('clientGstin'); }
-    if (data.clientPan) { setClientPan(data.clientPan); updatedFieldNames.add('clientPan'); }
-    if (data.clientState) { setClientState(data.clientState); updatedFieldNames.add('clientState'); }
-    if (data.clientCountry) { setClientCountry(data.clientCountry); updatedFieldNames.add('clientCountry'); }
-
-    // 2. Shipping Details & Copy Logic
-    const isCopyPrompt = data.copyBillingToShipping || /same as (?:bill|billing)|copy (?:bill|billing) to ship|ship to (?:details )?same/i.test(promptText);
-    if (isCopyPrompt) {
-      const validClientName = (data.clientName && !/ship to|bill to|same as/i.test(data.clientName)) ? data.clientName : clientName;
-      if (validClientName) { setShippedToName(validClientName); updatedFieldNames.add('shippedToName'); }
-      if (data.clientEmail || clientEmail) { setShippedToEmail(data.clientEmail || clientEmail); updatedFieldNames.add('shippedToEmail'); }
-      if (data.clientPhone || clientPhone) { setShippedToPhone(data.clientPhone || clientPhone); updatedFieldNames.add('shippedToPhone'); }
-      if (data.clientAddress || clientAddress) { setShippedToAddress(data.clientAddress || clientAddress); updatedFieldNames.add('shippedToAddress'); }
-      if (data.clientGstin || clientGstin) { setShippedToGstin(data.clientGstin || clientGstin); updatedFieldNames.add('shippedToGstin'); }
-      if (data.clientPan || clientPan) { setShippedToPan(data.clientPan || clientPan); updatedFieldNames.add('shippedToPan'); }
-      if (data.clientState || clientState) { setShippedToState(data.clientState || clientState); updatedFieldNames.add('shippedToState'); }
-      if (data.clientCountry || clientCountry) { setShippedToCountry(data.clientCountry || clientCountry); updatedFieldNames.add('shippedToCountry'); }
-    }
-
-    if (data.shippedToName) { setShippedToName(data.shippedToName); updatedFieldNames.add('shippedToName'); }
-    if (data.shippedToPhone) { setShippedToPhone(data.shippedToPhone); updatedFieldNames.add('shippedToPhone'); }
-    if (data.shippedToEmail) { setShippedToEmail(data.shippedToEmail); updatedFieldNames.add('shippedToEmail'); }
-    if (data.shippedToAddress) { setShippedToAddress(data.shippedToAddress); updatedFieldNames.add('shippedToAddress'); }
-    if (data.shippedToGstin) { setShippedToGstin(data.shippedToGstin); updatedFieldNames.add('shippedToGstin'); }
-    if (data.shippedToPan) { setShippedToPan(data.shippedToPan); updatedFieldNames.add('shippedToPan'); }
-    if (data.shippedToState) { setShippedToState(data.shippedToState); updatedFieldNames.add('shippedToState'); }
-    if (data.shippedToCountry) { setShippedToCountry(data.shippedToCountry); updatedFieldNames.add('shippedToCountry'); }
-
-    // 3. Document Meta & Dates
-    if (data.invoiceNumber) { setInvoiceNumber(data.invoiceNumber); updatedFieldNames.add('invoiceNumber'); }
-    if (data.date) { setDate(data.date); updatedFieldNames.add('date'); }
-    if (data.dueDate) { setDueDate(data.dueDate); updatedFieldNames.add('dueDate'); }
-    if (data.poNumber) { setPoNumber(data.poNumber); updatedFieldNames.add('poNumber'); }
-    if (data.referenceNumber) { setReferenceNumber(data.referenceNumber); updatedFieldNames.add('referenceNumber'); }
-    if (data.deliveryNote) { setDeliveryNote(data.deliveryNote); updatedFieldNames.add('deliveryNote'); }
-    if (data.notes) { setNotes(prev => prev ? `${prev}\n${data.notes}` : data.notes); updatedFieldNames.add('notes'); }
-    if (data.invoiceTerms) { setInvoiceTerms(data.invoiceTerms); updatedFieldNames.add('invoiceTerms'); }
-
-    // 4. Transport & Vehicle Details
-    const parsedVehicleNo = data.vehicleNo || data.vehicleNumber || data.vehicle || data.vehicle_no || data.vehicle_number || '';
-    if (data.placeOfSupply) { setPlaceOfSupply(data.placeOfSupply); updatedFieldNames.add('placeOfSupply'); }
-    if (data.transport) { setTransport(data.transport); updatedFieldNames.add('transport'); }
-    if (parsedVehicleNo) { setVehicleNo(parsedVehicleNo); updatedFieldNames.add('vehicleNo'); }
-    if (data.grRrNo) { setGrRrNo(data.grRrNo); updatedFieldNames.add('grRrNo'); }
-    if (data.driverMobile) { setDriverMobile(data.driverMobile); updatedFieldNames.add('driverMobile'); }
-    if (data.station) { setStation(data.station); updatedFieldNames.add('station'); }
-    if (data.ewayBillNo) { setEwayBillNo(data.ewayBillNo); updatedFieldNames.add('ewayBillNo'); }
-    if (data.transport || parsedVehicleNo || data.ewayBillNo || data.grRrNo || data.placeOfSupply || data.station || data.driverMobile) {
-      setHasTransport(true);
-    }
-
-    // 5. Financials, Discounts & Charges
-    const parsedDiscountVal = data.discountValue !== undefined ? data.discountValue : data.discount;
-    if (parsedDiscountVal !== undefined) {
-      const val = Number(parsedDiscountVal) || 0;
-      setDiscountValue(val);
-      updatedFieldNames.add('discountValue');
-      if (val > 0) {
-        const dt = data.discountType ? String(data.discountType).toLowerCase() : (promptText.includes('%') ? 'percent' : 'flat');
-        setDiscountType(dt.includes('percent') || dt === '%' ? 'percent' : 'flat');
-      }
-    }
-    const parsedFreight = data.freightCharges !== undefined ? data.freightCharges :
-                          data.freight !== undefined ? data.freight :
-                          data.transportCharges !== undefined ? data.transportCharges :
-                          data.shippingCharges !== undefined ? data.shippingCharges : undefined;
-
-    if (parsedFreight !== undefined) {
-      const val = Number(parsedFreight) || 0;
-      setFreightCharges(val);
-      setIsFreightAdded(val > 0);
-      updatedFieldNames.add('freightCharges');
-    }
-
-    // 6. Advanced Settings
-    if (data.invoiceType) { setInvoiceType(data.invoiceType.toLowerCase() === 'estimate' ? 'estimate' : 'invoice'); updatedFieldNames.add('invoiceType'); }
-    if (data.status) { setStatus(data.status.toLowerCase() as InvoiceStatus); updatedFieldNames.add('status'); }
-    if (data.taxMode) { setTaxMode(data.taxMode.toLowerCase() === 'custom' ? 'custom' : 'dynamic'); updatedFieldNames.add('taxMode'); }
-    if (data.customTaxName) { setCustomTaxName(data.customTaxName); updatedFieldNames.add('customTaxName'); }
-    if (data.customTaxPercentage !== undefined) { setCustomTaxPercentage(Number(data.customTaxPercentage) || 0); updatedFieldNames.add('customTaxPercentage'); }
-    if (data.isRecurring !== undefined) { setIsRecurring(Boolean(data.isRecurring)); updatedFieldNames.add('isRecurring'); }
-    if (data.recurringInterval) { setRecurringInterval(data.recurringInterval.toLowerCase() as RecurringInterval); updatedFieldNames.add('recurringInterval'); }
-
-    // 7. Line Items & Product Preset Lookup
-    if (data.items && data.items.length > 0) {
-      const validItems = data.items.filter((it: any) => {
-        const nameLower = String(it.name || '').toLowerCase();
-        return !/freight|transport charge|shipping charge|delivery charge/i.test(nameLower) && !/discount/i.test(nameLower);
-      });
-
-      if (validItems.length > 0) {
-        const parsedItems = validItems.map((it: any) => {
-          const cleanItemName = String(it.name || '').trim();
-          const foundPreset = (presets || []).find((p: any) => p.name?.toLowerCase() === cleanItemName.toLowerCase());
-
-          const initialCustomTaxes: Record<string, number> = {};
-          customTaxCols.forEach(col => { initialCustomTaxes[col] = 0; });
-
-          return {
-            id: `item_${Math.random().toString(36).substr(2, 5)}`,
-            name: foundPreset ? foundPreset.name : (it.name || 'AI Product Service'),
-            rate: Number(it.rate) || (foundPreset ? Number(foundPreset.rate) : 0),
-            quantity: Number(it.quantity) || 1,
-            quantityType: it.quantityType || it.unit || (foundPreset ? (foundPreset as any).quantityType : '') || '',
-            taxPercentage: it.taxPercentage !== undefined ? Number(it.taxPercentage) : (foundPreset ? Number(foundPreset.taxPercentage) : defaultTaxRate),
-            description: it.description || (foundPreset ? foundPreset.description : ''),
-            hsnCode: it.hsnCode || (foundPreset ? (foundPreset as any).hsnCode : '') || '',
-            discountPercentage: Number(it.discountPercentage) || 0,
-            customTaxes: initialCustomTaxes
-          };
-        });
-
-        setItems(prev => isRedoPrompt ? parsedItems : [...prev, ...parsedItems]);
-        updatedFieldNames.add('items');
-      }
-    }
-
-            setAiFilledFields(updatedFieldNames);
-
-    // Auto-enable populated client & section fields in active template layout schema for live canvas rendering
-    setActiveTemplate(prev => {
-      const currentFields = new Set(prev.config?.client?.fields || ['name', 'address']);
-      if (data.clientName) currentFields.add('name');
-      if (data.clientAddress) currentFields.add('address');
-      if (data.clientGstin) currentFields.add('gstin');
-      if (data.clientPhone) currentFields.add('phone');
-      if (data.clientEmail) currentFields.add('email');
-      if (data.clientPan) currentFields.add('pan');
-      if (data.clientState) currentFields.add('state');
-      if (data.clientCountry) currentFields.add('country');
-
-      const hasHsn = data.items?.some((it: any) => Boolean(it.hsnCode));
-      const hasDisc = data.items?.some((it: any) => Number(it.discountPercentage) > 0);
-
-      return {
-        ...prev,
-        sections: {
-          ...prev.sections,
-          ...(data.shippedToName || data.shippedToAddress || data.shippedToGstin ? { shipTo: { ...prev.sections.shipTo, visible: true } } : {}),
-          ...(data.transport || parsedVehicleNo || data.ewayBillNo ? { transport: { ...prev.sections.transport, visible: true } } : {}),
-          ...(data.invoiceTerms || data.notes ? { terms: { ...prev.sections.terms, visible: true } } : {})
-        },
-        config: {
-          ...prev.config,
-          client: {
-            ...prev.config?.client,
-            fields: Array.from(currentFields)
-          },
-          ...(hasHsn || hasDisc ? {
-            table: {
-              ...prev.config.table,
-              columns: prev.config.table.columns.map(c => {
-                if (c.id === 'hsn' && hasHsn) return { ...c, visible: true };
-                if (c.id === 'discount' && hasDisc) return { ...c, visible: true };
-                return c;
-              })
-            }
-          } : {})
-        }
-      };
-    });
-
-    const count = updatedFieldNames.size;
-    emitNotification('AI Smart Billing', `Auto-filled ${count} field${count === 1 ? '' : 's'} into existing template input boxes.`, 'success');
-  };
-
-  const handleAIParseInvoice = async () => {
-    if (!aiPromptText.trim()) return;
-    setIsAiLoading(true);
-
-    try {
-      // PHASE 1 — TEMPLATE SCHEMA SCANNER (READ-ONLY)
-      const fieldSchema = scanActiveTemplate(activeTemplate);
-      const allowedFieldPaths = fieldSchema.visibleFields.map(f => f.path);
-
-      const sessionRes = await supabase.auth.getSession();
-      const token = sessionRes.data.session?.access_token;
-      
-      const currentInvoicePayload = {
-        clientName, clientEmail, clientPhone, clientAddress, clientGstin, clientPan, clientState, clientCountry,
-        shippedToName, shippedToPhone, shippedToEmail, shippedToAddress, shippedToGstin, shippedToPan, shippedToState, shippedToCountry,
-        invoiceNumber, date, dueDate, poNumber, referenceNumber, deliveryNote, notes, invoiceTerms, placeOfSupply, transport, vehicleNo,
-        grRrNo, driverMobile, station, ewayBillNo, discountType, discountValue, freightCharges, taxMode, customTaxName, customTaxPercentage, items
-      };
-
-      // PHASE 2 — CONSTRAINED AI EXTRACTION
-      const response = await fetch('/api/ai/parse-invoice', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          prompt: aiPromptText,
-          current_invoice: currentInvoicePayload,
-          allowed_fields: allowedFieldPaths
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        const msg = data.detail || data.error || 'Failed to parse invoice';
-        console.warn('AI Parsing Note:', msg);
-        emitNotification('AI Smart Billing', msg, 'info');
-        return;
-      }
-
-      // PHASE 3 — APPLY TO FORM STATE (FILL ONLY, NEVER RESTRUCTURE TEMPLATE)
-      applyExtractedDataToForm(data, fieldSchema, aiPromptText);
-
-    } catch (err: any) {
-      console.error(err);
-      emitNotification('AI Smart Billing', 'Could not process AI billing request.', 'info');
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
 
   const handleAIGenerateDescription = async () => {
     if (!newItemName.trim()) {
@@ -1296,38 +1025,49 @@ export default function InvoiceModal({
   const [resumableDraft, setResumableDraft] = useState<{ id: string; clientName: string; updatedAt: string } | null>(null);
   const [resumeBannerDismissed, setResumeBannerDismissed] = useState(false);
 
-  // On modal open for a NEW invoice — check for a reload-triggered draft to offer resuming.
-  // The banner ONLY shows if a previous reload actually saved a draft (flag set by buildAndSave).
+  // On modal open for a NEW invoice — check for any unsaved draft to offer resuming.
   useEffect(() => {
     if (!isOpen || invoice) return; // only for new invoices
     setResumeBannerDismissed(false);
-    setResumableDraft(null);
-
-    // Only show banner if buildAndSave() wrote this flag on the last reload/unload
-    const pendingDraftId = localStorage.getItem('makbills_pending_resume_draft');
-    if (!pendingDraftId) return;
-
-    // Clear the flag immediately — banner should only show once per reload
-    localStorage.removeItem('makbills_pending_resume_draft');
 
     const userEmail = localStorage.getItem('makbills_custom_email');
     const suffix = userEmail ? `_${encodeURIComponent(userEmail)}` : '';
     const storageKey = `invoice_maker_invoices${suffix}`;
     try {
       const raw = localStorage.getItem(storageKey);
-      if (!raw) return;
-      const all = JSON.parse(raw) as any[];
-      // Find the specific draft that was saved on unload
-      const d = all.find(i =>
-        i.id === pendingDraftId &&
-        i.status === 'draft' &&
-        i.clientName && i.clientName.trim() !== '' &&
-        Array.isArray(i.items) && i.items.length > 0
-      );
-      if (d) {
-        setResumableDraft({ id: d.id, clientName: d.clientName, updatedAt: d.updatedAt });
+      if (!raw) {
+        setResumableDraft(null);
+        return;
       }
-    } catch { /* ignore */ }
+      const all = JSON.parse(raw) as any[];
+      const pendingDraftId = localStorage.getItem('makbills_pending_resume_draft');
+
+      let targetDraft = null;
+      if (pendingDraftId) {
+        targetDraft = all.find(i => i.id === pendingDraftId && i.status === 'draft');
+      }
+
+      if (!targetDraft) {
+        targetDraft = all
+          .filter(i =>
+            i.status === 'draft' &&
+            ((i.clientName && i.clientName.trim() !== '') || (Array.isArray(i.items) && i.items.length > 0))
+          )
+          .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())[0];
+      }
+
+      if (targetDraft) {
+        setResumableDraft({
+          id: targetDraft.id,
+          clientName: targetDraft.clientName || 'Untitled Draft',
+          updatedAt: targetDraft.updatedAt || new Date().toISOString()
+        });
+      } else {
+        setResumableDraft(null);
+      }
+    } catch {
+      setResumableDraft(null);
+    }
   }, [isOpen, invoice]);
 
   // Helper: get the correct storage key for this user
@@ -1703,9 +1443,19 @@ export default function InvoiceModal({
       }
     });
 
+    const docTypeNames: Record<string, string> = {
+      proforma: 'Proforma Invoice',
+      credit_note: 'Credit Note',
+      debit_note: 'Debit Note',
+      estimate: 'Quotation / Estimate',
+      invoice: 'Tax Invoice'
+    };
+    const docName = docTypeNames[invoiceType] || 'Tax Invoice';
+    const notifTitle = invoice ? `${docName} Updated` : `${docName} Created`;
+
     emitNotification(
-      invoice ? 'Invoice Updated' : 'Invoice Created',
-      `Invoice #${invoiceNumber} for ${clientName || 'Unknown Client'} has been saved successfully.`,
+      notifTitle,
+      `${docName} #${invoiceNumber} for ${clientName || 'Client'} has been saved to your ledger.`,
       'success'
     );
 
@@ -1733,15 +1483,24 @@ export default function InvoiceModal({
             return `${Math.floor(hrs / 24)}d ago`;
           })();
           return (
-            <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800/40 text-amber-800 dark:text-amber-300 text-xs font-medium hide-on-print">
-              <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
-                <Save className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+            <div className="resume-draft-banner flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 text-xs font-medium hide-on-print shrink-0 z-30 transition-all">
+              <div className="w-full sm:w-auto flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/20 dark:bg-amber-400/20 flex items-center justify-center shrink-0 text-amber-800 dark:text-amber-300">
+                  <Save className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
+                  <span className="font-extrabold text-amber-900 dark:text-amber-100 uppercase tracking-wider text-[10px] bg-amber-200/80 dark:bg-amber-900/80 px-2 py-0.5 rounded-md shrink-0">
+                    Unsaved Draft
+                  </span>
+                  <span className="font-medium truncate">
+                    for <span className="client-name font-extrabold">{resumableDraft.clientName}</span>
+                  </span>
+                  <span className="time-text text-[11px] font-semibold shrink-0">
+                    • saved {timeAgo}
+                  </span>
+                </div>
               </div>
-              <span className="flex-1 min-w-0">
-                <span className="font-semibold text-amber-900 dark:text-amber-200">Unsaved draft</span>
-                {' '}for <span className="font-semibold">{resumableDraft.clientName}</span> — saved {timeAgo}
-              </span>
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-amber-300/40 dark:border-amber-700/40">
                 <button
                   type="button"
                   onClick={() => {
@@ -1793,9 +1552,9 @@ export default function InvoiceModal({
                       emitNotification('Draft Restored', 'Your previous draft has been loaded.', 'success');
                     } catch { /* ignore */ }
                   }}
-                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
+                  className="flex-1 sm:flex-initial px-3.5 py-1.5 bg-amber-700 hover:bg-amber-800 dark:bg-amber-500 dark:hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 text-center"
                 >
-                  Resume
+                  Resume Draft
                 </button>
                 <button
                   type="button"
@@ -1815,7 +1574,7 @@ export default function InvoiceModal({
                     setResumableDraft(null);
                     setResumeBannerDismissed(true);
                   }}
-                  className="px-3 py-1.5 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer"
+                  className="px-2.5 py-1.5 text-amber-900 dark:text-amber-200 hover:bg-amber-200/60 dark:hover:bg-amber-900/60 rounded-lg text-xs font-semibold transition-all cursor-pointer text-center shrink-0"
                 >
                   Discard
                 </button>
@@ -1856,7 +1615,7 @@ export default function InvoiceModal({
 
         {/* Toggle Mode Tab + Template Switcher */}
         <div className="flex xl:hidden border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950 px-3 sm:px-4 py-2.5 sm:py-3 gap-2 select-none items-center justify-between shadow-xs z-10 relative">
-          {/* Primary tab: Interactive Layout */}
+          {/* Primary tab: Live Bill Preview */}
           <button
             type="button"
             onClick={() => setActiveMode('editable')}
@@ -1865,10 +1624,10 @@ export default function InvoiceModal({
                 : 'text-slate-650 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
           >
-            <span>✨ Layout</span>
+            <span>Bill Preview</span>
           </button>
 
-          {/* Secondary tab: Advanced Settings */}
+          {/* Secondary tab: Invoice Form Details */}
           <button
             type="button"
             onClick={() => setActiveMode('edit')}
@@ -1877,81 +1636,50 @@ export default function InvoiceModal({
                 : 'text-slate-650 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
           >
-            <span>⚙️ Settings</span>
+            <span>Invoice Details</span>
           </button>
         </div>
 
         {/* Scrollable Contents */}
-        <form onSubmit={handleSaveSubmit} className="flex-1 overflow-hidden p-3 sm:p-4 md:p-6 text-sans text-sm pb-6 sm:pb-8 flex flex-col relative">
+        <form onSubmit={handleSaveSubmit} className="flex-1 overflow-hidden px-3 sm:px-4 md:px-6 pt-1.5 sm:pt-2 md:pt-2.5 pb-6 sm:pb-8 text-sans text-sm flex flex-col">
 
-          {/* Premium AI Loading Overlay */}
-          {isAiLoading && (
-            <div className="absolute inset-0 z-50 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 transition-all duration-300">
-              <div className="bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900/60 rounded-3xl p-8 max-w-md w-full shadow-2xl flex flex-col items-center text-center space-y-5 relative overflow-hidden">
-                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 animate-pulse" />
-                <div className="relative flex items-center justify-center my-2">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 animate-ping absolute inset-0" />
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 relative">
-                    <Sparkles className="w-8 h-8 text-white animate-spin" />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <h2 className="text-xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                    AI Generation in Progress...
-                  </h2>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed">
-                    Analyzing instructions, populating line items, units, client metadata, and updating invoice details.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 px-3.5 py-2 bg-indigo-50 dark:bg-indigo-950/60 rounded-full border border-indigo-100 dark:border-indigo-900/40 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 dark:text-indigo-400" />
-                  <span>Scanning template schema & extracting data</span>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* ── AI Smart Billing (isolated module) ─────────────────────────────── */}
+          <SmartBillingBox
+            activeTemplate={activeTemplate}
+            setters={{
+              setClientName, setClientEmail, setClientPhone, setClientAddress,
+              setClientGstin, setClientPan, setClientState, setClientCountry,
+              setShippedToName, setShippedToPhone, setShippedToEmail, setShippedToAddress,
+              setShippedToGstin, setShippedToPan, setShippedToState, setShippedToCountry,
+              setTransport, setVehicleNo, setGrRrNo, setDriverMobile, setStation,
+              setEwayBillNo, setPlaceOfSupply, setHasTransport,
+              setInvoiceNumber, setDate, setDueDate, setPoNumber, setReferenceNumber,
+              setDeliveryNote, setNotes, setInvoiceTerms,
+              setItems,
+              setDiscountValue: (v: number) => setDiscountValue(v),
+              setDiscountType: (v: string) => setDiscountType(v as DiscountType),
+              setFreightCharges, setIsFreightAdded,
+              setInvoiceType: (v: string) => setInvoiceType(v as 'invoice' | 'estimate'),
+              setStatus: (v: string) => setStatus(v as InvoiceStatus),
+              setTaxMode: (v: string) => setTaxMode(v as 'dynamic' | 'custom'),
+              setCustomTaxName, setCustomTaxPercentage,
+              setIsRecurring, setRecurringInterval: (v: string) => setRecurringInterval(v as RecurringInterval),
+              setAiExtraData, setActiveTemplate,
+            }}
+            existingState={{
+              clientName, clientEmail, clientPhone, clientAddress,
+              clientGstin, clientPan, clientState, clientCountry,
+              shippedToName, shippedToPhone, shippedToEmail, shippedToAddress,
+              shippedToGstin, shippedToPan, shippedToState, shippedToCountry,
+              transport, vehicleNo, grRrNo, driverMobile, station, ewayBillNo, placeOfSupply,
+              invoiceNumber, date, dueDate, poNumber, referenceNumber, deliveryNote,
+              notes, invoiceTerms, items, discountValue, discountType, freightCharges, isFreightAdded,
+              invoiceType, status, defaultTaxRate, customTaxCols, registryClients, presets,
+              aiExtraData,
+            }}
+          />
 
-          {/* AI Smart Billing Prompt Box */}
-          <div className="mx-1 mb-4 p-4 bg-gradient-to-br from-indigo-50/80 to-purple-50/80 dark:from-slate-950 dark:to-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl shadow-xs shrink-0">
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm">
-                <Sparkles className="w-3.5 h-3.5 text-white" />
-              </div>
-              <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-950 dark:text-indigo-200">
-                AI Smart Billing
-              </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 ml-auto">
-                Constrained Mode
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-600 dark:text-slate-400 mb-2.5 font-medium">
-              Describe your bill in plain English. AI scans your active template and populates all visible input boxes automatically.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2.5">
-              <input
-                type="text"
-                value={aiPromptText}
-                onChange={(e) => setAiPromptText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAIParseInvoice();
-                  }
-                }}
-                placeholder="e.g. Bill ABC Corp ₹50000 for laptop, GST 18%, vehicle DL14SV7995, due in 2 weeks..."
-                className="flex-1 px-3.5 py-2.5 text-sm font-semibold rounded-xl border-2 border-indigo-300 dark:border-indigo-700 bg-white dark:bg-slate-900 text-slate-950 dark:text-slate-50 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all"
-              />
-              <button
-                type="button"
-                onClick={handleAIParseInvoice}
-                disabled={isAiLoading}
-                className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-md shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer active:scale-95"
-              >
-                {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Sparkles className="w-4 h-4 text-white" />}
-                <span>Generate with AI</span>
-              </button>
-            </div>
-          </div>
+          {/* ──────────────────────────────────────────────────────────────────── */}
 
           {/* Client Name Required Error Banner (shows on both mobile and desktop when saved without name) */}
           {showClientNameError && !clientName?.trim() && (
@@ -2000,7 +1728,7 @@ export default function InvoiceModal({
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
-                      {activeTemplate.config.invoiceInfo?.fields.includes('referenceNumber') && (
+                      {(activeTemplate.config.invoiceInfo?.fields.includes('referenceNumber') || Boolean(referenceNumber)) && (
                         <div>
                           <label htmlFor="inv-ref" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Ref Number (Optional)</label>
                           <input
@@ -2013,7 +1741,7 @@ export default function InvoiceModal({
                           />
                         </div>
                       )}
-                      {activeTemplate.config.invoiceInfo?.fields.includes('poNumber') && (
+                      {(activeTemplate.config.invoiceInfo?.fields.includes('poNumber') || Boolean(poNumber)) && (
                         <div>
                           <label htmlFor="inv-po" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">P.O. Number (Optional)</label>
                           <input
@@ -2026,7 +1754,7 @@ export default function InvoiceModal({
                           />
                         </div>
                       )}
-                      {activeTemplate.config.invoiceInfo?.fields.includes('deliveryNote') && (
+                      {(activeTemplate.config.invoiceInfo?.fields.includes('deliveryNote') || Boolean(deliveryNote)) && (
                         <div>
                           <label htmlFor="inv-dn" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Delivery Note (Optional)</label>
                           <input

@@ -30,11 +30,7 @@ async def parse_invoice(req: ParseRequest):
     except Exception as e:
         import logging, traceback
         logging.error(f"Error in parse-invoice: {e}\n{traceback.format_exc()}")
-        return {
-            "items": [],
-            "notes": req.prompt.strip(),
-            "warning": f"AI parsing note: {str(e)}"
-        }
+        raise HTTPException(status_code=500, detail=f"Internal server error occurred during natural language invoice parsing: {str(e)}")
 
 # Separate jobs router to handle server-side scheduled triggers
 jobs_router = APIRouter(prefix="/api/jobs", tags=["jobs"])
