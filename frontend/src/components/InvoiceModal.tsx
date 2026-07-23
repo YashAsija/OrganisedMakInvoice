@@ -26,9 +26,17 @@ interface InvoiceModalProps {
   onSave: (inv: Invoice) => void;
 }
 
-const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesList: Invoice[]) => {
-  const prefix = prefixInput ? String(prefixInput).trim() : 'INV';
-  const starting = startingInput !== undefined && startingInput !== null ? String(startingInput).trim() : '1';
+const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesList: Invoice[], docType: string = 'invoice') => {
+  const defaultPrefixes: Record<string, string> = {
+    invoice: 'INV',
+    proforma: 'PRO',
+    debit_note: 'DN',
+    credit_note: 'CN',
+    estimate: 'EST',
+    quote: 'EST'
+  };
+  const prefix = prefixInput ? String(prefixInput).trim() : (defaultPrefixes[docType] || 'INV');
+  const starting = startingInput !== undefined && startingInput !== null && String(startingInput).trim() !== '' ? String(startingInput).trim() : '1';
 
   const currentYear = new Date().getFullYear();
   const formatPrefix = `${prefix}-${currentYear}-`; // e.g. "INV-2026-"
@@ -37,7 +45,7 @@ const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesL
   const match = starting.match(/^(.*?)(\d+)$/);
   const startNumStr = match ? match[2] : '1';
   const startNum = parseInt(startNumStr, 10);
-  const padLength = startNumStr.length;
+  const padLength = Math.max(4, startNumStr.length);
 
   let maxNum = startNum - 1;
   if (invoicesList && invoicesList.length > 0) {
@@ -152,7 +160,7 @@ export default function InvoiceModal({
   }, []);
 
   // Advanced features and billing options
-  const [invoiceType, setInvoiceType] = useState<'invoice' | 'estimate'>('invoice');
+  const [invoiceType, setInvoiceType] = useState<'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'estimate' | 'quote'>('invoice');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [poNumber, setPoNumber] = useState('');
   const [deliveryNote, setDeliveryNote] = useState('');
@@ -525,15 +533,43 @@ export default function InvoiceModal({
     setActiveProfile(profile);
   }, [profile]);
 
-  // Sync default invoice number for new invoices when starting settings load
+  // Helper function to resolve document prefix and starting number by document type
+  const getDocTypeConfig = useCallback((type: string) => {
+    let pFix = activeProfile.invoicePrefix || profile.invoicePrefix || 'INV';
+    let sNum = activeProfile.startingInvoiceNumber || profile.startingInvoiceNumber || '1';
+
+    if (type === 'proforma') {
+      pFix = activeProfile.proformaPrefix || profile.proformaPrefix || 'PRO';
+      sNum = activeProfile.startingProformaNumber || profile.startingProformaNumber || '1';
+    } else if (type === 'debit_note') {
+      pFix = activeProfile.debitNotePrefix || profile.debitNotePrefix || 'DN';
+      sNum = activeProfile.startingDebitNoteNumber || profile.startingDebitNoteNumber || '1';
+    } else if (type === 'credit_note') {
+      pFix = activeProfile.creditNotePrefix || profile.creditNotePrefix || 'CN';
+      sNum = activeProfile.startingCreditNoteNumber || profile.startingCreditNoteNumber || '1';
+    } else if (type === 'estimate' || type === 'quote') {
+      pFix = activeProfile.quotePrefix || profile.quotePrefix || 'EST';
+      sNum = activeProfile.startingQuoteNumber || profile.startingQuoteNumber || '1';
+    }
+
+    return { prefix: pFix, startingNumber: sNum };
+  }, [activeProfile, profile]);
+
+  // Sync default invoice number for new invoices when starting settings load or document type changes
   useEffect(() => {
     if (isOpen && !invoice) {
-      const targetPrefix = activeProfile.invoicePrefix || profile.invoicePrefix || 'INV';
-      const targetStart = activeProfile.startingInvoiceNumber || profile.startingInvoiceNumber || '1';
-      const defaultNumber = getNextInvoiceNumber(targetPrefix, targetStart, invoices);
+      const config = getDocTypeConfig(invoiceType);
+      const defaultNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, invoiceType);
       setInvoiceNumber(defaultNumber);
     }
-  }, [activeProfile.startingInvoiceNumber, profile.startingInvoiceNumber, activeProfile.invoicePrefix, profile.invoicePrefix, invoices, isOpen, invoice]);
+  }, [
+    activeProfile.startingInvoiceNumber, profile.startingInvoiceNumber, activeProfile.invoicePrefix, profile.invoicePrefix,
+    activeProfile.startingProformaNumber, profile.startingProformaNumber, activeProfile.proformaPrefix, profile.proformaPrefix,
+    activeProfile.startingDebitNoteNumber, profile.startingDebitNoteNumber, activeProfile.debitNotePrefix, profile.debitNotePrefix,
+    activeProfile.startingCreditNoteNumber, profile.startingCreditNoteNumber, activeProfile.creditNotePrefix, profile.creditNotePrefix,
+    activeProfile.startingQuoteNumber, profile.startingQuoteNumber, activeProfile.quotePrefix, profile.quotePrefix,
+    invoices, isOpen, invoice, invoiceType, getDocTypeConfig
+  ]);
 
   // Fetch fresh company settings from Supabase on modal mount/open
   useEffect(() => {
@@ -563,7 +599,15 @@ export default function InvoiceModal({
                 currencySymbol: settings.currency_symbol || prev.currencySymbol,
                 stateCode: settings.state_code || prev.stateCode,
                 startingInvoiceNumber: settings.starting_invoice_number || prev.startingInvoiceNumber,
-                invoicePrefix: settings.invoice_prefix || prev.invoicePrefix
+                invoicePrefix: settings.invoice_prefix || prev.invoicePrefix,
+                proformaPrefix: settings.proforma_prefix || prev.proformaPrefix,
+                startingProformaNumber: settings.starting_proforma_number || prev.startingProformaNumber,
+                debitNotePrefix: settings.debit_note_prefix || prev.debitNotePrefix,
+                startingDebitNoteNumber: settings.starting_debit_note_number || prev.startingDebitNoteNumber,
+                creditNotePrefix: settings.credit_note_prefix || prev.creditNotePrefix,
+                startingCreditNoteNumber: settings.starting_credit_note_number || prev.startingCreditNoteNumber,
+                quotePrefix: settings.quote_prefix || prev.quotePrefix,
+                startingQuoteNumber: settings.starting_quote_number || prev.startingQuoteNumber
               }));
               if (settings.state) setCompanyState(settings.state);
               if (settings.country) setCompanyCountry(settings.country);
@@ -1713,7 +1757,22 @@ export default function InvoiceModal({
 
                   {/* General Metadata */}
                   <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-900 space-y-3">
-                    <div className="grid grid-cols-1 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label htmlFor="doc-type-select" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Document Type</label>
+                        <select
+                          id="doc-type-select"
+                          value={invoiceType}
+                          onChange={(e) => setInvoiceType(e.target.value as any)}
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-medium text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none cursor-pointer"
+                        >
+                          <option value="invoice">Tax Invoice</option>
+                          <option value="proforma">Proforma Invoice</option>
+                          <option value="debit_note">Debit Note</option>
+                          <option value="credit_note">Credit Note</option>
+                          <option value="estimate">Quote / Estimate</option>
+                        </select>
+                      </div>
                       <div>
                         <label htmlFor="inv-num" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">ID Number</label>
                         <input
