@@ -31,7 +31,7 @@ export interface RecurringSettings {
 export interface Invoice {
   id: string;
   userId: string;
-  invoiceType?: 'invoice' | 'estimate'; // Estimate versus Invoice document type
+  invoiceType?: 'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'estimate' | 'quote'; // Document type support
   invoiceNumber: string;
   referenceNumber?: string; // Reference number support
   poNumber?: string; // Purchase Order number support
@@ -152,6 +152,14 @@ export interface BusinessProfile {
   // Billing & Preset Rules Tab
   invoicePrefix?: string;
   startingInvoiceNumber?: string;
+  proformaPrefix?: string;
+  startingProformaNumber?: string;
+  debitNotePrefix?: string;
+  startingDebitNoteNumber?: string;
+  creditNotePrefix?: string;
+  startingCreditNoteNumber?: string;
+  quotePrefix?: string;
+  startingQuoteNumber?: string;
   postedInvoiceEdit?: 'Enabled' | 'Disabled';
   materialRateEdit?: 'Enabled' | 'Disabled';
   materialCategorization?: 'Optional' | 'Required';
