@@ -3332,10 +3332,28 @@ export default function Dashboard({
                 </button>
               </div>
 
-              {/* Bifurcated Section Tabs Bar */}
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 sm:mx-0 sm:px-0 border-b border-[#e2e8f0]/60 dark:border-zinc-800">
+              {/* Bifurcated Section Filter: Dropdown on Mobile (< sm), Pill Bar on Desktop (>= sm) */}
+              {/* Mobile Select Dropdown (< sm) */}
+              <div className="sm:hidden relative">
+                <select
+                  value={draftsSection}
+                  onChange={(e) => setDraftsSection(e.target.value as any)}
+                  className="w-full appearance-none pl-3.5 pr-8 py-2 rounded-xl border border-sky-300 dark:border-sky-800/80 bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-200 font-black text-xs focus:ring-2 focus:ring-sky-500/50 focus:outline-none cursor-pointer shadow-xs transition-all tracking-tight"
+                >
+                  <option value="all">All Drafts ({draftCounts.all})</option>
+                  <option value="invoice">Tax Invoices ({draftCounts.invoice})</option>
+                  <option value="proforma">Proforma ({draftCounts.proforma})</option>
+                  <option value="debit_note">Debit Notes ({draftCounts.debit_note})</option>
+                  <option value="credit_note">Credit Notes ({draftCounts.credit_note})</option>
+                  <option value="quote">Quotes & Est ({draftCounts.quote})</option>
+                </select>
+                <ChevronDown className="w-4 h-4 text-sky-700 dark:text-sky-300 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2.5} />
+              </div>
+
+              {/* Desktop Pill Tabs (>= sm) */}
+              <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 sm:mx-0 sm:px-0 border-b border-[#e2e8f0]/60 dark:border-zinc-800">
                 {[
-                  { id: 'all', label: 'All Drafts', count: draftCounts.all, activeColor: 'border-slate-700 text-slate-900 dark:text-slate-900 font-extrabold bg-[#f5f0eb] dark:bg-[#f5f0eb]', countBg: 'bg-[#e8decb] text-slate-900 dark:bg-[#e8decb] dark:text-slate-900 font-black' },
+                  { id: 'all', label: 'All Drafts', count: draftCounts.all, activeColor: 'border-slate-800 text-slate-900 dark:text-white bg-slate-100 dark:bg-zinc-800', countBg: 'bg-slate-200 text-slate-800 dark:bg-zinc-700 dark:text-zinc-200' },
                   { id: 'invoice', label: 'Tax Invoices', count: draftCounts.invoice, activeColor: 'border-emerald-500 text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20', countBg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' },
                   { id: 'proforma', label: 'Proforma', count: draftCounts.proforma, activeColor: 'border-sky-500 text-sky-700 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/20', countBg: 'bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-300' },
                   { id: 'debit_note', label: 'Debit Notes', count: draftCounts.debit_note, activeColor: 'border-indigo-500 text-indigo-700 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20', countBg: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300' },
@@ -3352,9 +3370,7 @@ export default function Dashboard({
                         : 'border-transparent text-[#64748b]/80 dark:text-zinc-400 hover:text-[#0f172a] dark:hover:text-zinc-200 hover:bg-[#f8fafc] dark:hover:bg-zinc-800/50'
                     }`}
                   >
-                    <span className={draftsSection === tab.id && tab.id === 'all' ? 'text-slate-900 dark:text-slate-900 font-black' : ''}>
-                      {tab.label}
-                    </span>
+                    {tab.label}
                     <span className={`px-1.5 py-0.5 sm:px-2 rounded-full text-[8.5px] sm:text-[9px] font-black ${
                       draftsSection === tab.id
                         ? tab.countBg
