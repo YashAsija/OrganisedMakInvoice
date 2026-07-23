@@ -177,6 +177,7 @@ export default function Dashboard({
 
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isDesktopSidebarExpanded, setIsDesktopSidebarExpanded] = useState(true);
+  const [isSalesLedgerExpanded, setIsSalesLedgerExpanded] = useState(true);
   const [isMasterExpanded, setIsMasterExpanded] = useState(true);
   const [isCatalogExpanded, setIsCatalogExpanded] = useState(true);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -784,15 +785,63 @@ export default function Dashboard({
             </div>
           </button>
 
-          <button onClick={() => handleTabClick('invoices')} className={navItemClass('invoices')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'invoices', 'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400')}><FileText className="w-3.5 h-3.5" /></div>
-              <span>Invoices Ledger</span>
-            </div>
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'invoices' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
-              {invoices.length}
-            </span>
-          </button>
+          {/* Sales Ledger Accordion Section */}
+          <div className="space-y-0.5">
+            <button
+              onClick={() => {
+                if (activeTab !== 'invoices') {
+                  handleTabClick('invoices');
+                }
+                setIsSalesLedgerExpanded(!isSalesLedgerExpanded);
+              }}
+              className={navItemClass('invoices')}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'invoices', 'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400')}><FileText className="w-3.5 h-3.5" /></div>
+                <span>Sales Ledger</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'invoices' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
+                  {invoices.filter(i => i.status !== 'draft').length}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-[#64748b]/70 transition-transform duration-200 ${isSalesLedgerExpanded ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
+
+            {/* Accordion Sub-items */}
+            {isSalesLedgerExpanded && (
+              <div className="pl-6 space-y-0.5 pt-0.5">
+                {[
+                  { id: 'invoice', label: 'Tax Invoices', count: documentTypeCounts.invoice, color: 'hover:text-emerald-600 dark:hover:text-emerald-400', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' },
+                  { id: 'proforma', label: 'Proforma Invoice', count: documentTypeCounts.proforma, color: 'hover:text-sky-600 dark:hover:text-sky-400', badge: 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300' },
+                  { id: 'debit_note', label: 'Debit Note', count: documentTypeCounts.debit_note, color: 'hover:text-indigo-600 dark:hover:text-indigo-400', badge: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300' },
+                  { id: 'credit_note', label: 'Credit Note', count: documentTypeCounts.credit_note, color: 'hover:text-violet-600 dark:hover:text-violet-400', badge: 'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300' },
+                  { id: 'quote', label: 'Quote / Estimate', count: documentTypeCounts.quote, color: 'hover:text-teal-600 dark:hover:text-teal-400', badge: 'bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300' }
+                ].map(sub => {
+                  const isSubActive = activeTab === 'invoices' && ledgerSection === sub.id;
+                  return (
+                    <button
+                      key={sub.id}
+                      onClick={() => {
+                        handleTabClick('invoices');
+                        setLedgerSection(sub.id as any);
+                      }}
+                      className={`w-full px-2.5 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
+                        isSubActive
+                          ? 'bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white font-black'
+                          : `text-[#64748b] dark:text-zinc-400 ${sub.color} hover:bg-slate-50 dark:hover:bg-zinc-800/50`
+                      }`}
+                    >
+                      <span className="truncate">{sub.label}</span>
+                      <span className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-black ${isSubActive ? sub.badge : 'bg-slate-200/50 dark:bg-zinc-800 text-slate-500'}`}>
+                        {sub.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
 
 
@@ -2451,7 +2500,7 @@ export default function Dashboard({
       case 'dashboard':
         return 'Financial Hub / Dashboard';
       case 'invoices':
-        return 'Financial Hub / Invoices Ledger';
+        return 'Financial Hub / Sales Ledger';
       case 'drafts':
         return 'Financial Hub / Drafts';
       case 'profile':
