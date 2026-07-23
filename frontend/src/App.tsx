@@ -6,20 +6,14 @@ import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Exp
 import { getSampleInvoice, BUSINESS_TEMPLATES } from './lib/presets';
 import { getSecuritySettings, saveSecuritySettings, SecuritySettings, hashPin, hashPinPBKDF2, generateSalt } from './lib/biometrics';
 
-// Global error and rejection handlers to suppress development error overlays for network blocks & browser extension hydration mismatches
+// Global error and rejection handlers to suppress development error overlays for network blocks (adblockers/extensions)
 if (typeof window !== 'undefined') {
-  // Suppress Next.js Console TypeError overlay by routing network/hydration console.errors to console.warn
+  // Suppress Next.js Console TypeError overlay by routing network-related console.errors to console.warn
   const originalConsoleError = console.error;
   console.error = function (...args) {
     const errorString = args.map(arg => (arg instanceof Error ? arg.message : String(arg))).join(' ');
-    if (
-      errorString.includes('Failed to fetch') ||
-      errorString.includes('TypeError') ||
-      errorString.includes('hydration') ||
-      errorString.includes('bis_skin_checked') ||
-      errorString.includes('did not match')
-    ) {
-      console.warn('[Suppressed Next.js Overlay] Suppressed error:', ...args);
+    if (errorString.includes('Failed to fetch') || errorString.includes('TypeError')) {
+      console.warn('[Suppressed Next.js Overlay] Suppressed network console.error:', ...args);
       return;
     }
     originalConsoleError.apply(console, args);
@@ -57,6 +51,11 @@ const tabToPath: Record<string, string> = {
   learn: '/learn',
   invoice_templates: '/invoice-templates',
   invoices: '/invoices',
+  'invoices/invoice': '/invoices/tax-invoices',
+  'invoices/proforma': '/invoices/proforma-invoices',
+  'invoices/debit_note': '/invoices/debit-notes',
+  'invoices/credit_note': '/invoices/credit-notes',
+  'invoices/quote': '/invoices/quotes-estimates',
   drafts: '/drafts',
   clients: '/clients',
   reports: '/reports',
@@ -207,6 +206,10 @@ export default function App() {
           expectedPath = '/quick-bill';
         } else if (isProfileOpen) {
           expectedPath = '/company-settings';
+        } else if (activeTab === 'invoices') {
+          if (path.startsWith('/invoices')) {
+            expectedPath = path;
+          }
         } else if (activeTab === 'invoice_templates') {
           if (path.startsWith('/invoice-templates')) {
             expectedPath = path;

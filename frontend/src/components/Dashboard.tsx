@@ -825,6 +825,16 @@ export default function Dashboard({
                       onClick={() => {
                         handleTabClick('invoices');
                         setLedgerSection(sub.id as any);
+                        const pathMap: Record<string, string> = {
+                          invoice: '/invoices/tax-invoices',
+                          proforma: '/invoices/proforma-invoices',
+                          debit_note: '/invoices/debit-notes',
+                          credit_note: '/invoices/credit-notes',
+                          quote: '/invoices/quotes-estimates'
+                        };
+                        if (typeof window !== 'undefined' && pathMap[sub.id]) {
+                          window.history.pushState(null, '', pathMap[sub.id]);
+                        }
                       }}
                       className={`w-full px-2.5 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
                         isSubActive
@@ -2499,8 +2509,17 @@ export default function Dashboard({
     switch (tab) {
       case 'dashboard':
         return 'Financial Hub / Dashboard';
-      case 'invoices':
-        return 'Financial Hub / Sales Ledger';
+      case 'invoices': {
+        const sectionNames: Record<string, string> = {
+          invoice: 'Tax Invoices',
+          proforma: 'Proforma Invoices',
+          debit_note: 'Debit Notes',
+          credit_note: 'Credit Notes',
+          quote: 'Quotes & Estimates'
+        };
+        const currentSecName = sectionNames[ledgerSection] || 'Tax Invoices';
+        return `Financial Hub / Sales Ledger / ${currentSecName}`;
+      }
       case 'drafts':
         return 'Financial Hub / Drafts';
       case 'profile':
