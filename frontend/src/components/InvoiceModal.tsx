@@ -433,7 +433,8 @@ export default function InvoiceModal({
       const now = new Date();
       const dateStr = now.toISOString().split('T')[0];
       const dueStr = new Date(now.setDate(now.getDate() + 14)).toISOString().split('T')[0];
-      const defaultNumber = getNextInvoiceNumber(profile.invoicePrefix || '', profile.startingInvoiceNumber || '', invoices);
+      const initialConfig = getDocTypeConfig('invoice');
+      const defaultNumber = getNextInvoiceNumber(initialConfig.prefix, initialConfig.startingNumber, invoices, 'invoice');
 
       setInvoiceNumber(defaultNumber);
       setDate(dateStr);
@@ -598,16 +599,16 @@ export default function InvoiceModal({
                 country: settings.country || prev.country,
                 currencySymbol: settings.currency_symbol || prev.currencySymbol,
                 stateCode: settings.state_code || prev.stateCode,
-                startingInvoiceNumber: settings.starting_invoice_number || prev.startingInvoiceNumber,
-                invoicePrefix: settings.invoice_prefix || prev.invoicePrefix,
-                proformaPrefix: settings.proforma_prefix || prev.proformaPrefix,
-                startingProformaNumber: settings.starting_proforma_number || prev.startingProformaNumber,
-                debitNotePrefix: settings.debit_note_prefix || prev.debitNotePrefix,
-                startingDebitNoteNumber: settings.starting_debit_note_number || prev.startingDebitNoteNumber,
-                creditNotePrefix: settings.credit_note_prefix || prev.creditNotePrefix,
-                startingCreditNoteNumber: settings.starting_credit_note_number || prev.startingCreditNoteNumber,
-                quotePrefix: settings.quote_prefix || prev.quotePrefix,
-                startingQuoteNumber: settings.starting_quote_number || prev.startingQuoteNumber
+                startingInvoiceNumber: settings.starting_invoice_number || profile.startingInvoiceNumber || prev.startingInvoiceNumber,
+                invoicePrefix: settings.invoice_prefix || profile.invoicePrefix || prev.invoicePrefix,
+                proformaPrefix: settings.proforma_prefix || profile.proformaPrefix || prev.proformaPrefix,
+                startingProformaNumber: settings.starting_proforma_number || profile.startingProformaNumber || prev.startingProformaNumber,
+                debitNotePrefix: settings.debit_note_prefix || profile.debitNotePrefix || prev.debitNotePrefix,
+                startingDebitNoteNumber: settings.starting_debit_note_number || profile.startingDebitNoteNumber || prev.startingDebitNoteNumber,
+                creditNotePrefix: settings.credit_note_prefix || profile.creditNotePrefix || prev.creditNotePrefix,
+                startingCreditNoteNumber: settings.starting_credit_note_number || profile.startingCreditNoteNumber || prev.startingCreditNoteNumber,
+                quotePrefix: settings.quote_prefix || profile.quotePrefix || prev.quotePrefix,
+                startingQuoteNumber: settings.starting_quote_number || profile.startingQuoteNumber || prev.startingQuoteNumber
               }));
               if (settings.state) setCompanyState(settings.state);
               if (settings.country) setCompanyCountry(settings.country);
