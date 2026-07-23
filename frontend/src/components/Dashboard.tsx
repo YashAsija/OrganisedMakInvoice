@@ -3073,11 +3073,11 @@ export default function Dashboard({
             </div>
 
             {/* Invoices Array List representation */}
-            <div className="mt-2 sm:mt-0">
+            <div className="-mt-1 sm:mt-0">
               {/* MOBILE ONLY SMALL SCREENS CARDS VIEW */}
-              <div className="space-y-2.5 sm:space-y-3 md:hidden">
+              <div className="space-y-2 sm:space-y-3 md:hidden">
                 {filteredInvoices.length > 0 && (
-                  <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-zinc-900 rounded-xl border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-2xs mb-1">
+                  <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-zinc-900 rounded-xl border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-2xs">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <input
                         type="checkbox"
@@ -3085,12 +3085,12 @@ export default function Dashboard({
                         onChange={handleSelectAllFiltered}
                         className="w-4 h-4 rounded border-[#e2e8f0] text-[#64748b] focus:ring-[#64748b] cursor-pointer"
                       />
-                      <span className="text-[10.5px] font-extrabold text-[#0f172a] dark:text-zinc-200 uppercase tracking-wider">
+                      <span className="text-[11px] font-extrabold text-[#0f172a] dark:text-zinc-200 uppercase tracking-wider">
                         Select All ({filteredInvoices.length})
                       </span>
                     </label>
                     {selectedInvoiceIds.length > 0 && (
-                      <span className="text-[9.5px] font-bold text-sky-600 dark:text-sky-400 font-mono">
+                      <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 font-mono">
                         {selectedInvoiceIds.length} Selected
                       </span>
                     )}
