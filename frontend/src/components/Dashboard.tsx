@@ -3073,7 +3073,7 @@ export default function Dashboard({
             </div>
 
             {/* Invoices Array List representation */}
-            <div className="-mt-1.5 sm:mt-0">
+            <div className="-mt-3.5 sm:mt-0">
               {/* MOBILE ONLY SMALL SCREENS CARDS VIEW */}
               <div className="space-y-1.5 sm:space-y-3 md:hidden">
                 {filteredInvoices.length > 0 && (
