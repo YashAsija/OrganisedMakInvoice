@@ -205,30 +205,68 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     }
   };
 
-  const handleSetDefault = (id: string, targetTemplate?: InvoiceTemplate) => {
-    setGlobalDefaultId(id);
-    localStorage.setItem('makbills_global_default_template', id);
+  // Determine document type key for a template (invoice, proforma, debit_note, credit_note, estimate)
+  const getTemplateDocTypeKey = (t: InvoiceTemplate): string => {
+    const title = (t.config?.header?.invoiceTitle || '').toLowerCase();
+    const name = (t.name || '').toLowerCase();
+    const id = (t.id || '').toLowerCase();
+    const desc = (t.description || '').toLowerCase();
 
-    const tmpl = targetTemplate || templates.find(t => t.id === id) || TEMPLATE_PRESETS.find(t => t.id === id);
-    if (tmpl) {
-      // Map template to document type keys
-      if (tmpl.id.includes('proforma') || tmpl.name.toLowerCase().includes('proforma')) {
-        localStorage.setItem('makbills_default_template_proforma', id);
-      } else if (tmpl.id.includes('debit') || tmpl.name.toLowerCase().includes('debit')) {
-        localStorage.setItem('makbills_default_template_debit_note', id);
-      } else if (tmpl.id.includes('credit') || tmpl.name.toLowerCase().includes('credit')) {
-        localStorage.setItem('makbills_default_template_credit_note', id);
-      } else if (tmpl.id.includes('quote') || tmpl.id.includes('quotation') || tmpl.name.toLowerCase().includes('quote') || tmpl.name.toLowerCase().includes('estimate')) {
-        localStorage.setItem('makbills_default_template_estimate', id);
-        localStorage.setItem('makbills_default_template_quote', id);
-      } else {
-        localStorage.setItem('makbills_default_template_invoice', id);
-      }
+    if (title.includes('proforma') || name.includes('proforma') || id.includes('proforma') || desc.includes('proforma')) return 'proforma';
+    if (title.includes('debit') || name.includes('debit') || id.includes('debit') || desc.includes('debit')) return 'debit_note';
+    if (title.includes('credit') || name.includes('credit') || id.includes('credit') || desc.includes('credit')) return 'credit_note';
+    if (title.includes('quote') || title.includes('estimate') || title.includes('quotation') || name.includes('quote') || name.includes('estimate') || name.includes('quotation') || id.includes('quote') || id.includes('estimate')) return 'estimate';
+    return 'invoice';
+  };
+
+  const getTemplateDocTypeLabel = (docKey: string): string => {
+    const labels: Record<string, string> = {
+      invoice: 'Tax Invoice',
+      proforma: 'Proforma Invoice',
+      debit_note: 'Debit Note',
+      credit_note: 'Credit Note',
+      estimate: 'Quote / Estimate'
+    };
+    return labels[docKey] || 'Tax Invoice';
+  };
+
+  const isDocTypeDefault = (t: InvoiceTemplate): boolean => {
+    const docKey = getTemplateDocTypeKey(t);
+    const docDefaultId = localStorage.getItem(`makbills_default_template_${docKey}`);
+
+    if (docDefaultId) {
+      return t.id === docDefaultId;
+    }
+
+    // Built-in default preset mapping if no user override
+    const builtInDefaults: Record<string, string> = {
+      invoice: 'preset_makinvoices_invoice',
+      proforma: 'preset_makinvoices_proforma',
+      debit_note: 'preset_makinvoices_debit_note',
+      credit_note: 'preset_makinvoices_credit_note',
+      estimate: 'preset_makinvoices_quotation'
+    };
+
+    if (builtInDefaults[docKey] === t.id) {
+      return true;
+    }
+
+    return t.id === globalDefaultId;
+  };
+
+  const handleSetDefault = (template: InvoiceTemplate) => {
+    const docKey = getTemplateDocTypeKey(template);
+    const docTypeDefaultStorageKey = `makbills_default_template_${docKey}`;
+
+    localStorage.setItem(docTypeDefaultStorageKey, template.id);
+    if (docKey === 'invoice') {
+      setGlobalDefaultId(template.id);
+      localStorage.setItem('makbills_global_default_template', template.id);
     }
 
     const updated = templates.map(t => ({
       ...t,
-      isDefault: t.id === id
+      isDefault: t.id === template.id
     }));
     setTemplates(updated);
     localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
@@ -368,7 +406,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
   const rawTemplates = activeLibraryTab === 'my_templates' ? templates : TEMPLATE_PRESETS;
   const sourceTemplates = rawTemplates.map(t => ({
     ...t,
-    isDefault: t.id === globalDefaultId
+    isDefault: isDocTypeDefault(t)
   }));
   
   const filteredTemplates = sourceTemplates.filter(t => {
@@ -538,14 +576,18 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
                       : 'border-[#e2e8f0]/60 dark:border-zinc-800 hover:border-violet-300 dark:hover:border-violet-700'
                   }`}
                 >
-                  {/* Default badge */}
-                  {template.isDefault && (
-                    <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden z-20 pointer-events-none">
-                      <div className="absolute top-4 -right-5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[8px] font-black py-0.5 px-6 transform rotate-45 shadow-xs tracking-widest uppercase">
-                        DEFAULT
+                  {/* Default badge with document type label */}
+                  {template.isDefault && (() => {
+                    const docKey = getTemplateDocTypeKey(template);
+                    const docLabel = getTemplateDocTypeLabel(docKey);
+                    return (
+                      <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
+                        <span className="px-2.5 py-1 bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wider rounded-lg shadow-md flex items-center gap-1 border border-emerald-400/30">
+                          <Check className="w-3 h-3" /> DEFAULT ({docLabel})
+                        </span>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Full Thumbnail preview */}
                   <div className="w-full aspect-[794/1123] bg-[#FCFAF7] dark:bg-zinc-900 relative overflow-hidden pointer-events-none">
@@ -566,15 +608,13 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
                   </div>
                   
                   {/* Name banner below preview always visible */}
-                  <div className="p-3 bg-white dark:bg-zinc-950 border-t border-[#e2e8f0]/60 dark:border-zinc-800 text-center flex items-center justify-center gap-2">
-                     <h3 className="text-[11px] font-black text-black truncate" title={template.name}>
+                  <div className="p-3 bg-white dark:bg-zinc-950 border-t border-[#e2e8f0]/60 dark:border-zinc-800 text-center flex flex-col items-center justify-center gap-1">
+                     <h3 className="text-[11px] font-black text-black truncate w-full" title={template.name}>
                        {template.name}
                      </h3>
-                     {activeLibraryTab === 'system' && (
-                       <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black uppercase tracking-wider shrink-0">
-                         Preset
-                       </span>
-                     )}
+                     <span className="px-2 py-0.5 bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 rounded text-[8.5px] font-extrabold uppercase tracking-wider">
+                       {getTemplateDocTypeLabel(getTemplateDocTypeKey(template))}
+                     </span>
                   </div>
                 </div>
               ))}
@@ -692,8 +732,10 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
                   {!selectedTemplateForModal.isDefault && (
                     <button
                       onClick={() => {
-                        handleSetDefault(selectedTemplateForModal.id, selectedTemplateForModal);
-                        emitNotification('Default Template Set', `'${selectedTemplateForModal.name}' is set as default template.`, 'success');
+                        const docKey = getTemplateDocTypeKey(selectedTemplateForModal);
+                        const docLabel = getTemplateDocTypeLabel(docKey);
+                        handleSetDefault(selectedTemplateForModal);
+                        emitNotification('Default Template Set', `'${selectedTemplateForModal.name}' is now default for ${docLabel}.`, 'success');
                         setSelectedTemplateForModal(null);
                       }}
                       className="py-2.5 bg-white dark:bg-zinc-900 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-white border border-[#e2e8f0] dark:border-zinc-700 rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
