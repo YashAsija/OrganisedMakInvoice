@@ -3372,39 +3372,77 @@ export default function Dashboard({
                 </button>
               </div>
 
-              {/* Bifurcated Section Tabs Bar — Segmented Pill Control */}
-              <div className="w-full bg-slate-100/80 dark:bg-zinc-900/90 p-1 sm:p-1.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
-                {[
-                  { id: 'all', label: 'All Drafts', count: draftCounts.all, activeColor: 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-white shadow-xs border-slate-200/70 dark:border-zinc-700', countBg: 'bg-slate-200/70 text-slate-800 dark:bg-zinc-700 dark:text-zinc-200' },
-                  { id: 'invoice', label: 'Tax Invoice', count: draftCounts.invoice, activeColor: 'bg-emerald-600 text-white shadow-xs border-emerald-600', countBg: 'bg-white/20 text-white' },
-                  { id: 'proforma', label: 'Proforma', count: draftCounts.proforma, activeColor: 'bg-sky-600 text-white shadow-xs border-sky-600', countBg: 'bg-white/20 text-white' },
-                  { id: 'debit_note', label: 'Debit Note', count: draftCounts.debit_note, activeColor: 'bg-indigo-600 text-white shadow-xs border-indigo-600', countBg: 'bg-white/20 text-white' },
-                  { id: 'credit_note', label: 'Credit Note', count: draftCounts.credit_note, activeColor: 'bg-violet-600 text-white shadow-xs border-violet-600', countBg: 'bg-white/20 text-white' },
-                  { id: 'quote', label: 'Quote / Est', count: draftCounts.quote, activeColor: 'bg-teal-600 text-white shadow-xs border-teal-600', countBg: 'bg-white/20 text-white' }
-                ].map(tab => {
-                  const isActive = draftsSection === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setDraftsSection(tab.id as any)}
-                      className={`flex-1 min-w-[58px] sm:min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2.5 px-1 sm:px-3 rounded-xl text-[9.5px] sm:text-[11px] font-extrabold uppercase tracking-tight transition-all cursor-pointer border whitespace-nowrap ${
-                        isActive
-                          ? `${tab.activeColor} scale-[1.02]`
-                          : 'border-transparent text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-800/40'
-                      }`}
-                    >
-                      <span>{tab.label}</span>
-                      <span className={`px-1.5 py-0.2 rounded-full text-[8.5px] sm:text-[9px] font-black ${
-                        isActive
-                          ? tab.countBg
-                          : 'bg-slate-200/60 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400'
-                      }`}>
-                        {tab.count}
-                      </span>
-                    </button>
-                  );
-                })}
+              {/* Bifurcated Section Tabs Bar — Ultra Clean Responsive Design */}
+              <div className="w-full">
+                {/* Mobile Grid Layout (2-column x 3-row on mobile screens) */}
+                <div className="grid grid-cols-3 sm:hidden gap-1.5 p-1.5 bg-[#f8fafc] dark:bg-zinc-900/90 rounded-2xl border border-[#e2e8f0]/80 dark:border-zinc-800">
+                  {[
+                    { id: 'all', label: 'All Drafts', count: draftCounts.all, activeColor: 'bg-[#0f172a] text-white dark:bg-white dark:text-zinc-900 shadow-sm' },
+                    { id: 'invoice', label: 'Tax Invoice', count: draftCounts.invoice, activeColor: 'bg-emerald-600 text-white shadow-sm' },
+                    { id: 'proforma', label: 'Proforma', count: draftCounts.proforma, activeColor: 'bg-sky-600 text-white shadow-sm' },
+                    { id: 'debit_note', label: 'Debit Note', count: draftCounts.debit_note, activeColor: 'bg-indigo-600 text-white shadow-sm' },
+                    { id: 'credit_note', label: 'Credit Note', count: draftCounts.credit_note, activeColor: 'bg-violet-600 text-white shadow-sm' },
+                    { id: 'quote', label: 'Quotes / Est', count: draftCounts.quote, activeColor: 'bg-teal-600 text-white shadow-sm' }
+                  ].map(tab => {
+                    const isActive = draftsSection === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setDraftsSection(tab.id as any)}
+                        className={`flex items-center justify-between px-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all cursor-pointer border ${
+                          isActive
+                            ? `${tab.activeColor} border-transparent`
+                            : 'bg-white dark:bg-zinc-800/80 border-[#e2e8f0]/60 dark:border-zinc-700/60 text-[#64748b] dark:text-zinc-400 hover:text-[#0f172a] dark:hover:text-white'
+                        }`}
+                      >
+                        <span className="truncate pr-1">{tab.label}</span>
+                        <span className={`px-1.5 py-0.2 rounded-full text-[8.5px] font-black shrink-0 ${
+                          isActive
+                            ? 'bg-white/20 text-current'
+                            : 'bg-[#e2e8f0]/70 dark:bg-zinc-700 text-[#64748b] dark:text-zinc-300'
+                        }`}>
+                          {tab.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop Horizontal Row Layout */}
+                <div className="hidden sm:flex items-center gap-1.5 p-1.5 bg-[#f8fafc] dark:bg-zinc-900/90 rounded-2xl border border-[#e2e8f0]/80 dark:border-zinc-800">
+                  {[
+                    { id: 'all', label: 'All Drafts', count: draftCounts.all, activeColor: 'bg-[#0f172a] text-white dark:bg-white dark:text-zinc-900 shadow-sm' },
+                    { id: 'invoice', label: 'Tax Invoices', count: draftCounts.invoice, activeColor: 'bg-emerald-600 text-white shadow-sm' },
+                    { id: 'proforma', label: 'Proforma', count: draftCounts.proforma, activeColor: 'bg-sky-600 text-white shadow-sm' },
+                    { id: 'debit_note', label: 'Debit Notes', count: draftCounts.debit_note, activeColor: 'bg-indigo-600 text-white shadow-sm' },
+                    { id: 'credit_note', label: 'Credit Notes', count: draftCounts.credit_note, activeColor: 'bg-violet-600 text-white shadow-sm' },
+                    { id: 'quote', label: 'Quotes & Estimates', count: draftCounts.quote, activeColor: 'bg-teal-600 text-white shadow-sm' }
+                  ].map(tab => {
+                    const isActive = draftsSection === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setDraftsSection(tab.id as any)}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer border ${
+                          isActive
+                            ? `${tab.activeColor} border-transparent`
+                            : 'border-transparent text-[#64748b] dark:text-zinc-400 hover:text-[#0f172a] dark:hover:text-white hover:bg-white/60 dark:hover:bg-zinc-800/60'
+                        }`}
+                      >
+                        <span>{tab.label}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
+                          isActive
+                            ? 'bg-white/20 text-current'
+                            : 'bg-[#e2e8f0]/70 dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400'
+                        }`}>
+                          {tab.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Draft Cards Grid */}
