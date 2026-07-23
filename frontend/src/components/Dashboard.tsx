@@ -75,6 +75,7 @@ import { exportInvoicePDFAsync, exportCollectiveReportPDF } from '../lib/pdfExpo
 import TemplateManager from './TemplateManager';
 import { emitNotification } from '../lib/notifications';
 import { TEMPLATE_PRESETS, getDefaultTemplatePreset } from '../lib/templatePresets';
+import { getDocumentTypeDefaults } from '../lib/docTypeDefaults';
 import { LivePreview } from './TemplateBuilder/LivePreview';
 import SettingsPage from './SettingsPage';
 import SupportPage from './SupportPage';
@@ -2133,6 +2134,8 @@ export default function Dashboard({
     const prefix = prefixMap[section] || 'INV';
     const num = `${prefix}-${paddedNum}`;
 
+    const defaults = getDocumentTypeDefaults(section, profile);
+
     const draftDoc: Invoice = {
       id: `inv_${Date.now()}`,
       userId: 'local',
@@ -2155,7 +2158,8 @@ export default function Dashboard({
       discountTotal: 0,
       taxTotal: 18,
       grandTotal: 118,
-      notes: 'Thank you for your business!',
+      notes: defaults.notes,
+      invoiceTerms: defaults.terms,
       status: 'pending',
       invoiceType: typeMap[section],
       createdAt: today,

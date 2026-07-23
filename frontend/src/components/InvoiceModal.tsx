@@ -11,6 +11,7 @@ import { TEMPLATE_PRESETS, getDefaultTemplatePreset } from '../lib/templatePrese
 import { supabase } from '../lib/supabase';
 import { emitNotification } from '../lib/notifications';
 import { SmartBillingBox } from './SmartBillingBox';
+import { getDocumentTypeDefaults } from '../lib/docTypeDefaults';
 
 
 interface InvoiceModalProps {
@@ -456,6 +457,7 @@ export default function InvoiceModal({
       const initialConfig = getDocTypeConfig('invoice');
       const defaultNumber = getNextInvoiceNumber(initialConfig.prefix, initialConfig.startingNumber, invoices, 'invoice');
 
+      const initialDefaults = getDocumentTypeDefaults('invoice', profile);
       setInvoiceNumber(defaultNumber);
       setDate(dateStr);
       setDueDate(dueStr);
@@ -463,8 +465,8 @@ export default function InvoiceModal({
       setClientEmail('');
       setClientPhone('');
       setClientAddress('');
-      setNotes('Thank you for your business!');
-      setInvoiceTerms('Standard Net-15 terms apply. Unresolved overdue balances are subject to three times the RBI bank rate penalties under Indian MSME guidelines.');
+      setNotes(initialDefaults.notes);
+      setInvoiceTerms(initialDefaults.terms);
       setStatus('pending');
       setItems([]);
       setDiscountType('none');
@@ -1685,7 +1687,15 @@ export default function InvoiceModal({
             <div className="md:hidden relative inline-flex items-center">
               <select
                 value={invoiceType === 'quote' ? 'estimate' : invoiceType}
-                onChange={(e) => setInvoiceType(e.target.value as any)}
+                onChange={(e) => {
+                  const newType = e.target.value as any;
+                  setInvoiceType(newType);
+                  if (!invoice) {
+                    const newDefaults = getDocumentTypeDefaults(newType, profile);
+                    setNotes(newDefaults.notes);
+                    setInvoiceTerms(newDefaults.terms);
+                  }
+                }}
                 className="appearance-none pl-3.5 pr-8 py-2 rounded-xl border border-sky-300 dark:border-sky-800/80 bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-200 font-extrabold text-xs focus:ring-2 focus:ring-sky-500/50 focus:outline-none cursor-pointer shadow-xs transition-all tracking-tight"
               >
                 <option value="invoice">Tax Invoice</option>
@@ -1711,7 +1721,15 @@ export default function InvoiceModal({
                   <button
                     key={type.id}
                     type="button"
-                    onClick={() => setInvoiceType(type.id as any)}
+                    onClick={() => {
+                      const newType = type.id as any;
+                      setInvoiceType(newType);
+                      if (!invoice) {
+                        const newDefaults = getDocumentTypeDefaults(newType, profile);
+                        setNotes(newDefaults.notes);
+                        setInvoiceTerms(newDefaults.terms);
+                      }
+                    }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 border ${
                       isActive
                         ? 'bg-sky-600 text-white border-sky-600 shadow-sm shadow-sky-600/20 scale-[1.02]'
