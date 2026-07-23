@@ -3073,9 +3073,9 @@ export default function Dashboard({
             </div>
 
             {/* Invoices Array List representation */}
-            <div className="-mt-1 sm:mt-0">
+            <div className="-mt-1.5 sm:mt-0">
               {/* MOBILE ONLY SMALL SCREENS CARDS VIEW */}
-              <div className="space-y-2 sm:space-y-3 md:hidden">
+              <div className="space-y-1.5 sm:space-y-3 md:hidden">
                 {filteredInvoices.length > 0 && (
                   <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-zinc-900 rounded-xl border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-2xs">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
