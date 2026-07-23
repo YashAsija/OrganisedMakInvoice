@@ -3352,7 +3352,9 @@ export default function Dashboard({
                         : 'border-transparent text-[#64748b]/80 dark:text-zinc-400 hover:text-[#0f172a] dark:hover:text-zinc-200 hover:bg-[#f8fafc] dark:hover:bg-zinc-800/50'
                     }`}
                   >
-                    {tab.label}
+                    <span className={draftsSection === tab.id && tab.id === 'all' ? 'text-slate-900 dark:text-slate-900 font-black' : ''}>
+                      {tab.label}
+                    </span>
                     <span className={`px-1.5 py-0.5 sm:px-2 rounded-full text-[8.5px] sm:text-[9px] font-black ${
                       draftsSection === tab.id
                         ? tab.countBg
