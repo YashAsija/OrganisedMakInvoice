@@ -247,10 +247,9 @@ export default function InvoiceModal({
   // Helper: load the correct default template from storage
   // Helper: resolve default template for a given document type
   const getDocTypeDefaultTemplate = useCallback((docType: string): InvoiceTemplate => {
-    const docTypeDefaultKey = `makbills_default_template_${docType}`;
+    const normType = docType === 'quote' ? 'estimate' : docType;
+    const docTypeDefaultKey = `makbills_default_template_${normType}`;
     const userSelectedDocDefaultId = localStorage.getItem(docTypeDefaultKey);
-    const globalDefaultId = localStorage.getItem('makbills_global_default_template');
-    const targetId = userSelectedDocDefaultId || globalDefaultId;
 
     const savedCustom = localStorage.getItem('makbills_custom_templates');
     let customTemplates: InvoiceTemplate[] = [];
@@ -260,14 +259,15 @@ export default function InvoiceModal({
       } catch (e) {}
     }
 
-    if (targetId) {
-      const matchCustom = customTemplates.find(t => t.id === targetId);
+    // 1. Check if user set a specific default for this document type
+    if (userSelectedDocDefaultId) {
+      const matchCustom = customTemplates.find(t => t.id === userSelectedDocDefaultId);
       if (matchCustom) return matchCustom;
-      const matchSystem = TEMPLATE_PRESETS.find(t => t.id === targetId);
+      const matchSystem = TEMPLATE_PRESETS.find(t => t.id === userSelectedDocDefaultId);
       if (matchSystem) return matchSystem;
     }
 
-    // Map doc type to default MakInvoices Original template variant
+    // 2. Default to the built-in MakInvoices Original template for this document type
     const presetDocMap: Record<string, string> = {
       invoice: 'preset_makinvoices_invoice',
       proforma: 'preset_makinvoices_proforma',
@@ -276,8 +276,20 @@ export default function InvoiceModal({
       estimate: 'preset_makinvoices_quotation',
       quote: 'preset_makinvoices_quotation'
     };
-    const defaultPresetId = presetDocMap[docType] || 'preset_makinvoices_invoice';
-    return TEMPLATE_PRESETS.find(t => t.id === defaultPresetId) || getDefaultTemplatePreset();
+    const defaultPresetId = presetDocMap[normType] || 'preset_makinvoices_invoice';
+    const builtInPreset = TEMPLATE_PRESETS.find(t => t.id === defaultPresetId);
+    if (builtInPreset) return builtInPreset;
+
+    // 3. Fallback to global default template if needed
+    const globalDefaultId = localStorage.getItem('makbills_global_default_template');
+    if (globalDefaultId) {
+      const matchCustomGlobal = customTemplates.find(t => t.id === globalDefaultId);
+      if (matchCustomGlobal) return matchCustomGlobal;
+      const matchSystemGlobal = TEMPLATE_PRESETS.find(t => t.id === globalDefaultId);
+      if (matchSystemGlobal) return matchSystemGlobal;
+    }
+
+    return getDefaultTemplatePreset();
   }, []);
 
   // Helper: load the correct default template from storage
