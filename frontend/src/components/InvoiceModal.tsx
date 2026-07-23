@@ -1649,68 +1649,80 @@ export default function InvoiceModal({
         })()}
 
         {/* Header */}
-        <div className="px-5 py-3.5 md:px-6 border-b border-slate-200/70 dark:border-slate-800/80 flex items-center justify-between gap-3 bg-white dark:bg-zinc-950 relative overflow-hidden shrink-0">
+        <div className="px-5 py-3.5 md:px-6 border-b border-slate-200/70 dark:border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-zinc-950 relative overflow-hidden shrink-0">
           {/* Subtle background glow effect */}
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-sky-400 via-sky-300 to-transparent opacity-70"></div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-b from-white to-slate-50 dark:from-zinc-800 dark:to-zinc-900 text-slate-700 dark:text-slate-300 flex items-center justify-center shadow-sm border border-slate-200/80 dark:border-zinc-700/80 relative overflow-hidden shrink-0">
-              <ShoppingBag className="w-4 h-4 relative z-10" strokeWidth={2.5} />
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between md:justify-start gap-3.5">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-b from-white to-slate-50 dark:from-zinc-800 dark:to-zinc-900 text-slate-700 dark:text-slate-300 flex items-center justify-center shadow-sm border border-slate-200/80 dark:border-zinc-700/80 relative overflow-hidden shrink-0">
+                <ShoppingBag className="w-4 h-4 relative z-10" strokeWidth={2.5} />
+              </div>
+              <div className="flex flex-col">
                 <h2 className="text-sm md:text-base font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
                   {invoice ? 'Edit Document' : 'Quick Bill'}
                 </h2>
-                {/* Mobile Dropdown (Compact, inline left next to title) */}
-                <div className="md:hidden relative inline-block">
-                  <select
-                    value={invoiceType === 'quote' ? 'estimate' : invoiceType}
-                    onChange={(e) => setInvoiceType(e.target.value as any)}
-                    className="pl-2.5 pr-7 py-1 rounded-lg border border-sky-300/80 dark:border-sky-800 bg-sky-50/90 dark:bg-sky-950/70 text-sky-800 dark:text-sky-200 font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none cursor-pointer shadow-xs appearance-none"
-                  >
-                    <option value="invoice">Tax Invoice</option>
-                    <option value="proforma">Proforma Invoice</option>
-                    <option value="debit_note">Debit Note</option>
-                    <option value="credit_note">Credit Note</option>
-                    <option value="estimate">Quote / Estimate</option>
-                  </select>
-                  <ChevronDown className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <div className="flex items-center mt-0.5">
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] md:text-[11px] font-mono font-medium bg-slate-100 dark:bg-zinc-800/80 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-zinc-700/80 shadow-xs">
+                    <span className="opacity-60 mr-[1px]">#</span>{invoiceNumber}
+                  </span>
                 </div>
               </div>
-              <div className="flex items-center mt-0.5">
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] md:text-[11px] font-mono font-medium bg-slate-100 dark:bg-zinc-800/80 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-zinc-700/80 shadow-xs">
-                  <span className="opacity-60 mr-[1px]">#</span>{invoiceNumber}
-                </span>
-              </div>
             </div>
+
+            <button
+              onClick={onClose}
+              className="md:hidden w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+              title="Close"
+            >
+              <X className="w-4.5 h-4.5" strokeWidth={2.5} />
+            </button>
           </div>
 
-          {/* Desktop Pill Tabs (>= md) */}
-          <div className="hidden md:flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none max-w-full">
-            {[
-              { id: 'invoice', label: 'Tax Invoice' },
-              { id: 'proforma', label: 'Proforma' },
-              { id: 'debit_note', label: 'Debit Note' },
-              { id: 'credit_note', label: 'Credit Note' },
-              { id: 'estimate', label: 'Quote / Est' }
-            ].map(type => {
-              const isActive = invoiceType === type.id || (type.id === 'estimate' && invoiceType === 'quote');
-              return (
-                <button
-                  key={type.id}
-                  type="button"
-                  onClick={() => setInvoiceType(type.id as any)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 border ${
-                    isActive
-                      ? 'bg-sky-600 text-white border-sky-600 shadow-sm shadow-sky-600/20 scale-[1.02]'
-                      : 'bg-slate-100/70 dark:bg-zinc-900 text-slate-650 dark:text-zinc-400 border-slate-200/80 dark:border-zinc-800 hover:bg-slate-200/60 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {type.label}
-                </button>
-              );
-            })}
+          {/* Document Type Selector: Dropdown on Mobile, Pill Bar on Desktop */}
+          <div className="flex items-center gap-1.5 max-w-full">
+            {/* Mobile Select Dropdown (< md) */}
+            <div className="md:hidden relative inline-flex items-center">
+              <select
+                value={invoiceType === 'quote' ? 'estimate' : invoiceType}
+                onChange={(e) => setInvoiceType(e.target.value as any)}
+                className="appearance-none pl-3 pr-7 py-1.5 rounded-xl border border-sky-300 dark:border-sky-800/80 bg-sky-50/80 dark:bg-sky-950/70 text-sky-800 dark:text-sky-200 font-extrabold text-[11px] focus:ring-2 focus:ring-sky-500/50 focus:outline-none cursor-pointer shadow-xs transition-all tracking-tight"
+              >
+                <option value="invoice">Tax Invoice</option>
+                <option value="proforma">Proforma Invoice</option>
+                <option value="debit_note">Debit Note</option>
+                <option value="credit_note">Credit Note</option>
+                <option value="estimate">Quote / Estimate</option>
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-sky-700 dark:text-sky-300 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2.5} />
+            </div>
+
+            {/* Desktop Pill Tabs (>= md) */}
+            <div className="hidden md:flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none max-w-full">
+              {[
+                { id: 'invoice', label: 'Tax Invoice' },
+                { id: 'proforma', label: 'Proforma' },
+                { id: 'debit_note', label: 'Debit Note' },
+                { id: 'credit_note', label: 'Credit Note' },
+                { id: 'estimate', label: 'Quote / Est' }
+              ].map(type => {
+                const isActive = invoiceType === type.id || (type.id === 'estimate' && invoiceType === 'quote');
+                return (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => setInvoiceType(type.id as any)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 border ${
+                      isActive
+                        ? 'bg-sky-600 text-white border-sky-600 shadow-sm shadow-sky-600/20 scale-[1.02]'
+                        : 'bg-slate-100/70 dark:bg-zinc-900 text-slate-650 dark:text-zinc-400 border-slate-200/80 dark:border-zinc-800 hover:bg-slate-200/60 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {type.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <button
