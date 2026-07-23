@@ -1686,7 +1686,7 @@ export default function InvoiceModal({
               <select
                 value={invoiceType === 'quote' ? 'estimate' : invoiceType}
                 onChange={(e) => setInvoiceType(e.target.value as any)}
-                className="appearance-none pl-3 pr-7 py-1.5 rounded-xl border border-sky-300 dark:border-sky-800/80 bg-sky-50/80 dark:bg-sky-950/70 text-sky-800 dark:text-sky-200 font-extrabold text-[11px] focus:ring-2 focus:ring-sky-500/50 focus:outline-none cursor-pointer shadow-xs transition-all tracking-tight"
+                className="appearance-none pl-3.5 pr-8 py-2 rounded-xl border border-sky-300 dark:border-sky-800/80 bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-200 font-extrabold text-xs focus:ring-2 focus:ring-sky-500/50 focus:outline-none cursor-pointer shadow-xs transition-all tracking-tight"
               >
                 <option value="invoice">Tax Invoice</option>
                 <option value="proforma">Proforma Invoice</option>
@@ -1694,7 +1694,7 @@ export default function InvoiceModal({
                 <option value="credit_note">Credit Note</option>
                 <option value="estimate">Quote / Estimate</option>
               </select>
-              <ChevronDown className="w-3.5 h-3.5 text-sky-700 dark:text-sky-300 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2.5} />
+              <ChevronDown className="w-4 h-4 text-sky-700 dark:text-sky-300 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2.5} />
             </div>
 
             {/* Desktop Pill Tabs (>= md) */}
