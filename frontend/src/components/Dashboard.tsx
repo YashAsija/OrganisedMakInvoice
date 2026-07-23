@@ -2963,35 +2963,7 @@ export default function Dashboard({
               </div>
             </section>
 
-            {/* Document Type Ledger Tabs Bar */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 sm:mx-0 sm:px-0 border-b border-[#e2e8f0]/60 dark:border-zinc-800">
-              {[
-                { id: 'invoice',     label: 'Tax Invoices',       count: documentTypeCounts.invoice,     activeColor: 'border-emerald-500 text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20', countBg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' },
-                { id: 'proforma',    label: 'Proforma Invoices', count: documentTypeCounts.proforma,    activeColor: 'border-sky-500 text-sky-700 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/20',             countBg: 'bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-300' },
-                { id: 'credit_note', label: 'Credit Notes',      count: documentTypeCounts.credit_note, activeColor: 'border-violet-500 text-violet-700 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-950/20', countBg: 'bg-violet-100 text-violet-800 dark:bg-violet-900/60 dark:text-violet-300' },
-                { id: 'debit_note',  label: 'Debit Notes',       count: documentTypeCounts.debit_note,  activeColor: 'border-indigo-500 text-indigo-700 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20', countBg: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300' },
-                { id: 'quote',       label: 'Quotes & Estimates',count: documentTypeCounts.quote,       activeColor: 'border-teal-500 text-teal-700 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/20',       countBg: 'bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-300' },
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => handleSwitchLedgerSection(tab.id as any)}
-                  className={`flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer border shrink-0 ${
-                    ledgerSection === tab.id
-                      ? `${tab.activeColor} border-current shadow-xs`
-                      : 'border-transparent text-[#64748b]/80 dark:text-zinc-400 hover:text-[#0f172a] dark:hover:text-zinc-200 hover:bg-[#f8fafc] dark:hover:bg-zinc-800/50'
-                  }`}
-                >
-                  {tab.label}
-                  <span className={`px-1.5 py-0.5 sm:px-2 rounded-full text-[8.5px] sm:text-[9px] font-black ${
-                    ledgerSection === tab.id
-                      ? tab.countBg
-                      : 'bg-[#e2e8f0]/60 dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400'
-                  }`}>
-                    {tab.count}
-                  </span>
-                </button>
-              ))}
-            </div>
+
 
             {/* Search, Action Header and Filters */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
