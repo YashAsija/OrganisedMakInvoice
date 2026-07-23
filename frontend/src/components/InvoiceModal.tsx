@@ -1679,31 +1679,49 @@ export default function InvoiceModal({
             </button>
           </div>
 
-          {/* Document Type Selector Bar */}
-          <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none max-w-full">
-            {[
-              { id: 'invoice', label: 'Tax Invoice' },
-              { id: 'proforma', label: 'Proforma' },
-              { id: 'debit_note', label: 'Debit Note' },
-              { id: 'credit_note', label: 'Credit Note' },
-              { id: 'estimate', label: 'Quote / Est' }
-            ].map(type => {
-              const isActive = invoiceType === type.id || (type.id === 'estimate' && invoiceType === 'quote');
-              return (
-                <button
-                  key={type.id}
-                  type="button"
-                  onClick={() => setInvoiceType(type.id as any)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 border ${
-                    isActive
-                      ? 'bg-sky-600 text-white border-sky-600 shadow-sm shadow-sky-600/20 scale-[1.02]'
-                      : 'bg-slate-100/70 dark:bg-zinc-900 text-slate-650 dark:text-zinc-400 border-slate-200/80 dark:border-zinc-800 hover:bg-slate-200/60 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {type.label}
-                </button>
-              );
-            })}
+          {/* Document Type Selector: Dropdown on Mobile, Pill Bar on Desktop */}
+          <div className="flex items-center gap-1.5 max-w-full">
+            {/* Mobile Select Dropdown (< md) */}
+            <div className="md:hidden w-full">
+              <select
+                value={invoiceType === 'quote' ? 'estimate' : invoiceType}
+                onChange={(e) => setInvoiceType(e.target.value as any)}
+                className="w-full px-3 py-1.5 rounded-xl border border-sky-300 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-200 font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none cursor-pointer shadow-xs"
+              >
+                <option value="invoice">Tax Invoice</option>
+                <option value="proforma">Proforma Invoice</option>
+                <option value="debit_note">Debit Note</option>
+                <option value="credit_note">Credit Note</option>
+                <option value="estimate">Quote / Estimate</option>
+              </select>
+            </div>
+
+            {/* Desktop Pill Tabs (>= md) */}
+            <div className="hidden md:flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none max-w-full">
+              {[
+                { id: 'invoice', label: 'Tax Invoice' },
+                { id: 'proforma', label: 'Proforma' },
+                { id: 'debit_note', label: 'Debit Note' },
+                { id: 'credit_note', label: 'Credit Note' },
+                { id: 'estimate', label: 'Quote / Est' }
+              ].map(type => {
+                const isActive = invoiceType === type.id || (type.id === 'estimate' && invoiceType === 'quote');
+                return (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => setInvoiceType(type.id as any)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 border ${
+                      isActive
+                        ? 'bg-sky-600 text-white border-sky-600 shadow-sm shadow-sky-600/20 scale-[1.02]'
+                        : 'bg-slate-100/70 dark:bg-zinc-900 text-slate-650 dark:text-zinc-400 border-slate-200/80 dark:border-zinc-800 hover:bg-slate-200/60 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {type.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <button
