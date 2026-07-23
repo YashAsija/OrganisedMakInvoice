@@ -245,7 +245,43 @@ export default function InvoiceModal({
   });
 
   // Helper: load the correct default template from storage
-  const loadDefaultTemplate = useCallback(() => {
+  // Helper: resolve default template for a given document type
+  const getDocTypeDefaultTemplate = useCallback((docType: string): InvoiceTemplate => {
+    const docTypeDefaultKey = `makbills_default_template_${docType}`;
+    const userSelectedDocDefaultId = localStorage.getItem(docTypeDefaultKey);
+    const globalDefaultId = localStorage.getItem('makbills_global_default_template');
+    const targetId = userSelectedDocDefaultId || globalDefaultId;
+
+    const savedCustom = localStorage.getItem('makbills_custom_templates');
+    let customTemplates: InvoiceTemplate[] = [];
+    if (savedCustom) {
+      try {
+        customTemplates = JSON.parse(savedCustom);
+      } catch (e) {}
+    }
+
+    if (targetId) {
+      const matchCustom = customTemplates.find(t => t.id === targetId);
+      if (matchCustom) return matchCustom;
+      const matchSystem = TEMPLATE_PRESETS.find(t => t.id === targetId);
+      if (matchSystem) return matchSystem;
+    }
+
+    // Map doc type to default MakInvoices Original template variant
+    const presetDocMap: Record<string, string> = {
+      invoice: 'preset_makinvoices_invoice',
+      proforma: 'preset_makinvoices_proforma',
+      debit_note: 'preset_makinvoices_debit_note',
+      credit_note: 'preset_makinvoices_credit_note',
+      estimate: 'preset_makinvoices_quotation',
+      quote: 'preset_makinvoices_quotation'
+    };
+    const defaultPresetId = presetDocMap[docType] || 'preset_makinvoices_invoice';
+    return TEMPLATE_PRESETS.find(t => t.id === defaultPresetId) || getDefaultTemplatePreset();
+  }, []);
+
+  // Helper: load the correct default template from storage
+  const loadDefaultTemplate = useCallback((typeToUse?: string) => {
     // If an exact snapshot of the template was embedded in the invoice, use it to ensure historical consistency
     if (invoice?.embeddedTemplate) {
       setActiveTemplate(invoice.embeddedTemplate);
@@ -282,45 +318,17 @@ export default function InvoiceModal({
       }
     }
 
-    const defaultTemplateId = localStorage.getItem('makbills_global_default_template');
-    let loadedTemplate = getDefaultTemplatePreset();
-
-    if (defaultTemplateId) {
-      let foundCustom = false;
-      const savedCustom = localStorage.getItem('makbills_custom_templates');
-      if (savedCustom) {
-        try {
-          const parsed = JSON.parse(savedCustom);
-          const customMatch = parsed.find((t: InvoiceTemplate) => t.id === defaultTemplateId);
-          if (customMatch) {
-            loadedTemplate = customMatch;
-            foundCustom = true;
-          }
-        } catch (e) { }
-      }
-      if (!foundCustom) {
-        const systemMatch = TEMPLATE_PRESETS.find(t => t.id === defaultTemplateId);
-        if (systemMatch) loadedTemplate = systemMatch;
-      }
-    } else {
-      const savedCustom = localStorage.getItem('makbills_custom_templates');
-      if (savedCustom) {
-        try {
-          const parsed = JSON.parse(savedCustom);
-          const customDefault = parsed.find((t: InvoiceTemplate) => t.isDefault);
-          if (customDefault) loadedTemplate = customDefault;
-        } catch (e) { }
-      }
-    }
+    const currentDocType = typeToUse || invoiceType || 'invoice';
+    const loadedTemplate = getDocTypeDefaultTemplate(currentDocType);
     setActiveTemplate(loadedTemplate);
-  }, [invoice]);
+  }, [invoice, invoiceType, getDocTypeDefaultTemplate]);
 
-  // Load template whenever the modal opens (not on every clientCountry change)
+  // Load template whenever the modal opens or doc type changes for new invoices
   useEffect(() => {
     if (isOpen) {
-      loadDefaultTemplate();
+      loadDefaultTemplate(invoiceType);
     }
-  }, [isOpen, loadDefaultTemplate]);
+  }, [isOpen, invoiceType, loadDefaultTemplate]);
 
   // Listen for template changes made in TemplateManager while modal is open
   useEffect(() => {
@@ -1785,6 +1793,62 @@ export default function InvoiceModal({
                           className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-medium font-mono text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
                         />
                       </div>
+                    </div>
+
+                    <div className="border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
+                      <label htmlFor="template-select" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Document Template</label>
+                      <select
+                        id="template-select"
+                        value={activeTemplate.id}
+                        onChange={(e) => {
+                          const selectedId = e.target.value;
+                          const savedCustom = localStorage.getItem('makbills_custom_templates');
+                          let match: InvoiceTemplate | undefined;
+                          if (savedCustom) {
+                            try {
+                              const parsed = JSON.parse(savedCustom);
+                              match = parsed.find((t: InvoiceTemplate) => t.id === selectedId);
+                            } catch (err) {}
+                          }
+                          if (!match) {
+                            match = TEMPLATE_PRESETS.find(t => t.id === selectedId);
+                          }
+                          if (match) {
+                            setActiveTemplate(match);
+                            // Store user selected default template specifically for this document type
+                            localStorage.setItem(`makbills_default_template_${invoiceType}`, selectedId);
+                          }
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-medium text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none cursor-pointer"
+                      >
+                        <optgroup label="MakInvoices Originals">
+                          <option value="preset_makinvoices_invoice">MakInvoices Tax Invoice (Default)</option>
+                          <option value="preset_makinvoices_proforma">MakInvoices Proforma Invoice (Default)</option>
+                          <option value="preset_makinvoices_debit_note">MakInvoices Debit Note (Default)</option>
+                          <option value="preset_makinvoices_credit_note">MakInvoices Credit Note (Default)</option>
+                          <option value="preset_makinvoices_quotation">MakInvoices Quote / Estimate (Default)</option>
+                        </optgroup>
+                        {(() => {
+                          const savedCustom = localStorage.getItem('makbills_custom_templates');
+                          let customList: InvoiceTemplate[] = [];
+                          if (savedCustom) {
+                            try { customList = JSON.parse(savedCustom); } catch (err) {}
+                          }
+                          if (customList.length === 0) return null;
+                          return (
+                            <optgroup label="My Custom Templates">
+                              {customList.map(ct => (
+                                <option key={ct.id} value={ct.id}>{ct.name}</option>
+                              ))}
+                            </optgroup>
+                          );
+                        })()}
+                        <optgroup label="System Presets">
+                          {TEMPLATE_PRESETS.filter(p => !p.id.startsWith('preset_makinvoices_')).map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </optgroup>
+                      </select>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-150 dark:border-slate-900/50 pt-2.5">

@@ -1203,10 +1203,26 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
   },
   {
     ...makInvoicesOriginalPreset,
+    id: 'preset_makinvoices_invoice',
+    name: 'MakInvoices Tax Invoice',
+    description: 'Official MakInvoices Tax Invoice default template featuring structured layout, GST compliance, and standard payment terms.',
+    isDefault: true,
+    category: 'GST',
+    config: {
+      ...makInvoicesOriginalPreset.config,
+      header: {
+        ...makInvoicesOriginalPreset.config.header,
+        invoiceTitle: 'TAX INVOICE'
+      }
+    }
+  },
+  {
+    ...makInvoicesOriginalPreset,
     id: 'preset_makinvoices_proforma',
     name: 'MakInvoices Proforma Invoice',
     description: 'Official MakInvoices Proforma Invoice layout featuring Deep Corporate Sapphire Navy theme, Outfit typography, and custom advance payment terms.',
     isDefault: false,
+    category: 'Default',
     config: {
       ...makInvoicesOriginalPreset.config,
       header: {
@@ -1242,6 +1258,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
     name: 'MakInvoices Credit Note',
     description: 'Official MakInvoices Credit Note layout featuring Steel Charcoal theme, crisp borders, and return credit terms.',
     isDefault: false,
+    category: 'Default',
     config: {
       ...makInvoicesOriginalPreset.config,
       header: {
@@ -1273,6 +1290,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
     name: 'MakInvoices Debit Note',
     description: 'Official MakInvoices Debit Note layout featuring Dark Graphite accent, bold table styling, and supplementary billing terms.',
     isDefault: false,
+    category: 'Default',
     config: {
       ...makInvoicesOriginalPreset.config,
       header: {
@@ -1304,6 +1322,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
     name: 'MakInvoices Quote / Estimate',
     description: 'Official MakInvoices Quotation & Cost Estimate layout featuring Corporate Emerald Teal palette, Inter typography, and estimate validity terms.',
     isDefault: false,
+    category: 'Default',
     config: {
       ...makInvoicesOriginalPreset.config,
       header: {
