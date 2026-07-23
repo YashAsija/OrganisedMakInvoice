@@ -2213,6 +2213,18 @@ export default function Dashboard({
     }
   };
 
+  const getStatusText = (status: InvoiceStatus) => {
+    switch (status) {
+      case 'rejected': return 'Not Approved';
+      case 'approved': return 'Approved';
+      case 'pending': return 'Pending';
+      case 'paid': return 'Paid';
+      case 'cancelled': return 'Cancelled';
+      case 'draft': return 'Draft';
+      default: return status;
+    }
+  };
+
   function getCurrencySymbol(code: string): string {
     switch (code) {
       case 'USD': return '$';
@@ -3105,7 +3117,7 @@ export default function Dashboard({
                           <div className="text-right shrink-0">
                             <span className="text-xs font-black font-mono block text-[#0f172a] dark:text-white">{currencySymbol}{inv.grandTotal.toFixed(2)}</span>
                             <span className={`inline-block px-2 mt-1 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
-                              {inv.status}
+                              {getStatusText(inv.status)}
                             </span>
                           </div>
                         </div>
@@ -3223,7 +3235,7 @@ export default function Dashboard({
                           </td>
                           <td className="px-4 py-3.5 text-center">
                             <span className={`inline-block px-2.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
-                              {inv.status}
+                              {getStatusText(inv.status)}
                             </span>
                           </td>
                           <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
