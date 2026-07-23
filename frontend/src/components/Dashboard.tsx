@@ -154,6 +154,7 @@ export default function Dashboard({
   const [localActiveTab, setLocalActiveTab] = useState<string>('dashboard');
   const activeTab = propActiveTab !== undefined ? propActiveTab : localActiveTab;
   const setActiveTab = onTabChange !== undefined ? onTabChange : setLocalActiveTab;
+  const [draftsSection, setDraftsSection] = useState<'all' | 'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'quote'>('all');
   
   // Custom scroll recovery behavior to guarantee the dashboard opens from the top instead of stays scrolled to the bottom on sign-in
   React.useEffect(() => {
@@ -2043,12 +2044,31 @@ export default function Dashboard({
       return;
     }
     const today = new Date().toISOString().split('T')[0];
-    const prefixMap: Record<string, string> = { proforma: 'PRO', credit_note: 'CN', debit_note: 'DN', quote: 'EST' };
+
+    // Use profile-configured prefixes with fallback defaults
+    const prefixMap: Record<string, string> = {
+      proforma: (profile.proformaPrefix || 'PRO').toUpperCase(),
+      credit_note: (profile.creditNotePrefix || 'CN').toUpperCase(),
+      debit_note: (profile.debitNotePrefix || 'DN').toUpperCase(),
+      quote: (profile.quotePrefix || 'EST').toUpperCase(),
+    };
+
+    // Compute the next sequential number for this document type
+    const startingMap: Record<string, number> = {
+      proforma: parseInt(profile.startingProformaNumber || '1', 10),
+      credit_note: parseInt(profile.startingCreditNoteNumber || '1', 10),
+      debit_note: parseInt(profile.startingDebitNoteNumber || '1', 10),
+      quote: parseInt(profile.startingQuoteNumber || '1', 10),
+    };
+    const existingCount = documentTypeCounts[section] || 0;
+    const nextNum = (startingMap[section] || 1) + existingCount;
+    const paddedNum = String(nextNum).padStart(4, '0');
+
     const titleMap: Record<string, string> = { proforma: 'PROFORMA INVOICE', credit_note: 'CREDIT NOTE', debit_note: 'DEBIT NOTE', quote: 'QUOTATION / ESTIMATE' };
     const typeMap: Record<string, any> = { proforma: 'proforma', credit_note: 'credit_note', debit_note: 'debit_note', quote: 'estimate' };
 
     const prefix = prefixMap[section] || 'INV';
-    const num = `${prefix}-${Date.now().toString().slice(-6)}`;
+    const num = `${prefix}-${paddedNum}`;
 
     const draftDoc: Invoice = {
       id: `inv_${Date.now()}`,
@@ -3258,68 +3278,151 @@ export default function Dashboard({
         )}
 
         {/* ------------------ TAB: DRAFTS ROUTE ------------------ */}
-        {activeTab === 'drafts' && (
-          <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wider">Drafts</h2>
-                <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black">{invoices.filter(i => i.status === 'draft').length} Drafts</span>
-              </div>
-              <button
-                onClick={() => setActiveTab('invoices')}
-                className="px-4 py-1.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0] dark:border-zinc-700 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back to Ledger</span>
-              </button>
-            </div>
+        {activeTab === 'drafts' && (() => {
+          const allDrafts = invoices.filter(i => i.status === 'draft');
 
-            {invoices.filter(i => i.status === 'draft').length === 0 ? (
-              <div className="p-12 bg-white dark:bg-zinc-900 text-center rounded-2xl text-[#64748b]/60 border border-[#e2e8f0]/60 dark:border-zinc-800">
-                <FileText className="w-8 h-8 mx-auto mb-2 text-[#64748b]/40" />
-                No drafts found.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {invoices.filter(i => i.status === 'draft').map(inv => (
-                  <div key={inv.id} className="p-5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-md transition-all group relative">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <span className="text-[10px] font-black text-sky-600 font-mono tracking-tight block mb-1">{inv.invoiceNumber}</span>
-                        <h4 className="text-sm font-black text-[#0f172a] dark:text-white uppercase truncate">{inv.clientName || 'Draft Profile'}</h4>
-                      </div>
-                      <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
-                        Draft
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center gap-1.5 mb-4 text-[10px] text-[#64748b]/80 font-semibold font-mono">
-                      <span>Saved on {inv.date}</span>
-                    </div>
+          const getDraftDocType = (inv: Invoice) => {
+            const t = inv.invoiceType || 'invoice';
+            if (t === 'estimate') return 'quote';
+            return t;
+          };
 
-                    <div className="pt-4 border-t border-[#e2e8f0]/40 dark:border-zinc-800/50 flex gap-2">
-                      <button 
-                        onClick={() => onOpenInvoiceEditor(inv)}
-                        className="flex-1 py-2 bg-[#0f172a] dark:bg-zinc-800 hover:bg-[#1e293b] dark:hover:bg-zinc-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer flex justify-center items-center gap-1.5"
-                      >
-                        <PenTool className="w-3 h-3" /> Resume
-                      </button>
-                      <button 
-                        onClick={() => onDeleteInvoice(inv.id)}
-                        className="w-8 h-8 flex items-center justify-center bg-rose-50 dark:bg-rose-950/30 text-rose-500 hover:bg-rose-100 hover:text-rose-600 rounded-xl transition-colors cursor-pointer"
-                        title="Delete Draft"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
+          const draftCounts = {
+            all: allDrafts.length,
+            invoice: allDrafts.filter(i => getDraftDocType(i) === 'invoice').length,
+            proforma: allDrafts.filter(i => getDraftDocType(i) === 'proforma').length,
+            debit_note: allDrafts.filter(i => getDraftDocType(i) === 'debit_note').length,
+            credit_note: allDrafts.filter(i => getDraftDocType(i) === 'credit_note').length,
+            quote: allDrafts.filter(i => getDraftDocType(i) === 'quote').length
+          };
+
+          const filteredDrafts = draftsSection === 'all'
+            ? allDrafts
+            : allDrafts.filter(i => getDraftDocType(i) === draftsSection);
+
+          const docTypeBadges: Record<string, { label: string; style: string }> = {
+            invoice: { label: 'Tax Invoice', style: 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border-emerald-300/60' },
+            proforma: { label: 'Proforma', style: 'bg-sky-100 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 border-sky-300/60' },
+            debit_note: { label: 'Debit Note', style: 'bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border-indigo-300/60' },
+            credit_note: { label: 'Credit Note', style: 'bg-violet-100 dark:bg-violet-950/70 text-violet-700 dark:text-violet-300 border-violet-300/60' },
+            quote: { label: 'Quote / Est', style: 'bg-teal-100 dark:bg-teal-950/70 text-teal-700 dark:text-teal-300 border-teal-300/60' }
+          };
+
+          return (
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wider">Unsaved & Saved Drafts</h2>
+                  <span className="px-2 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9.5px] font-black">
+                    {filteredDrafts.length} {filteredDrafts.length === 1 ? 'Draft' : 'Drafts'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setActiveTab('invoices')}
+                  className="px-4 py-1.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0] dark:border-zinc-700 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Ledger</span>
+                </button>
+              </div>
+
+              {/* Bifurcated Section Tabs Bar */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 sm:mx-0 sm:px-0 border-b border-[#e2e8f0]/60 dark:border-zinc-800">
+                {[
+                  { id: 'all', label: 'All Drafts', count: draftCounts.all, activeColor: 'border-slate-800 text-slate-900 dark:text-white bg-slate-100 dark:bg-zinc-800', countBg: 'bg-slate-200 text-slate-800 dark:bg-zinc-700 dark:text-zinc-200' },
+                  { id: 'invoice', label: 'Tax Invoices', count: draftCounts.invoice, activeColor: 'border-emerald-500 text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20', countBg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' },
+                  { id: 'proforma', label: 'Proforma', count: draftCounts.proforma, activeColor: 'border-sky-500 text-sky-700 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/20', countBg: 'bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-300' },
+                  { id: 'debit_note', label: 'Debit Notes', count: draftCounts.debit_note, activeColor: 'border-indigo-500 text-indigo-700 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20', countBg: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300' },
+                  { id: 'credit_note', label: 'Credit Notes', count: draftCounts.credit_note, activeColor: 'border-violet-500 text-violet-700 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-950/20', countBg: 'bg-violet-100 text-violet-800 dark:bg-violet-900/60 dark:text-violet-300' },
+                  { id: 'quote', label: 'Quotes & Est', count: draftCounts.quote, activeColor: 'border-teal-500 text-teal-700 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/20', countBg: 'bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-300' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setDraftsSection(tab.id as any)}
+                    className={`flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer border shrink-0 ${
+                      draftsSection === tab.id
+                        ? `${tab.activeColor} border-current shadow-xs`
+                        : 'border-transparent text-[#64748b]/80 dark:text-zinc-400 hover:text-[#0f172a] dark:hover:text-zinc-200 hover:bg-[#f8fafc] dark:hover:bg-zinc-800/50'
+                    }`}
+                  >
+                    {tab.label}
+                    <span className={`px-1.5 py-0.5 sm:px-2 rounded-full text-[8.5px] sm:text-[9px] font-black ${
+                      draftsSection === tab.id
+                        ? tab.countBg
+                        : 'bg-[#e2e8f0]/60 dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  </button>
                 ))}
               </div>
-            )}
-          </div>
-        )}
 
-        {/* ------------------ TAB: INVOICE TEMPLATES ROUTE ------------------ */}
+              {/* Draft Cards Grid */}
+              {filteredDrafts.length === 0 ? (
+                <div className="py-16 text-center bg-white dark:bg-zinc-900 rounded-2xl border border-[#e2e8f0]/60 dark:border-zinc-800">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-zinc-800 text-amber-500 flex items-center justify-center mx-auto mb-3 border border-amber-200/50 dark:border-zinc-700">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <p className="text-xs font-bold text-[#64748b]/80 dark:text-zinc-400">
+                    {draftsSection === 'all'
+                      ? 'No pending drafts found.'
+                      : `No ${docTypeBadges[draftsSection]?.label || draftsSection} drafts found.`}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredDrafts.map(inv => {
+                    const docTypeKey = getDraftDocType(inv);
+                    const badge = docTypeBadges[docTypeKey] || docTypeBadges.invoice;
+                    return (
+                      <div key={inv.id} className="p-5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-md transition-all group relative flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start mb-3 gap-2">
+                            <div>
+                              <span className="text-[10px] font-black text-sky-600 font-mono tracking-tight block mb-1">{inv.invoiceNumber}</span>
+                              <h4 className="text-sm font-black text-[#0f172a] dark:text-white uppercase truncate">{inv.clientName || 'Draft Profile'}</h4>
+                            </div>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              <span className={`px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider border ${badge.style}`}>
+                                {badge.label}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
+                                Draft
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between mb-4 text-[10px] text-[#64748b]/80 font-semibold font-mono">
+                            <span>Saved on {inv.date}</span>
+                            <span className="font-bold text-[#0f172a] dark:text-white">{currencySymbol}{inv.grandTotal ? inv.grandTotal.toFixed(2) : '0.00'}</span>
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-[#e2e8f0]/40 dark:border-zinc-800/50 flex gap-2">
+                          <button 
+                            onClick={() => onOpenInvoiceEditor(inv)}
+                            className="flex-1 py-2 bg-[#0f172a] dark:bg-zinc-800 hover:bg-[#1e293b] dark:hover:bg-zinc-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer flex justify-center items-center gap-1.5 shadow-xs"
+                          >
+                            <PenTool className="w-3 h-3" /> Resume Editing
+                          </button>
+                          <button 
+                            onClick={() => onDeleteInvoice(inv.id)}
+                            className="w-8 h-8 flex items-center justify-center bg-rose-50 dark:bg-rose-950/30 text-rose-500 hover:bg-rose-100 hover:text-rose-600 rounded-xl transition-colors cursor-pointer shrink-0"
+                            title="Delete Draft"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
         {activeTab === 'invoice_templates' && (
           <div className="space-y-4">
             <TemplateManager businessProfile={profile} />
