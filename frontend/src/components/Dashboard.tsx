@@ -3114,26 +3114,11 @@ export default function Dashboard({
                             </div>
                           </div>
 
-                          <div className="text-right shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <div className="text-right shrink-0">
                             <span className="text-xs font-black font-mono block text-[#0f172a] dark:text-white">{currencySymbol}{inv.grandTotal.toFixed(2)}</span>
-                            {getInvoiceDocumentType(inv) === 'debit_note' || getInvoiceDocumentType(inv) === 'credit_note' ? (
-                              <select
-                                value={inv.status === 'rejected' ? 'rejected' : inv.status === 'approved' ? 'approved' : 'pending'}
-                                onChange={(e) => {
-                                  const updated = { ...inv, status: e.target.value as InvoiceStatus, updatedAt: new Date().toISOString() };
-                                  onSaveInvoice(updated);
-                                }}
-                                className={`mt-1 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border cursor-pointer focus:outline-none transition-all ${getStatusColor(inv.status)}`}
-                              >
-                                <option value="pending">PENDING</option>
-                                <option value="approved">APPROVED</option>
-                                <option value="rejected">NOT APPROVED</option>
-                              </select>
-                            ) : (
-                              <span className={`inline-block px-2 mt-1 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
-                                {getStatusText(inv.status)}
-                              </span>
-                            )}
+                            <span className={`inline-block px-2 mt-1 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
+                              {getStatusText(inv.status)}
+                            </span>
                           </div>
                         </div>
 
@@ -3248,25 +3233,10 @@ export default function Dashboard({
                           <td className="px-4 py-3.5 font-black font-mono text-[#0f172a] dark:text-white text-right text-[12px]">
                             {currencySymbol}{inv.grandTotal.toFixed(2)}
                           </td>
-                          <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                            {getInvoiceDocumentType(inv) === 'debit_note' || getInvoiceDocumentType(inv) === 'credit_note' ? (
-                              <select
-                                value={inv.status === 'rejected' ? 'rejected' : inv.status === 'approved' ? 'approved' : 'pending'}
-                                onChange={(e) => {
-                                  const updated = { ...inv, status: e.target.value as InvoiceStatus, updatedAt: new Date().toISOString() };
-                                  onSaveInvoice(updated);
-                                }}
-                                className={`px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider border cursor-pointer focus:outline-none transition-all ${getStatusColor(inv.status)}`}
-                              >
-                                <option value="pending">PENDING</option>
-                                <option value="approved">APPROVED</option>
-                                <option value="rejected">NOT APPROVED</option>
-                              </select>
-                            ) : (
-                              <span className={`inline-block px-2.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
-                                {getStatusText(inv.status)}
-                              </span>
-                            )}
+                          <td className="px-4 py-3.5 text-center">
+                            <span className={`inline-block px-2.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
+                              {getStatusText(inv.status)}
+                            </span>
                           </td>
                           <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1.5">
@@ -3355,10 +3325,20 @@ export default function Dashboard({
                     title="Change status in bulk"
                   >
                     <option value="" disabled>Status...</option>
-                    <option value="paid">Set Paid</option>
-                    <option value="pending">Set Pending</option>
-                    <option value="draft">Set Draft</option>
-                    <option value="cancelled">Set Cancelled</option>
+                    {ledgerSection === 'debit_note' || ledgerSection === 'credit_note' ? (
+                      <>
+                        <option value="pending">Set Pending</option>
+                        <option value="approved">Set Approved</option>
+                        <option value="rejected">Set Not Approved</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="paid">Set Paid</option>
+                        <option value="pending">Set Pending</option>
+                        <option value="draft">Set Draft</option>
+                        <option value="cancelled">Set Cancelled</option>
+                      </>
+                    )}
                   </select>
 
                   <button
