@@ -1637,42 +1637,66 @@ export default function InvoiceModal({
         })()}
 
         {/* Header */}
-        <div className="px-5 py-4 md:px-6 border-b border-slate-200/70 dark:border-slate-800/80 flex items-center justify-between bg-white dark:bg-zinc-950 relative overflow-hidden">
+        <div className="px-5 py-3.5 md:px-6 border-b border-slate-200/70 dark:border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-zinc-950 relative overflow-hidden shrink-0">
           {/* Subtle background glow effect */}
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-sky-400 via-sky-300 to-transparent opacity-70"></div>
 
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-b from-white to-slate-50 dark:from-zinc-800 dark:to-zinc-900 text-slate-700 dark:text-slate-300 flex items-center justify-center shadow-sm border border-slate-200/80 dark:border-zinc-700/80 relative overflow-hidden">
-              <ShoppingBag className="w-4.5 h-4.5 relative z-10" strokeWidth={2.5} />
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight leading-tight">
+          <div className="flex items-center justify-between md:justify-start gap-3.5">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-b from-white to-slate-50 dark:from-zinc-800 dark:to-zinc-900 text-slate-700 dark:text-slate-300 flex items-center justify-center shadow-sm border border-slate-200/80 dark:border-zinc-700/80 relative overflow-hidden shrink-0">
+                <ShoppingBag className="w-4 h-4 relative z-10" strokeWidth={2.5} />
+              </div>
+              <div className="flex flex-col">
+                <h2 className="text-sm md:text-base font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
                   {invoice ? 'Edit Document' : 'Quick Bill'}
                 </h2>
-                <select
-                  value={invoiceType}
-                  onChange={(e) => setInvoiceType(e.target.value as any)}
-                  className="px-2.5 py-1 rounded-lg border border-sky-300 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none cursor-pointer shadow-xs"
-                >
-                  <option value="invoice">Tax Invoice</option>
-                  <option value="proforma">Proforma Invoice</option>
-                  <option value="debit_note">Debit Note</option>
-                  <option value="credit_note">Credit Note</option>
-                  <option value="estimate">Quote / Estimate</option>
-                </select>
-              </div>
-              <div className="flex items-center mt-0.5">
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-mono font-medium bg-slate-100 dark:bg-zinc-800/80 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-zinc-700/80 shadow-xs">
-                  <span className="opacity-60 mr-[1px]">#</span>{invoiceNumber}
-                </span>
+                <div className="flex items-center mt-0.5">
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] md:text-[11px] font-mono font-medium bg-slate-100 dark:bg-zinc-800/80 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-zinc-700/80 shadow-xs">
+                    <span className="opacity-60 mr-[1px]">#</span>{invoiceNumber}
+                  </span>
+                </div>
               </div>
             </div>
+
+            <button
+              onClick={onClose}
+              className="md:hidden w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+              title="Close"
+            >
+              <X className="w-4.5 h-4.5" strokeWidth={2.5} />
+            </button>
+          </div>
+
+          {/* Document Type Selector Bar */}
+          <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none max-w-full">
+            {[
+              { id: 'invoice', label: 'Tax Invoice' },
+              { id: 'proforma', label: 'Proforma' },
+              { id: 'debit_note', label: 'Debit Note' },
+              { id: 'credit_note', label: 'Credit Note' },
+              { id: 'estimate', label: 'Quote / Est' }
+            ].map(type => {
+              const isActive = invoiceType === type.id || (type.id === 'estimate' && invoiceType === 'quote');
+              return (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => setInvoiceType(type.id as any)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 border ${
+                    isActive
+                      ? 'bg-sky-600 text-white border-sky-600 shadow-sm shadow-sky-600/20 scale-[1.02]'
+                      : 'bg-slate-100/70 dark:bg-zinc-900 text-slate-650 dark:text-zinc-400 border-slate-200/80 dark:border-zinc-800 hover:bg-slate-200/60 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {type.label}
+                </button>
+              );
+            })}
           </div>
 
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-zinc-700"
+            className="hidden md:flex w-8 h-8 items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all cursor-pointer focus:outline-none shrink-0"
             title="Close"
           >
             <X className="w-4.5 h-4.5" strokeWidth={2.5} />
