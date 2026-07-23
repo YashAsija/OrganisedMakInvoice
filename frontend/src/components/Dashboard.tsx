@@ -794,15 +794,7 @@ export default function Dashboard({
             </span>
           </button>
 
-          <button onClick={() => handleTabClick('drafts')} className={navItemClass('drafts')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'drafts', 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400')}><FileText className="w-3.5 h-3.5" /></div>
-              <span>Drafts</span>
-            </div>
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'drafts' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
-              {invoices.filter(i => i.status === 'draft').length}
-            </span>
-          </button>
+
 
           <button onClick={() => handleTabClick('clients')} className={navItemClass('clients')}>
             <div className="flex items-center gap-2.5">
