@@ -205,9 +205,26 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     }
   };
 
-  const handleSetDefault = (id: string) => {
+  const handleSetDefault = (id: string, targetTemplate?: InvoiceTemplate) => {
     setGlobalDefaultId(id);
     localStorage.setItem('makbills_global_default_template', id);
+
+    const tmpl = targetTemplate || templates.find(t => t.id === id) || TEMPLATE_PRESETS.find(t => t.id === id);
+    if (tmpl) {
+      // Map template to document type keys
+      if (tmpl.id.includes('proforma') || tmpl.name.toLowerCase().includes('proforma')) {
+        localStorage.setItem('makbills_default_template_proforma', id);
+      } else if (tmpl.id.includes('debit') || tmpl.name.toLowerCase().includes('debit')) {
+        localStorage.setItem('makbills_default_template_debit_note', id);
+      } else if (tmpl.id.includes('credit') || tmpl.name.toLowerCase().includes('credit')) {
+        localStorage.setItem('makbills_default_template_credit_note', id);
+      } else if (tmpl.id.includes('quote') || tmpl.id.includes('quotation') || tmpl.name.toLowerCase().includes('quote') || tmpl.name.toLowerCase().includes('estimate')) {
+        localStorage.setItem('makbills_default_template_estimate', id);
+        localStorage.setItem('makbills_default_template_quote', id);
+      } else {
+        localStorage.setItem('makbills_default_template_invoice', id);
+      }
+    }
 
     const updated = templates.map(t => ({
       ...t,
@@ -675,8 +692,8 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
                   {!selectedTemplateForModal.isDefault && (
                     <button
                       onClick={() => {
-                        handleSetDefault(selectedTemplateForModal.id);
-                        emitNotification('Default Template Set', `'${selectedTemplateForModal.name}' is now set as global default template.`, 'success');
+                        handleSetDefault(selectedTemplateForModal.id, selectedTemplateForModal);
+                        emitNotification('Default Template Set', `'${selectedTemplateForModal.name}' is set as default template.`, 'success');
                         setSelectedTemplateForModal(null);
                       }}
                       className="py-2.5 bg-white dark:bg-zinc-900 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-white border border-[#e2e8f0] dark:border-zinc-700 rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
