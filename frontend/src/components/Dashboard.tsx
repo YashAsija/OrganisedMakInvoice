@@ -3356,18 +3356,18 @@ export default function Dashboard({
           return (
             <div className="space-y-6">
               {/* Header */}
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wider">Unsaved & Saved Drafts</h2>
-                  <span className="px-2 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9.5px] font-black">
+              <div className="flex items-center justify-between gap-2 w-full">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink min-w-0">
+                  <h2 className="text-[11px] sm:text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wider truncate">Drafts</h2>
+                  <span className="px-1.5 py-0.5 sm:px-2 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] sm:text-[9.5px] font-black shrink-0">
                     {filteredDrafts.length} {filteredDrafts.length === 1 ? 'Draft' : 'Drafts'}
                   </span>
                 </div>
                 <button
                   onClick={() => setActiveTab('invoices')}
-                  className="px-4 py-1.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0] dark:border-zinc-700 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap"
+                  className="px-2.5 py-1.5 sm:px-4 sm:py-1.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0] dark:border-zinc-700 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-zinc-200 rounded-xl text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider flex items-center gap-1 sm:gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap ml-auto shrink-0"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   <span>Back to Ledger</span>
                 </button>
               </div>
