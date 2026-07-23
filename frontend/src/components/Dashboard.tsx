@@ -2006,7 +2006,8 @@ export default function Dashboard({
 
   const documentTypeCounts = useMemo(() => {
     const counts = { invoice: 0, proforma: 0, credit_note: 0, debit_note: 0, quote: 0 };
-    invoices.forEach(inv => {
+    // Only count non-draft documents in the ledger tabs
+    invoices.filter(inv => inv.status !== 'draft').forEach(inv => {
       const docType = getInvoiceDocumentType(inv);
       counts[docType] = (counts[docType] || 0) + 1;
     });
@@ -2014,7 +2015,8 @@ export default function Dashboard({
   }, [invoices]);
 
   const sectionInvoices = useMemo(() => {
-    return invoices.filter(inv => getInvoiceDocumentType(inv) === ledgerSection);
+    // Exclude drafts from ledger listings — drafts belong exclusively to the Drafts page
+    return invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === ledgerSection);
   }, [invoices, ledgerSection]);
 
   // --- STATS ENGINES ---
@@ -2989,7 +2991,6 @@ export default function Dashboard({
                   <option value="all">All Statuses</option>
                   <option value="paid">Paid</option>
                   <option value="pending">Pending</option>
-                  <option value="draft">Draft</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
