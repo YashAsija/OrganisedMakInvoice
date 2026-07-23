@@ -1344,15 +1344,13 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       roundedCorners: true,
       alternatingRowColors: true,
       tableHeaderBackground: '#0f766e',
-      tableHeaderTextColor: '#ffffff',
       spacing: 'Normal'
     }
-  },
-  makInvoicesOriginalPreset
+  }
 ];
 
 export function getDefaultTemplatePreset(): InvoiceTemplate {
-  return TEMPLATE_PRESETS.find(t => t.isDefault) || makInvoicesOriginalPreset || TEMPLATE_PRESETS[0];
+  return TEMPLATE_PRESETS.find(t => t.isDefault) || TEMPLATE_PRESETS[0];
 }
 
 export function ensureAllColumns(existingCols: any[]): any[] {

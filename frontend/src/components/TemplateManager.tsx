@@ -127,7 +127,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
   useEffect(() => {
     const allTemplates = [...templates, ...TEMPLATE_PRESETS];
     if (!allTemplates.some(t => t.id === globalDefaultId)) {
-      let newDefaultId = 'preset_modal_classic';
+      let newDefaultId = 'preset_makinvoices_invoice';
       if (templates.length > 0) {
         newDefaultId = templates[templates.length - 1].id;
         
@@ -179,7 +179,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
       const updated = templates.filter(t => t.id !== id);
       
       if (id === globalDefaultId) {
-        let newDefaultId = 'preset_modal_classic';
+        let newDefaultId = 'preset_makinvoices_invoice';
         if (updated.length > 0) {
           const newDefault = updated[updated.length - 1];
           newDefaultId = newDefault.id;
