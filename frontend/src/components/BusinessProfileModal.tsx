@@ -112,6 +112,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   // Billing
   const [invoicePrefix, setInvoicePrefix] = useState(() => isOnboarding ? '' : (profile.invoicePrefix || 'INV'));
   const [startingInvoiceNumber, setStartingInvoiceNumber] = useState(() => isOnboarding ? '' : (profile.startingInvoiceNumber || '1'));
+  const [proformaPrefix, setProformaPrefix] = useState(() => isOnboarding ? '' : (profile.proformaPrefix || 'PRO'));
+  const [startingProformaNumber, setStartingProformaNumber] = useState(() => isOnboarding ? '' : (profile.startingProformaNumber || '1'));
+  const [debitNotePrefix, setDebitNotePrefix] = useState(() => isOnboarding ? '' : (profile.debitNotePrefix || 'DN'));
+  const [startingDebitNoteNumber, setStartingDebitNoteNumber] = useState(() => isOnboarding ? '' : (profile.startingDebitNoteNumber || '1'));
+  const [creditNotePrefix, setCreditNotePrefix] = useState(() => isOnboarding ? '' : (profile.creditNotePrefix || 'CN'));
+  const [startingCreditNoteNumber, setStartingCreditNoteNumber] = useState(() => isOnboarding ? '' : (profile.startingCreditNoteNumber || '1'));
+  const [quotePrefix, setQuotePrefix] = useState(() => isOnboarding ? '' : (profile.quotePrefix || 'EST'));
+  const [startingQuoteNumber, setStartingQuoteNumber] = useState(() => isOnboarding ? '' : (profile.startingQuoteNumber || '1'));
   const [postedInvoiceEdit, setPostedInvoiceEdit] = useState<'Enabled' | 'Disabled'>(() => isOnboarding ? 'Disabled' : (profile.postedInvoiceEdit || 'Disabled'));
   const [materialRateEdit, setMaterialRateEdit] = useState<'Enabled' | 'Disabled'>(() => isOnboarding ? 'Disabled' : (profile.materialRateEdit || 'Disabled'));
   const [materialCategorization, setMaterialCategorization] = useState<'Optional' | 'Required'>(() => isOnboarding ? 'Optional' : (profile.materialCategorization || 'Optional'));
@@ -439,6 +447,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
             setInvoicePrefix(profile.invoicePrefix || 'INV');
             setStartingInvoiceNumber(profile.startingInvoiceNumber || '1');
+            setProformaPrefix(profile.proformaPrefix || 'PRO');
+            setStartingProformaNumber(profile.startingProformaNumber || '1');
+            setDebitNotePrefix(profile.debitNotePrefix || 'DN');
+            setStartingDebitNoteNumber(profile.startingDebitNoteNumber || '1');
+            setCreditNotePrefix(profile.creditNotePrefix || 'CN');
+            setStartingCreditNoteNumber(profile.startingCreditNoteNumber || '1');
+            setQuotePrefix(profile.quotePrefix || 'EST');
+            setStartingQuoteNumber(profile.startingQuoteNumber || '1');
             setPostedInvoiceEdit(profile.postedInvoiceEdit || 'Disabled');
             setMaterialRateEdit(profile.materialRateEdit || 'Disabled');
             setMaterialCategorization(profile.materialCategorization || 'Optional');
@@ -493,6 +509,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
           setInvoicePrefix(settings.invoice_prefix || 'INV');
           setStartingInvoiceNumber(settings.starting_invoice_number || '1');
+          setProformaPrefix(settings.proforma_prefix || 'PRO');
+          setStartingProformaNumber(settings.starting_proforma_number || '1');
+          setDebitNotePrefix(settings.debit_note_prefix || 'DN');
+          setStartingDebitNoteNumber(settings.starting_debit_note_number || '1');
+          setCreditNotePrefix(settings.credit_note_prefix || 'CN');
+          setStartingCreditNoteNumber(settings.starting_credit_note_number || '1');
+          setQuotePrefix(settings.quote_prefix || 'EST');
+          setStartingQuoteNumber(settings.starting_quote_number || '1');
           setPostedInvoiceEdit(settings.posted_invoice_edit === true ? 'Enabled' : 'Disabled');
           setMaterialRateEdit(settings.material_rate_edit === true ? 'Enabled' : 'Disabled');
           setMaterialCategorization(
@@ -535,6 +559,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
           setInvoicePrefix(profile.invoicePrefix || 'INV');
           setStartingInvoiceNumber(profile.startingInvoiceNumber || '1');
+          setProformaPrefix(profile.proformaPrefix || 'PRO');
+          setStartingProformaNumber(profile.startingProformaNumber || '1');
+          setDebitNotePrefix(profile.debitNotePrefix || 'DN');
+          setStartingDebitNoteNumber(profile.startingDebitNoteNumber || '1');
+          setCreditNotePrefix(profile.creditNotePrefix || 'CN');
+          setStartingCreditNoteNumber(profile.startingCreditNoteNumber || '1');
+          setQuotePrefix(profile.quotePrefix || 'EST');
+          setStartingQuoteNumber(profile.startingQuoteNumber || '1');
           setPostedInvoiceEdit(profile.postedInvoiceEdit || 'Disabled');
           setMaterialRateEdit(profile.materialRateEdit || 'Disabled');
           setMaterialCategorization(profile.materialCategorization || 'Optional');
@@ -1296,6 +1328,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         upi_id: upiId,
         invoice_prefix: invoicePrefix,
         starting_invoice_number: startingInvoiceNumber,
+        proforma_prefix: proformaPrefix,
+        starting_proforma_number: startingProformaNumber,
+        debit_note_prefix: debitNotePrefix,
+        starting_debit_note_number: startingDebitNoteNumber,
+        credit_note_prefix: creditNotePrefix,
+        starting_credit_note_number: startingCreditNoteNumber,
+        quote_prefix: quotePrefix,
+        starting_quote_number: startingQuoteNumber,
         posted_invoice_edit: postedInvoiceEdit === 'Enabled',
         material_rate_edit: materialRateEdit === 'Enabled',
         material_categorization: materialCategorization.toLowerCase(),
@@ -1310,11 +1350,42 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       }
 
       // 4. Upsert company settings
-      const { data: savedSetting, error: settingError } = await supabase
+      // Try with all columns first (including new doc-numbering ones).
+      // If the DB doesn't have those columns yet (migration pending), fall back
+      // to a stripped payload so saving still succeeds.
+      let savedSetting: any = null;
+      let settingError: any = null;
+
+      ({ data: savedSetting, error: settingError } = await supabase
         .from('company_settings')
         .upsert(settingData, { onConflict: 'user_id' })
         .select('id')
-        .single();
+        .single());
+
+      if (settingError) {
+        // PGRST204 = column not found in schema cache (migration not yet run)
+        // Also catch generic empty-error edge cases
+        const errMsg = settingError.message || JSON.stringify(settingError) || '';
+        const isColumnError =
+          settingError.code === 'PGRST204' ||
+          errMsg.toLowerCase().includes('column') ||
+          errMsg.toLowerCase().includes('schema cache') ||
+          errMsg.toLowerCase().includes('does not exist') ||
+          (errMsg === '' && Object.keys(settingError).length === 0);
+
+        if (isColumnError) {
+          console.warn("[SETTINGS] New columns not found in DB yet (PGRST204), retrying without doc-numbering fields...");
+          const { proforma_prefix, starting_proforma_number, debit_note_prefix, starting_debit_note_number,
+            credit_note_prefix, starting_credit_note_number, quote_prefix, starting_quote_number,
+            ...fallbackData } = settingData;
+
+          ({ data: savedSetting, error: settingError } = await supabase
+            .from('company_settings')
+            .upsert(fallbackData, { onConflict: 'user_id' })
+            .select('id')
+            .single());
+        }
+      }
 
       if (settingError) {
         console.error("[SETTINGS] Error saving company settings:", settingError);
@@ -1401,6 +1472,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         upiId,
         invoicePrefix,
         startingInvoiceNumber,
+        proformaPrefix,
+        startingProformaNumber,
+        debitNotePrefix,
+        startingDebitNoteNumber,
+        creditNotePrefix,
+        startingCreditNoteNumber,
+        quotePrefix,
+        startingQuoteNumber,
         postedInvoiceEdit,
         materialRateEdit,
         materialCategorization,
@@ -2228,6 +2307,145 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                       />
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Card 1b: Document Numbering */}
+              <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="bg-slate-100 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-800 dark:text-[#e2e8f0]">
+                  Document Numbering
+                </div>
+                <div className="p-6 space-y-6">
+                  <p className="text-[10px] text-slate-500 dark:text-zinc-500 -mt-2">Set the prefix and starting number for each document type. These will be used when creating new documents.</p>
+
+                  {/* Proforma Invoice */}
+                  <div>
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-sky-600 dark:text-sky-400 mb-3 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-sky-500 inline-block"></span>
+                      Proforma Invoice
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label htmlFor="proforma-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Prefix</label>
+                        <input
+                          id="proforma-prefix"
+                          type="text"
+                          value={proformaPrefix}
+                          onChange={(e) => setProformaPrefix(e.target.value)}
+                          placeholder="e.g. PRO"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="proforma-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Starting Number</label>
+                        <input
+                          id="proforma-start-num"
+                          type="number"
+                          value={startingProformaNumber}
+                          onChange={(e) => setStartingProformaNumber(e.target.value)}
+                          placeholder="1"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Debit Note */}
+                  <div>
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span>
+                      Debit Note
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label htmlFor="debit-note-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Prefix</label>
+                        <input
+                          id="debit-note-prefix"
+                          type="text"
+                          value={debitNotePrefix}
+                          onChange={(e) => setDebitNotePrefix(e.target.value)}
+                          placeholder="e.g. DN"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="debit-note-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Starting Number</label>
+                        <input
+                          id="debit-note-start-num"
+                          type="number"
+                          value={startingDebitNoteNumber}
+                          onChange={(e) => setStartingDebitNoteNumber(e.target.value)}
+                          placeholder="1"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Credit Note */}
+                  <div>
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-violet-600 dark:text-violet-400 mb-3 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-violet-500 inline-block"></span>
+                      Credit Note
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label htmlFor="credit-note-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Prefix</label>
+                        <input
+                          id="credit-note-prefix"
+                          type="text"
+                          value={creditNotePrefix}
+                          onChange={(e) => setCreditNotePrefix(e.target.value)}
+                          placeholder="e.g. CN"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="credit-note-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Starting Number</label>
+                        <input
+                          id="credit-note-start-num"
+                          type="number"
+                          value={startingCreditNoteNumber}
+                          onChange={(e) => setStartingCreditNoteNumber(e.target.value)}
+                          placeholder="1"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quote / Estimate */}
+                  <div>
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-teal-600 dark:text-teal-400 mb-3 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-teal-500 inline-block"></span>
+                      Quote / Estimate
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label htmlFor="quote-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Prefix</label>
+                        <input
+                          id="quote-prefix"
+                          type="text"
+                          value={quotePrefix}
+                          onChange={(e) => setQuotePrefix(e.target.value)}
+                          placeholder="e.g. EST"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="quote-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Starting Number</label>
+                        <input
+                          id="quote-start-num"
+                          type="number"
+                          value={startingQuoteNumber}
+                          onChange={(e) => setStartingQuoteNumber(e.target.value)}
+                          placeholder="1"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               </div>
 
