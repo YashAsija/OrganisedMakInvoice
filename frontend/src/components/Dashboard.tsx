@@ -811,13 +811,13 @@ export default function Dashboard({
 
             {/* Accordion Sub-items */}
             {isSalesLedgerExpanded && (
-              <div className="pl-6 space-y-0.5 pt-0.5">
+              <div className="pl-6 space-y-1 pt-1">
                 {[
-                  { id: 'invoice', label: 'Tax Invoices', count: documentTypeCounts.invoice, color: 'hover:text-emerald-600 dark:hover:text-emerald-400', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' },
-                  { id: 'proforma', label: 'Proforma Invoice', count: documentTypeCounts.proforma, color: 'hover:text-sky-600 dark:hover:text-sky-400', badge: 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300' },
-                  { id: 'debit_note', label: 'Debit Note', count: documentTypeCounts.debit_note, color: 'hover:text-indigo-600 dark:hover:text-indigo-400', badge: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300' },
-                  { id: 'credit_note', label: 'Credit Note', count: documentTypeCounts.credit_note, color: 'hover:text-violet-600 dark:hover:text-violet-400', badge: 'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300' },
-                  { id: 'quote', label: 'Quote / Estimate', count: documentTypeCounts.quote, color: 'hover:text-teal-600 dark:hover:text-teal-400', badge: 'bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300' }
+                  { id: 'invoice', label: 'Tax Invoices', count: documentTypeCounts.invoice, activeBg: 'bg-emerald-600 text-white dark:bg-emerald-600 dark:text-white shadow-xs', color: 'hover:text-emerald-600 dark:hover:text-emerald-400', badge: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300', activeBadge: 'bg-white/25 text-white' },
+                  { id: 'proforma', label: 'Proforma Invoice', count: documentTypeCounts.proforma, activeBg: 'bg-sky-600 text-white dark:bg-sky-600 dark:text-white shadow-xs', color: 'hover:text-sky-600 dark:hover:text-sky-400', badge: 'bg-sky-500/20 text-sky-700 dark:text-sky-300', activeBadge: 'bg-white/25 text-white' },
+                  { id: 'debit_note', label: 'Debit Note', count: documentTypeCounts.debit_note, activeBg: 'bg-indigo-600 text-white dark:bg-indigo-600 dark:text-white shadow-xs', color: 'hover:text-indigo-600 dark:hover:text-indigo-400', badge: 'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300', activeBadge: 'bg-white/25 text-white' },
+                  { id: 'credit_note', label: 'Credit Note', count: documentTypeCounts.credit_note, activeBg: 'bg-violet-600 text-white dark:bg-violet-600 dark:text-white shadow-xs', color: 'hover:text-violet-600 dark:hover:text-violet-400', badge: 'bg-violet-500/20 text-violet-700 dark:text-violet-300', activeBadge: 'bg-white/25 text-white' },
+                  { id: 'quote', label: 'Quote / Estimate', count: documentTypeCounts.quote, activeBg: 'bg-teal-600 text-white dark:bg-teal-600 dark:text-white shadow-xs', color: 'hover:text-teal-600 dark:hover:text-teal-400', badge: 'bg-teal-500/20 text-teal-700 dark:text-teal-300', activeBadge: 'bg-white/25 text-white' }
                 ].map(sub => {
                   const isSubActive = activeTab === 'invoices' && ledgerSection === sub.id;
                   return (
@@ -837,14 +837,14 @@ export default function Dashboard({
                           window.history.pushState(null, '', pathMap[sub.id]);
                         }
                       }}
-                      className={`w-full px-2.5 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
+                      className={`w-full px-3 py-2 rounded-xl text-left text-[11px] font-extrabold transition-all duration-200 flex items-center justify-between cursor-pointer ${
                         isSubActive
-                          ? 'bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white font-black'
-                          : `text-[#64748b] dark:text-zinc-400 ${sub.color} hover:bg-slate-50 dark:hover:bg-zinc-800/50`
+                          ? `${sub.activeBg} font-black scale-[1.01]`
+                          : `text-slate-700 dark:text-zinc-300 ${sub.color} hover:bg-slate-100/70 dark:hover:bg-zinc-850/60`
                       }`}
                     >
                       <span className="truncate">{sub.label}</span>
-                      <span className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-black ${isSubActive ? sub.badge : 'bg-slate-200/50 dark:bg-zinc-800 text-slate-500'}`}>
+                      <span className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-black ${isSubActive ? sub.activeBadge : 'bg-slate-200/60 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400'}`}>
                         {sub.count}
                       </span>
                     </button>
