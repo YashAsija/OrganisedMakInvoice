@@ -2087,9 +2087,9 @@ export default function Dashboard({
     return matchesSearch && matchesFilter;
   });
 
-  // Non-draft invoices across all sections for Global Billing Ledger totals
+  // Non-draft Tax Invoices only for Global Billing Ledger totals & Analytics
   const allLedgerInvoices = useMemo(() => {
-    return invoices.filter(inv => inv.status !== 'draft');
+    return invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === 'invoice');
   }, [invoices]);
 
   const totalBilled = allLedgerInvoices
@@ -2502,8 +2502,10 @@ export default function Dashboard({
   };
 
   // --- REPORTS COMPILED CALCULATIONS ---
-  // Apply date and client filters
+  // Apply date, client, and document type filters (Tax Invoices only for accounting analytics)
   const reportedInvoices = invoices.filter(inv => {
+    if (inv.status === 'draft') return false;
+    if (getInvoiceDocumentType(inv) !== 'invoice') return false;
     // Client filter
     if (reportClientFilter !== 'all' && inv.clientName !== reportClientFilter) return false;
     // Date range filter
