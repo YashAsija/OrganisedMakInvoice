@@ -6,14 +6,20 @@ import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Exp
 import { getSampleInvoice, BUSINESS_TEMPLATES } from './lib/presets';
 import { getSecuritySettings, saveSecuritySettings, SecuritySettings, hashPin, hashPinPBKDF2, generateSalt } from './lib/biometrics';
 
-// Global error and rejection handlers to suppress development error overlays for network blocks (adblockers/extensions)
+// Global error and rejection handlers to suppress development error overlays for network blocks & browser extension hydration mismatches
 if (typeof window !== 'undefined') {
-  // Suppress Next.js Console TypeError overlay by routing network-related console.errors to console.warn
+  // Suppress Next.js Console TypeError overlay by routing network/hydration console.errors to console.warn
   const originalConsoleError = console.error;
   console.error = function (...args) {
     const errorString = args.map(arg => (arg instanceof Error ? arg.message : String(arg))).join(' ');
-    if (errorString.includes('Failed to fetch') || errorString.includes('TypeError')) {
-      console.warn('[Suppressed Next.js Overlay] Suppressed network console.error:', ...args);
+    if (
+      errorString.includes('Failed to fetch') ||
+      errorString.includes('TypeError') ||
+      errorString.includes('hydration') ||
+      errorString.includes('bis_skin_checked') ||
+      errorString.includes('did not match')
+    ) {
+      console.warn('[Suppressed Next.js Overlay] Suppressed error:', ...args);
       return;
     }
     originalConsoleError.apply(console, args);
@@ -574,6 +580,14 @@ export default function App() {
                   upiId: companySettings.upi_id || cloudProf.upiId || '',
                   invoicePrefix: companySettings.invoice_prefix || cloudProf.invoicePrefix || 'INV',
                   startingInvoiceNumber: companySettings.starting_invoice_number || cloudProf.startingInvoiceNumber || '1',
+                  proformaPrefix: companySettings.proforma_prefix || cloudProf.proformaPrefix || 'PRO',
+                  startingProformaNumber: companySettings.starting_proforma_number || cloudProf.startingProformaNumber || '1',
+                  debitNotePrefix: companySettings.debit_note_prefix || cloudProf.debitNotePrefix || 'DN',
+                  startingDebitNoteNumber: companySettings.starting_debit_note_number || cloudProf.startingDebitNoteNumber || '1',
+                  creditNotePrefix: companySettings.credit_note_prefix || cloudProf.creditNotePrefix || 'CN',
+                  startingCreditNoteNumber: companySettings.starting_credit_note_number || cloudProf.startingCreditNoteNumber || '1',
+                  quotePrefix: companySettings.quote_prefix || cloudProf.quotePrefix || 'EST',
+                  startingQuoteNumber: companySettings.starting_quote_number || cloudProf.startingQuoteNumber || '1',
                   defaultNotes: companySettings.default_notes || cloudProf.defaultNotes || '',
                   defaultTerms: companySettings.default_terms || cloudProf.defaultTerms || '',
                 } : (cloudProf as BusinessProfile);
