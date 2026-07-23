@@ -3076,6 +3076,27 @@ export default function Dashboard({
             <div>
               {/* MOBILE ONLY SMALL SCREENS CARDS VIEW */}
               <div className="space-y-3 md:hidden">
+                {filteredInvoices.length > 0 && (
+                  <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-zinc-900 rounded-xl border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-2xs">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={filteredInvoices.length > 0 && filteredInvoices.every(i => selectedInvoiceIds.includes(i.id))}
+                        onChange={handleSelectAllFiltered}
+                        className="w-4 h-4 rounded border-[#e2e8f0] text-[#64748b] focus:ring-[#64748b] cursor-pointer"
+                      />
+                      <span className="text-[11px] font-extrabold text-[#0f172a] dark:text-zinc-200 uppercase tracking-wider">
+                        Select All ({filteredInvoices.length})
+                      </span>
+                    </label>
+                    {selectedInvoiceIds.length > 0 && (
+                      <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 font-mono">
+                        {selectedInvoiceIds.length} Selected
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {filteredInvoices.length === 0 ? (
                   <div className="p-8 sm:p-12 bg-white dark:bg-zinc-900 text-center rounded-2xl text-[#64748b]/60 border border-[#e2e8f0]/60 dark:border-zinc-800">
                     <FileText className="w-8 h-8 mx-auto mb-2 text-[#64748b]/40" />
