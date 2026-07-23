@@ -1943,10 +1943,21 @@ export default function InvoiceModal({
                         id="inv-status"
                         value={status}
                         onChange={(e) => setStatus(e.target.value as InvoiceStatus)}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white font-medium text-[13px] text-slate-800 focus:ring-1 focus:ring-sky-500 focus:outline-none"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white font-medium text-[13px] text-slate-800 focus:ring-1 focus:ring-sky-500 focus:outline-none cursor-pointer"
                       >
-                        <option value="pending">Unpaid</option>
-                        <option value="paid">Paid</option>
+                        {invoiceType === 'debit_note' || invoiceType === 'credit_note' ? (
+                          <>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Not Approved</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="pending">Unpaid / Pending</option>
+                            <option value="paid">Paid</option>
+                            <option value="cancelled">Cancelled</option>
+                          </>
+                        )}
                       </select>
                     </div>
 

@@ -2204,9 +2204,12 @@ export default function Dashboard({
   const getStatusColor = (status: InvoiceStatus) => {
     switch (status) {
       case 'paid': return 'bg-emerald-50 dark:bg-emerald-950/45 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50';
+      case 'approved': return 'bg-emerald-50 dark:bg-emerald-950/45 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50';
       case 'pending': return 'bg-amber-50 dark:bg-amber-950/45 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-900/50';
+      case 'rejected': return 'bg-rose-50 dark:bg-rose-950/45 text-rose-700 dark:text-rose-400 border border-rose-100 dark:border-rose-900/50';
       case 'draft': return 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700';
       case 'cancelled': return 'bg-rose-50 dark:bg-rose-950/45 text-rose-700 dark:text-rose-400 border border-rose-100 dark:border-rose-900/50';
+      default: return 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700';
     }
   };
 
@@ -3038,9 +3041,19 @@ export default function Dashboard({
                   className="w-full pl-3 pr-7 py-1.5 sm:py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]/60 cursor-pointer transition-colors"
                 >
                   <option value="all">All Statuses</option>
-                  <option value="paid">Paid</option>
-                  <option value="pending">Pending</option>
-                  <option value="cancelled">Cancelled</option>
+                  {ledgerSection === 'debit_note' || ledgerSection === 'credit_note' ? (
+                    <>
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Not Approved</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="paid">Paid</option>
+                      <option value="pending">Pending</option>
+                      <option value="cancelled">Cancelled</option>
+                    </>
+                  )}
                 </select>
               </div>
             </div>
