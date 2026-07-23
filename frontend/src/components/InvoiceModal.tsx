@@ -1662,13 +1662,12 @@ export default function InvoiceModal({
                 <h2 className="text-sm md:text-base font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
                   {invoice ? 'Edit Document' : 'Quick Bill'}
                 </h2>
-
-                {/* Mobile Inline Compact Select Dropdown (< md) */}
-                <div className="md:hidden relative inline-flex items-center">
+                {/* Mobile Dropdown (Compact, inline left next to title) */}
+                <div className="md:hidden relative inline-block">
                   <select
                     value={invoiceType === 'quote' ? 'estimate' : invoiceType}
                     onChange={(e) => setInvoiceType(e.target.value as any)}
-                    className="pl-2.5 pr-7 py-1 rounded-lg border border-sky-300/80 dark:border-sky-800 bg-sky-50/80 dark:bg-sky-950/70 text-sky-800 dark:text-sky-200 font-extrabold text-[11px] focus:ring-2 focus:ring-sky-500 focus:outline-none cursor-pointer appearance-none shadow-2xs"
+                    className="pl-2.5 pr-7 py-1 rounded-lg border border-sky-300/80 dark:border-sky-800 bg-sky-50/90 dark:bg-sky-950/70 text-sky-800 dark:text-sky-200 font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none cursor-pointer shadow-xs appearance-none"
                   >
                     <option value="invoice">Tax Invoice</option>
                     <option value="proforma">Proforma Invoice</option>
@@ -1676,10 +1675,9 @@ export default function InvoiceModal({
                     <option value="credit_note">Credit Note</option>
                     <option value="estimate">Quote / Estimate</option>
                   </select>
-                  <ChevronDown className="w-3 h-3 text-sky-600 dark:text-sky-400 absolute right-2 pointer-events-none stroke-[3]" />
+                  <ChevronDown className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               </div>
-
               <div className="flex items-center mt-0.5">
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] md:text-[11px] font-mono font-medium bg-slate-100 dark:bg-zinc-800/80 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-zinc-700/80 shadow-xs">
                   <span className="opacity-60 mr-[1px]">#</span>{invoiceNumber}
@@ -1717,7 +1715,7 @@ export default function InvoiceModal({
 
           <button
             onClick={onClose}
-            className="flex w-8 h-8 items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all cursor-pointer focus:outline-none shrink-0"
+            className="hidden md:flex w-8 h-8 items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all cursor-pointer focus:outline-none shrink-0"
             title="Close"
           >
             <X className="w-4.5 h-4.5" strokeWidth={2.5} />
