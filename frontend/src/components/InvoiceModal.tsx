@@ -1646,9 +1646,22 @@ export default function InvoiceModal({
               <ShoppingBag className="w-4.5 h-4.5 relative z-10" strokeWidth={2.5} />
             </div>
             <div className="flex flex-col">
-              <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight leading-tight">
-                {invoice ? 'Edit Invoice' : 'Create Invoice'}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight leading-tight">
+                  {invoice ? 'Edit Document' : 'Quick Bill'}
+                </h2>
+                <select
+                  value={invoiceType}
+                  onChange={(e) => setInvoiceType(e.target.value as any)}
+                  className="px-2.5 py-1 rounded-lg border border-sky-300 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none cursor-pointer shadow-xs"
+                >
+                  <option value="invoice">Tax Invoice</option>
+                  <option value="proforma">Proforma Invoice</option>
+                  <option value="debit_note">Debit Note</option>
+                  <option value="credit_note">Credit Note</option>
+                  <option value="estimate">Quote / Estimate</option>
+                </select>
+              </div>
               <div className="flex items-center mt-0.5">
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-mono font-medium bg-slate-100 dark:bg-zinc-800/80 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-zinc-700/80 shadow-xs">
                   <span className="opacity-60 mr-[1px]">#</span>{invoiceNumber}
@@ -1766,22 +1779,7 @@ export default function InvoiceModal({
 
                   {/* General Metadata */}
                   <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-900 space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label htmlFor="doc-type-select" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Document Type</label>
-                        <select
-                          id="doc-type-select"
-                          value={invoiceType}
-                          onChange={(e) => setInvoiceType(e.target.value as any)}
-                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-medium text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none cursor-pointer"
-                        >
-                          <option value="invoice">Tax Invoice</option>
-                          <option value="proforma">Proforma Invoice</option>
-                          <option value="debit_note">Debit Note</option>
-                          <option value="credit_note">Credit Note</option>
-                          <option value="estimate">Quote / Estimate</option>
-                        </select>
-                      </div>
+                    <div className="grid grid-cols-1 gap-3">
                       <div>
                         <label htmlFor="inv-num" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">ID Number</label>
                         <input
@@ -1793,62 +1791,6 @@ export default function InvoiceModal({
                           className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-medium font-mono text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
                         />
                       </div>
-                    </div>
-
-                    <div className="border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
-                      <label htmlFor="template-select" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Document Template</label>
-                      <select
-                        id="template-select"
-                        value={activeTemplate.id}
-                        onChange={(e) => {
-                          const selectedId = e.target.value;
-                          const savedCustom = localStorage.getItem('makbills_custom_templates');
-                          let match: InvoiceTemplate | undefined;
-                          if (savedCustom) {
-                            try {
-                              const parsed = JSON.parse(savedCustom);
-                              match = parsed.find((t: InvoiceTemplate) => t.id === selectedId);
-                            } catch (err) {}
-                          }
-                          if (!match) {
-                            match = TEMPLATE_PRESETS.find(t => t.id === selectedId);
-                          }
-                          if (match) {
-                            setActiveTemplate(match);
-                            // Store user selected default template specifically for this document type
-                            localStorage.setItem(`makbills_default_template_${invoiceType}`, selectedId);
-                          }
-                        }}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-medium text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none cursor-pointer"
-                      >
-                        <optgroup label="MakInvoices Originals">
-                          <option value="preset_makinvoices_invoice">MakInvoices Tax Invoice (Default)</option>
-                          <option value="preset_makinvoices_proforma">MakInvoices Proforma Invoice (Default)</option>
-                          <option value="preset_makinvoices_debit_note">MakInvoices Debit Note (Default)</option>
-                          <option value="preset_makinvoices_credit_note">MakInvoices Credit Note (Default)</option>
-                          <option value="preset_makinvoices_quotation">MakInvoices Quote / Estimate (Default)</option>
-                        </optgroup>
-                        {(() => {
-                          const savedCustom = localStorage.getItem('makbills_custom_templates');
-                          let customList: InvoiceTemplate[] = [];
-                          if (savedCustom) {
-                            try { customList = JSON.parse(savedCustom); } catch (err) {}
-                          }
-                          if (customList.length === 0) return null;
-                          return (
-                            <optgroup label="My Custom Templates">
-                              {customList.map(ct => (
-                                <option key={ct.id} value={ct.id}>{ct.name}</option>
-                              ))}
-                            </optgroup>
-                          );
-                        })()}
-                        <optgroup label="System Presets">
-                          {TEMPLATE_PRESETS.filter(p => !p.id.startsWith('preset_makinvoices_')).map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </optgroup>
-                      </select>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-150 dark:border-slate-900/50 pt-2.5">
