@@ -2087,18 +2087,23 @@ export default function Dashboard({
     return matchesSearch && matchesFilter;
   });
 
-  const totalBilled = sectionInvoices
+  // Non-draft invoices across all sections for Global Billing Ledger totals
+  const allLedgerInvoices = useMemo(() => {
+    return invoices.filter(inv => inv.status !== 'draft');
+  }, [invoices]);
+
+  const totalBilled = allLedgerInvoices
     .filter(inv => inv.status === 'paid')
     .reduce((sum, inv) => sum + inv.grandTotal, 0);
 
-  const totalOutstanding = sectionInvoices
+  const totalOutstanding = allLedgerInvoices
     .filter(inv => inv.status === 'pending')
     .reduce((sum, inv) => sum + inv.grandTotal, 0);
 
-  const totalTax = sectionInvoices
+  const totalTax = allLedgerInvoices
     .reduce((sum, inv) => sum + (inv.taxTotal || 0), 0);
 
-  const totalDraft = sectionInvoices
+  const totalDraft = invoices
     .filter(inv => inv.status === 'draft')
     .reduce((sum, inv) => sum + inv.grandTotal, 0);
 
