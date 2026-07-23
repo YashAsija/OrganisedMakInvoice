@@ -3335,7 +3335,7 @@ export default function Dashboard({
               {/* Bifurcated Section Tabs Bar */}
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 sm:mx-0 sm:px-0 border-b border-[#e2e8f0]/60 dark:border-zinc-800">
                 {[
-                  { id: 'all', label: 'All Drafts', count: draftCounts.all, activeColor: 'border-slate-900 text-white bg-slate-900 dark:bg-zinc-800 dark:text-white font-black', countBg: 'bg-white/20 text-white dark:bg-zinc-700 dark:text-zinc-100' },
+                  { id: 'all', label: 'All Drafts', count: draftCounts.all, activeColor: 'border-slate-800 text-slate-900 dark:text-white bg-[#F5EFE6] dark:bg-zinc-800 font-extrabold', countBg: 'bg-slate-300/80 text-slate-900 dark:bg-zinc-700 dark:text-zinc-100' },
                   { id: 'invoice', label: 'Tax Invoices', count: draftCounts.invoice, activeColor: 'border-emerald-500 text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20', countBg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' },
                   { id: 'proforma', label: 'Proforma', count: draftCounts.proforma, activeColor: 'border-sky-500 text-sky-700 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/20', countBg: 'bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-300' },
                   { id: 'debit_note', label: 'Debit Notes', count: draftCounts.debit_note, activeColor: 'border-indigo-500 text-indigo-700 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20', countBg: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300' },
