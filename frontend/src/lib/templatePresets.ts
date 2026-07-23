@@ -1203,21 +1203,6 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
   },
   {
     ...makInvoicesOriginalPreset,
-    id: 'preset_makinvoices_invoice',
-    name: 'MakInvoices Tax Invoice',
-    description: 'Official MakInvoices Tax Invoice default template featuring structured layout, GST compliance, and standard payment terms.',
-    isDefault: true,
-    category: 'GST',
-    config: {
-      ...makInvoicesOriginalPreset.config,
-      header: {
-        ...makInvoicesOriginalPreset.config.header,
-        invoiceTitle: 'TAX INVOICE'
-      }
-    }
-  },
-  {
-    ...makInvoicesOriginalPreset,
     id: 'preset_makinvoices_proforma',
     name: 'MakInvoices Proforma Invoice',
     description: 'Official MakInvoices Proforma Invoice layout featuring Deep Corporate Sapphire Navy theme, Outfit typography, and custom advance payment terms.',
@@ -1344,13 +1329,15 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       roundedCorners: true,
       alternatingRowColors: true,
       tableHeaderBackground: '#0f766e',
+      tableHeaderTextColor: '#ffffff',
       spacing: 'Normal'
     }
-  }
+  },
+  makInvoicesOriginalPreset
 ];
 
 export function getDefaultTemplatePreset(): InvoiceTemplate {
-  return TEMPLATE_PRESETS.find(t => t.isDefault) || TEMPLATE_PRESETS[0];
+  return TEMPLATE_PRESETS.find(t => t.isDefault) || makInvoicesOriginalPreset || TEMPLATE_PRESETS[0];
 }
 
 export function ensureAllColumns(existingCols: any[]): any[] {

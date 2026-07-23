@@ -127,7 +127,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
   useEffect(() => {
     const allTemplates = [...templates, ...TEMPLATE_PRESETS];
     if (!allTemplates.some(t => t.id === globalDefaultId)) {
-      let newDefaultId = 'preset_makinvoices_invoice';
+      let newDefaultId = 'preset_modal_classic';
       if (templates.length > 0) {
         newDefaultId = templates[templates.length - 1].id;
         
@@ -179,7 +179,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
       const updated = templates.filter(t => t.id !== id);
       
       if (id === globalDefaultId) {
-        let newDefaultId = 'preset_makinvoices_invoice';
+        let newDefaultId = 'preset_modal_classic';
         if (updated.length > 0) {
           const newDefault = updated[updated.length - 1];
           newDefaultId = newDefault.id;
@@ -240,7 +240,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
 
     // Built-in default preset mapping if no user override
     const builtInDefaults: Record<string, string> = {
-      invoice: 'preset_makinvoices_invoice',
+      invoice: 'preset_modal_classic',
       proforma: 'preset_makinvoices_proforma',
       debit_note: 'preset_makinvoices_debit_note',
       credit_note: 'preset_makinvoices_credit_note',

@@ -269,14 +269,14 @@ export default function InvoiceModal({
 
     // 2. Default to the built-in MakInvoices Original template for this document type
     const presetDocMap: Record<string, string> = {
-      invoice: 'preset_makinvoices_invoice',
+      invoice: 'preset_modal_classic',
       proforma: 'preset_makinvoices_proforma',
       debit_note: 'preset_makinvoices_debit_note',
       credit_note: 'preset_makinvoices_credit_note',
       estimate: 'preset_makinvoices_quotation',
       quote: 'preset_makinvoices_quotation'
     };
-    const defaultPresetId = presetDocMap[normType] || 'preset_makinvoices_invoice';
+    const defaultPresetId = presetDocMap[normType] || 'preset_modal_classic';
     const builtInPreset = TEMPLATE_PRESETS.find(t => t.id === defaultPresetId);
     if (builtInPreset) return builtInPreset;
 
