@@ -3332,37 +3332,39 @@ export default function Dashboard({
                 </button>
               </div>
 
-              {/* Bifurcated Section Tabs Bar — All visible on mobile */}
-              <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 sm:mx-0 sm:px-0 border-b border-[#e2e8f0]/60 dark:border-zinc-800">
+              {/* Bifurcated Section Tabs Bar — Segmented Pill Control */}
+              <div className="w-full bg-slate-100/80 dark:bg-zinc-900/90 p-1 sm:p-1.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
                 {[
-                  { id: 'all', label: 'All Drafts', mobileLabel: 'All', count: draftCounts.all, activeColor: 'border-slate-800 text-slate-900 dark:text-white bg-slate-100 dark:bg-zinc-800', countBg: 'bg-slate-200 text-slate-800 dark:bg-zinc-700 dark:text-zinc-200' },
-                  { id: 'invoice', label: 'Tax Invoices', mobileLabel: 'Invoice', count: draftCounts.invoice, activeColor: 'border-emerald-500 text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20', countBg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' },
-                  { id: 'proforma', label: 'Proforma', mobileLabel: 'Proforma', count: draftCounts.proforma, activeColor: 'border-sky-500 text-sky-700 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/20', countBg: 'bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-300' },
-                  { id: 'debit_note', label: 'Debit Notes', mobileLabel: 'Debit', count: draftCounts.debit_note, activeColor: 'border-indigo-500 text-indigo-700 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20', countBg: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300' },
-                  { id: 'credit_note', label: 'Credit Notes', mobileLabel: 'Credit', count: draftCounts.credit_note, activeColor: 'border-violet-500 text-violet-700 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-950/20', countBg: 'bg-violet-100 text-violet-800 dark:bg-violet-900/60 dark:text-violet-300' },
-                  { id: 'quote', label: 'Quotes & Est', mobileLabel: 'Quotes', count: draftCounts.quote, activeColor: 'border-teal-500 text-teal-700 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/20', countBg: 'bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-300' }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setDraftsSection(tab.id as any)}
-                    className={`flex items-center gap-1 sm:gap-1.5 px-2 py-1.5 sm:px-4 sm:py-2.5 rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-tight sm:tracking-wider transition-all cursor-pointer border shrink-0 sm:shrink ${
-                      draftsSection === tab.id
-                        ? `${tab.activeColor} border-current shadow-xs`
-                        : 'border-transparent text-[#64748b]/80 dark:text-zinc-400 hover:text-[#0f172a] dark:hover:text-zinc-200 hover:bg-[#f8fafc] dark:hover:bg-zinc-800/50'
-                    }`}
-                  >
-                    <span className="hidden sm:inline">{tab.label}</span>
-                    <span className="sm:hidden">{tab.mobileLabel}</span>
-                    <span className={`px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full text-[8px] sm:text-[9px] font-black ${
-                      draftsSection === tab.id
-                        ? tab.countBg
-                        : 'bg-[#e2e8f0]/60 dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400'
-                    }`}>
-                      {tab.count}
-                    </span>
-                  </button>
-                ))}
+                  { id: 'all', label: 'All Drafts', count: draftCounts.all, activeColor: 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-white shadow-xs border-slate-200/70 dark:border-zinc-700', countBg: 'bg-slate-200/70 text-slate-800 dark:bg-zinc-700 dark:text-zinc-200' },
+                  { id: 'invoice', label: 'Tax Invoice', count: draftCounts.invoice, activeColor: 'bg-emerald-600 text-white shadow-xs border-emerald-600', countBg: 'bg-white/20 text-white' },
+                  { id: 'proforma', label: 'Proforma', count: draftCounts.proforma, activeColor: 'bg-sky-600 text-white shadow-xs border-sky-600', countBg: 'bg-white/20 text-white' },
+                  { id: 'debit_note', label: 'Debit Note', count: draftCounts.debit_note, activeColor: 'bg-indigo-600 text-white shadow-xs border-indigo-600', countBg: 'bg-white/20 text-white' },
+                  { id: 'credit_note', label: 'Credit Note', count: draftCounts.credit_note, activeColor: 'bg-violet-600 text-white shadow-xs border-violet-600', countBg: 'bg-white/20 text-white' },
+                  { id: 'quote', label: 'Quote / Est', count: draftCounts.quote, activeColor: 'bg-teal-600 text-white shadow-xs border-teal-600', countBg: 'bg-white/20 text-white' }
+                ].map(tab => {
+                  const isActive = draftsSection === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setDraftsSection(tab.id as any)}
+                      className={`flex-1 min-w-[58px] sm:min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2.5 px-1 sm:px-3 rounded-xl text-[9.5px] sm:text-[11px] font-extrabold uppercase tracking-tight transition-all cursor-pointer border whitespace-nowrap ${
+                        isActive
+                          ? `${tab.activeColor} scale-[1.02]`
+                          : 'border-transparent text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-800/40'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span className={`px-1.5 py-0.2 rounded-full text-[8.5px] sm:text-[9px] font-black ${
+                        isActive
+                          ? tab.countBg
+                          : 'bg-slate-200/60 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400'
+                      }`}>
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Draft Cards Grid */}
