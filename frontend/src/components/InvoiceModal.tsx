@@ -161,7 +161,7 @@ export default function InvoiceModal({
   }, []);
 
   // Advanced features and billing options
-  const [invoiceType, setInvoiceType] = useState<'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'estimate' | 'quote'>('invoice');
+  const [invoiceType, setInvoiceType] = useState<'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'estimate' | 'quote' | 'purchases' | 'purchase_order' | 'purchase_debit_note'>('invoice');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [poNumber, setPoNumber] = useState('');
   const [deliveryNote, setDeliveryNote] = useState('');
