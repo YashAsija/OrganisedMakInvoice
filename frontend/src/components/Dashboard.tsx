@@ -847,10 +847,12 @@ export default function Dashboard({
                       <span className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-black ${isSubActive ? sub.activeBadge : sub.badge}`}>
                         {sub.count}
                       </span>
-                    </button>
                   );
                 })}
               </div>
+            )}
+          </div>
+
           {/* Purchases Ledger Accordion Section */}
           <div className="space-y-0.5">
             <button
