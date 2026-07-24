@@ -2111,7 +2111,6 @@ export default function Dashboard({
   }, []);
 
   const currencySymbol = profile.currencySymbol || getCurrencySymbol(profile.currency);
-  const [isSalesLedgerExpanded, setIsSalesLedgerExpanded] = useState(true);
   const [isPurchasesLedgerExpanded, setIsPurchasesLedgerExpanded] = useState(true);
   const [purchaseLedgerSection, setPurchaseLedgerSection] = useState<'purchases' | 'purchase_order' | 'purchase_debit_note'>('purchases');
 
