@@ -29,6 +29,18 @@ export const BUILTIN_DOC_DEFAULTS: Record<string, DocTypeDefaults> = {
   quote: {
     notes: 'Thank you for requesting a quotation. We look forward to working with you!',
     terms: '1. This quotation is valid for 30 days from the date of issue.\n2. Taxes, shipping, and incidental charges will be calculated at final billing unless specified.\n3. Final scope of work or item quantities may adjust the grand total.'
+  },
+  purchases: {
+    notes: 'Purchase bill record. Goods / services received in good condition.',
+    terms: '1. Standard vendor payment terms apply.\n2. Subject to verification of delivered goods against purchase order.'
+  },
+  purchase_order: {
+    notes: 'Official Purchase Order. Please deliver items as per specifications and agreed pricing.',
+    terms: '1. Please acknowledge receipt of this purchase order within 48 hours.\n2. Delivery must be fulfilled on or before the specified date.\n3. Invoice must reference this Purchase Order number.'
+  },
+  purchase_debit_note: {
+    notes: 'Purchase Debit Note issued to vendor for returned goods / price adjustment.',
+    terms: '1. Debit adjustment as per vendor return agreement.\n2. Please adjust in current accounts payable statement.'
   }
 };
 

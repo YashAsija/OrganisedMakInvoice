@@ -31,7 +31,7 @@ export interface RecurringSettings {
 export interface Invoice {
   id: string;
   userId: string;
-  invoiceType?: 'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'estimate' | 'quote'; // Document type support
+  invoiceType?: 'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'estimate' | 'quote' | 'purchases' | 'purchase_order' | 'purchase_debit_note'; // Document type support
   invoiceNumber: string;
   referenceNumber?: string; // Reference number support
   poNumber?: string; // Purchase Order number support

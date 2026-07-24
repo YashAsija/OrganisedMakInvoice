@@ -851,6 +851,67 @@ export default function Dashboard({
                   );
                 })}
               </div>
+          {/* Purchases Ledger Accordion Section */}
+          <div className="space-y-0.5">
+            <button
+              onClick={() => {
+                if (activeTab !== 'purchases') {
+                  handleTabClick('purchases');
+                }
+                setIsPurchasesLedgerExpanded(!isPurchasesLedgerExpanded);
+              }}
+              className={navItemClass('purchases')}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'purchases', 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400')}><Briefcase className="w-3.5 h-3.5" /></div>
+                <span>Purchases Ledger</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'purchases' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
+                  {(documentTypeCounts.purchases || 0) + (documentTypeCounts.purchase_order || 0) + (documentTypeCounts.purchase_debit_note || 0)}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-[#64748b]/70 transition-transform duration-200 ${isPurchasesLedgerExpanded ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
+
+            {/* Accordion Sub-items */}
+            {isPurchasesLedgerExpanded && (
+              <div className="pl-6 space-y-0.5 pt-0.5">
+                {[
+                  { id: 'purchases', label: 'Purchases', count: documentTypeCounts.purchases || 0, activeBg: 'bg-blue-600 dark:bg-blue-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-blue-600 dark:hover:text-blue-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
+                  { id: 'purchase_order', label: 'Purchase Order', count: documentTypeCounts.purchase_order || 0, activeBg: 'bg-amber-600 dark:bg-amber-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-amber-600 dark:hover:text-amber-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
+                  { id: 'purchase_debit_note', label: 'Debit Note', count: documentTypeCounts.purchase_debit_note || 0, activeBg: 'bg-indigo-600 dark:bg-indigo-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-indigo-600 dark:hover:text-indigo-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' }
+                ].map(sub => {
+                  const isSubActive = activeTab === 'purchases' && purchaseLedgerSection === sub.id;
+                  return (
+                    <button
+                      key={sub.id}
+                      onClick={() => {
+                        handleTabClick('purchases');
+                        setPurchaseLedgerSection(sub.id as any);
+                        const pathMap: Record<string, string> = {
+                          purchases: '/purchases/purchases',
+                          purchase_order: '/purchases/purchase-order',
+                          purchase_debit_note: '/purchases/debit-note'
+                        };
+                        if (typeof window !== 'undefined' && pathMap[sub.id]) {
+                          window.history.pushState(null, '', pathMap[sub.id]);
+                        }
+                      }}
+                      className={`w-full px-3 py-2 rounded-xl text-left text-[11px] font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
+                        isSubActive
+                          ? sub.activeBg
+                          : `text-slate-700 dark:text-zinc-300 ${sub.color} hover:bg-slate-100/70 dark:hover:bg-zinc-800/60`
+                      }`}
+                    >
+                      <span className="truncate">{sub.label}</span>
+                      <span className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-black ${isSubActive ? sub.activeBadge : sub.badge}`}>
+                        {sub.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
 
@@ -2047,15 +2108,24 @@ export default function Dashboard({
   }, []);
 
   const currencySymbol = profile.currencySymbol || getCurrencySymbol(profile.currency);
+  const [isSalesLedgerExpanded, setIsSalesLedgerExpanded] = useState(true);
+  const [isPurchasesLedgerExpanded, setIsPurchasesLedgerExpanded] = useState(true);
+  const [purchaseLedgerSection, setPurchaseLedgerSection] = useState<'purchases' | 'purchase_order' | 'purchase_debit_note'>('purchases');
 
-  const getInvoiceDocumentType = (inv: Invoice): 'invoice' | 'proforma' | 'credit_note' | 'debit_note' | 'quote' => {
+  const getInvoiceDocumentType = (inv: Invoice): 'invoice' | 'proforma' | 'credit_note' | 'debit_note' | 'quote' | 'purchases' | 'purchase_order' | 'purchase_debit_note' => {
     const rawType = (inv.invoiceType || '').toLowerCase().trim();
+    if (rawType === 'purchases' || rawType === 'purchase_bill' || rawType === 'purchase') return 'purchases';
+    if (rawType === 'purchase_order' || rawType === 'po') return 'purchase_order';
+    if (rawType === 'purchase_debit_note' || rawType === 'purchase_dn') return 'purchase_debit_note';
     if (rawType === 'proforma' || rawType === 'proforma_invoice') return 'proforma';
     if (rawType === 'credit_note' || rawType === 'credit') return 'credit_note';
     if (rawType === 'debit_note' || rawType === 'debit') return 'debit_note';
     if (rawType === 'estimate' || rawType === 'quote' || rawType === 'quotation') return 'quote';
 
     const title = (inv.embeddedTemplate?.config?.header?.invoiceTitle || '').toLowerCase();
+    if (title.includes('purchase order')) return 'purchase_order';
+    if (title.includes('purchase debit')) return 'purchase_debit_note';
+    if (title.includes('purchase')) return 'purchases';
     if (title.includes('proforma')) return 'proforma';
     if (title.includes('credit')) return 'credit_note';
     if (title.includes('debit')) return 'debit_note';
@@ -2065,7 +2135,7 @@ export default function Dashboard({
   };
 
   const documentTypeCounts = useMemo(() => {
-    const counts = { invoice: 0, proforma: 0, credit_note: 0, debit_note: 0, quote: 0 };
+    const counts: Record<string, number> = { invoice: 0, proforma: 0, credit_note: 0, debit_note: 0, quote: 0, purchases: 0, purchase_order: 0, purchase_debit_note: 0 };
     // Only count non-draft documents in the ledger tabs
     invoices.filter(inv => inv.status !== 'draft').forEach(inv => {
       const docType = getInvoiceDocumentType(inv);
@@ -2075,9 +2145,12 @@ export default function Dashboard({
   }, [invoices]);
 
   const sectionInvoices = useMemo(() => {
+    if (activeTab === 'purchases') {
+      return invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === purchaseLedgerSection);
+    }
     // Exclude drafts from ledger listings — drafts belong exclusively to the Drafts page
     return invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === ledgerSection);
-  }, [invoices, ledgerSection]);
+  }, [invoices, ledgerSection, purchaseLedgerSection, activeTab]);
 
   // --- STATS ENGINES ---
   const filteredInvoices = sectionInvoices.filter(inv => {
@@ -2107,7 +2180,7 @@ export default function Dashboard({
     .filter(inv => inv.status === 'draft')
     .reduce((sum, inv) => sum + inv.grandTotal, 0);
 
-  const handleCreateDocumentForSection = (section: 'invoice' | 'proforma' | 'credit_note' | 'debit_note' | 'quote') => {
+  const handleCreateDocumentForSection = (section: string) => {
     if (section === 'invoice') {
       onOpenInvoiceEditor(null);
       return;
@@ -2120,6 +2193,9 @@ export default function Dashboard({
       credit_note: (profile.creditNotePrefix || 'CN').toUpperCase(),
       debit_note: (profile.debitNotePrefix || 'DN').toUpperCase(),
       quote: (profile.quotePrefix || 'EST').toUpperCase(),
+      purchases: 'PUR',
+      purchase_order: 'PO',
+      purchase_debit_note: 'PDN'
     };
 
     // Compute the next sequential number for this document type
@@ -2128,13 +2204,32 @@ export default function Dashboard({
       credit_note: parseInt(profile.startingCreditNoteNumber || '1', 10),
       debit_note: parseInt(profile.startingDebitNoteNumber || '1', 10),
       quote: parseInt(profile.startingQuoteNumber || '1', 10),
+      purchases: 1,
+      purchase_order: 1,
+      purchase_debit_note: 1
     };
     const existingCount = documentTypeCounts[section] || 0;
     const nextNum = (startingMap[section] || 1) + existingCount;
     const paddedNum = String(nextNum).padStart(4, '0');
 
-    const titleMap: Record<string, string> = { proforma: 'PROFORMA INVOICE', credit_note: 'CREDIT NOTE', debit_note: 'DEBIT NOTE', quote: 'QUOTATION / ESTIMATE' };
-    const typeMap: Record<string, any> = { proforma: 'proforma', credit_note: 'credit_note', debit_note: 'debit_note', quote: 'estimate' };
+    const titleMap: Record<string, string> = {
+      proforma: 'PROFORMA INVOICE',
+      credit_note: 'CREDIT NOTE',
+      debit_note: 'DEBIT NOTE',
+      quote: 'QUOTATION / ESTIMATE',
+      purchases: 'PURCHASE BILL',
+      purchase_order: 'PURCHASE ORDER',
+      purchase_debit_note: 'PURCHASE DEBIT NOTE'
+    };
+    const typeMap: Record<string, any> = {
+      proforma: 'proforma',
+      credit_note: 'credit_note',
+      debit_note: 'debit_note',
+      quote: 'estimate',
+      purchases: 'purchases',
+      purchase_order: 'purchase_order',
+      purchase_debit_note: 'purchase_debit_note'
+    };
 
     const prefix = prefixMap[section] || 'INV';
     const num = `${prefix}-${paddedNum}`;
@@ -2187,6 +2282,12 @@ export default function Dashboard({
   const renderDocTypeBadge = (inv: Invoice) => {
     const docType = getInvoiceDocumentType(inv);
     switch (docType) {
+      case 'purchases':
+        return <span className="bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Purchase Bill</span>;
+      case 'purchase_order':
+        return <span className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">P.O.</span>;
+      case 'purchase_debit_note':
+        return <span className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Purchase DN</span>;
       case 'proforma':
         return <span className="bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Proforma</span>;
       case 'credit_note':
@@ -2545,6 +2646,15 @@ export default function Dashboard({
         };
         const currentSecName = sectionNames[ledgerSection] || 'Tax Invoices';
         return `Financial Hub / Sales Ledger / ${currentSecName}`;
+      }
+      case 'purchases': {
+        const purchaseSectionNames: Record<string, string> = {
+          purchases: 'Purchases',
+          purchase_order: 'Purchase Orders',
+          purchase_debit_note: 'Debit Notes'
+        };
+        const currentSecName = purchaseSectionNames[purchaseLedgerSection] || 'Purchases';
+        return `Financial Hub / Purchases Ledger / ${currentSecName}`;
       }
       case 'drafts':
         return 'Financial Hub / Drafts';
@@ -2960,8 +3070,8 @@ export default function Dashboard({
 
           {/* Connections / sync triggers */}
 
-        {/* ------------------ TAB 1: INVOICES ROUTE ------------------ */}
-        {activeTab === 'invoices' && (
+        {/* ------------------ TAB 1: INVOICES / PURCHASES ROUTE ------------------ */}
+        {(activeTab === 'invoices' || activeTab === 'purchases') && (
           <div className="space-y-6">
             <section className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
               <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border-l-4 border-l-emerald-400 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between">
@@ -3014,7 +3124,9 @@ export default function Dashboard({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
               <div className="flex items-center gap-2">
                 <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wider">
-                  {ledgerSection === 'proforma' ? 'Proforma Invoices Ledger' : ledgerSection === 'credit_note' ? 'Credit Notes Ledger' : ledgerSection === 'debit_note' ? 'Debit Notes Ledger' : ledgerSection === 'quote' ? 'Quotes & Estimates Ledger' : 'Invoices Ledger'}
+                  {activeTab === 'purchases'
+                    ? (purchaseLedgerSection === 'purchase_order' ? 'Purchase Orders Ledger' : purchaseLedgerSection === 'purchase_debit_note' ? 'Purchase Debit Notes Ledger' : 'Purchases Ledger')
+                    : (ledgerSection === 'proforma' ? 'Proforma Invoices Ledger' : ledgerSection === 'credit_note' ? 'Credit Notes Ledger' : ledgerSection === 'debit_note' ? 'Debit Notes Ledger' : ledgerSection === 'quote' ? 'Quotes & Estimates Ledger' : 'Invoices Ledger')}
                 </h2>
                 <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black">{filteredInvoices.length} Documents</span>
               </div>
@@ -3027,11 +3139,15 @@ export default function Dashboard({
                   <span>Drafts</span>
                 </button>
                 <button
-                  onClick={() => handleCreateDocumentForSection(ledgerSection)}
+                  onClick={() => handleCreateDocumentForSection(activeTab === 'purchases' ? purchaseLedgerSection : ledgerSection)}
                   className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 sm:py-1.5 bg-gradient-to-r from-[#0f172a] to-[#64748b] hover:from-[#5C5043] hover:to-[#0f172a] text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm shadow-[#64748b]/20 transition-all active:scale-95 whitespace-nowrap"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>{ledgerSection === 'proforma' ? 'Create Proforma' : ledgerSection === 'credit_note' ? 'Create Credit Note' : ledgerSection === 'debit_note' ? 'Create Debit Note' : ledgerSection === 'quote' ? 'Create Quote' : 'Create Invoice'}</span>
+                  <span>
+                    {activeTab === 'purchases'
+                      ? (purchaseLedgerSection === 'purchase_order' ? 'Create Purchase Order' : purchaseLedgerSection === 'purchase_debit_note' ? 'Create Debit Note' : 'Create Purchase Bill')
+                      : (ledgerSection === 'proforma' ? 'Create Proforma' : ledgerSection === 'credit_note' ? 'Create Credit Note' : ledgerSection === 'debit_note' ? 'Create Debit Note' : ledgerSection === 'quote' ? 'Create Quote' : 'Create Invoice')}
+                  </span>
                 </button>
               </div>
             </div>
@@ -3055,7 +3171,7 @@ export default function Dashboard({
                   className="w-full pl-3 pr-7 py-1.5 sm:py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]/60 cursor-pointer transition-colors"
                 >
                   <option value="all">All Statuses</option>
-                  {ledgerSection === 'debit_note' || ledgerSection === 'credit_note' ? (
+                  {ledgerSection === 'debit_note' || ledgerSection === 'credit_note' || (activeTab === 'purchases' && purchaseLedgerSection === 'purchase_debit_note') ? (
                     <>
                       <option value="pending">Pending</option>
                       <option value="approved">Approved</option>
@@ -3348,7 +3464,7 @@ export default function Dashboard({
                     title="Change status in bulk"
                   >
                     <option value="" disabled>Status...</option>
-                    {ledgerSection === 'debit_note' || ledgerSection === 'credit_note' ? (
+                    {ledgerSection === 'debit_note' || ledgerSection === 'credit_note' || (activeTab === 'purchases' && purchaseLedgerSection === 'purchase_debit_note') ? (
                       <>
                         <option value="pending">Set Pending</option>
                         <option value="approved">Set Approved</option>
