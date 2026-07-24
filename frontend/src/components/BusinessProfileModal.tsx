@@ -112,7 +112,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   // Billing
   const [invoicePrefix, setInvoicePrefix] = useState(() => isOnboarding ? '' : (profile.invoicePrefix || 'INV'));
   const [startingInvoiceNumber, setStartingInvoiceNumber] = useState(() => isOnboarding ? '' : (profile.startingInvoiceNumber || '1'));
-  const [proformaPrefix, setProformaPrefix] = useState(() => isOnboarding ? '' : (profile.proformaPrefix || 'PRO'));
+  const [proformaPrefix, setProformaPrefix] = useState(() => isOnboarding ? '' : (profile.proformaPrefix || 'PI'));
   const [startingProformaNumber, setStartingProformaNumber] = useState(() => isOnboarding ? '' : (profile.startingProformaNumber || '1'));
   const [debitNotePrefix, setDebitNotePrefix] = useState(() => isOnboarding ? '' : (profile.debitNotePrefix || 'DN'));
   const [startingDebitNoteNumber, setStartingDebitNoteNumber] = useState(() => isOnboarding ? '' : (profile.startingDebitNoteNumber || '1'));
@@ -120,6 +120,10 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const [startingCreditNoteNumber, setStartingCreditNoteNumber] = useState(() => isOnboarding ? '' : (profile.startingCreditNoteNumber || '1'));
   const [quotePrefix, setQuotePrefix] = useState(() => isOnboarding ? '' : (profile.quotePrefix || 'EST'));
   const [startingQuoteNumber, setStartingQuoteNumber] = useState(() => isOnboarding ? '' : (profile.startingQuoteNumber || '1'));
+  const [purchaseOrderPrefix, setPurchaseOrderPrefix] = useState(() => isOnboarding ? '' : (profile.purchaseOrderPrefix || 'PO'));
+  const [startingPurchaseOrderNumber, setStartingPurchaseOrderNumber] = useState(() => isOnboarding ? '' : (profile.startingPurchaseOrderNumber || '1'));
+  const [purchasesPrefix, setPurchasesPrefix] = useState(() => isOnboarding ? '' : (profile.purchasesPrefix || 'PUR'));
+  const [startingPurchasesNumber, setStartingPurchasesNumber] = useState(() => isOnboarding ? '' : (profile.startingPurchasesNumber || '1'));
   const [postedInvoiceEdit, setPostedInvoiceEdit] = useState<'Enabled' | 'Disabled'>(() => isOnboarding ? 'Disabled' : (profile.postedInvoiceEdit || 'Disabled'));
   const [materialRateEdit, setMaterialRateEdit] = useState<'Enabled' | 'Disabled'>(() => isOnboarding ? 'Disabled' : (profile.materialRateEdit || 'Disabled'));
   const [materialCategorization, setMaterialCategorization] = useState<'Optional' | 'Required'>(() => isOnboarding ? 'Optional' : (profile.materialCategorization || 'Optional'));
@@ -447,7 +451,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
             setInvoicePrefix(profile.invoicePrefix || 'INV');
             setStartingInvoiceNumber(profile.startingInvoiceNumber || '1');
-            setProformaPrefix(profile.proformaPrefix || 'PRO');
+            setProformaPrefix(profile.proformaPrefix || 'PI');
             setStartingProformaNumber(profile.startingProformaNumber || '1');
             setDebitNotePrefix(profile.debitNotePrefix || 'DN');
             setStartingDebitNoteNumber(profile.startingDebitNoteNumber || '1');
@@ -455,6 +459,10 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
             setStartingCreditNoteNumber(profile.startingCreditNoteNumber || '1');
             setQuotePrefix(profile.quotePrefix || 'EST');
             setStartingQuoteNumber(profile.startingQuoteNumber || '1');
+            setPurchaseOrderPrefix(profile.purchaseOrderPrefix || 'PO');
+            setStartingPurchaseOrderNumber(profile.startingPurchaseOrderNumber || '1');
+            setPurchasesPrefix(profile.purchasesPrefix || 'PUR');
+            setStartingPurchasesNumber(profile.startingPurchasesNumber || '1');
             setPostedInvoiceEdit(profile.postedInvoiceEdit || 'Disabled');
             setMaterialRateEdit(profile.materialRateEdit || 'Disabled');
             setMaterialCategorization(profile.materialCategorization || 'Optional');
@@ -559,7 +567,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
           setInvoicePrefix(profile.invoicePrefix || 'INV');
           setStartingInvoiceNumber(profile.startingInvoiceNumber || '1');
-          setProformaPrefix(profile.proformaPrefix || 'PRO');
+          setProformaPrefix(profile.proformaPrefix || 'PI');
           setStartingProformaNumber(profile.startingProformaNumber || '1');
           setDebitNotePrefix(profile.debitNotePrefix || 'DN');
           setStartingDebitNoteNumber(profile.startingDebitNoteNumber || '1');
@@ -1336,6 +1344,10 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         starting_credit_note_number: startingCreditNoteNumber,
         quote_prefix: quotePrefix,
         starting_quote_number: startingQuoteNumber,
+        purchase_order_prefix: purchaseOrderPrefix,
+        starting_purchase_order_number: startingPurchaseOrderNumber,
+        purchases_prefix: purchasesPrefix,
+        starting_purchases_number: startingPurchasesNumber,
         posted_invoice_edit: postedInvoiceEdit === 'Enabled',
         material_rate_edit: materialRateEdit === 'Enabled',
         material_categorization: materialCategorization.toLowerCase(),
@@ -1480,6 +1492,10 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         startingCreditNoteNumber,
         quotePrefix,
         startingQuoteNumber,
+        purchaseOrderPrefix,
+        startingPurchaseOrderNumber,
+        purchasesPrefix,
+        startingPurchasesNumber,
         postedInvoiceEdit,
         materialRateEdit,
         materialCategorization,
@@ -2439,6 +2455,70 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                           type="number"
                           value={startingQuoteNumber}
                           onChange={(e) => setStartingQuoteNumber(e.target.value)}
+                          placeholder="1"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Purchases / Purchase Bill */}
+                  <div>
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-3 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
+                      Purchases / Purchase Bill
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label htmlFor="purchases-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Prefix</label>
+                        <input
+                          id="purchases-prefix"
+                          type="text"
+                          value={purchasesPrefix}
+                          onChange={(e) => setPurchasesPrefix(e.target.value)}
+                          placeholder="e.g. PUR"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="purchases-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Starting Number</label>
+                        <input
+                          id="purchases-start-num"
+                          type="number"
+                          value={startingPurchasesNumber}
+                          onChange={(e) => setStartingPurchasesNumber(e.target.value)}
+                          placeholder="1"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Purchase Order */}
+                  <div>
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+                      Purchase Order
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label htmlFor="po-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Prefix</label>
+                        <input
+                          id="po-prefix"
+                          type="text"
+                          value={purchaseOrderPrefix}
+                          onChange={(e) => setPurchaseOrderPrefix(e.target.value)}
+                          placeholder="e.g. PO"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="po-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Starting Number</label>
+                        <input
+                          id="po-start-num"
+                          type="number"
+                          value={startingPurchaseOrderNumber}
+                          onChange={(e) => setStartingPurchaseOrderNumber(e.target.value)}
                           placeholder="1"
                           className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
                         />

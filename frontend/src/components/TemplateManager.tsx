@@ -212,6 +212,8 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     const id = (t.id || '').toLowerCase();
     const desc = (t.description || '').toLowerCase();
 
+    if (title.includes('purchase order') || name.includes('purchase order') || id.includes('po') || desc.includes('purchase order')) return 'purchase_order';
+    if (title.includes('purchase') || name.includes('purchase') || id.includes('purchase') || desc.includes('purchase')) return 'purchases';
     if (title.includes('proforma') || name.includes('proforma') || id.includes('proforma') || desc.includes('proforma')) return 'proforma';
     if (title.includes('debit') || name.includes('debit') || id.includes('debit') || desc.includes('debit')) return 'debit_note';
     if (title.includes('credit') || name.includes('credit') || id.includes('credit') || desc.includes('credit')) return 'credit_note';
@@ -225,7 +227,9 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
       proforma: 'Proforma Invoice',
       debit_note: 'Debit Note',
       credit_note: 'Credit Note',
-      estimate: 'Quote / Estimate'
+      estimate: 'Quote / Estimate',
+      purchases: 'Purchase Bill',
+      purchase_order: 'Purchase Order'
     };
     return labels[docKey] || 'Tax Invoice';
   };
@@ -242,9 +246,11 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     const builtInDefaults: Record<string, string> = {
       invoice: 'preset_modal_classic',
       proforma: 'preset_makinvoices_proforma',
-      debit_note: 'preset_makinvoices_debit_note',
+      debit_note: 'preset_mak_debit_note',
       credit_note: 'preset_makinvoices_credit_note',
-      estimate: 'preset_makinvoices_quotation'
+      estimate: 'preset_makinvoices_quotation',
+      purchases: 'preset_mak_purchases',
+      purchase_order: 'preset_mak_po'
     };
 
     if (builtInDefaults[docKey] === t.id) {
@@ -377,7 +383,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     );
   }
 
-  const categories = ['All', 'Invoice', 'Proforma Invoice', 'Debit Note', 'Credit Note', 'Quote'];
+  const categories = ['All', 'Invoice', 'Proforma Invoice', 'Debit Note', 'Credit Note', 'Quote', 'Purchase Order', 'Purchases'];
 
   const matchesDocumentCategory = (t: InvoiceTemplate, category: string) => {
     if (category === 'All') return true;
@@ -387,17 +393,21 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     const id = (t.id || '').toLowerCase();
     const desc = (t.description || '').toLowerCase();
 
+    const isPO = title.includes('purchase order') || name.includes('purchase order') || id.includes('po') || desc.includes('purchase order');
+    const isPurchases = !isPO && (title.includes('purchase') || name.includes('purchase') || id.includes('purchase') || desc.includes('purchase'));
     const isProforma = title.includes('proforma') || name.includes('proforma') || id.includes('proforma') || desc.includes('proforma');
     const isDebit = title.includes('debit') || name.includes('debit') || id.includes('debit') || desc.includes('debit');
     const isCredit = title.includes('credit') || name.includes('credit') || id.includes('credit') || desc.includes('credit');
     const isQuote = title.includes('quote') || title.includes('estimate') || title.includes('quotation') || name.includes('quote') || name.includes('estimate') || name.includes('quotation') || id.includes('quote') || id.includes('quotation') || id.includes('estimate');
 
+    if (category === 'Purchase Order') return isPO;
+    if (category === 'Purchases') return isPurchases;
     if (category === 'Proforma Invoice') return isProforma;
     if (category === 'Debit Note') return isDebit;
     if (category === 'Credit Note') return isCredit;
     if (category === 'Quote') return isQuote;
     if (category === 'Invoice') {
-      return !isProforma && !isDebit && !isCredit && !isQuote;
+      return !isPO && !isPurchases && !isProforma && !isDebit && !isCredit && !isQuote;
     }
 
     return t.category === category;

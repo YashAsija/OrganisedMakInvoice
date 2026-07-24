@@ -272,10 +272,13 @@ export default function InvoiceModal({
     const presetDocMap: Record<string, string> = {
       invoice: 'preset_modal_classic',
       proforma: 'preset_makinvoices_proforma',
-      debit_note: 'preset_makinvoices_debit_note',
+      debit_note: 'preset_mak_debit_note',
+      purchase_debit_note: 'preset_mak_debit_note',
       credit_note: 'preset_makinvoices_credit_note',
       estimate: 'preset_makinvoices_quotation',
-      quote: 'preset_makinvoices_quotation'
+      quote: 'preset_makinvoices_quotation',
+      purchase_order: 'preset_mak_po',
+      purchases: 'preset_mak_purchases'
     };
     const defaultPresetId = presetDocMap[normType] || 'preset_modal_classic';
     const builtInPreset = TEMPLATE_PRESETS.find(t => t.id === defaultPresetId);
@@ -562,9 +565,9 @@ export default function InvoiceModal({
     let sNum = activeProfile.startingInvoiceNumber || profile.startingInvoiceNumber || '1';
 
     if (type === 'proforma') {
-      pFix = activeProfile.proformaPrefix || profile.proformaPrefix || 'PRO';
+      pFix = activeProfile.proformaPrefix || profile.proformaPrefix || 'PI';
       sNum = activeProfile.startingProformaNumber || profile.startingProformaNumber || '1';
-    } else if (type === 'debit_note') {
+    } else if (type === 'debit_note' || type === 'purchase_debit_note') {
       pFix = activeProfile.debitNotePrefix || profile.debitNotePrefix || 'DN';
       sNum = activeProfile.startingDebitNoteNumber || profile.startingDebitNoteNumber || '1';
     } else if (type === 'credit_note') {
@@ -573,6 +576,12 @@ export default function InvoiceModal({
     } else if (type === 'estimate' || type === 'quote') {
       pFix = activeProfile.quotePrefix || profile.quotePrefix || 'EST';
       sNum = activeProfile.startingQuoteNumber || profile.startingQuoteNumber || '1';
+    } else if (type === 'purchases') {
+      pFix = activeProfile.purchasesPrefix || profile.purchasesPrefix || 'PUR';
+      sNum = activeProfile.startingPurchasesNumber || profile.startingPurchasesNumber || '1';
+    } else if (type === 'purchase_order') {
+      pFix = activeProfile.purchaseOrderPrefix || profile.purchaseOrderPrefix || 'PO';
+      sNum = activeProfile.startingPurchaseOrderNumber || profile.startingPurchaseOrderNumber || '1';
     }
 
     return { prefix: pFix, startingNumber: sNum };
@@ -585,14 +594,7 @@ export default function InvoiceModal({
       const defaultNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, invoiceType);
       setInvoiceNumber(defaultNumber);
     }
-  }, [
-    activeProfile.startingInvoiceNumber, profile.startingInvoiceNumber, activeProfile.invoicePrefix, profile.invoicePrefix,
-    activeProfile.startingProformaNumber, profile.startingProformaNumber, activeProfile.proformaPrefix, profile.proformaPrefix,
-    activeProfile.startingDebitNoteNumber, profile.startingDebitNoteNumber, activeProfile.debitNotePrefix, profile.debitNotePrefix,
-    activeProfile.startingCreditNoteNumber, profile.startingCreditNoteNumber, activeProfile.creditNotePrefix, profile.creditNotePrefix,
-    activeProfile.startingQuoteNumber, profile.startingQuoteNumber, activeProfile.quotePrefix, profile.quotePrefix,
-    invoices, isOpen, invoice, invoiceType, getDocTypeConfig
-  ]);
+  }, [isOpen, invoice, invoiceType, invoices, getDocTypeConfig]);
 
   // Fetch fresh company settings from Supabase on modal mount/open
   useEffect(() => {
@@ -630,7 +632,11 @@ export default function InvoiceModal({
                 creditNotePrefix: settings.credit_note_prefix || profile.creditNotePrefix || prev.creditNotePrefix,
                 startingCreditNoteNumber: settings.starting_credit_note_number || profile.startingCreditNoteNumber || prev.startingCreditNoteNumber,
                 quotePrefix: settings.quote_prefix || profile.quotePrefix || prev.quotePrefix,
-                startingQuoteNumber: settings.starting_quote_number || profile.startingQuoteNumber || prev.startingQuoteNumber
+                startingQuoteNumber: settings.starting_quote_number || profile.startingQuoteNumber || prev.startingQuoteNumber,
+                purchaseOrderPrefix: settings.purchase_order_prefix || profile.purchaseOrderPrefix || prev.purchaseOrderPrefix,
+                startingPurchaseOrderNumber: settings.starting_purchase_order_number || profile.startingPurchaseOrderNumber || prev.startingPurchaseOrderNumber,
+                purchasesPrefix: settings.purchases_prefix || profile.purchasesPrefix || prev.purchasesPrefix,
+                startingPurchasesNumber: settings.starting_purchases_number || profile.startingPurchasesNumber || prev.startingPurchasesNumber
               }));
               if (settings.state) setCompanyState(settings.state);
               if (settings.country) setCompanyCountry(settings.country);
@@ -1101,37 +1107,33 @@ export default function InvoiceModal({
     const suffix = userEmail ? `_${encodeURIComponent(userEmail)}` : '';
     const storageKey = `invoice_maker_invoices${suffix}`;
     try {
+      const pendingDraftId = localStorage.getItem('makbills_pending_resume_draft');
+      if (!pendingDraftId) {
+        setResumableDraft(null);
+        return;
+      }
+
       const raw = localStorage.getItem(storageKey);
       if (!raw) {
         setResumableDraft(null);
         return;
       }
       const all = JSON.parse(raw) as any[];
-      const pendingDraftId = localStorage.getItem('makbills_pending_resume_draft');
 
-      let targetDraft = null;
-      if (pendingDraftId) {
-        targetDraft = all.find(i => i.id === pendingDraftId && i.status === 'draft');
+      const found = all.find(i => i.id === pendingDraftId && i.status === 'draft');
+      if (found) {
+        const hasRealName = found.clientName && found.clientName.trim() !== '' && !found.clientName.startsWith('Guest-') && found.clientName !== 'Quote / Estimate';
+        const hasRealItems = Array.isArray(found.items) && found.items.length > 0;
+        if (hasRealName || hasRealItems) {
+          setResumableDraft({
+            id: found.id,
+            clientName: found.clientName || 'Untitled Draft',
+            updatedAt: found.updatedAt || new Date().toISOString()
+          });
+          return;
+        }
       }
-
-      if (!targetDraft) {
-        targetDraft = all
-          .filter(i =>
-            i.status === 'draft' &&
-            ((i.clientName && i.clientName.trim() !== '') || (Array.isArray(i.items) && i.items.length > 0))
-          )
-          .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())[0];
-      }
-
-      if (targetDraft) {
-        setResumableDraft({
-          id: targetDraft.id,
-          clientName: targetDraft.clientName || 'Untitled Draft',
-          updatedAt: targetDraft.updatedAt || new Date().toISOString()
-        });
-      } else {
-        setResumableDraft(null);
-      }
+      setResumableDraft(null);
     } catch {
       setResumableDraft(null);
     }
@@ -1638,6 +1640,9 @@ export default function InvoiceModal({
                     try {
                       await supabase.from('invoices').delete().eq('id', resumableDraft.id);
                     } catch { /* ignore */ }
+                    try {
+                      localStorage.removeItem('makbills_pending_resume_draft');
+                    } catch { /* ignore */ }
                     setResumableDraft(null);
                     setResumeBannerDismissed(true);
                   }}
@@ -1689,7 +1694,23 @@ export default function InvoiceModal({
                 value={invoiceType === 'quote' ? 'estimate' : invoiceType}
                 onChange={(e) => {
                   const newType = e.target.value as any;
+                  const currentWip = buildTempInvoiceRef.current(true);
+                  if (currentWip) {
+                    const hasName = currentWip.clientName && currentWip.clientName.trim() !== '' && !currentWip.clientName.startsWith('Guest-') && currentWip.clientName !== 'Quote / Estimate';
+                    const hasItems = Array.isArray(currentWip.items) && currentWip.items.length > 0;
+                    if (hasName || hasItems) {
+                      const draftToSave = {
+                        ...currentWip,
+                        id: draftIdRef.current,
+                        status: 'draft',
+                        updatedAt: new Date().toISOString()
+                      };
+                      saveDraftToLocalStorage(draftToSave);
+                      localStorage.setItem('makbills_pending_resume_draft', draftToSave.id);
+                    }
+                  }
                   setInvoiceType(newType);
+                  loadDefaultTemplate(newType);
                   if (!invoice) {
                     const newDefaults = getDocumentTypeDefaults(newType, profile);
                     setNotes(newDefaults.notes);
@@ -1700,12 +1721,11 @@ export default function InvoiceModal({
               >
                 <option value="invoice">Tax Invoice</option>
                 <option value="proforma">Proforma Invoice</option>
-                <option value="debit_note">Debit Note</option>
                 <option value="credit_note">Credit Note</option>
                 <option value="estimate">Quote / Estimate</option>
                 <option value="purchases">Purchase Bill</option>
                 <option value="purchase_order">Purchase Order</option>
-                <option value="purchase_debit_note">Purchase Debit Note</option>
+                <option value="purchase_debit_note">Debit Note</option>
               </select>
               <ChevronDown className="w-4 h-4 text-sky-700 dark:text-sky-300 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2.5} />
             </div>
@@ -1715,12 +1735,11 @@ export default function InvoiceModal({
               {[
                 { id: 'invoice', label: 'Tax Invoice' },
                 { id: 'proforma', label: 'Proforma' },
-                { id: 'debit_note', label: 'Debit Note' },
                 { id: 'credit_note', label: 'Credit Note' },
                 { id: 'estimate', label: 'Quote / Est' },
                 { id: 'purchases', label: 'Purchases' },
                 { id: 'purchase_order', label: 'P.O.' },
-                { id: 'purchase_debit_note', label: 'Purchase DN' }
+                { id: 'purchase_debit_note', label: 'Debit Note' }
               ].map(type => {
                 const isActive = invoiceType === type.id || (type.id === 'estimate' && invoiceType === 'quote');
                 return (
@@ -1729,7 +1748,24 @@ export default function InvoiceModal({
                     type="button"
                     onClick={() => {
                       const newType = type.id as any;
+                      // Save WIP draft before switching document type if work was started
+                      const currentWip = buildTempInvoiceRef.current(true);
+                      if (currentWip) {
+                        const hasName = currentWip.clientName && currentWip.clientName.trim() !== '' && !currentWip.clientName.startsWith('Guest-') && currentWip.clientName !== 'Quote / Estimate';
+                        const hasItems = Array.isArray(currentWip.items) && currentWip.items.length > 0;
+                        if (hasName || hasItems) {
+                          const draftToSave = {
+                            ...currentWip,
+                            id: draftIdRef.current,
+                            status: 'draft',
+                            updatedAt: new Date().toISOString()
+                          };
+                          saveDraftToLocalStorage(draftToSave);
+                          localStorage.setItem('makbills_pending_resume_draft', draftToSave.id);
+                        }
+                      }
                       setInvoiceType(newType);
+                      loadDefaultTemplate(newType);
                       if (!invoice) {
                         const newDefaults = getDocumentTypeDefaults(newType, profile);
                         setNotes(newDefaults.notes);
@@ -1951,7 +1987,7 @@ export default function InvoiceModal({
                         onChange={(e) => setStatus(e.target.value as InvoiceStatus)}
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white font-medium text-[13px] text-slate-800 focus:ring-1 focus:ring-sky-500 focus:outline-none cursor-pointer"
                       >
-                        {invoiceType === 'debit_note' || invoiceType === 'credit_note' || invoiceType === 'purchase_debit_note' ? (
+                        {invoiceType === 'credit_note' || invoiceType === 'purchase_debit_note' ? (
                           <>
                             <option value="pending">Pending</option>
                             <option value="approved">Approved</option>

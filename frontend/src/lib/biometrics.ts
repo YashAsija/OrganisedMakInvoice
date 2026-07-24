@@ -122,3 +122,40 @@ export function recordFailedAttempt(): AttemptState {
 export function clearAttempts(): void {
   localStorage.removeItem(ATTEMPT_KEY);
 }
+
+// ---------------------------------------------------------------------------
+// Security questions for PIN recovery
+// ---------------------------------------------------------------------------
+export interface SecurityQuestionsPayload {
+  q1: string;      // question label
+  a1Hash: string;  // PBKDF2 hash of normalised answer
+  a1Salt: string;  // hex salt used for a1Hash
+  q2: string;
+  a2Hash: string;
+  a2Salt: string;
+}
+
+const SECURITY_Q_KEY = 'makbills_security_questions';
+
+/** Hash a security-question answer: normalised to lowercase+trim first. */
+export async function hashAnswer(answer: string, saltHex: string): Promise<string> {
+  return hashPinPBKDF2(answer.trim().toLowerCase(), saltHex);
+}
+
+export function saveSecurityQuestions(payload: SecurityQuestionsPayload): void {
+  localStorage.setItem(SECURITY_Q_KEY, JSON.stringify(payload));
+}
+
+export function getSecurityQuestions(): SecurityQuestionsPayload | null {
+  const raw = localStorage.getItem(SECURITY_Q_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as SecurityQuestionsPayload;
+  } catch {
+    return null;
+  }
+}
+
+export function clearSecurityQuestions(): void {
+  localStorage.removeItem(SECURITY_Q_KEY);
+}

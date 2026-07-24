@@ -10,8 +10,10 @@ import {
   hashPin,
   hashPinPBKDF2,
   generateSalt,
+  getSecurityQuestions,
 } from '../lib/biometrics';
 import { supabase } from '../lib/supabase';
+import { ForgotPinWithQuestions } from './ForgotPinWithQuestions';
 
 interface BiometricVerificationProps {
   onSuccess: () => void;
@@ -22,7 +24,7 @@ const BACKEND_URL =
   (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_BACKEND_URL : '') ||
   '';
 
-type Screen = 'unlock' | 'forgot' | 'forgotSent';
+type Screen = 'unlock' | 'forgot' | 'forgotSent' | 'securityQuestions' | 'resetPin';
 
 export default function BiometricVerification({ onSuccess }: BiometricVerificationProps) {
   const [pin, setPin] = useState<string>('');
@@ -34,6 +36,13 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [shakeError, setShakeError] = useState(false);
+
+  // ── Reset-PIN flow state ────────────────────────────────────────────────
+  const [resetStep, setResetStep] = useState<'enter' | 'confirm'>('enter');
+  const [resetNewPin, setResetNewPin] = useState('');
+  const [resetConfirmPin, setResetConfirmPin] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
   useEffect(() => {
     const state = getAttemptState();
@@ -62,17 +71,22 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
     return () => clearInterval(id);
   }, [lockoutSeconds]);
 
-  // Keyboard support
+  // Keyboard support — unlock screen
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (screen !== 'unlock') return;
-      if (e.key >= '0' && e.key <= '9') handlePinInput(e.key);
-      else if (e.key === 'Backspace') handleBackspace();
+      if (screen === 'unlock') {
+        if (e.key >= '0' && e.key <= '9') handlePinInput(e.key);
+        else if (e.key === 'Backspace') handleBackspace();
+      } else if (screen === 'resetPin') {
+        if (e.key >= '0' && e.key <= '9') handleResetPinInput(e.key);
+        else if (e.key === 'Backspace') handleResetBackspace();
+      }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [pin, lockoutSeconds, screen]);
+  }, [pin, lockoutSeconds, screen, resetStep, resetNewPin, resetConfirmPin]);
 
+  // ── Server-side PIN verify ───────────────────────────────────────────────
   const verifyWithServer = async (
     enteredPin: string,
     userId: string
@@ -85,7 +99,7 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
         .single();
 
       if (fetchErr) {
-        console.error('PIN fetch error:', fetchErr); // <-- log the real reason
+        console.error('PIN fetch error:', fetchErr);
         return null;
       }
       if (!row || !row.is_pin_enabled) {
@@ -94,16 +108,12 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
       }
 
       const hashedInput = await hashPinPBKDF2(enteredPin, row.salt);
-      console.log('Hash check:', { computed: hashedInput, stored: row.hashed_pin });
-
       return hashedInput === row.hashed_pin;
     } catch (err) {
-      console.error('verifyWithServer threw:', err); // <-- this tells us if RPC/table access is broken
+      console.error('verifyWithServer threw:', err);
       return null;
     }
   };
-
-
 
   const triggerShake = () => {
     setShakeError(true);
@@ -126,24 +136,18 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
         const serverResult = await verifyWithServer(newPin, session.user.id);
 
         if (serverResult === true) {
-          // Server confirmed correct PIN
           verified = true;
         } else if (serverResult === false) {
-          // Server confirmed wrong PIN
           verified = false;
         } else {
-          // serverResult === null → server unreachable / no hash on server yet 
-          // Since we no longer save PIN hashes locally, verification fails offline
           verified = false;
           setError('Network error: Cannot verify PIN offline');
         }
       } else {
-        // No supabase session (offline / local-only mode) → Since no local hash, verification fails
         verified = false;
         setError('Cannot verify PIN without an active session');
       }
     } catch {
-      // Any unexpected error → fail securely
       verified = false;
       setError('An error occurred during verification');
     }
@@ -175,6 +179,7 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
     setPin(prev => prev.slice(0, -1));
   };
 
+  // ── Forgot PIN (remove-entirely) flow ────────────────────────────────────
   const handleForgotPin = async () => {
     setForgotLoading(true);
     try {
@@ -205,9 +210,67 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
   };
 
   const handleBypassAndEnter = () => {
-    // After PIN is cleared, allow entry
     clearAttempts();
     onSuccess();
+  };
+
+  // ── Reset-PIN flow handlers ───────────────────────────────────────────────
+  const activeResetPin = resetStep === 'enter' ? resetNewPin : resetConfirmPin;
+  const setActiveResetPin = resetStep === 'enter' ? setResetNewPin : setResetConfirmPin;
+
+  const handleResetPinInput = async (num: string) => {
+    if (activeResetPin.length >= 4) return;
+    const val = activeResetPin + num;
+    setActiveResetPin(val);
+    setResetError('');
+
+    if (val.length === 4) {
+      if (resetStep === 'enter') {
+        setTimeout(() => setResetStep('confirm'), 300);
+      } else {
+        if (val !== resetNewPin) {
+          setTimeout(() => {
+            setResetError('PINs do not match. Please try again.');
+            setResetNewPin('');
+            setResetConfirmPin('');
+            setResetStep('enter');
+          }, 300);
+        } else {
+          await doResetPin(resetNewPin);
+        }
+      }
+    }
+  };
+
+  const handleResetBackspace = () => {
+    setActiveResetPin(prev => prev.slice(0, -1));
+    setResetError('');
+  };
+
+  const doResetPin = async (rawPin: string) => {
+    setResetLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        const salt = await generateSalt();
+        const hashed = await hashPinPBKDF2(rawPin, salt);
+        await supabase.from('user_pin_security').upsert({
+          user_id: session.user.id,
+          hashed_pin: hashed,
+          salt,
+          is_pin_enabled: true,
+          updated_at: new Date().toISOString(),
+        });
+      }
+      const current = getSecuritySettings();
+      saveSecuritySettings({ ...current, isPinLockEnabled: true });
+      clearAttempts();
+      onSuccess();
+    } catch {
+      setResetError('Failed to save new PIN. Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   const isLocked = lockoutSeconds > 0;
@@ -219,7 +282,7 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
     ['', '0', 'del'],
   ];
 
-  // ─── FORGOT PIN SENT SCREEN ───────────────────────────────────────────────
+  // ── FORGOT PIN SENT SCREEN ───────────────────────────────────────────────
   if (screen === 'forgotSent') {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 select-none"
@@ -245,7 +308,7 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
     );
   }
 
-  // ─── FORGOT PIN SCREEN ────────────────────────────────────────────────────
+  // ── FORGOT PIN SCREEN (remove entirely) ───────────────────────────────────
   if (screen === 'forgot') {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 select-none"
@@ -294,7 +357,172 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
     );
   }
 
-  // ─── MAIN UNLOCK SCREEN ───────────────────────────────────────────────────
+  // ── SECURITY QUESTIONS RECOVERY SCREEN ───────────────────────────────────
+  if (screen === 'securityQuestions') {
+    return (
+      <ForgotPinWithQuestions
+        onSuccess={() => {
+          // Answers verified — proceed to reset PIN
+          setResetStep('enter');
+          setResetNewPin('');
+          setResetConfirmPin('');
+          setResetError('');
+          setScreen('resetPin');
+        }}
+        onBack={() => setScreen('unlock')}
+        onFallback={() => setScreen('forgot')}
+      />
+    );
+  }
+
+  // ── RESET PIN SCREEN ──────────────────────────────────────────────────────
+  if (screen === 'resetPin') {
+    const activePin = resetStep === 'enter' ? resetNewPin : resetConfirmPin;
+
+    return (
+      <div
+        className="fixed inset-0 z-50 flex flex-col items-center justify-between select-none"
+        style={{ background: 'linear-gradient(135deg, #1a1410 0%, #0f0c08 50%, #1a1410 100%)' }}
+      >
+        {/* Top Badge */}
+        <div className="mt-10 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest"
+          style={{ background: 'rgba(136,118,92,0.15)', border: '1px solid rgba(136,118,92,0.3)', color: '#c4a97e' }}>
+          <ShieldCheck className="w-3.5 h-3.5" />
+          MakInvoices — Set New PIN
+        </div>
+
+        {/* Center Content */}
+        <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm px-6">
+          <div className="relative mb-6">
+            <div
+              className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-2xl"
+              style={{
+                background: 'linear-gradient(135deg, rgba(136,118,92,0.25) 0%, rgba(107,90,68,0.25) 100%)',
+                border: '1px solid rgba(136,118,92,0.4)',
+                color: '#c4a97e',
+              }}
+            >
+              <Lock className="w-9 h-9" />
+            </div>
+          </div>
+
+          <h1 className="text-2xl font-black text-white tracking-tight mb-2">
+            {resetStep === 'enter' ? 'Set New PIN' : 'Confirm New PIN'}
+          </h1>
+          <p className="text-sm text-white/60 text-center leading-relaxed max-w-xs mb-6">
+            {resetStep === 'enter'
+              ? 'Enter a new 4-digit PIN for your workspace.'
+              : 'Re-enter your new PIN to confirm.'}
+          </p>
+
+          {/* Step indicator */}
+          <div className="flex gap-2 mb-6">
+            <div className={`h-1 w-10 rounded-full transition-all ${resetStep === 'enter' ? 'bg-[#88765C]' : 'bg-[#88765C]/30'}`} />
+            <div className={`h-1 w-10 rounded-full transition-all ${resetStep === 'confirm' ? 'bg-[#88765C]' : 'bg-[#88765C]/30'}`} />
+          </div>
+
+          {/* PIN Dots */}
+          <div className="flex gap-5 my-2">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="w-4 h-4 rounded-full transition-all duration-150"
+                style={{
+                  backgroundColor: i < activePin.length ? '#88765C' : 'transparent',
+                  border: `2px solid ${i < activePin.length ? '#88765C' : 'rgba(255,255,255,0.2)'}`,
+                  transform: i < activePin.length ? 'scale(1.2)' : 'scale(1)',
+                  boxShadow: i < activePin.length ? '0 0 10px rgba(136,118,92,0.5)' : 'none',
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Error */}
+          <div className="h-6 flex items-center justify-center mt-2">
+            {resetError && (
+              <p className="text-xs font-bold text-rose-400 text-center">{resetError}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Dialpad */}
+        <div className={`w-full max-w-sm px-6 mb-6 transition-opacity duration-300 ${resetLoading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+          <div className="grid grid-rows-4 gap-3">
+            {dialPad.map((row, ri) => (
+              <div key={ri} className="grid grid-cols-3 gap-3">
+                {row.map((key, ki) => {
+                  if (key === '') return <div key={ki} />;
+                  if (key === 'del') {
+                    return (
+                      <button
+                        key={ki}
+                        onClick={handleResetBackspace}
+                        className="h-14 rounded-2xl flex items-center justify-center font-bold transition-all active:scale-95"
+                        style={{
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          color: 'rgba(255,255,255,0.5)',
+                        }}
+                      >
+                        <Delete size={18} />
+                      </button>
+                    );
+                  }
+                  return (
+                    <button
+                      key={ki}
+                      onClick={() => handleResetPinInput(key)}
+                      className="h-14 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95"
+                      style={{
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(136,118,92,0.25)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                      onMouseDown={e => (e.currentTarget.style.background = 'rgba(136,118,92,0.4)')}
+                      onMouseUp={e => (e.currentTarget.style.background = 'rgba(136,118,92,0.25)')}
+                    >
+                      <span className="text-xl font-bold text-white leading-tight">{key}</span>
+                      <span className="text-[8px] font-semibold uppercase tracking-widest text-white/30 leading-tight">
+                        {key === '2' ? 'ABC' : key === '3' ? 'DEF' : key === '4' ? 'GHI'
+                          : key === '5' ? 'JKL' : key === '6' ? 'MNO' : key === '7' ? 'PQRS'
+                          : key === '8' ? 'TUV' : key === '9' ? 'WXYZ' : ''}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+
+          {/* Cancel */}
+          <button
+            onClick={() => setScreen('securityQuestions')}
+            className="w-full mt-5 py-3 text-xs font-bold uppercase tracking-wider transition-all text-center"
+            style={{ color: 'rgba(196,169,126,0.6)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#c4a97e')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(196,169,126,0.6)')}
+          >
+            ← Back
+          </button>
+        </div>
+
+        <style>{`
+          @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%       { transform: translateX(-8px); }
+            40%       { transform: translateX(8px); }
+            60%       { transform: translateX(-6px); }
+            80%       { transform: translateX(6px); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // ── MAIN UNLOCK SCREEN ────────────────────────────────────────────────────
+  const hasSecurityQuestions = !!getSecurityQuestions();
+
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col items-center justify-between select-none"
@@ -424,9 +652,9 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
           ))}
         </div>
 
-        {/* Forgot PIN */}
+        {/* Forgot PIN — routes to security questions if available, else remove-flow */}
         <button
-          onClick={() => setScreen('forgot')}
+          onClick={() => setScreen(hasSecurityQuestions ? 'securityQuestions' : 'forgot')}
           className="w-full mt-5 py-3 text-xs font-bold uppercase tracking-wider transition-all text-center"
           style={{ color: 'rgba(196,169,126,0.6)' }}
           onMouseEnter={e => (e.currentTarget.style.color = '#c4a97e')}

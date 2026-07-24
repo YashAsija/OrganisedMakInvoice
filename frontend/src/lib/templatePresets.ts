@@ -615,7 +615,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
     }
   },
   {
-    ...generateBaseTemplate('preset_debit_note', 'Debit Note', 'GST'),
+    ...generateBaseTemplate('preset_debit_note', 'GST Debit Note', 'GST'),
     description: 'An amber-accented debit note preset to issue supplementary charges, price adjustments, or additional billing corrections.',
     layout: {
       type: 'GST Standard',
@@ -1203,6 +1203,253 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
   },
   {
     ...makInvoicesOriginalPreset,
+    id: 'preset_po_enterprise',
+    name: 'Enterprise Purchase Order',
+    description: 'Formal corporate procurement order template with strict vendor terms, transport dispatch details, and dark slate styling.',
+    isDefault: false,
+    category: 'Purchase Order',
+    layout: {
+      ...makInvoicesOriginalPreset.layout,
+      type: 'Corporate'
+    },
+    sections: {
+      ...makInvoicesOriginalPreset.sections,
+      shipTo: { id: 'shipTo', visible: true, order: 5, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
+      transport: { id: 'transport', visible: true, order: 6, gridColumnSpan: 12, customLabels: {}, customStyles: {} }
+    },
+    config: {
+      ...makInvoicesOriginalPreset.config,
+      header: {
+        ...makInvoicesOriginalPreset.config.header,
+        invoiceTitle: 'PURCHASE ORDER'
+      },
+      terms: {
+        presetId: 'default',
+        customText: '1. Strict compliance with purchase order specifications required.\n2. Goods subject to inspection upon delivery.\n3. Mention PO number on all invoices and packaging slips.'
+      }
+    },
+    styleConfig: {
+      ...makInvoicesOriginalPreset.styleConfig,
+      primaryColor: '#0f172a',
+      tableHeaderBackground: '#0f172a',
+      tableHeaderTextColor: '#ffffff',
+      accentColor: '#f59e0b',
+      alternatingRowColors: true
+    }
+  },
+  {
+    ...makInvoicesOriginalPreset,
+    id: 'preset_po_minimal',
+    name: 'Minimal Procurement PO',
+    description: 'Clean, lightweight Purchase Order layout focusing strictly on required line items, quantities, and delivery schedules.',
+    isDefault: false,
+    category: 'Purchase Order',
+    layout: {
+      ...makInvoicesOriginalPreset.layout,
+      type: 'Minimal'
+    },
+    sections: {
+      ...makInvoicesOriginalPreset.sections,
+      shipTo: { id: 'shipTo', visible: false, order: 5, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
+      transport: { id: 'transport', visible: false, order: 6, gridColumnSpan: 12, customLabels: {}, customStyles: {} }
+    },
+    config: {
+      ...makInvoicesOriginalPreset.config,
+      header: {
+        ...makInvoicesOriginalPreset.config.header,
+        invoiceTitle: 'PURCHASE ORDER'
+      },
+      terms: {
+        presetId: 'default',
+        customText: '1. Deliver items as per agreed timeline.\n2. Payment processed post receipt of valid invoice.'
+      }
+    },
+    styleConfig: {
+      ...makInvoicesOriginalPreset.styleConfig,
+      primaryColor: '#b45309',
+      tableHeaderBackground: '#fef3c7',
+      tableHeaderTextColor: '#92400e',
+      accentColor: '#d97706',
+      borderStyle: 'Light',
+      roundedCorners: true
+    }
+  },
+  {
+    ...makInvoicesOriginalPreset,
+    id: 'preset_purchases_vendor_bill',
+    name: 'Vendor Expense Bill',
+    description: 'Comprehensive purchase bill template designed for accounting, vendor verification, and input tax credit record keeping.',
+    isDefault: false,
+    category: 'Purchases',
+    layout: {
+      ...makInvoicesOriginalPreset.layout,
+      type: 'GST Standard'
+    },
+    sections: {
+      ...makInvoicesOriginalPreset.sections,
+      transport: { id: 'transport', visible: true, order: 6, gridColumnSpan: 12, customLabels: {}, customStyles: {} }
+    },
+    config: {
+      ...makInvoicesOriginalPreset.config,
+      header: {
+        ...makInvoicesOriginalPreset.config.header,
+        invoiceTitle: 'PURCHASE BILL'
+      },
+      tax: {
+        ...makInvoicesOriginalPreset.config.tax,
+        enableHsnSummary: true,
+        enableGstSummary: true
+      },
+      terms: {
+        presetId: 'default',
+        customText: '1. Vendor bill entered for Accounts Payable.\n2. Input Tax Credit (ITC) claimable subject to GSTR 2B matching.'
+      }
+    },
+    styleConfig: {
+      ...makInvoicesOriginalPreset.styleConfig,
+      primaryColor: '#1e40af',
+      tableHeaderBackground: '#1e40af',
+      tableHeaderTextColor: '#ffffff',
+      accentColor: '#3b82f6',
+      alternatingRowColors: true
+    }
+  },
+  {
+    ...makInvoicesOriginalPreset,
+    id: 'preset_purchases_logistics',
+    name: 'Logistics & Material Purchase',
+    description: 'Tailored for raw material procurement, shipping freight charges, and inward inventory purchases.',
+    isDefault: false,
+    category: 'Purchases',
+    layout: {
+      ...makInvoicesOriginalPreset.layout,
+      type: 'Modern'
+    },
+    sections: {
+      ...makInvoicesOriginalPreset.sections,
+      shipTo: { id: 'shipTo', visible: true, order: 5, gridColumnSpan: 6, customLabels: {}, customStyles: {} },
+      transport: { id: 'transport', visible: true, order: 6, gridColumnSpan: 12, customLabels: {}, customStyles: {} }
+    },
+    config: {
+      ...makInvoicesOriginalPreset.config,
+      header: {
+        ...makInvoicesOriginalPreset.config.header,
+        invoiceTitle: 'PURCHASE BILL'
+      },
+      terms: {
+        presetId: 'default',
+        customText: '1. Material received in good condition.\n2. Subject to final quality assurance audit.'
+      }
+    },
+    styleConfig: {
+      ...makInvoicesOriginalPreset.styleConfig,
+      primaryColor: '#0369a1',
+      tableHeaderBackground: '#e0f2fe',
+      tableHeaderTextColor: '#0369a1',
+      accentColor: '#0284c7',
+      borderStyle: 'Light',
+      roundedCorners: true
+    }
+  },
+  {
+    ...makInvoicesOriginalPreset,
+    id: 'preset_mak_po',
+    name: 'MakInvoices PO',
+    description: 'Official Purchase Order default template designed specifically for procurement, vendor orders, and item requisitions with amber accent highlights.',
+    isDefault: false,
+    category: 'Default',
+    config: {
+      ...makInvoicesOriginalPreset.config,
+      header: {
+        ...makInvoicesOriginalPreset.config.header,
+        invoiceTitle: 'PURCHASE ORDER'
+      },
+      payment: {
+        ...makInvoicesOriginalPreset.config.payment,
+        customNote: 'Please reference this Purchase Order number on all invoices and shipping documents.'
+      },
+      terms: {
+        presetId: 'default',
+        customText: '1. Please acknowledge receipt of this purchase order within 48 hours.\n2. Delivery must be fulfilled on or before the specified date.'
+      }
+    },
+    styleConfig: {
+      ...makInvoicesOriginalPreset.styleConfig,
+      primaryColor: '#7c2d12',
+      tableHeaderBackground: '#7c2d12',
+      tableHeaderTextColor: '#ffffff',
+      accentColor: '#9a3412',
+      fontFamily: 'Inter',
+      borderStyle: 'Light',
+      alternatingRowColors: false,
+      roundedCorners: false,
+      spacing: 'Compact'
+    }
+  },
+  {
+    ...makInvoicesOriginalPreset,
+    id: 'preset_mak_purchases',
+    name: 'MakInvoices Purchases',
+    description: 'Purchase Bill & Vendor Expense record template featuring clear vendor details, line-item tax calculation, and blue professional theme.',
+    isDefault: false,
+    category: 'Default',
+    config: {
+      ...makInvoicesOriginalPreset.config,
+      header: {
+        ...makInvoicesOriginalPreset.config.header,
+        invoiceTitle: 'PURCHASE BILL'
+      },
+      terms: {
+        presetId: 'default',
+        customText: '1. Standard vendor payment terms apply.\n2. Subject to verification of delivered goods.'
+      }
+    },
+    styleConfig: {
+      ...makInvoicesOriginalPreset.styleConfig,
+      primaryColor: '#1e3a8a',
+      tableHeaderBackground: '#1e3a8a',
+      tableHeaderTextColor: '#ffffff',
+      accentColor: '#1d4ed8',
+      fontFamily: 'Inter',
+      borderStyle: 'Light',
+      alternatingRowColors: false,
+      roundedCorners: false,
+      spacing: 'Compact'
+    }
+  },
+  {
+    ...makInvoicesOriginalPreset,
+    id: 'preset_mak_debit_note',
+    name: 'MakInvoices Debit Note',
+    description: 'Official Debit Note template for price adjustments, supplementary charges, and vendor returns with indigo accent headers.',
+    isDefault: false,
+    category: 'Default',
+    config: {
+      ...makInvoicesOriginalPreset.config,
+      header: {
+        ...makInvoicesOriginalPreset.config.header,
+        invoiceTitle: 'DEBIT NOTE'
+      },
+      terms: {
+        presetId: 'default',
+        customText: '1. This Debit Note is issued in accordance with applicable GST rules for debit adjustments.\n2. Please update your accounts payable ledger accordingly.'
+      }
+    },
+    styleConfig: {
+      ...makInvoicesOriginalPreset.styleConfig,
+      primaryColor: '#312e81',
+      tableHeaderBackground: '#312e81',
+      tableHeaderTextColor: '#ffffff',
+      accentColor: '#4338ca',
+      fontFamily: 'Inter',
+      borderStyle: 'Light',
+      alternatingRowColors: false,
+      roundedCorners: false,
+      spacing: 'Compact'
+    }
+  },
+  {
+    ...makInvoicesOriginalPreset,
     id: 'preset_makinvoices_proforma',
     name: 'MakInvoices Proforma Invoice',
     description: 'Official MakInvoices Proforma Invoice layout featuring Deep Corporate Sapphire Navy theme, Outfit typography, and custom advance payment terms.',
@@ -1267,38 +1514,6 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       tableHeaderBackground: '#334155',
       tableHeaderTextColor: '#ffffff',
       spacing: 'Compact'
-    }
-  },
-  {
-    ...makInvoicesOriginalPreset,
-    id: 'preset_makinvoices_debit_note',
-    name: 'MakInvoices Debit Note',
-    description: 'Official MakInvoices Debit Note layout featuring Dark Graphite accent, bold table styling, and supplementary billing terms.',
-    isDefault: false,
-    category: 'Default',
-    config: {
-      ...makInvoicesOriginalPreset.config,
-      header: {
-        ...makInvoicesOriginalPreset.config.header,
-        invoiceTitle: 'DEBIT NOTE'
-      },
-      terms: {
-        presetId: 'default',
-        customText: '1. Debit Note issued for supplementary price adjustments or tax corrections.\n2. Payment due within 7 days of issue.'
-      }
-    },
-    styleConfig: {
-      ...makInvoicesOriginalPreset.styleConfig,
-      primaryColor: '#1e293b',
-      secondaryColor: '#f8fafc',
-      accentColor: '#3b82f6',
-      fontFamily: 'Roboto',
-      borderStyle: 'Medium',
-      roundedCorners: false,
-      alternatingRowColors: true,
-      tableHeaderBackground: '#1e293b',
-      tableHeaderTextColor: '#ffffff',
-      spacing: 'Normal'
     }
   },
   {

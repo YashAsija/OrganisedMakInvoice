@@ -4,7 +4,8 @@ import type { User } from '@supabase/supabase-js';
 import { supabase, handleSupabaseError, OperationType, isSupabaseConfigured } from './lib/supabase';
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense, InvoiceTemplate } from './types';
 import { getSampleInvoice, BUSINESS_TEMPLATES } from './lib/presets';
-import { getSecuritySettings, saveSecuritySettings, SecuritySettings, hashPin, hashPinPBKDF2, generateSalt } from './lib/biometrics';
+import { getSecuritySettings, saveSecuritySettings, SecuritySettings, hashPin, hashPinPBKDF2, generateSalt, hashAnswer, saveSecurityQuestions, clearSecurityQuestions } from './lib/biometrics';
+import type { PinSetupSecQPayload } from './components/PinSetupModal';
 
 // Global error and rejection handlers to suppress development error overlays for network blocks (adblockers/extensions)
 if (typeof window !== 'undefined') {
@@ -53,7 +54,6 @@ const tabToPath: Record<string, string> = {
   invoices: '/invoices',
   'invoices/invoice': '/invoices/tax-invoices',
   'invoices/proforma': '/invoices/proforma-invoices',
-  'invoices/debit_note': '/invoices/debit-notes',
   'invoices/credit_note': '/invoices/credit-notes',
   'invoices/quote': '/invoices/quotes-estimates',
   purchases: '/purchases',
@@ -137,6 +137,9 @@ export default function App() {
       if (path.startsWith('/invoice-templates')) {
         return 'invoice_templates';
       }
+      if (path.startsWith('/purchases')) {
+        return 'purchases';
+      }
       return pathToTab[path] || 'dashboard';
     }
     return 'dashboard';
@@ -214,6 +217,10 @@ export default function App() {
           if (path.startsWith('/invoices')) {
             expectedPath = path;
           }
+        } else if (activeTab === 'purchases') {
+          if (path.startsWith('/purchases')) {
+            expectedPath = path;
+          }
         } else if (activeTab === 'invoice_templates') {
           if (path.startsWith('/invoice-templates')) {
             expectedPath = path;
@@ -251,6 +258,8 @@ export default function App() {
             let matchedTab = pathToTab[path];
             if (path.startsWith('/invoice-templates')) {
               matchedTab = 'invoice_templates';
+            } else if (path.startsWith('/purchases')) {
+              matchedTab = 'purchases';
             }
             
             if (matchedTab) {
@@ -295,7 +304,10 @@ export default function App() {
     setPinModalOpen(true);
   };
 
-  const handlePinConfirm = async (rawPin: string) => {
+  const handlePinConfirm = async (
+    rawPin: string,
+    secQRaw?: PinSetupSecQPayload
+  ) => {
     const current = getSecuritySettings();
     const enable = !current.isPinLockEnabled;
     setPinModalLoading(true);
@@ -334,6 +346,27 @@ export default function App() {
           console.warn('[PIN] Could not sync PIN to server, proceeding locally anyway.', err);
         }
       }
+
+      // Hash and persist security questions if provided
+      if (secQRaw?.q1 && secQRaw?._rawA1 && secQRaw?.q2 && secQRaw?._rawA2) {
+        try {
+          const a1Salt = await generateSalt();
+          const a2Salt = await generateSalt();
+          const a1Hash = await hashAnswer(secQRaw._rawA1, a1Salt);
+          const a2Hash = await hashAnswer(secQRaw._rawA2, a2Salt);
+          saveSecurityQuestions({
+            q1: secQRaw.q1,
+            a1Hash,
+            a1Salt,
+            q2: secQRaw.q2,
+            a2Hash,
+            a2Salt,
+          });
+        } catch (err) {
+          console.warn('[PIN] Could not save security questions.', err);
+        }
+      }
+
       setPinModalLoading(false);
       setPinModalOpen(false);
     } else {
@@ -352,6 +385,8 @@ export default function App() {
           console.warn('[PIN] Could not clear PIN on server.');
         }
       }
+      // Also clear security questions from local storage
+      clearSecurityQuestions();
     }
 
     const updated: SecuritySettings = {
@@ -587,7 +622,7 @@ export default function App() {
                   upiId: companySettings.upi_id || cloudProf.upiId || '',
                   invoicePrefix: companySettings.invoice_prefix || cloudProf.invoicePrefix || 'INV',
                   startingInvoiceNumber: companySettings.starting_invoice_number || cloudProf.startingInvoiceNumber || '1',
-                  proformaPrefix: companySettings.proforma_prefix || cloudProf.proformaPrefix || 'PRO',
+                  proformaPrefix: companySettings.proforma_prefix || cloudProf.proformaPrefix || 'PI',
                   startingProformaNumber: companySettings.starting_proforma_number || cloudProf.startingProformaNumber || '1',
                   debitNotePrefix: companySettings.debit_note_prefix || cloudProf.debitNotePrefix || 'DN',
                   startingDebitNoteNumber: companySettings.starting_debit_note_number || cloudProf.startingDebitNoteNumber || '1',
@@ -595,6 +630,10 @@ export default function App() {
                   startingCreditNoteNumber: companySettings.starting_credit_note_number || cloudProf.startingCreditNoteNumber || '1',
                   quotePrefix: companySettings.quote_prefix || cloudProf.quotePrefix || 'EST',
                   startingQuoteNumber: companySettings.starting_quote_number || cloudProf.startingQuoteNumber || '1',
+                  purchaseOrderPrefix: companySettings.purchase_order_prefix || cloudProf.purchaseOrderPrefix || 'PO',
+                  startingPurchaseOrderNumber: companySettings.starting_purchase_order_number || cloudProf.startingPurchaseOrderNumber || '1',
+                  purchasesPrefix: companySettings.purchases_prefix || cloudProf.purchasesPrefix || 'PUR',
+                  startingPurchasesNumber: companySettings.starting_purchases_number || cloudProf.startingPurchasesNumber || '1',
                   defaultNotes: companySettings.default_notes || cloudProf.defaultNotes || '',
                   defaultTerms: companySettings.default_terms || cloudProf.defaultTerms || '',
                 } : (cloudProf as BusinessProfile);

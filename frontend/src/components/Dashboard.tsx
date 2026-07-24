@@ -815,7 +815,6 @@ export default function Dashboard({
                 {[
                   { id: 'invoice', label: 'Tax Invoices', count: documentTypeCounts.invoice, activeBg: 'bg-emerald-600 dark:bg-emerald-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-emerald-600 dark:hover:text-emerald-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
                   { id: 'proforma', label: 'Proforma Invoice', count: documentTypeCounts.proforma, activeBg: 'bg-sky-600 dark:bg-sky-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-sky-600 dark:hover:text-sky-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
-                  { id: 'debit_note', label: 'Debit Note', count: documentTypeCounts.debit_note, activeBg: 'bg-indigo-600 dark:bg-indigo-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-indigo-600 dark:hover:text-indigo-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
                   { id: 'credit_note', label: 'Credit Note', count: documentTypeCounts.credit_note, activeBg: 'bg-violet-600 dark:bg-violet-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-violet-600 dark:hover:text-violet-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
                   { id: 'quote', label: 'Quote / Estimate', count: documentTypeCounts.quote, activeBg: 'bg-teal-600 dark:bg-teal-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-teal-600 dark:hover:text-teal-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' }
                 ].map(sub => {
@@ -829,7 +828,6 @@ export default function Dashboard({
                         const pathMap: Record<string, string> = {
                           invoice: '/invoices/tax-invoices',
                           proforma: '/invoices/proforma-invoices',
-                          debit_note: '/invoices/debit-notes',
                           credit_note: '/invoices/credit-notes',
                           quote: '/invoices/quotes-estimates'
                         };
@@ -2083,17 +2081,26 @@ export default function Dashboard({
   useEffect(() => {
     const syncRouteFromLocation = () => {
       if (typeof window === 'undefined') return;
+      const path = (window.location.pathname || '').toLowerCase();
       const hash = (window.location.hash || '').toLowerCase().replace('#', '');
       const searchParams = new URLSearchParams(window.location.search);
       const paramType = (searchParams.get('section') || searchParams.get('type') || '').toLowerCase();
-      const target = hash || paramType;
+      const target = path.includes('/purchases') ? path : (hash || paramType);
 
-      if (target.includes('proforma')) {
+      if (target.includes('purchase-order') || target.includes('po')) {
+        setPurchaseLedgerSection('purchase_order');
+      } else if (target.includes('debit-note') || target.includes('debit')) {
+        if (path.includes('/purchases')) {
+          setPurchaseLedgerSection('purchase_debit_note');
+        } else {
+          setLedgerSection('debit_note');
+        }
+      } else if (target.includes('purchases')) {
+        setPurchaseLedgerSection('purchases');
+      } else if (target.includes('proforma')) {
         setLedgerSection('proforma');
       } else if (target.includes('credit')) {
         setLedgerSection('credit_note');
-      } else if (target.includes('debit')) {
-        setLedgerSection('debit_note');
       } else if (target.includes('quote') || target.includes('estimate')) {
         setLedgerSection('quote');
       } else if (target.includes('invoice')) {
@@ -2191,7 +2198,7 @@ export default function Dashboard({
 
     // Use profile-configured prefixes with fallback defaults
     const prefixMap: Record<string, string> = {
-      proforma: (profile.proformaPrefix || 'PRO').toUpperCase(),
+      proforma: (profile.proformaPrefix || 'PI').toUpperCase(),
       credit_note: (profile.creditNotePrefix || 'CN').toUpperCase(),
       debit_note: (profile.debitNotePrefix || 'DN').toUpperCase(),
       quote: (profile.quotePrefix || 'EST').toUpperCase(),
@@ -2289,7 +2296,7 @@ export default function Dashboard({
       case 'purchase_order':
         return <span className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">P.O.</span>;
       case 'purchase_debit_note':
-        return <span className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Purchase DN</span>;
+        return <span className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Debit Note</span>;
       case 'proforma':
         return <span className="bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200/50 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Proforma</span>;
       case 'credit_note':
@@ -3173,7 +3180,7 @@ export default function Dashboard({
                   className="w-full pl-3 pr-7 py-1.5 sm:py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]/60 cursor-pointer transition-colors"
                 >
                   <option value="all">All Statuses</option>
-                  {ledgerSection === 'debit_note' || ledgerSection === 'credit_note' || (activeTab === 'purchases' && purchaseLedgerSection === 'purchase_debit_note') ? (
+                  {ledgerSection === 'credit_note' || (activeTab === 'purchases' && purchaseLedgerSection === 'purchase_debit_note') ? (
                     <>
                       <option value="pending">Pending</option>
                       <option value="approved">Approved</option>
@@ -3466,7 +3473,7 @@ export default function Dashboard({
                     title="Change status in bulk"
                   >
                     <option value="" disabled>Status...</option>
-                    {ledgerSection === 'debit_note' || ledgerSection === 'credit_note' || (activeTab === 'purchases' && purchaseLedgerSection === 'purchase_debit_note') ? (
+                    {ledgerSection === 'credit_note' || (activeTab === 'purchases' && purchaseLedgerSection === 'purchase_debit_note') ? (
                       <>
                         <option value="pending">Set Pending</option>
                         <option value="approved">Set Approved</option>

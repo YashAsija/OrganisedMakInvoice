@@ -160,6 +160,10 @@ export interface BusinessProfile {
   startingCreditNoteNumber?: string;
   quotePrefix?: string;
   startingQuoteNumber?: string;
+  purchaseOrderPrefix?: string;
+  startingPurchaseOrderNumber?: string;
+  purchasesPrefix?: string;
+  startingPurchasesNumber?: string;
   postedInvoiceEdit?: 'Enabled' | 'Disabled';
   materialRateEdit?: 'Enabled' | 'Disabled';
   materialCategorization?: 'Optional' | 'Required';
@@ -200,7 +204,7 @@ export interface InvoiceTemplate {
   name: string;
   description: string;
   isDefault?: boolean;
-  category: 'Default' | 'GST' | 'Service' | 'Retail' | 'User';
+  category: 'Default' | 'GST' | 'Service' | 'Retail' | 'User' | 'Purchase Order' | 'Purchases';
 
   layout: {
     type: 'Classic' | 'Modern' | 'Minimal' | 'Corporate' | 'GST Standard' | 'Retail' | 'Fully Custom' | 'Modal Classic';
