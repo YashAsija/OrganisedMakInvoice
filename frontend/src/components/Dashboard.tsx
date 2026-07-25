@@ -66,7 +66,9 @@ import {
   Building2, 
   HelpCircle, 
   GripVertical, 
-  AlertTriangle 
+  AlertTriangle,
+  Settings,
+  Building
 } from 'lucide-react';
 import { useConfirm } from './ConfirmContext';
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from '../types';
@@ -155,7 +157,8 @@ export default function Dashboard({
   const [localActiveTab, setLocalActiveTab] = useState<string>('dashboard');
   const activeTab = propActiveTab !== undefined ? propActiveTab : localActiveTab;
   const setActiveTab = onTabChange !== undefined ? onTabChange : setLocalActiveTab;
-  const [draftsSection, setDraftsSection] = useState<'all' | 'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'quote'>('all');
+  const [draftsSection, setDraftsSection] = useState<string>('all');
+  const [draftsOrigin, setDraftsOrigin] = useState<'sales' | 'purchases'>('sales');
   
   // Custom scroll recovery behavior to guarantee the dashboard opens from the top instead of stays scrolled to the bottom on sign-in
   React.useEffect(() => {
@@ -366,6 +369,16 @@ export default function Dashboard({
     ];
   });
 
+  const [actualVendors, setActualVendors] = useState<MasterVendor[]>(() => {
+    const cached = localStorage.getItem('makbills_masters_actual_vendors');
+    if (cached) return JSON.parse(cached);
+    return [
+      { id: 'av_1', name: 'AWS Cloud Hosting', company: 'Amazon Web Services', email: 'billing@aws.com', phone: '1-800-AWS', address: 'Seattle, WA', category: 'SaaS Subscriptions' },
+      { id: 'av_2', name: 'WeWork Office Space', company: 'WeWork LLC', email: 'billing@wework.com', phone: '+1-555-WEWORK', address: 'Tech Plaza, SF, CA', category: 'Rent & Overheads' },
+      { id: 'av_3', name: 'Google Suite Workspace', company: 'Google Cloud Corp', email: 'gsuite@google.com', phone: '1-800-GOOGLE', address: 'Mountain View, CA', category: 'SaaS Subscriptions' }
+    ];
+  });
+
   const [hsnCodes, setHsnCodes] = useState<MasterHsnCode[]>(() => {
     const cached = localStorage.getItem('makbills_masters_hsn');
     if (cached) return JSON.parse(cached);
@@ -537,6 +550,7 @@ export default function Dashboard({
 
     const tabLabels: Record<string, string> = {
       master_vendor: 'Client Database',
+      master_actual_vendor: 'Vendor Database',
       master_transport: 'Transport Database',
       master_hsn: 'HSN Registry',
       master_gl: 'GL Accounts',
@@ -553,6 +567,11 @@ export default function Dashboard({
         list = vendors;
         key = 'makbills_masters_vendors';
         setter = setVendors;
+        break;
+      case 'master_actual_vendor':
+        list = actualVendors;
+        key = 'makbills_masters_actual_vendors';
+        setter = setActualVendors;
         break;
       case 'master_transport':
         list = transports;
@@ -637,6 +656,7 @@ export default function Dashboard({
 
     const tabLabels: Record<string, string> = {
       master_vendor: 'Client Database',
+      master_actual_vendor: 'Vendor Database',
       master_transport: 'Transport Database',
       master_hsn: 'HSN Registry',
       master_gl: 'GL Accounts',
@@ -653,6 +673,11 @@ export default function Dashboard({
         list = vendors;
         key = 'makbills_masters_vendors';
         setter = setVendors;
+        break;
+      case 'master_actual_vendor':
+        list = actualVendors;
+        key = 'makbills_masters_actual_vendors';
+        setter = setActualVendors;
         break;
       case 'master_transport':
         list = transports;
@@ -763,26 +788,12 @@ export default function Dashboard({
 
         {/* SETTINGS MENU */}
         <div className="space-y-1">
-          <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1">Settings Menu</span>
+          <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1">Financial Hub</span>
           
           <button onClick={() => handleTabClick('dashboard')} className={navItemClass('dashboard')}>
             <div className="flex items-center gap-2.5">
               <div className={iconWrapper(activeTab === 'dashboard', 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400')}><BarChart3 className="w-3.5 h-3.5" /></div>
               <span>Billing Dashboard</span>
-            </div>
-          </button>
-
-          <button onClick={() => handleTabClick('learn')} className={navItemClass('learn')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'learn', 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400')}><BookOpen className="w-3.5 h-3.5" /></div>
-              <span>Learn MakInvoices</span>
-            </div>
-          </button>
-
-          <button onClick={() => handleTabClick('invoice_templates')} className={navItemClass('invoice_templates')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'invoice_templates', 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400')}><Layout className="w-3.5 h-3.5" /></div>
-              <span>Invoice Template</span>
             </div>
           </button>
 
@@ -924,7 +935,17 @@ export default function Dashboard({
               <span>Billed Clients</span>
             </div>
             <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'clients' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
-              {clients.length}
+              {billedClientsFiltered.length}
+            </span>
+          </button>
+
+          <button onClick={() => handleTabClick('purchasers')} className={navItemClass('purchasers')}>
+            <div className="flex items-center gap-2.5">
+              <div className={iconWrapper(activeTab === 'purchasers', 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400')}><Users2 className="w-3.5 h-3.5" /></div>
+              <span>Billed Vendors</span>
+            </div>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'purchasers' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
+              {purchasersFiltered.length}
             </span>
           </button>
 
@@ -932,6 +953,25 @@ export default function Dashboard({
             <div className="flex items-center gap-2.5">
               <div className={iconWrapper(activeTab === 'reports', 'bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400')}><TrendingUp className="w-3.5 h-3.5" /></div>
               <span>Accounting Summary</span>
+            </div>
+          </button>
+        </div>
+
+        {/* TOOLS & CUSTOMIZATION */}
+        <div className="space-y-1">
+          <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1 mt-2">Tools & Design</span>
+
+          <button onClick={() => handleTabClick('invoice_templates')} className={navItemClass('invoice_templates')}>
+            <div className="flex items-center gap-2.5">
+              <div className={iconWrapper(activeTab === 'invoice_templates', 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400')}><Layout className="w-3.5 h-3.5" /></div>
+              <span>Invoice Template</span>
+            </div>
+          </button>
+
+          <button onClick={() => handleTabClick('learn')} className={navItemClass('learn')}>
+            <div className="flex items-center gap-2.5">
+              <div className={iconWrapper(activeTab === 'learn', 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400')}><BookOpen className="w-3.5 h-3.5" /></div>
+              <span>Learn MakInvoices</span>
             </div>
           </button>
         </div>
@@ -944,6 +984,13 @@ export default function Dashboard({
             <div className="flex items-center gap-2.5">
               <div className={iconWrapper(activeTab === 'master_vendor', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Users2 className="w-3.5 h-3.5" /></div>
               <span>Client Database</span>
+            </div>
+          </button>
+
+          <button onClick={() => handleTabClick('master_actual_vendor')} className={navItemClass('master_actual_vendor')}>
+            <div className="flex items-center gap-2.5">
+              <div className={iconWrapper(activeTab === 'master_actual_vendor', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Users2 className="w-3.5 h-3.5" /></div>
+              <span>Vendor Database</span>
             </div>
           </button>
 
@@ -968,10 +1015,36 @@ export default function Dashboard({
             </div>
           </button>
 
-          <button onClick={() => handleTabClick('catalog_material')} className={`${navItemClass('catalog_material')} mb-3 sm:mb-4`}>
+          <button onClick={() => handleTabClick('catalog_material')} className={navItemClass('catalog_material')}>
             <div className="flex items-center gap-2.5">
               <div className={iconWrapper(activeTab === 'catalog_material', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Wrench className="w-3.5 h-3.5" /></div>
               <span>Material Catalog</span>
+            </div>
+          </button>
+        </div>
+
+        {/* SYSTEM SETTINGS */}
+        <div className="space-y-1">
+          <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1 mt-2">System Settings</span>
+
+          <button onClick={() => handleTabClick('settings')} className={navItemClass('settings')}>
+            <div className="flex items-center gap-2.5">
+              <div className={iconWrapper(activeTab === 'settings', 'bg-slate-50 text-slate-650 dark:bg-zinc-800 dark:text-zinc-300')}><Settings className="w-3.5 h-3.5" /></div>
+              <span>Preferences</span>
+            </div>
+          </button>
+
+          <button onClick={() => handleTabClick('profile')} className={navItemClass('profile')}>
+            <div className="flex items-center gap-2.5">
+              <div className={iconWrapper(activeTab === 'profile', 'bg-slate-50 text-slate-650 dark:bg-zinc-800 dark:text-zinc-300')}><Building className="w-3.5 h-3.5" /></div>
+              <span>Company Info</span>
+            </div>
+          </button>
+
+          <button onClick={() => handleTabClick('support')} className={`${navItemClass('support')} mb-3 sm:mb-4`}>
+            <div className="flex items-center gap-2.5">
+              <div className={iconWrapper(activeTab === 'support', 'bg-slate-50 text-slate-650 dark:bg-zinc-800 dark:text-zinc-300')}><HelpCircle className="w-3.5 h-3.5" /></div>
+              <span>Help & Support</span>
             </div>
           </button>
         </div>
@@ -1032,6 +1105,40 @@ export default function Dashboard({
         ];
         fields = [
           { label: 'Client Name', key: 'name', type: 'text' },
+          { label: 'Company / Organization', key: 'company', type: 'text' },
+          { label: 'Category / Tag', key: 'category', type: 'text' },
+          { label: 'Email Address', key: 'email', type: 'email' },
+          { label: 'Phone Number', key: 'phone', type: 'text' },
+          { label: 'Billing Address', key: 'address', type: 'text' }
+        ];
+        break;
+      case 'master_actual_vendor':
+        title = 'Vendor Database';
+        description = 'Pre-saved vendor and supplier profiles, company configurations, and billing credentials';
+        const actualVendorSignatures = new Set(actualVendors.map(v => 
+          `${v.name?.trim().toLowerCase()}|${(v.email||'').trim().toLowerCase()}|${(v.phone||'').trim()}|${(v.address||'').trim()}`
+        ));
+        const additionalVendors = purchasersFiltered
+          .filter(c => !actualVendorSignatures.has(`${c.name.trim().toLowerCase()}|${(c.email||'').trim().toLowerCase()}|${(c.phone||'').trim()}|${(c.address||'').trim()}`))
+          .map(c => ({
+            id: c.id,
+            name: c.name,
+            company: c.companyName,
+            email: c.email,
+            phone: c.phone,
+            address: c.address,
+            category: 'Billed Vendor'
+          }));
+        list = [...actualVendors, ...additionalVendors];
+        columns = [
+          { header: 'Vendor Name', key: 'name' },
+          { header: 'Company Name', key: 'company' },
+          { header: 'Email Address', key: 'email' },
+          { header: 'Phone Number', key: 'phone' },
+          { header: 'Category / Tag', key: 'category' }
+        ];
+        fields = [
+          { label: 'Vendor Name', key: 'name', type: 'text' },
           { label: 'Company / Organization', key: 'company', type: 'text' },
           { label: 'Category / Tag', key: 'category', type: 'text' },
           { label: 'Email Address', key: 'email', type: 'email' },
@@ -1208,6 +1315,21 @@ export default function Dashboard({
         avatarIcon:    'text-indigo-500',
         avatarIconDark:'dark:text-indigo-400',
       },
+      master_actual_vendor: {
+        topBar:        'bg-blue-500',
+        iconBg:        'bg-blue-600',
+        iconBgDark:    'dark:bg-blue-700',
+        iconColor:     'text-blue-50',
+        iconColorDark: 'dark:text-blue-100',
+        badgeBg:       'bg-blue-50 border-blue-100 dark:bg-blue-950/40 dark:border-blue-900/40',
+        badgeText:     'text-blue-600 dark:text-blue-400',
+        theadBg:       'bg-blue-50/40 dark:bg-blue-950/20',
+        theadBgDark:   '',
+        avatarBg:      'bg-blue-50 border-blue-100/70',
+        avatarBgDark:  'dark:bg-blue-950/30 dark:border-blue-900/40',
+        avatarIcon:    'text-blue-500',
+        avatarIconDark:'dark:text-blue-400',
+      },
       master_transport: {
         topBar:        'bg-teal-500',
         iconBg:        'bg-teal-600',
@@ -1309,7 +1431,7 @@ export default function Dashboard({
 
             {/* Right: Action buttons */}
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              {(activeTab === 'master_vendor' || activeTab === 'master_transport' || activeTab === 'master_hsn' || activeTab === 'catalog_material' || activeTab === 'catalog_category') && (
+              {(activeTab === 'master_vendor' || activeTab === 'master_actual_vendor' || activeTab === 'master_transport' || activeTab === 'master_hsn' || activeTab === 'catalog_material' || activeTab === 'catalog_category') && (
                 <>
                   {/* Download Template */}
                   <button
@@ -1321,6 +1443,10 @@ export default function Dashboard({
                         headers = ['Client Name', 'Company Name', 'Category / Tag', 'Email Address', 'Phone Number', 'Billing Address'];
                         sampleRow = ['John Doe', 'Acme Corp', 'VIP Client', 'john@acme.com', '+1 555-0199', '123 Business Rd, New York'];
                         filename = 'client_database_template.csv';
+                      } else if (activeTab === 'master_actual_vendor') {
+                        headers = ['Vendor Name', 'Company Name', 'Category / Tag', 'Email Address', 'Phone Number', 'Billing Address'];
+                        sampleRow = ['Jane Smith', 'Supplies Inc', 'Regular Supplier', 'jane@supplies.com', '+1 555-0245', '456 Vendor Blvd, Boston'];
+                        filename = 'vendor_database_template.csv';
                       } else if (activeTab === 'master_transport') {
                         headers = ['Carrier Name', 'GSTIN / UIN', 'PAN', 'Phone Number', 'Email Address', 'State', 'Country', 'Address Details'];
                         sampleRow = ['Safe Express Logistics', '07AAAAS0000A1Z1', 'AAAAS0000A', '+91 9888877777', 'info@safeexpress.com', 'Delhi', 'India', 'Okhla Phase 1, New Delhi'];
@@ -1350,8 +1476,12 @@ export default function Dashboard({
                       document.body.removeChild(link);
                       // Notify download
                       const tabLabelDl: Record<string, string> = {
-                        master_vendor: 'Client Database', master_transport: 'Transport Database',
-                        master_hsn: 'HSN Registry', catalog_material: 'Material Catalog', catalog_category: 'Product Category'
+                        master_vendor: 'Client Database',
+                        master_actual_vendor: 'Vendor Database',
+                        master_transport: 'Transport Database',
+                        master_hsn: 'HSN Registry',
+                        catalog_material: 'Material Catalog',
+                        catalog_category: 'Product Category'
                       };
                       emitNotification('Template Downloaded', `${tabLabelDl[activeTab] || 'Registry'} CSV template saved — "${filename}".`, 'success');
                     }}
@@ -1386,6 +1516,7 @@ export default function Dashboard({
                                 headers.forEach((header: string, headerIdx: number) => { if (header) rowData[header] = row[headerIdx] !== undefined ? row[headerIdx] : ''; });
                                 const id = `bulk_${activeTab}_${Date.now()}_${index}`;
                                 if (activeTab === 'master_vendor') return { id, name: rowData.name || rowData['Client Name'] || 'Unnamed Client', company: rowData.company || rowData['Company Name'] || '', category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || '', email: rowData.email || rowData['Email Address'] || '', phone: rowData.phone || rowData['Phone Number'] || '', address: rowData.address || rowData['Billing Address'] || '' };
+                                if (activeTab === 'master_actual_vendor') return { id, name: rowData.name || rowData['Vendor Name'] || 'Unnamed Vendor', company: rowData.company || rowData['Company Name'] || '', category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || '', email: rowData.email || rowData['Email Address'] || '', phone: rowData.phone || rowData['Phone Number'] || '', address: rowData.address || rowData['Billing Address'] || '' };
                                 if (activeTab === 'master_transport') return { id, name: rowData.name || rowData['Transport Name'] || 'Unnamed Carrier', phone: rowData.phone || rowData['Driver Mobile'] || '', vehicleNo: rowData.vehicleNo || rowData['Vehicle No'] || '', ewayBillNo: rowData.ewayBillNo || rowData['E-Way Bill No'] || '', station: rowData.station || rowData['Station'] || '', grRrNo: rowData.grRrNo || rowData['GR/RR No.'] || '' };
                                 if (activeTab === 'master_hsn') return { id, code: rowData.code || rowData['HSN/SAC Code'] || '000000', description: rowData.description || rowData['Description'] || '', gstRate: Number(rowData.gstRate || rowData['Tax Rate (%)'] || 18) };
                                 if (activeTab === 'catalog_material') return { id, name: rowData.name || rowData['Item Name'] || 'Unnamed Material', rate: Number(rowData.rate || rowData['Standard Rate / Unit Price'] || 0), hsn: rowData.hsn || rowData['HSN/SAC Code'] || '', uom: rowData.uom || rowData['Unit of Measure (UOM)'] || 'pcs', category: rowData.category || rowData['Category'] || '' };
@@ -1395,11 +1526,12 @@ export default function Dashboard({
                               if (finalItems.length === 0) { alert('No valid items found in file.'); return; }
                               let currentList: any[] = [], storageKey = '', setterFn: any = null;
                               if (activeTab === 'master_vendor') { currentList = vendors; storageKey = 'makbills_masters_vendors'; setterFn = setVendors; }
+                              else if (activeTab === 'master_actual_vendor') { currentList = actualVendors; storageKey = 'makbills_masters_actual_vendors'; setterFn = setActualVendors; }
                               else if (activeTab === 'master_transport') { currentList = transports; storageKey = 'makbills_masters_transports'; setterFn = setTransports; }
                               else if (activeTab === 'master_hsn') { currentList = hsnCodes; storageKey = 'makbills_masters_hsn'; setterFn = setHsnCodes; }
                               else if (activeTab === 'catalog_material') { currentList = materials; storageKey = 'makbills_masters_materials'; setterFn = setMaterials; }
                               else if (activeTab === 'catalog_category') { currentList = categories; storageKey = 'makbills_masters_categories'; setterFn = setCategories; }
-                              if (setterFn) { const updatedList = [...finalItems, ...currentList]; setterFn(updatedList); localStorage.setItem(storageKey, JSON.stringify(updatedList)); const tabLabelUp: Record<string, string> = { master_vendor: 'Client Database', master_transport: 'Transport Database', master_hsn: 'HSN Registry', catalog_material: 'Material Catalog', catalog_category: 'Product Category' }; emitNotification('Bulk Upload Complete', `${finalItems.length} records imported into ${tabLabelUp[activeTab] || 'Registry'} successfully.`, 'info'); }
+                              if (setterFn) { const updatedList = [...finalItems, ...currentList]; setterFn(updatedList); localStorage.setItem(storageKey, JSON.stringify(updatedList)); const tabLabelUp: Record<string, string> = { master_vendor: 'Client Database', master_actual_vendor: 'Vendor Database', master_transport: 'Transport Database', master_hsn: 'HSN Registry', catalog_material: 'Material Catalog', catalog_category: 'Product Category' }; emitNotification('Bulk Upload Complete', `${finalItems.length} records imported into ${tabLabelUp[activeTab] || 'Registry'} successfully.`, 'info'); }
                             } catch (err: any) { alert('Error parsing file: ' + err.message); }
                           };
                           reader.readAsBinaryString(file);
@@ -1489,7 +1621,7 @@ export default function Dashboard({
                                 <div className="flex items-center gap-3">
                                   {/* Avatar — per-tab accent color */}
                                   <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#F0E8DC] border-[#e2e8f0]/60 dark:bg-zinc-800 dark:border-zinc-700'}`}>
-                                    {activeTab === 'master_vendor' && <User className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                                    {(activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') && <User className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                                     {activeTab === 'master_transport' && <Truck className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                                     {activeTab === 'master_hsn' && <FileSpreadsheet className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                                     {activeTab === 'catalog_material' && <Wrench className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
@@ -1557,7 +1689,7 @@ export default function Dashboard({
                       <div className="flex items-start gap-3">
                         {/* Avatar */}
                         <div className={`w-9 h-9 mt-0.5 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#F0E8DC] border-[#e2e8f0]/60 dark:bg-zinc-800 dark:border-zinc-700'}`}>
-                          {activeTab === 'master_vendor' && <User className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                          {(activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') && <User className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                           {activeTab === 'master_transport' && <Truck className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                           {activeTab === 'master_hsn' && <FileSpreadsheet className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                           {activeTab === 'catalog_material' && <Wrench className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
@@ -1631,7 +1763,7 @@ export default function Dashboard({
               {/* Pagination Strip */}
               <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-[#e2e8f0]/40 dark:border-zinc-800 bg-[#FDFAF7]/60 dark:bg-zinc-950/30">
                 <span className="text-[10px] text-[#64748b]/75 dark:text-zinc-500 font-medium">
-                  Showing {Math.min(safePage * CLIENT_PAGE_SIZE + 1, filteredList.length)}–{Math.min((safePage + 1) * CLIENT_PAGE_SIZE, filteredList.length)} of {filteredList.length} {activeTab === 'master_vendor' ? 'client' : activeTab === 'master_transport' ? 'transport' : 'registry'} records
+                  Showing {Math.min(safePage * CLIENT_PAGE_SIZE + 1, filteredList.length)}–{Math.min((safePage + 1) * CLIENT_PAGE_SIZE, filteredList.length)} of {filteredList.length} {activeTab === 'master_vendor' ? 'client' : activeTab === 'master_actual_vendor' ? 'vendor' : activeTab === 'master_transport' ? 'transport' : 'registry'} records
                 </span>
                 <div className="flex items-center gap-1">
                   <button
@@ -2117,9 +2249,13 @@ export default function Dashboard({
     };
   }, []);
 
-  const currencySymbol = profile.currencySymbol || getCurrencySymbol(profile.currency);
-  const [isPurchasesLedgerExpanded, setIsPurchasesLedgerExpanded] = useState(true);
-  const [purchaseLedgerSection, setPurchaseLedgerSection] = useState<'purchases' | 'purchase_order' | 'purchase_debit_note'>('purchases');
+  const [manualPurchaserIds, setManualPurchaserIds] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('makbills_manual_purchasers');
+      return cached ? JSON.parse(cached) : [];
+    }
+    return [];
+  });
 
   const getInvoiceDocumentType = (inv: Invoice): 'invoice' | 'proforma' | 'credit_note' | 'debit_note' | 'quote' | 'purchases' | 'purchase_order' | 'purchase_debit_note' => {
     const rawType = (inv.invoiceType || '').toLowerCase().trim();
@@ -2142,6 +2278,81 @@ export default function Dashboard({
 
     return 'invoice';
   };
+
+  // Set of names/emails associated with purchase documents
+  const purchaseInvoices = useMemo(() => {
+    return invoices.filter(inv => {
+      const docType = getInvoiceDocumentType(inv);
+      return ['purchases', 'purchase_order', 'purchase_debit_note'].includes(docType);
+    });
+  }, [invoices]);
+
+  const purchaserNames = useMemo(() => {
+    return new Set(purchaseInvoices.map(i => (i.clientName || '').trim().toLowerCase()));
+  }, [purchaseInvoices]);
+
+  const purchaserEmails = useMemo(() => {
+    return new Set(purchaseInvoices.map(i => (i.clientEmail || '').trim().toLowerCase()));
+  }, [purchaseInvoices]);
+
+  // Set of names/emails associated with sales documents
+  const salesInvoices = useMemo(() => {
+    return invoices.filter(inv => {
+      const docType = getInvoiceDocumentType(inv);
+      return !['purchases', 'purchase_order', 'purchase_debit_note'].includes(docType);
+    });
+  }, [invoices]);
+
+  const salesClientNames = useMemo(() => {
+    return new Set(salesInvoices.map(i => (i.clientName || '').trim().toLowerCase()));
+  }, [salesInvoices]);
+
+  const salesClientEmails = useMemo(() => {
+    return new Set(salesInvoices.map(i => (i.clientEmail || '').trim().toLowerCase()));
+  }, [salesInvoices]);
+
+  // Billed Clients Filtered
+  const billedClientsFiltered = useMemo(() => {
+    return clients.filter(c => {
+      const nameLower = (c.name || '').trim().toLowerCase();
+      const emailLower = (c.email || '').trim().toLowerCase();
+      const isManualPurchaser = manualPurchaserIds.includes(c.id);
+      
+      if (isManualPurchaser) return false;
+      
+      const isReferencedInSales = salesClientNames.has(nameLower) || (c.email && salesClientEmails.has(emailLower));
+      const isReferencedInPurchases = purchaserNames.has(nameLower) || (c.email && purchaserEmails.has(emailLower));
+      
+      if (isReferencedInSales) return true;
+      if (isReferencedInPurchases) return false;
+      return true; // Default
+    });
+  }, [clients, manualPurchaserIds, salesClientNames, salesClientEmails, purchaserNames, purchaserEmails]);
+
+  // Purchasers Filtered
+  const purchasersFiltered = useMemo(() => {
+    return clients.filter(c => {
+      const nameLower = (c.name || '').trim().toLowerCase();
+      const emailLower = (c.email || '').trim().toLowerCase();
+      const isManualPurchaser = manualPurchaserIds.includes(c.id);
+      
+      if (isManualPurchaser) return true;
+      
+      const isReferencedInPurchases = purchaserNames.has(nameLower) || (c.email && purchaserEmails.has(emailLower));
+      return isReferencedInPurchases;
+    });
+  }, [clients, manualPurchaserIds, purchaserNames, purchaserEmails]);
+
+  const handleDeleteClientWrap = async (clientId: string) => {
+    onDeleteClient(clientId);
+    const newManualIds = manualPurchaserIds.filter(id => id !== clientId);
+    setManualPurchaserIds(newManualIds);
+    localStorage.setItem('makbills_manual_purchasers', JSON.stringify(newManualIds));
+  };
+
+  const currencySymbol = profile.currencySymbol || getCurrencySymbol(profile.currency);
+  const [isPurchasesLedgerExpanded, setIsPurchasesLedgerExpanded] = useState(true);
+  const [purchaseLedgerSection, setPurchaseLedgerSection] = useState<'purchases' | 'purchase_order' | 'purchase_debit_note'>('purchases');
 
   const documentTypeCounts = useMemo(() => {
     const counts: Record<string, number> = { invoice: 0, proforma: 0, credit_note: 0, debit_note: 0, quote: 0, purchases: 0, purchase_order: 0, purchase_debit_note: 0 };
@@ -2189,15 +2400,30 @@ export default function Dashboard({
     .filter(inv => inv.status === 'draft')
     .reduce((sum, inv) => sum + inv.grandTotal, 0);
 
+  const activeLedgerStats = useMemo(() => {
+    const targets = invoices.filter(inv => {
+      if (inv.status === 'draft') return false;
+      const docType = getInvoiceDocumentType(inv);
+      if (activeTab === 'purchases') {
+        return docType === purchaseLedgerSection;
+      } else {
+        return docType === ledgerSection;
+      }
+    });
+
+    const total = targets.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
+    const paid = targets.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
+    const pending = targets.filter(inv => inv.status === 'pending').reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
+
+    return { total, paid, pending };
+  }, [invoices, activeTab, ledgerSection, purchaseLedgerSection]);
+
   const handleCreateDocumentForSection = (section: string) => {
-    if (section === 'invoice') {
-      onOpenInvoiceEditor(null);
-      return;
-    }
     const today = new Date().toISOString().split('T')[0];
 
     // Use profile-configured prefixes with fallback defaults
     const prefixMap: Record<string, string> = {
+      invoice: (profile.invoicePrefix || 'INV').toUpperCase(),
       proforma: (profile.proformaPrefix || 'PI').toUpperCase(),
       credit_note: (profile.creditNotePrefix || 'CN').toUpperCase(),
       debit_note: (profile.debitNotePrefix || 'DN').toUpperCase(),
@@ -2209,6 +2435,7 @@ export default function Dashboard({
 
     // Compute the next sequential number for this document type
     const startingMap: Record<string, number> = {
+      invoice: parseInt(profile.startingInvoiceNumber || '1', 10),
       proforma: parseInt(profile.startingProformaNumber || '1', 10),
       credit_note: parseInt(profile.startingCreditNoteNumber || '1', 10),
       debit_note: parseInt(profile.startingDebitNoteNumber || '1', 10),
@@ -2222,6 +2449,7 @@ export default function Dashboard({
     const paddedNum = String(nextNum).padStart(4, '0');
 
     const titleMap: Record<string, string> = {
+      invoice: 'TAX INVOICE',
       proforma: 'PROFORMA INVOICE',
       credit_note: 'CREDIT NOTE',
       debit_note: 'DEBIT NOTE',
@@ -2231,6 +2459,7 @@ export default function Dashboard({
       purchase_debit_note: 'PURCHASE DEBIT NOTE'
     };
     const typeMap: Record<string, any> = {
+      invoice: 'invoice',
       proforma: 'proforma',
       credit_note: 'credit_note',
       debit_note: 'debit_note',
@@ -2574,8 +2803,14 @@ export default function Dashboard({
       alert('Client name is required.');
       return;
     }
+    const clientId = editingClient ? editingClient.id : `client_${Math.random().toString(36).substr(2, 9)}`;
+    if (activeTab === 'purchasers' && !editingClient) {
+      const newManualIds = [...manualPurchaserIds, clientId];
+      setManualPurchaserIds(newManualIds);
+      localStorage.setItem('makbills_manual_purchasers', JSON.stringify(newManualIds));
+    }
     onSaveClient({
-      id: editingClient ? editingClient.id : `client_${Math.random().toString(36).substr(2, 9)}`,
+      id: clientId,
       userId: editingClient ? editingClient.userId : 'local',
       name: clientName.trim(),
       companyName: clientCompany.trim(),
@@ -2666,7 +2901,9 @@ export default function Dashboard({
         return `Financial Hub / Purchases Ledger / ${currentSecName}`;
       }
       case 'drafts':
-        return 'Financial Hub / Drafts';
+        return draftsOrigin === 'purchases'
+          ? 'Financial Hub / Purchases Ledger / Drafts'
+          : 'Financial Hub / Sales Ledger / Drafts';
       case 'profile':
         return 'Financial Hub / Creator Profile';
       case 'learn':
@@ -2675,9 +2912,13 @@ export default function Dashboard({
         return 'Financial Hub / Invoice Template';
       case 'clients':
         return 'Financial Hub / Client Database';
+      case 'purchasers':
+        return 'Financial Hub / Billed Vendors Directory';
       case 'reports':
         return 'Financial Hub / Accounting Summary';
       case 'master_vendor':
+        return 'Master Registry / Client Database';
+      case 'master_actual_vendor':
         return 'Master Registry / Vendor Database';
       case 'master_transport':
         return 'Master Registry / Transport Database';
@@ -3082,47 +3323,58 @@ export default function Dashboard({
         {/* ------------------ TAB 1: INVOICES / PURCHASES ROUTE ------------------ */}
         {(activeTab === 'invoices' || activeTab === 'purchases') && (
           <div className="space-y-6">
-            <section className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
-              <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border-l-4 border-l-emerald-400 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between">
+            <section className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 font-sans select-none">
+              {/* Total Amount Card */}
+              <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border-l-4 border-l-blue-500 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between hover:shadow-md transition-all duration-300">
                 <div>
-                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Settled Funds</span>
-                  <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-emerald-600 dark:text-emerald-400 block">{currencySymbol}{totalBilled.toLocaleString()}</span>
+                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Total Amount</span>
+                  <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-blue-600 dark:text-blue-450 block">
+                    {currencySymbol}{activeLedgerStats.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
                 {/* Micro Sparkline */}
                 <div className="flex items-end gap-0.5 h-5 sm:h-6 shrink-0">
-                  <span className="w-1 bg-emerald-100 dark:bg-zinc-800 h-2 rounded-t" />
-                  <span className="w-1 bg-emerald-200 dark:bg-zinc-800 h-3 rounded-t" />
-                  <span className="w-1 bg-emerald-300 dark:bg-zinc-700 h-4 rounded-t" />
-                  <span className="w-1 bg-emerald-400 dark:bg-zinc-650 h-3 rounded-t" />
-                  <span className="w-1 bg-emerald-500 h-5 rounded-t" />
+                  <span className="w-1 bg-blue-100 dark:bg-zinc-800 h-2 rounded-t" />
+                  <span className="w-1 bg-blue-200 dark:bg-zinc-800 h-3 rounded-t" />
+                  <span className="w-1 bg-blue-300 dark:bg-zinc-700 h-4 rounded-t" />
+                  <span className="w-1 bg-blue-400 dark:bg-zinc-650 h-3 rounded-t" />
+                  <span className="w-1 bg-blue-500 h-5 rounded-t" />
                 </div>
               </div>
-              <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border-l-4 border-l-amber-400 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between">
+
+              {/* Paid Amount Card */}
+              <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border-l-4 border-l-emerald-500 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between hover:shadow-md transition-all duration-300">
                 <div>
-                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Pending Due</span>
-                  <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-amber-600 dark:text-amber-400 block">{currencySymbol}{totalOutstanding.toLocaleString()}</span>
+                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Paid</span>
+                  <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-emerald-600 dark:text-emerald-450 block">
+                    {currencySymbol}{activeLedgerStats.paid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
                 {/* Micro Sparkline */}
                 <div className="flex items-end gap-0.5 h-5 sm:h-6 shrink-0">
-                  <span className="w-1 bg-amber-100 dark:bg-zinc-800 h-4 rounded-t" />
-                  <span className="w-1 bg-amber-200 dark:bg-zinc-800 h-2 rounded-t" />
+                  <span className="w-1 bg-emerald-100 dark:bg-zinc-800 h-4 rounded-t" />
+                  <span className="w-1 bg-emerald-200 dark:bg-zinc-800 h-2 rounded-t" />
+                  <span className="w-1 bg-emerald-300 dark:bg-zinc-700 h-3 rounded-t" />
+                  <span className="w-1 bg-emerald-400 dark:bg-zinc-650 h-5 rounded-t" />
+                  <span className="w-1 bg-emerald-500 h-3 rounded-t" />
+                </div>
+              </div>
+
+              {/* Pending Amount Card */}
+              <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border-l-4 border-l-amber-500 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between hover:shadow-md transition-all duration-300">
+                <div>
+                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Pending</span>
+                  <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-amber-600 dark:text-amber-450 block">
+                    {currencySymbol}{activeLedgerStats.pending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                {/* Micro Sparkline */}
+                <div className="flex items-end gap-0.5 h-5 sm:h-6 shrink-0">
+                  <span className="w-1 bg-amber-100 dark:bg-zinc-800 h-2 rounded-t" />
+                  <span className="w-1 bg-amber-200 dark:bg-zinc-800 h-3 rounded-t" />
                   <span className="w-1 bg-amber-300 dark:bg-zinc-700 h-3 rounded-t" />
-                  <span className="w-1 bg-amber-400 dark:bg-zinc-650 h-5 rounded-t" />
-                  <span className="w-1 bg-amber-500 h-3 rounded-t" />
-                </div>
-              </div>
-              <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border-l-4 border-l-zinc-400 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between">
-                <div>
-                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Draft Bills</span>
-                  <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-[#0f172a] dark:text-zinc-300 block">{currencySymbol}{totalDraft.toLocaleString()}</span>
-                </div>
-                {/* Micro Sparkline */}
-                <div className="flex items-end gap-0.5 h-5 sm:h-6 shrink-0">
-                  <span className="w-1 bg-zinc-100 dark:bg-zinc-800 h-2 rounded-t" />
-                  <span className="w-1 bg-zinc-200 dark:bg-zinc-800 h-3 rounded-t" />
-                  <span className="w-1 bg-zinc-300 dark:bg-zinc-700 h-3 rounded-t" />
-                  <span className="w-1 bg-zinc-450 h-2 rounded-t" />
-                  <span className="w-1 bg-zinc-500 h-4 rounded-t" />
+                  <span className="w-1 bg-amber-450 h-2 rounded-t" />
+                  <span className="w-1 bg-amber-500 h-4 rounded-t" />
                 </div>
               </div>
             </section>
@@ -3141,7 +3393,11 @@ export default function Dashboard({
               </div>
               <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <button
-                  onClick={() => setActiveTab('drafts')}
+                  onClick={() => {
+                    setDraftsOrigin(activeTab === 'purchases' ? 'purchases' : 'sales');
+                    setDraftsSection('all');
+                    setActiveTab('drafts');
+                  }}
                   className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 sm:py-1.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0] dark:border-zinc-700 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap"
                 >
                   <FileText className="w-3.5 h-3.5" />
@@ -3516,47 +3772,91 @@ export default function Dashboard({
 
         {/* ------------------ TAB: DRAFTS ROUTE ------------------ */}
         {activeTab === 'drafts' && (() => {
-          const allDrafts = invoices.filter(i => i.status === 'draft');
+          const isPurchaseOrigin = draftsOrigin === 'purchases';
 
-          const getDraftDocType = (inv: Invoice) => {
-            const t = inv.invoiceType || 'invoice';
-            if (t === 'estimate') return 'quote';
-            return t;
-          };
+          // Filter drafts based on origin
+          const allDrafts = invoices.filter(i => {
+            if (i.status !== 'draft') return false;
+            const docType = getInvoiceDocumentType(i);
+            const isPurchaseDoc = ['purchases', 'purchase_order', 'purchase_debit_note'].includes(docType);
+            return isPurchaseOrigin ? isPurchaseDoc : !isPurchaseDoc;
+          });
 
           const draftCounts = {
             all: allDrafts.length,
-            invoice: allDrafts.filter(i => getDraftDocType(i) === 'invoice').length,
-            proforma: allDrafts.filter(i => getDraftDocType(i) === 'proforma').length,
-            debit_note: allDrafts.filter(i => getDraftDocType(i) === 'debit_note').length,
-            credit_note: allDrafts.filter(i => getDraftDocType(i) === 'credit_note').length,
-            quote: allDrafts.filter(i => getDraftDocType(i) === 'quote').length
+            // Sales
+            invoice: allDrafts.filter(i => getInvoiceDocumentType(i) === 'invoice').length,
+            proforma: allDrafts.filter(i => getInvoiceDocumentType(i) === 'proforma').length,
+            debit_note: allDrafts.filter(i => getInvoiceDocumentType(i) === 'debit_note').length,
+            credit_note: allDrafts.filter(i => getInvoiceDocumentType(i) === 'credit_note').length,
+            quote: allDrafts.filter(i => getInvoiceDocumentType(i) === 'quote').length,
+            // Purchases
+            purchases: allDrafts.filter(i => getInvoiceDocumentType(i) === 'purchases').length,
+            purchase_order: allDrafts.filter(i => getInvoiceDocumentType(i) === 'purchase_order').length,
+            purchase_debit_note: allDrafts.filter(i => getInvoiceDocumentType(i) === 'purchase_debit_note').length
           };
 
           const filteredDrafts = draftsSection === 'all'
             ? allDrafts
-            : allDrafts.filter(i => getDraftDocType(i) === draftsSection);
+            : allDrafts.filter(i => getInvoiceDocumentType(i) === draftsSection);
 
           const docTypeBadges: Record<string, { label: string; style: string }> = {
             invoice: { label: 'Tax Invoice', style: 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border-emerald-300/60' },
             proforma: { label: 'Proforma', style: 'bg-sky-100 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 border-sky-300/60' },
             debit_note: { label: 'Debit Note', style: 'bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border-indigo-300/60' },
             credit_note: { label: 'Credit Note', style: 'bg-violet-100 dark:bg-violet-950/70 text-violet-700 dark:text-violet-300 border-violet-300/60' },
-            quote: { label: 'Quote / Est', style: 'bg-teal-100 dark:bg-teal-950/70 text-teal-700 dark:text-teal-300 border-teal-300/60' }
+            quote: { label: 'Quote / Est', style: 'bg-teal-100 dark:bg-teal-950/70 text-teal-700 dark:text-teal-300 border-teal-300/60' },
+            purchases: { label: 'Purchase Bill', style: 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-300/60' },
+            purchase_order: { label: 'Purchase Order', style: 'bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border-amber-300/60' },
+            purchase_debit_note: { label: 'Debit Note', style: 'bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border-indigo-300/60' }
           };
+
+          const activeTabsList = isPurchaseOrigin
+            ? [
+                { id: 'all', label: 'All Drafts', count: draftCounts.all, activeColor: 'bg-blue-600 text-white shadow-sm' },
+                { id: 'purchases', label: 'Purchase Bills', count: draftCounts.purchases, activeColor: 'bg-blue-600 text-white shadow-sm' },
+                { id: 'purchase_order', label: 'Purchase Orders', count: draftCounts.purchase_order, activeColor: 'bg-amber-600 text-white shadow-sm' },
+                { id: 'purchase_debit_note', label: 'Debit Notes', count: draftCounts.purchase_debit_note, activeColor: 'bg-[#4f46e5] text-white shadow-sm' }
+              ]
+            : [
+                { id: 'all', label: 'All Drafts', count: draftCounts.all, activeColor: 'bg-[#0f172a] text-white dark:bg-white dark:text-zinc-900 shadow-sm' },
+                { id: 'invoice', label: 'Tax Invoice', count: draftCounts.invoice, activeColor: 'bg-emerald-600 text-white shadow-sm' },
+                { id: 'proforma', label: 'Proforma', count: draftCounts.proforma, activeColor: 'bg-sky-600 text-white shadow-sm' },
+                { id: 'debit_note', label: 'Debit Note', count: draftCounts.debit_note, activeColor: 'bg-indigo-600 text-white shadow-sm' },
+                { id: 'credit_note', label: 'Credit Note', count: draftCounts.credit_note, activeColor: 'bg-violet-600 text-white shadow-sm' },
+                { id: 'quote', label: 'Quotes / Est', count: draftCounts.quote, activeColor: 'bg-teal-600 text-white shadow-sm' }
+              ];
+
+          const activeTabsListDesktop = isPurchaseOrigin
+            ? [
+                { id: 'all', label: 'All Purchase Drafts', count: draftCounts.all, activeColor: 'bg-blue-600 text-white shadow-sm' },
+                { id: 'purchases', label: 'Purchase Bills', count: draftCounts.purchases, activeColor: 'bg-blue-600 text-white shadow-sm' },
+                { id: 'purchase_order', label: 'Purchase Orders', count: draftCounts.purchase_order, activeColor: 'bg-amber-600 text-white shadow-sm' },
+                { id: 'purchase_debit_note', label: 'Debit Notes', count: draftCounts.purchase_debit_note, activeColor: 'bg-[#4f46e5] text-white shadow-sm' }
+              ]
+            : [
+                { id: 'all', label: 'All Drafts', count: draftCounts.all, activeColor: 'bg-[#0f172a] text-white dark:bg-white dark:text-zinc-900 shadow-sm' },
+                { id: 'invoice', label: 'Tax Invoices', count: draftCounts.invoice, activeColor: 'bg-emerald-600 text-white shadow-sm' },
+                { id: 'proforma', label: 'Proforma', count: draftCounts.proforma, activeColor: 'bg-sky-600 text-white shadow-sm' },
+                { id: 'debit_note', label: 'Debit Notes', count: draftCounts.debit_note, activeColor: 'bg-indigo-600 text-white shadow-sm' },
+                { id: 'credit_note', label: 'Credit Notes', count: draftCounts.credit_note, activeColor: 'bg-violet-600 text-white shadow-sm' },
+                { id: 'quote', label: 'Quotes & Estimates', count: draftCounts.quote, activeColor: 'bg-teal-600 text-white shadow-sm' }
+              ];
 
           return (
             <div className="space-y-6">
               {/* Header */}
               <div className="flex items-center justify-between gap-2 w-full">
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink min-w-0">
-                  <h2 className="text-[11px] sm:text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wider truncate">Drafts</h2>
+                  <h2 className="text-[11px] sm:text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wider truncate">
+                    {isPurchaseOrigin ? 'Purchase Drafts' : 'Sales Drafts'}
+                  </h2>
                   <span className="px-1.5 py-0.5 sm:px-2 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] sm:text-[9.5px] font-black shrink-0">
                     {filteredDrafts.length} {filteredDrafts.length === 1 ? 'Draft' : 'Drafts'}
                   </span>
                 </div>
                 <button
-                  onClick={() => setActiveTab('invoices')}
+                  onClick={() => setActiveTab(isPurchaseOrigin ? 'purchases' : 'invoices')}
                   className="px-2.5 py-1.5 sm:px-4 sm:py-1.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0] dark:border-zinc-700 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-zinc-200 rounded-xl text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider flex items-center gap-1 sm:gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap ml-auto shrink-0"
                 >
                   <ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -3566,16 +3866,9 @@ export default function Dashboard({
 
               {/* Bifurcated Section Tabs Bar — Ultra Clean Responsive Design */}
               <div className="w-full">
-                {/* Mobile Grid Layout (2-column x 3-row on mobile screens) */}
+                {/* Mobile Grid Layout */}
                 <div className="grid grid-cols-3 sm:hidden gap-1.5 p-1.5 bg-[#f8fafc] dark:bg-zinc-900/90 rounded-2xl border border-[#e2e8f0]/80 dark:border-zinc-800">
-                  {[
-                    { id: 'all', label: 'All Drafts', count: draftCounts.all, activeColor: 'bg-[#0f172a] text-white dark:bg-white dark:text-zinc-900 shadow-sm' },
-                    { id: 'invoice', label: 'Tax Invoice', count: draftCounts.invoice, activeColor: 'bg-emerald-600 text-white shadow-sm' },
-                    { id: 'proforma', label: 'Proforma', count: draftCounts.proforma, activeColor: 'bg-sky-600 text-white shadow-sm' },
-                    { id: 'debit_note', label: 'Debit Note', count: draftCounts.debit_note, activeColor: 'bg-indigo-600 text-white shadow-sm' },
-                    { id: 'credit_note', label: 'Credit Note', count: draftCounts.credit_note, activeColor: 'bg-violet-600 text-white shadow-sm' },
-                    { id: 'quote', label: 'Quotes / Est', count: draftCounts.quote, activeColor: 'bg-teal-600 text-white shadow-sm' }
-                  ].map(tab => {
+                  {activeTabsList.map(tab => {
                     const isActive = draftsSection === tab.id;
                     return (
                       <button
@@ -3603,14 +3896,7 @@ export default function Dashboard({
 
                 {/* Desktop Horizontal Row Layout */}
                 <div className="hidden sm:flex items-center gap-1.5 p-1.5 bg-[#f8fafc] dark:bg-zinc-900/90 rounded-2xl border border-[#e2e8f0]/80 dark:border-zinc-800">
-                  {[
-                    { id: 'all', label: 'All Drafts', count: draftCounts.all, activeColor: 'bg-[#0f172a] text-white dark:bg-white dark:text-zinc-900 shadow-sm' },
-                    { id: 'invoice', label: 'Tax Invoices', count: draftCounts.invoice, activeColor: 'bg-emerald-600 text-white shadow-sm' },
-                    { id: 'proforma', label: 'Proforma', count: draftCounts.proforma, activeColor: 'bg-sky-600 text-white shadow-sm' },
-                    { id: 'debit_note', label: 'Debit Notes', count: draftCounts.debit_note, activeColor: 'bg-indigo-600 text-white shadow-sm' },
-                    { id: 'credit_note', label: 'Credit Notes', count: draftCounts.credit_note, activeColor: 'bg-violet-600 text-white shadow-sm' },
-                    { id: 'quote', label: 'Quotes & Estimates', count: draftCounts.quote, activeColor: 'bg-teal-600 text-white shadow-sm' }
-                  ].map(tab => {
+                  {activeTabsListDesktop.map(tab => {
                     const isActive = draftsSection === tab.id;
                     return (
                       <button
@@ -3652,7 +3938,7 @@ export default function Dashboard({
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredDrafts.map(inv => {
-                    const docTypeKey = getDraftDocType(inv);
+                    const docTypeKey = getInvoiceDocumentType(inv);
                     const badge = docTypeBadges[docTypeKey] || docTypeBadges.invoice;
                     return (
                       <div key={inv.id} className="p-5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-md transition-all group relative flex flex-col justify-between">
@@ -3725,11 +4011,11 @@ export default function Dashboard({
                         Billed Clients Ledger Book
                       </h2>
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-rose-50 border-rose-100 dark:bg-rose-950/40 dark:border-rose-900/40 text-rose-600 dark:text-rose-400">
-                        {clients.length} {clients.length === 1 ? 'Record' : 'Records'}
+                        {billedClientsFiltered.length} {billedClientsFiltered.length === 1 ? 'Record' : 'Records'}
                       </span>
                     </div>
                     <p className="mt-1.5 text-xs text-[#64748b]/75 dark:text-zinc-500 max-w-md leading-relaxed">
-                      Manage client profiles for rapid auto-filling during billing creation
+                      Manage client profiles for rapid auto-filling during billing creation (Sales Ledger only)
                     </p>
                   </div>
                 </div>
@@ -3737,7 +4023,7 @@ export default function Dashboard({
             </div>
 
             {/* Clients grid list */}
-            {clients.length === 0 ? (
+            {billedClientsFiltered.length === 0 ? (
               <div 
                 className="bg-white dark:bg-zinc-900 rounded-2xl border border-[#e2e8f0]/50 dark:border-zinc-800/80 p-12 text-center relative overflow-hidden"
                 style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.06)' }}
@@ -3757,7 +4043,7 @@ export default function Dashboard({
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {clients.map(c => (
+                {billedClientsFiltered.map(c => (
                   <div
                     key={c.id}
                     className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800/80 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-rose-500 active:border-rose-600 dark:hover:border-rose-500 dark:active:border-rose-600 hover:-translate-y-1 group flex flex-col justify-between cursor-pointer"
@@ -3791,7 +4077,7 @@ export default function Dashboard({
                             <PenTool className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => onDeleteClient(c.id)}
+                            onClick={() => handleDeleteClientWrap(c.id)}
                             className="text-zinc-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                             title="Delete profile"
                           >
@@ -3823,6 +4109,136 @@ export default function Dashboard({
                         {/* Address */}
                         <div className="flex items-start gap-2 text-[10px] text-[#64748b]/80 dark:text-zinc-400">
                           <MapPin className="w-3.5 h-3.5 text-[#C6A87D] shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <span className="text-[8px] font-black uppercase tracking-wider text-[#64748b]/50 block">Billing Address</span>
+                            <span className="block font-semibold text-[#0f172a] dark:text-zinc-200 mt-0.5 line-clamp-2 leading-relaxed">{c.address || 'No billing address registered'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ------------------ TAB: PURCHASERS ROUTE ------------------ */}
+        {activeTab === 'purchasers' && (
+          <div className="space-y-5 text-sans">
+            
+            {/* ── Page Header ── */}
+            <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 6px rgba(110,96,80,0.07)' }}>
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-4 sm:p-5 md:p-6">
+                {/* Left: Icon + title + description */}
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-blue-500 dark:bg-blue-600" style={{ boxShadow: '0 3px 10px rgba(0,0,0,0.18)' }}>
+                    <Users2 className="w-5 h-5 text-blue-50 dark:text-blue-100" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h2 className="text-lg md:text-xl font-black text-[#1e293b] dark:text-white uppercase tracking-tight leading-none font-sans">
+                        Billed Vendors Directory
+                      </h2>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-blue-50 border-blue-100 dark:bg-blue-950/40 dark:border-blue-900/40 text-blue-600 dark:text-blue-400">
+                        {purchasersFiltered.length} {purchasersFiltered.length === 1 ? 'Record' : 'Records'}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-xs text-[#64748b]/75 dark:text-zinc-500 max-w-md leading-relaxed">
+                      Manage vendor and supplier profiles captured from your purchases ledger bills, POs, and debit notes
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Billed Vendors grid list */}
+            {purchasersFiltered.length === 0 ? (
+              <div 
+                className="bg-white dark:bg-zinc-900 rounded-2xl border border-[#e2e8f0]/50 dark:border-zinc-800/80 p-12 text-center relative overflow-hidden"
+                style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.06)' }}
+              >
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e2e8f0]/50 to-transparent" />
+                <Notebook className="w-10 h-10 mx-auto mb-3 text-blue-400/70" />
+                <h3 className="text-xs font-bold text-[#0f172a] dark:text-zinc-300 uppercase tracking-wider">Your Billed Vendors Directory is Empty</h3>
+                <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
+                  Add profiles manually or create Purchase Bills, POs, and Debit Notes to automatically populate vendors here.
+                </p>
+                <button
+                  onClick={() => handleOpenClientEditor(null)}
+                  className="mt-4 px-3.5 py-1.5 border border-blue-600 hover:bg-blue-600 text-blue-600 hover:text-white dark:text-zinc-300 dark:border-zinc-700 dark:hover:bg-zinc-800 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer"
+                >
+                  Create First Vendor
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {purchasersFiltered.map(c => (
+                  <div
+                    key={c.id}
+                    className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800/80 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-blue-500 active:border-blue-600 dark:hover:border-blue-500 dark:active:border-blue-600 hover:-translate-y-1 group flex flex-col justify-between cursor-pointer"
+                    style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.06)' }}
+                  >
+                    {/* card top line decoration */}
+                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                    <div>
+                      {/* Name & Company header */}
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="space-y-1 flex-1 min-w-0">
+                          <h4 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-tight truncate">{c.name}</h4>
+                          {c.companyName && (
+                            <span 
+                              className="text-[9px] bg-[#FCFAF7] dark:bg-zinc-950 text-[#64748b] dark:text-zinc-300 border border-[#e2e8f0]/50 dark:border-zinc-800 font-extrabold px-2 py-0.5 rounded-md inline-block uppercase tracking-wider"
+                              style={{ boxShadow: '0 1px 2px rgba(110,96,80,0.04)' }}
+                            >
+                              🏢 {c.companyName}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Quick action buttons */}
+                        <div className="flex gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleOpenClientEditor(c)}
+                            className="text-[#64748b] hover:text-[#0f172a] dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Edit profile"
+                          >
+                            <PenTool className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClientWrap(c.id)}
+                            className="text-zinc-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                            title="Delete profile"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Info lines */}
+                      <div className="mt-4 space-y-3.5 pt-3.5 border-t border-[#e2e8f0]/35 dark:border-zinc-800/60">
+                        {/* Email */}
+                        <div className="flex items-start gap-2 text-[10px] text-[#64748b]/80 dark:text-zinc-400">
+                          <Mail className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <span className="text-[8px] font-black uppercase tracking-wider text-[#64748b]/50 block">Email Address</span>
+                            <span className="truncate block font-semibold text-[#0f172a] dark:text-zinc-200 mt-0.5">{c.email || 'N/A'}</span>
+                          </div>
+                        </div>
+
+                        {/* Phone */}
+                        <div className="flex items-start gap-2 text-[10px] text-[#64748b]/80 dark:text-zinc-400">
+                          <Smartphone className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="text-[8px] font-black uppercase tracking-wider text-[#64748b]/50 block">Contact Number</span>
+                            <span className="block font-semibold text-[#0f172a] dark:text-zinc-200 mt-0.5">{c.phone || 'N/A'}</span>
+                          </div>
+                        </div>
+
+                        {/* Address */}
+                        <div className="flex items-start gap-2 text-[10px] text-[#64748b]/80 dark:text-zinc-400">
+                          <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
                           <div className="min-w-0">
                             <span className="text-[8px] font-black uppercase tracking-wider text-[#64748b]/50 block">Billing Address</span>
                             <span className="block font-semibold text-[#0f172a] dark:text-zinc-200 mt-0.5 line-clamp-2 leading-relaxed">{c.address || 'No billing address registered'}</span>
@@ -5379,21 +5795,6 @@ export default function Dashboard({
               <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">App usage documentation, billing policies, and company invoicing standards</p>
             </div>
 
-            {/* Quick nav pills */}
-            <div className="w-full overflow-x-auto no-scrollbar">
-              <div className="flex items-center gap-2 bg-[#FCFAF7]/50 dark:bg-zinc-950/20 p-2 rounded-2xl border border-[#e2e8f0]/30 dark:border-zinc-800 min-w-max sm:min-w-0 sm:flex-wrap">
-                <span className="text-[9px] font-black text-[#64748b]/60 dark:text-zinc-500 uppercase tracking-widest pl-2 shrink-0">Jump to:</span>
-                {['Getting Started', 'App Walkthrough', 'Billing Policies', 'Tax & Compliance', 'Tips & Shortcuts'].map((label, i) => (
-                  <a
-                    key={label}
-                    href={`#learn-section-${i}`}
-                    className="px-3 py-1 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-lg text-[10px] font-bold text-[#64748b] dark:text-zinc-400 hover:border-[#64748b]/50 hover:text-[#0f172a] dark:hover:text-white transition-all cursor-pointer shadow-2xs whitespace-nowrap shrink-0"
-                  >
-                    {label}
-                  </a>
-                ))}
-              </div>
-            </div>
 
             {/* Asymmetric Bento Grid Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -5413,12 +5814,12 @@ export default function Dashboard({
 
                 <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 flex-1">
                   {[
-                    { step: '01', title: 'Set Up Your Profile', desc: 'Click your avatar in the top-right corner, open Profile, and enter company name, GSTIN, logo, and bank accounts. This info prints directly on PDF invoices.' },
-                    { step: '02', title: 'Build Client Ledger', desc: 'Go to Clients from the sidebar. Save repeating corporate accounts with billing addresses to enable rapid dropdown injection when generating new bills.' },
-                    { step: '03', title: 'Create an Invoice', desc: 'Click "New Invoice" on the dashboard. Choose a registered client, add HSN/SAC codes, quantities, and rates. The calculations update instantly.' },
-                    { step: '04', title: 'Export & Deliver', desc: 'Download clean PDF bills using the download button, print directly, or export collective XLSX summaries from the Reports ledger tab.' },
-                    { step: '05', title: 'Track Payment Status', desc: 'Mark bills as Paid, Unpaid, or Overdue. Your dashboard intelligence metrics will update automatically based on active statuses.' },
-                    { step: '06', title: 'Sync Across Devices', desc: 'Authenticate your account to activate instant Supabase cloud synchronization. Retrieve your clients and templates from any modern browser.' },
+                    { step: '01', title: 'Set Up Company Profile', desc: 'Go to System Settings → Company Info. Input your business logo, GSTIN, PAN, bank accounts, and signature stamp. This data auto-populates all generated documents.' },
+                    { step: '02', title: 'Populate Master Registries', desc: 'Open the Master Registry section. Save recurring records for Client Database, Vendor Database, HSN Registry, Transport Database, Material Catalog, and Product Categories.' },
+                    { step: '03', title: 'Design Invoice Templates', desc: 'Go to Tools & Design → Invoice Template. Use Advanced Studio and Quick Builder to toggle layouts (Modern, Classic, Minimal, Bold) and customize color palettes.' },
+                    { step: '04', title: 'Manage Financial Ledgers', desc: 'Access Sales Ledger to issue Tax Invoices, Quotes, and Credit Notes. Access Purchases Ledger to record bills and POs. CGST/SGST/IGST tax splits calculate automatically.' },
+                    { step: '05', title: 'Review Reports & Exports', desc: 'Review total revenue and expenses in the main Billing Dashboard. Visit Financial Hub → Accounting Summary to export ledger databases directly to Excel.' },
+                    { step: '06', title: 'Configure Security PIN Lock', desc: 'Go to System Settings → App Preferences. Enable a secure 4-Digit PIN to encrypt your localIndexedDB storage sandbox and sync safely with Supabase.' },
                   ].map((item, idx) => {
                     const stepColors = ['bg-emerald-500', 'bg-sky-500', 'bg-amber-500', 'bg-violet-500', 'bg-rose-500', 'bg-teal-500'];
                     return (
@@ -5735,7 +6136,7 @@ export default function Dashboard({
 
         {/* ------------------ TAB: SUPPORT ------------------ */}
         {activeTab === 'support' && (
-          <SupportPage onChatClick={() => setActiveTab('support-chat')} />
+          <SupportPage onChatClick={() => setActiveTab('support-chat')} onNavigateTab={(tab) => setActiveTab(tab as any)} />
         )}
 
         {/* ------------------ TAB: SUPPORT CHAT ------------------ */}

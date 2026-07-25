@@ -349,7 +349,9 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
                     <select 
                       value={
                         template.config?.header?.invoiceTitle?.toUpperCase().includes('CREDIT') ? 'Credit Note' :
-                        template.config?.header?.invoiceTitle?.toUpperCase().includes('DEBIT') ? 'Debit Note' :
+                        template.config?.header?.invoiceTitle?.toUpperCase().includes('PURCHASE DEBIT') ? 'Purchase Debit Note' :
+                        template.config?.header?.invoiceTitle?.toUpperCase().includes('PURCHASE ORDER') ? 'Purchase Order' :
+                        template.config?.header?.invoiceTitle?.toUpperCase().includes('PURCHASE') ? 'Purchases' :
                         template.config?.header?.invoiceTitle?.toUpperCase().includes('PROFORMA') ? 'Proforma Invoice' :
                         template.config?.header?.invoiceTitle?.toUpperCase().includes('QUOTATION') || template.config?.header?.invoiceTitle?.toUpperCase().includes('ESTIMATE') || template.config?.header?.invoiceTitle?.toUpperCase().includes('QUOTE') ? 'Quotation / Estimate' :
                         'Invoice'
@@ -359,9 +361,11 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
                         let newTitle = template.config?.header?.invoiceTitle || 'TAX INVOICE';
                         if (type === 'Invoice') newTitle = 'TAX INVOICE';
                         if (type === 'Credit Note') newTitle = 'CREDIT NOTE';
-                        if (type === 'Debit Note') newTitle = 'DEBIT NOTE';
                         if (type === 'Proforma Invoice') newTitle = 'PROFORMA INVOICE';
                         if (type === 'Quotation / Estimate') newTitle = 'QUOTATION / ESTIMATE';
+                        if (type === 'Purchases') newTitle = 'PURCHASE BILL';
+                        if (type === 'Purchase Order') newTitle = 'PURCHASE ORDER';
+                        if (type === 'Purchase Debit Note') newTitle = 'PURCHASE DEBIT NOTE';
                         
                         updateTemplate({
                           ...template, 
@@ -378,9 +382,11 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
                     >
                       <option value="Invoice">Invoice (Tax Invoice)</option>
                       <option value="Credit Note">Credit Note</option>
-                      <option value="Debit Note">Debit Note</option>
                       <option value="Proforma Invoice">Proforma Invoice</option>
                       <option value="Quotation / Estimate">Quote / Estimate</option>
+                      <option value="Purchases">Purchases (Purchase Bill)</option>
+                      <option value="Purchase Order">Purchase Order</option>
+                      <option value="Purchase Debit Note">Purchase Debit Note</option>
                     </select>
                   </div>
                   <p className="text-[10px] text-[#64748b]/80 mt-1">Updates the main header title on generated PDF bills.</p>

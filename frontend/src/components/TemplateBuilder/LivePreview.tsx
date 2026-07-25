@@ -427,6 +427,10 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const compStateCode = (businessProfile as any)?.stateCode || "";
 
   const invNo = invoiceData?.invoiceNumber || 'INV-2023-001';
+  const rawType = (invoiceData?.invoiceType || '').toLowerCase().trim();
+  const isPurchase = ['purchases', 'purchase_bill', 'purchase', 'purchase_order', 'po', 'purchase_debit_note', 'purchase_dn'].includes(rawType) ||
+                    (invoiceData?.embeddedTemplate?.config?.header?.invoiceTitle || '').toLowerCase().includes('purchase') ||
+                    (template?.config?.header?.invoiceTitle || '').toLowerCase().includes('purchase');
   const invDate = invoiceData?.date || '';
   const dueDate = invoiceData?.dueDate || '';
 
@@ -689,10 +693,34 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             const isProforma = titleLower.includes('proforma');
             const isCreditNote = titleLower.includes('credit');
             const isDebitNote = titleLower.includes('debit');
+            const isPurchaseDebit = titleLower.includes('purchase debit') || titleLower.includes('purchase dn');
+            const isPurchaseOrder = titleLower.includes('purchase order') || titleLower.includes('po');
+            const isPurchases = !isPurchaseDebit && !isPurchaseOrder && (titleLower.includes('purchase') || titleLower.includes('bill'));
 
-            const detailTitle = isEstimate ? 'Estimate Details' : isProforma ? 'Proforma Details' : isCreditNote ? 'Credit Note Details' : isDebitNote ? 'Debit Note Details' : 'Invoice Details';
-            const noLabel = isEstimate ? 'Est No.' : isProforma ? 'Proforma No.' : isCreditNote ? 'CN No.' : isDebitNote ? 'DN No.' : 'Invoice No.';
-            const dueDateLabel = isEstimate ? 'Valid Until' : 'Due Date';
+            const detailTitle = 
+              isEstimate ? 'Estimate Details' : 
+              isProforma ? 'Proforma Details' : 
+              isCreditNote ? 'Credit Note Details' : 
+              isPurchaseDebit ? 'Purchase Debit Note Details' :
+              isPurchaseOrder ? 'Purchase Order Details' :
+              isPurchases ? 'Purchase Details' :
+              isDebitNote ? 'Debit Note Details' : 
+              'Invoice Details';
+
+            const noLabel = 
+              isEstimate ? 'Est No.' : 
+              isProforma ? 'Proforma No.' : 
+              isCreditNote ? 'CN No.' : 
+              isPurchaseDebit ? 'Debit Note No.' :
+              isPurchaseOrder ? 'PO No.' :
+              isPurchases ? 'Bill No.' :
+              isDebitNote ? 'DN No.' : 
+              'Invoice No.';
+
+            const dueDateLabel = 
+              isEstimate ? 'Valid Until' : 
+              isPurchaseOrder ? 'Expected Delivery' :
+              'Due Date';
 
             if (layout.type === 'Modal Classic') {
 
@@ -746,8 +774,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               return (
                 <div key="billTo" style={{ ...getSectionStyle('billTo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginBottom: '0px', marginTop: amigoIndex === 2 ? '-1px' : '5px' }}>
                   <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${isVertical ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
-                    <h3 className={`font-bold text-[11px] text-gray-800 uppercase ${isVertical ? 'mb-1' : 'w-full mb-0'}`}>BILLED TO</h3>
-                    {config.client.fields.includes('name') && <div className={`${isVertical ? 'text-[12px] font-medium text-gray-900 mb-0.5' : 'flex items-center text-[10px]'}`}>{isVertical ? renderInteractive(clientName, 'clientName', 'text', 'Client Name') : <><span className="text-gray-500 font-medium mr-1">Name:</span><span className="text-gray-900 font-bold">{renderInteractive(clientName, 'clientName', 'text', 'Client Name')}</span></>}</div>}
+                    <h3 className={`font-bold text-[11px] text-gray-800 uppercase ${isVertical ? 'mb-1' : 'w-full mb-0'}`}>{isPurchase ? 'BILL FROM' : 'BILLED TO'}</h3>
+                    {config.client.fields.includes('name') && <div className={`${isVertical ? 'text-[12px] font-medium text-gray-900 mb-0.5' : 'flex items-center text-[10px]'}`}>{isVertical ? renderInteractive(clientName, 'clientName', 'text', isPurchase ? 'Supplier Name' : 'Client Name') : <><span className="text-gray-500 font-medium mr-1">Name:</span><span className="text-gray-900 font-bold">{renderInteractive(clientName, 'clientName', 'text', isPurchase ? 'Supplier Name' : 'Client Name')}</span></>}</div>}
                     {config.client.fields.includes('phone') && (
                       isVertical ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Party Mobile No</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(clientPhone, 'clientPhone', 'text', 'Phone')}</span></div> :
                         <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Mobile No:</span><span className="text-gray-900 font-bold">{renderInteractive(clientPhone, 'clientPhone', 'text', 'Phone')}</span></div>
@@ -784,8 +812,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             const clientStateNM = clientState;
             return (
               <div key="billTo" style={getSectionStyle('billTo')}>
-                <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '5px' }}>Bill To</h4>
-                <h3 style={{ fontWeight: 'bold', fontSize: '14px', color: '#1e293b' }}>{renderInteractive(clientName, 'clientName', 'text', 'Client Name')}</h3>
+                <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '5px' }}>{isPurchase ? 'Bill From' : 'Bill To'}</h4>
+                <h3 style={{ fontWeight: 'bold', fontSize: '14px', color: '#1e293b' }}>{renderInteractive(clientName, 'clientName', 'text', isPurchase ? 'Supplier Name' : 'Client Name')}</h3>
                 {config.client.fields.includes('address') && <>
                   <div style={{ fontSize: '12px', margin: '2px 0' }}><strong>Country:</strong> {renderSelectInteractive(clientCountryNM, 'clientCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</div>
                   <div style={{ fontSize: '12px', margin: '2px 0' }}><strong>State:</strong> {renderSelectInteractive(clientStateNM, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountryNM)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</div>
@@ -817,7 +845,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 <div key="shipTo" style={{ ...getSectionStyle('shipTo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginBottom: '0px', marginTop: amigoIndex === 2 ? '-1px' : '5px' }}>
                   <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${isVertical ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
                     <div className={`flex justify-between items-center ${isVertical ? 'mb-1' : 'w-full mb-0'}`}>
-                      <h3 className={`font-bold text-[11px] text-gray-800 uppercase`}>SHIPPED TO</h3>
+                      <h3 className={`font-bold text-[11px] text-gray-800 uppercase`}>{isPurchase ? 'SHIP FROM' : 'SHIPPED TO'}</h3>
                       {isInteractive && onCopyBillingToShipping && (
                         <button
                           type="button"
@@ -829,7 +857,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                       )}
                     </div>
                     <>
-                      {config.shipping.fields.includes('name') && <div className={`${isVertical ? 'text-[12px] font-medium text-gray-900 mb-0.5' : 'flex items-center text-[10px]'}`}>{isVertical ? renderInteractive(shipName, 'shippedToName', 'text', 'Client Name') : <><span className="text-gray-500 font-medium mr-1">Name:</span><span className="text-gray-900 font-bold">{renderInteractive(shipName, 'shippedToName', 'text', 'Client Name')}</span></>}</div>}
+                      {config.shipping.fields.includes('name') && <div className={`${isVertical ? 'text-[12px] font-medium text-gray-900 mb-0.5' : 'flex items-center text-[10px]'}`}>{isVertical ? renderInteractive(shipName, 'shippedToName', 'text', isPurchase ? 'Supplier Name' : 'Client Name') : <><span className="text-gray-500 font-medium mr-1">Name:</span><span className="text-gray-900 font-bold">{renderInteractive(shipName, 'shippedToName', 'text', isPurchase ? 'Supplier Name' : 'Client Name')}</span></>}</div>}
                       {config.shipping.fields.includes('phone') && (
                         isVertical ? <div className="flex items-center text-[11px] mb-0.5"><span className="w-28 font-medium text-gray-700 shrink-0">Party Mobile No</span><span className="mr-2">:</span><span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipPhone, 'shippedToPhone', 'text', 'Phone')}</span></div> :
                           <div className="flex items-center text-[10px]"><span className="text-gray-500 font-medium mr-1">Mobile No:</span><span className="text-gray-900 font-bold">{renderInteractive(shipPhone, 'shippedToPhone', 'text', 'Phone')}</span></div>
@@ -866,7 +894,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             return (
               <div key="shipTo" style={getSectionStyle('shipTo')}>
                 <div className="flex justify-between items-center mb-[5px]">
-                  <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', margin: 0 }}>Ship To</h4>
+                  <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', margin: 0 }}>{isPurchase ? 'Ship From' : 'Ship To'}</h4>
                   {isInteractive && onCopyBillingToShipping && (
                     <button
                       type="button"
@@ -878,7 +906,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   )}
                 </div>
                 <>
-                  <h3 style={{ fontWeight: 'bold', fontSize: '14px', color: '#1e293b' }}>{renderInteractive(shipName, "shippedToName", 'text', 'Client Name')}</h3>
+                  <h3 style={{ fontWeight: 'bold', fontSize: '14px', color: '#1e293b' }}>{renderInteractive(shipName, "shippedToName", 'text', isPurchase ? 'Supplier Name' : 'Client Name')}</h3>
                   {config.shipping.fields.includes('address') && <>
                     <div style={{ fontSize: '12px', margin: '2px 0' }}><strong>Country:</strong> {renderSelectInteractive(shipCountry, 'shippedToCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</div>
                     <div style={{ fontSize: '12px', margin: '2px 0' }}><strong>State:</strong> {renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</div>

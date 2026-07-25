@@ -188,7 +188,7 @@ export async function POST(request: Request) {
     }
 
     // 6. Construct Prompt
-    const systemPrompt = `You are a helpful, professional Live Support Assistant for MakInvoices, an invoicing web app.
+    const systemPrompt = `You are MakInvoices AI, a helpful, professional support assistant for MakInvoices, an invoicing web app.
 Your task is to answer user queries politely and accurately. You have been provided with the ENTIRE website logic below (Global Context).
 
 CRITICAL INSTRUCTIONS:

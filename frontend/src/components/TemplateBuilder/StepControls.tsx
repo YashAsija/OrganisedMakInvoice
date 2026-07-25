@@ -17,7 +17,9 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
 
   const currentDocType = 
     config.header.invoiceTitle?.toUpperCase().includes('CREDIT') ? 'Credit Note' :
-    config.header.invoiceTitle?.toUpperCase().includes('DEBIT') ? 'Debit Note' :
+    config.header.invoiceTitle?.toUpperCase().includes('PURCHASE DEBIT') ? 'Purchase Debit Note' :
+    config.header.invoiceTitle?.toUpperCase().includes('PURCHASE ORDER') ? 'Purchase Order' :
+    config.header.invoiceTitle?.toUpperCase().includes('PURCHASE') ? 'Purchases' :
     config.header.invoiceTitle?.toUpperCase().includes('PROFORMA') ? 'Proforma Invoice' :
     config.header.invoiceTitle?.toUpperCase().includes('QUOTATION') || config.header.invoiceTitle?.toUpperCase().includes('ESTIMATE') || config.header.invoiceTitle?.toUpperCase().includes('QUOTE') ? 'Quote' :
     'Invoice';
@@ -26,9 +28,11 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
     let newTitle = config.header.invoiceTitle || 'TAX INVOICE';
     if (type === 'Invoice') newTitle = 'TAX INVOICE';
     if (type === 'Credit Note') newTitle = 'CREDIT NOTE';
-    if (type === 'Debit Note') newTitle = 'DEBIT NOTE';
     if (type === 'Proforma Invoice') newTitle = 'PROFORMA INVOICE';
     if (type === 'Quote') newTitle = 'QUOTATION / ESTIMATE';
+    if (type === 'Purchases') newTitle = 'PURCHASE BILL';
+    if (type === 'Purchase Order') newTitle = 'PURCHASE ORDER';
+    if (type === 'Purchase Debit Note') newTitle = 'PURCHASE DEBIT NOTE';
     updateConfig('header', { invoiceTitle: newTitle });
   };
 
@@ -70,9 +74,11 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
           >
             <option value="Invoice">Invoice (Tax Invoice)</option>
             <option value="Credit Note">Credit Note</option>
-            <option value="Debit Note">Debit Note</option>
             <option value="Proforma Invoice">Proforma Invoice</option>
             <option value="Quote">Quote / Estimate</option>
+            <option value="Purchases">Purchases (Purchase Bill)</option>
+            <option value="Purchase Order">Purchase Order</option>
+            <option value="Purchase Debit Note">Purchase Debit Note</option>
           </select>
         </div>
 

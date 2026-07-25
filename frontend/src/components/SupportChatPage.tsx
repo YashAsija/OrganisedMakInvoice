@@ -66,12 +66,12 @@ const SUGGESTED_FAQS: Record<string, string[]> = {
 };
 
 const GREETINGS: Record<string, string> = {
-  'en': "Hello! I'm your MakInvoices support assistant. How can I help you today?",
-  'hi': "नमस्ते! मैं आपका MakInvoices सहायता सहायक हूँ। मैं आज आपकी कैसे मदद कर सकता हूँ?",
-  'hi-en': "Hello! Main aapka MakInvoices support assistant hoon. Aaj main aapki kaise madad kar sakta hoon?",
-  'es': "¡Hola! Soy tu asistente de soporte de MakInvoices. ¿Cómo puedo ayudarte hoy?",
-  'fr': "Bonjour ! Je suis votre assistant de support MakInvoices. Comment puis-je vous aider aujourd'hui ?",
-  'de': "Hallo! Ich bin Ihr MakInvoices-Support-Assistent. Wie kann ich Ihnen heute helfen?"
+  'en': "Hello! I'm MakInvoices AI. How can I help you today?",
+  'hi': "नमस्ते! मैं MakInvoices AI हूँ। मैं आज आपकी कैसे मदद कर सकता हूँ?",
+  'hi-en': "Hello! Main MakInvoices AI hoon. Aaj main aapki kaise madad kar sakta hoon?",
+  'es': "¡Hola! Soy MakInvoices AI. ¿Cómo puedo ayudarte hoy?",
+  'fr': "Bonjour ! Je suis MakInvoices AI. Comment puis-je vous aider aujourd'hui ?",
+  'de': "Hallo! Ich bin MakInvoices AI. Wie kann ich Ihnen heute helfen?"
 };
 
 interface SupportChatPageProps {
@@ -244,7 +244,7 @@ export default function SupportChatPage({ userEmail, onBack, onEscalate }: Suppo
             <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white dark:border-zinc-900" />
           </div>
           <div>
-            <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wider">Support Assistant</h2>
+            <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wider">MakInvoices AI</h2>
             <p className="text-[10px] text-[#64748b] dark:text-zinc-500 flex items-center gap-1.5">
               Online • {LANGUAGES.find(l => l.id === language)?.label}
             </p>

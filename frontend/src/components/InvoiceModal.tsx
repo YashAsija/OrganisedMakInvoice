@@ -1687,103 +1687,105 @@ export default function InvoiceModal({
           </div>
 
           {/* Document Type Selector: Dropdown on Mobile, Pill Bar on Desktop */}
-          <div className="flex items-center gap-1.5 max-w-full">
-            {/* Mobile Select Dropdown (< md) */}
-            <div className="md:hidden relative inline-flex items-center">
-              <select
-                value={invoiceType === 'quote' ? 'estimate' : invoiceType}
-                onChange={(e) => {
-                  const newType = e.target.value as any;
-                  const currentWip = buildTempInvoiceRef.current(true);
-                  if (currentWip) {
-                    const hasName = currentWip.clientName && currentWip.clientName.trim() !== '' && !currentWip.clientName.startsWith('Guest-') && currentWip.clientName !== 'Quote / Estimate';
-                    const hasItems = Array.isArray(currentWip.items) && currentWip.items.length > 0;
-                    if (hasName || hasItems) {
-                      const draftToSave = {
-                        ...currentWip,
-                        id: draftIdRef.current,
-                        status: 'draft',
-                        updatedAt: new Date().toISOString()
-                      };
-                      saveDraftToLocalStorage(draftToSave);
-                      localStorage.setItem('makbills_pending_resume_draft', draftToSave.id);
+          {!invoice && (
+            <div className="flex items-center gap-1.5 max-w-full">
+              {/* Mobile Select Dropdown (< md) */}
+              <div className="md:hidden relative inline-flex items-center">
+                <select
+                  value={invoiceType === 'quote' ? 'estimate' : invoiceType}
+                  onChange={(e) => {
+                    const newType = e.target.value as any;
+                    const currentWip = buildTempInvoiceRef.current(true);
+                    if (currentWip) {
+                      const hasName = currentWip.clientName && currentWip.clientName.trim() !== '' && !currentWip.clientName.startsWith('Guest-') && currentWip.clientName !== 'Quote / Estimate';
+                      const hasItems = Array.isArray(currentWip.items) && currentWip.items.length > 0;
+                      if (hasName || hasItems) {
+                        const draftToSave = {
+                          ...currentWip,
+                          id: draftIdRef.current,
+                          status: 'draft',
+                          updatedAt: new Date().toISOString()
+                        };
+                        saveDraftToLocalStorage(draftToSave);
+                        localStorage.setItem('makbills_pending_resume_draft', draftToSave.id);
+                      }
                     }
-                  }
-                  setInvoiceType(newType);
-                  loadDefaultTemplate(newType);
-                  if (!invoice) {
-                    const newDefaults = getDocumentTypeDefaults(newType, profile);
-                    setNotes(newDefaults.notes);
-                    setInvoiceTerms(newDefaults.terms);
-                  }
-                }}
-                className="appearance-none pl-3.5 pr-8 py-2 rounded-xl border border-sky-300 dark:border-sky-800/80 bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-200 font-extrabold text-xs focus:ring-2 focus:ring-sky-500/50 focus:outline-none cursor-pointer shadow-xs transition-all tracking-tight"
-              >
-                <option value="invoice">Tax Invoice</option>
-                <option value="proforma">Proforma Invoice</option>
-                <option value="credit_note">Credit Note</option>
-                <option value="estimate">Quote / Estimate</option>
-                <option value="purchases">Purchase Bill</option>
-                <option value="purchase_order">Purchase Order</option>
-                <option value="purchase_debit_note">Debit Note</option>
-              </select>
-              <ChevronDown className="w-4 h-4 text-sky-700 dark:text-sky-300 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2.5} />
-            </div>
+                    setInvoiceType(newType);
+                    loadDefaultTemplate(newType);
+                    if (!invoice) {
+                      const newDefaults = getDocumentTypeDefaults(newType, profile);
+                      setNotes(newDefaults.notes);
+                      setInvoiceTerms(newDefaults.terms);
+                    }
+                  }}
+                  className="appearance-none pl-3.5 pr-8 py-2 rounded-xl border border-sky-300 dark:border-sky-800/80 bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-200 font-extrabold text-xs focus:ring-2 focus:ring-sky-500/50 focus:outline-none cursor-pointer shadow-xs transition-all tracking-tight"
+                >
+                  <option value="invoice">Tax Invoice</option>
+                  <option value="proforma">Proforma Invoice</option>
+                  <option value="credit_note">Credit Note</option>
+                  <option value="estimate">Quote / Estimate</option>
+                  <option value="purchases">Purchase Bill</option>
+                  <option value="purchase_order">Purchase Order</option>
+                  <option value="purchase_debit_note">Debit Note</option>
+                </select>
+                <ChevronDown className="w-4 h-4 text-sky-700 dark:text-sky-300 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2.5} />
+              </div>
 
-            {/* Desktop Pill Tabs (>= md) */}
-            <div className="hidden md:flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none max-w-full">
-              {[
-                { id: 'invoice', label: 'Tax Invoice' },
-                { id: 'proforma', label: 'Proforma' },
-                { id: 'credit_note', label: 'Credit Note' },
-                { id: 'estimate', label: 'Quote / Est' },
-                { id: 'purchases', label: 'Purchases' },
-                { id: 'purchase_order', label: 'P.O.' },
-                { id: 'purchase_debit_note', label: 'Debit Note' }
-              ].map(type => {
-                const isActive = invoiceType === type.id || (type.id === 'estimate' && invoiceType === 'quote');
-                return (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() => {
-                      const newType = type.id as any;
-                      // Save WIP draft before switching document type if work was started
-                      const currentWip = buildTempInvoiceRef.current(true);
-                      if (currentWip) {
-                        const hasName = currentWip.clientName && currentWip.clientName.trim() !== '' && !currentWip.clientName.startsWith('Guest-') && currentWip.clientName !== 'Quote / Estimate';
-                        const hasItems = Array.isArray(currentWip.items) && currentWip.items.length > 0;
-                        if (hasName || hasItems) {
-                          const draftToSave = {
-                            ...currentWip,
-                            id: draftIdRef.current,
-                            status: 'draft',
-                            updatedAt: new Date().toISOString()
-                          };
-                          saveDraftToLocalStorage(draftToSave);
-                          localStorage.setItem('makbills_pending_resume_draft', draftToSave.id);
+              {/* Desktop Pill Tabs (>= md) */}
+              <div className="hidden md:flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none max-w-full">
+                {[
+                  { id: 'invoice', label: 'Tax Invoice' },
+                  { id: 'proforma', label: 'Proforma' },
+                  { id: 'credit_note', label: 'Credit Note' },
+                  { id: 'estimate', label: 'Quote / Est' },
+                  { id: 'purchases', label: 'Purchases' },
+                  { id: 'purchase_order', label: 'P.O.' },
+                  { id: 'purchase_debit_note', label: 'Debit Note' }
+                ].map(type => {
+                  const isActive = invoiceType === type.id || (type.id === 'estimate' && invoiceType === 'quote');
+                  return (
+                    <button
+                      key={type.id}
+                      type="button"
+                      onClick={() => {
+                        const newType = type.id as any;
+                        // Save WIP draft before switching document type if work was started
+                        const currentWip = buildTempInvoiceRef.current(true);
+                        if (currentWip) {
+                          const hasName = currentWip.clientName && currentWip.clientName.trim() !== '' && !currentWip.clientName.startsWith('Guest-') && currentWip.clientName !== 'Quote / Estimate';
+                          const hasItems = Array.isArray(currentWip.items) && currentWip.items.length > 0;
+                          if (hasName || hasItems) {
+                            const draftToSave = {
+                              ...currentWip,
+                              id: draftIdRef.current,
+                              status: 'draft',
+                              updatedAt: new Date().toISOString()
+                            };
+                            saveDraftToLocalStorage(draftToSave);
+                            localStorage.setItem('makbills_pending_resume_draft', draftToSave.id);
+                          }
                         }
-                      }
-                      setInvoiceType(newType);
-                      loadDefaultTemplate(newType);
-                      if (!invoice) {
-                        const newDefaults = getDocumentTypeDefaults(newType, profile);
-                        setNotes(newDefaults.notes);
-                        setInvoiceTerms(newDefaults.terms);
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 border ${
-                      isActive
-                        ? 'bg-sky-600 text-white border-sky-600 shadow-sm shadow-sky-600/20 scale-[1.02]'
-                        : 'bg-slate-100/70 dark:bg-zinc-900 text-slate-650 dark:text-zinc-400 border-slate-200/80 dark:border-zinc-800 hover:bg-slate-200/60 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    {type.label}
-                  </button>
-                );
-              })}
+                        setInvoiceType(newType);
+                        loadDefaultTemplate(newType);
+                        if (!invoice) {
+                          const newDefaults = getDocumentTypeDefaults(newType, profile);
+                          setNotes(newDefaults.notes);
+                          setInvoiceTerms(newDefaults.terms);
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 border ${
+                        isActive
+                          ? 'bg-sky-600 text-white border-sky-600 shadow-sm shadow-sky-600/20 scale-[1.02]'
+                          : 'bg-slate-100/70 dark:bg-zinc-900 text-slate-650 dark:text-zinc-400 border-slate-200/80 dark:border-zinc-800 hover:bg-slate-200/60 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {type.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           <button
             onClick={onClose}

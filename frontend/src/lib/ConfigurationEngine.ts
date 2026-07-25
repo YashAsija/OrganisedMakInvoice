@@ -1,7 +1,7 @@
 import { InvoiceTemplate } from '../types';
 
 export interface QuickBuilderState {
-  invoiceType: 'Invoice' | 'Estimate' | 'Credit Note' | 'Proforma' | 'Debit Note';
+  invoiceType: 'Invoice' | 'Estimate' | 'Credit Note' | 'Proforma' | 'Purchases' | 'Purchase Order' | 'Purchase Debit Note';
   templateStyle: 'Modern' | 'Corporate' | 'Minimal' | 'Premium';
   branding: {
     primaryColor: string;
@@ -108,7 +108,7 @@ export const generateTemplateFromQuickState = (state: QuickBuilderState): Invoic
         logoPosition: state.branding.titleAlignment === 'Left' ? 'Right' : state.branding.titleAlignment === 'Right' ? 'Left' : 'Center', 
         logoWidth: 120, logoHeight: 60, 
         titleAlignment: state.branding.titleAlignment, 
-        invoiceTitle: state.invoiceType === 'Debit Note' ? 'DEBIT NOTE' : state.invoiceType === 'Credit Note' ? 'CREDIT NOTE' : state.invoiceType === 'Proforma' ? 'PROFORMA INVOICE' : state.invoiceType === 'Estimate' ? 'QUOTATION / ESTIMATE' : 'TAX INVOICE' 
+        invoiceTitle: state.invoiceType === 'Credit Note' ? 'CREDIT NOTE' : state.invoiceType === 'Proforma' ? 'PROFORMA INVOICE' : state.invoiceType === 'Estimate' ? 'QUOTATION / ESTIMATE' : state.invoiceType === 'Purchases' ? 'PURCHASE BILL' : state.invoiceType === 'Purchase Order' ? 'PURCHASE ORDER' : state.invoiceType === 'Purchase Debit Note' ? 'PURCHASE DEBIT NOTE' : 'TAX INVOICE' 
       },
       company: { fields: ['name', 'address', state.sections.gst ? 'gstin' : '', 'email', 'phone', 'pan'].filter(Boolean) },
       invoiceInfo: { fields: ['invoiceNumber', 'invoiceDate', 'dueDate'], customFields: [], position: 'Right' },
