@@ -115,10 +115,10 @@ RECENT HISTORY:
   console.log(systemPrompt);
   console.log(`--- END PROMPT ---`);
   
-  // 6. Call Gemini 2.5 Flash Lite
+  // 6. Call Gemini 2.5 Flash
   try {
     const generateResponse = await genAI.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
+      model: 'gemini-2.5-flash',
       contents: [
         { role: 'user', parts: [{ text: systemPrompt }] },
         { role: 'model', parts: [{ text: '{"reply": "Understood. I will answer the user\'s next message in JSON format accordingly.", "features": []}' }] },

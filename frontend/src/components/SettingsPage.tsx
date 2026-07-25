@@ -161,7 +161,7 @@ export default function SettingsPage({
                 description="Primary currency used across invoices and reports"
                 control={
                   <span className="px-2.5 py-1 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-lg text-[10px] font-mono font-bold text-[#64748b]">
-                    {profile.currency || 'INR'}
+                    {profile.currency || 'INR'}{profile.currencySymbol ? ` (${profile.currencySymbol})` : ''}
                   </span>
                 }
               />

@@ -592,6 +592,22 @@ export default function App() {
 
               console.log("[APP] Loaded company settings from Supabase:", companySettings);
 
+              // Helper: derive currency code from symbol when the currency column doesn't exist yet
+              const deriveCurrencyCode = (sym: string | null | undefined, fallback: string): string => {
+                if (!sym) return fallback;
+                const symToCode: Record<string, string> = {
+                  '₹': 'INR', '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY',
+                  'C$': 'CAD', 'A$': 'AUD', 'Fr': 'CHF', 'HK$': 'HKD', 'S$': 'SGD',
+                  'NZ$': 'NZD', '₩': 'KRW', 'R$': 'BRL', '₽': 'RUB', 'R': 'ZAR',
+                  '₺': 'TRY', 'kr': 'SEK', 'zł': 'PLN', '฿': 'THB', 'Rp': 'IDR',
+                  'RM': 'MYR', '₱': 'PHP', '₫': 'VND', '₦': 'NGN', '₪': 'ILS',
+                  'Kč': 'CZK', 'Ft': 'HUF', '₴': 'UAH', '₾': 'GEL', '₸': 'KZT',
+                  'NT$': 'TWD', '₵': 'GHS', 'KSh': 'KES', '₼': 'AZN',
+                  '﷼': 'SAR', 'د.إ': 'AED', '₮': 'MNT',
+                };
+                return symToCode[sym] || fallback;
+              };
+
               if (cloudProf) {
                 // Merge company_settings fields into the profile if available
                 const mergedProf: BusinessProfile = companySettings ? {
@@ -610,7 +626,7 @@ export default function App() {
                   country: companySettings.country || cloudProf.country || '',
                   state: companySettings.state || cloudProf.state || '',
                   stateCode: companySettings.state_code || cloudProf.stateCode || '',
-                  currency: companySettings.currency || cloudProf.currency || 'INR',
+                  currency: companySettings.currency || deriveCurrencyCode(companySettings.currency_symbol, cloudProf.currency || 'INR'),
                   currencySymbol: companySettings.currency_symbol || cloudProf.currencySymbol || '',
                   taxMode: companySettings.tax_mode || cloudProf.taxMode || 'dynamic',
                   customTaxName: companySettings.custom_tax_name || cloudProf.customTaxName || 'Tax',
@@ -668,7 +684,7 @@ export default function App() {
                   country: companySettings?.country || profile.country || '',
                   state: companySettings?.state || profile.state || '',
                   stateCode: companySettings?.state_code || profile.stateCode || '',
-                  currency: companySettings?.currency || profile.currency || 'INR',
+                  currency: companySettings?.currency || deriveCurrencyCode(companySettings?.currency_symbol, profile.currency || 'INR'),
                   currencySymbol: companySettings?.currency_symbol || profile.currencySymbol || '',
                   taxMode: companySettings?.tax_mode || profile.taxMode || 'dynamic',
                   customTaxName: companySettings?.custom_tax_name || profile.customTaxName || 'Tax',
@@ -676,6 +692,11 @@ export default function App() {
                   defaultTaxRate: companySettings?.default_tax_rate !== undefined ? companySettings.default_tax_rate : (profile.defaultTaxRate || 18),
                   logoUrl: companySettings?.logo_url || profile.logoUrl || '',
                   signature: companySettings?.signature_url || profile.signature || '',
+                  // ✅ Banking fields — always pull from company_settings (source of truth)
+                  bankName: companySettings?.bank_name || profile.bankName || '',
+                  accountNumber: companySettings?.account_number || profile.accountNumber || '',
+                  ifsc: companySettings?.ifsc || profile.ifsc || '',
+                  upiId: companySettings?.upi_id || profile.upiId || '',
                   updatedAt: new Date().toISOString()
                 };
                 await supabase.from('users').upsert(initProf);

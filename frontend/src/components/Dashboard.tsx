@@ -274,36 +274,19 @@ export default function Dashboard({
       const lowerTitle = (title || '').toLowerCase();
 
       // Only add navigation for notifications that lead to a genuinely useful page
-      if (
-        lowerTitle.includes('invoice created') || lowerTitle.includes('invoice updated') ||
-        lowerTitle.includes('proforma') || lowerTitle.includes('credit note') ||
-        lowerTitle.includes('debit note') || lowerTitle.includes('quote created') ||
-        lowerTitle.includes('quote updated') || lowerTitle.includes('pdf downloaded') ||
-        lowerTitle.includes('ledger pdf') || lowerTitle.includes('excel csv') ||
-        lowerTitle.includes('bulk pdfs') || lowerTitle.includes('word document') ||
-        lowerTitle.includes('draft saved')
-      ) {
-        // Invoice Ledger — all document/export actions
-        actionLabel = 'View Ledger';
-        actionTab = 'invoices';
-      } else if (lowerTitle.includes('default template set')) {
-        // Template manager — only when a default template is set (navigates to a different page)
-        actionLabel = 'View Templates';
-        actionTab = 'invoice_templates';
-      } else if (lowerTitle.includes('profile') || lowerTitle.includes('preference') || lowerTitle.includes('setting') || lowerTitle.includes('pin') || lowerTitle.includes('subscription')) {
-        // Settings page
-        actionLabel = 'View Settings';
-        actionTab = 'settings';
-      } else if (lowerTitle.includes('bulk upload complete')) {
+      if (lowerTitle.includes('bulk upload complete')) {
         // Bulk upload: infer the correct registry tab from the message body
         const lowerMsg = (message || '').toLowerCase();
-        if (lowerMsg.includes('client database')) { actionLabel = 'Client Database'; actionTab = 'master_vendor'; }
-        else if (lowerMsg.includes('hsn registry')) { actionLabel = 'HSN Registry'; actionTab = 'master_hsn'; }
-        else if (lowerMsg.includes('transport database')) { actionLabel = 'Transport Database'; actionTab = 'master_transport'; }
-        else if (lowerMsg.includes('material catalog')) { actionLabel = 'Material Catalog'; actionTab = 'catalog_material'; }
-        else if (lowerMsg.includes('product category')) { actionLabel = 'Product Category'; actionTab = 'catalog_category'; }
-        // If context unclear, no navigation
+        if (lowerMsg.includes('client database')) { actionLabel = 'Go to Client Database'; actionTab = 'master_vendor'; }
+        else if (lowerMsg.includes('hsn registry')) { actionLabel = 'Go to HSN Registry'; actionTab = 'master_hsn'; }
+        else if (lowerMsg.includes('transport database')) { actionLabel = 'Go to Transport Database'; actionTab = 'master_transport'; }
+        else if (lowerMsg.includes('material catalog')) { actionLabel = 'Go to Material Catalog'; actionTab = 'catalog_material'; }
+        else if (lowerMsg.includes('product category')) { actionLabel = 'Go to Product Category'; actionTab = 'catalog_category'; }
+      } else if (lowerTitle.includes('default template set')) {
+        actionLabel = 'Go to Templates';
+        actionTab = 'invoice_templates';
       }
+
       // No navigation for: Template Downloaded (CSV file), individual registry CRUD (already on page),
       // Validation Errors, Draft Restored, GL Accounts, Download Failed
 
@@ -5947,7 +5930,25 @@ export default function Dashboard({
                     </div>
                     <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
                       <span className="text-[9px] uppercase font-extrabold text-[#64748b]/75 dark:text-zinc-500 block">Primary currency</span>
-                      <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 mt-1 block">{profile.currency || 'INR'} ({currencySymbol})</span>
+                      <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 mt-1 block">
+                        {(() => {
+                          // Derive currency code from currencySymbol stored in profile, or fall back to profile.currency
+                          const sym = profile.currencySymbol || currencySymbol || '₹';
+                          // Map symbol → code for display
+                          const symToCode: Record<string, string> = {
+                            '₹': 'INR', '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY',
+                            'C$': 'CAD', 'A$': 'AUD', 'Fr': 'CHF', 'HK$': 'HKD', 'S$': 'SGD',
+                            'NZ$': 'NZD', '₩': 'KRW', 'R$': 'BRL', '₽': 'RUB', 'R': 'ZAR',
+                            '₺': 'TRY', 'kr': 'SEK', 'zł': 'PLN', '฿': 'THB', 'Rp': 'IDR',
+                            'RM': 'MYR', '₱': 'PHP', '₫': 'VND', '₦': 'NGN', '₪': 'ILS',
+                            'Kč': 'CZK', 'Ft': 'HUF', '₴': 'UAH', '₾': 'GEL', '₸': 'KZT',
+                            'NT$': 'TWD', '₵': 'GHS', 'KSh': 'KES', '₼': 'AZN',
+                          };
+                          // Use profile.currency if it looks correct (matches the symbol)
+                          const derivedCode = symToCode[sym] || profile.currency || 'INR';
+                          return `${derivedCode} (${sym})`;
+                        })()}
+                      </span>
                     </div>
                     <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
                       <span className="text-[9px] uppercase font-extrabold text-[#64748b]/75 dark:text-zinc-500 block">Mobile Number</span>

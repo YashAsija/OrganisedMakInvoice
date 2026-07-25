@@ -30,14 +30,24 @@ def generate_description_cached(name: str) -> str:
     prompt = f'Write a professional, concise, polished invoice line item description for the service/product named: "{name}". Keep it to 15-25 words. Make it sound appealing to a professional corporate client. Do not use quotation marks around the answer.'
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
+            model="gemini-3.5-flash-lite",
             contents=prompt,
             config=types.GenerateContentConfig(temperature=0.7)
         )
         return response.text.strip() if response.text else f"High quality {name} deliverables and consulting solutions."
     except Exception as e:
         print(f"AI Description Error: {e}")
-        raise Exception("Failed to generate AI description")
+        # Try fallback to gemini-3.5-flash
+        try:
+            response = client.models.generate_content(
+                model="gemini-3.5-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(temperature=0.7)
+            )
+            return response.text.strip() if response.text else f"High quality {name} deliverables and consulting solutions."
+        except Exception as fallback_err:
+            print(f"AI Description Fallback Error: {fallback_err}")
+            raise Exception("Failed to generate AI description")
 
 def parse_invoice_cached(prompt: str, current_invoice: dict | None = None, allowed_fields: list[str] | None = None) -> dict:
     client = get_ai_client()
@@ -295,7 +305,7 @@ Use standard fallback fields for today's date {today} and a due date exactly 14 
     parsed_result = {}
     if client:
         try:
-            model_name = "gemini-2.5-flash-lite"
+            model_name = "gemini-3.5-flash-lite"
             try:
                 response = client.models.generate_content(
                     model=model_name,
@@ -308,10 +318,10 @@ Use standard fallback fields for today's date {today} and a due date exactly 14 
                 )
                 parsed_result = json.loads(response.text.strip()) if response.text else {}
             except Exception as api_err:
-                print(f"Gemini {model_name} Error: {api_err}. Trying fallback model gemini-2.5-flash...")
+                print(f"Gemini {model_name} Error: {api_err}. Trying fallback model gemini-3.5-flash...")
                 try:
                     response = client.models.generate_content(
-                        model="gemini-2.5-flash",
+                        model="gemini-3.5-flash",
                         contents=prompt,
                         config=types.GenerateContentConfig(
                             system_instruction=system_instruction,

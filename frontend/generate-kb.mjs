@@ -1,6 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import { GoogleGenAI } from '@google/genai';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: '.env.local' });
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
 
@@ -95,28 +98,38 @@ Here is the source code:
 ${combinedSource}
 `;
 
-    try {
-      // Add a small delay to avoid rate limiting
-      if (i > 0) {
-        await new Promise(resolve => setTimeout(resolve, 5000));
-      }
-
-      const response = await genAI.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
-        contents: prompt,
-        config: {
-          temperature: 0.2,
-          responseMimeType: "application/json"
+    let retries = 5;
+    let success = false;
+    while (retries > 0 && !success) {
+      try {
+        // Add a small delay to avoid rate limiting
+        if (i > 0 || retries < 5) {
+          console.log(`Waiting to call API (retries left: ${retries})...`);
+          await new Promise(resolve => setTimeout(resolve, retries < 5 ? 10000 : 5000));
         }
-      });
 
-      let rawJson = response.text;
-      rawJson = rawJson.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
-      const parsed = JSON.parse(rawJson);
-      allEntries = allEntries.concat(parsed);
-      console.log(`Added ${parsed.length} entries.`);
-    } catch (err) {
-      console.error("Failed to generate knowledge base for this chunk:", err);
+        const response = await genAI.models.generateContent({
+          model: 'gemini-3.5-flash-lite',
+          contents: prompt,
+          config: {
+            temperature: 0.2,
+            responseMimeType: "application/json"
+          }
+        });
+
+        let rawJson = response.text;
+        rawJson = rawJson.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
+        const parsed = JSON.parse(rawJson);
+        allEntries = allEntries.concat(parsed);
+        console.log(`Added ${parsed.length} entries.`);
+        success = true;
+      } catch (err) {
+        retries--;
+        console.error(`Failed to generate knowledge base for this chunk: ${err.message || err}. Retries left: ${retries}`);
+        if (retries === 0) {
+          console.error("Skipping chunk permanently after exhausting all retries.");
+        }
+      }
     }
   }
 

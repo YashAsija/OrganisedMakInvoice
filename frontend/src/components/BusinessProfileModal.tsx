@@ -69,7 +69,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const [address, setAddress] = useState(() => isOnboarding ? '' : (profile.address || ''));
   const [taxId, setTaxId] = useState(() => isOnboarding ? '' : (profile.taxId || ''));
   const [pan, setPan] = useState(() => isOnboarding ? '' : (profile.pan || ''));
-  const [currency, setCurrency] = useState(() => isOnboarding ? '' : (profile.currency || 'USD'));
+  const [currency, setCurrency] = useState(() => isOnboarding ? '' : (profile.currency || 'INR'));
   const [defaultTaxRate, setDefaultTaxRate] = useState(() => isOnboarding ? 0 : (profile.defaultTaxRate || 0));
   const [logoUrl, setLogoUrl] = useState(() => isOnboarding ? '' : (profile.logoUrl || ''));
   const [website, setWebsite] = useState(() => isOnboarding ? '' : (profile.website || ''));
@@ -428,7 +428,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
             setAddress(profile.address || '');
             setTaxId(profile.taxId || '');
             setPan(profile.pan || '');
-            setCurrency(profile.currency || 'USD');
+            setCurrency(profile.currency || 'INR');
             setDefaultTaxRate(profile.defaultTaxRate || 0);
             setLogoUrl(profile.logoUrl || '');
             setSignature(profile.signature || '');
@@ -498,7 +498,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           setAddress(settings.address || '');
           setTaxId(settings.gstin || '');
           setPan(settings.pan || '');
-          setCurrency(settings.currency || 'USD');
+          setCurrency(settings.currency || 'INR');
           setLogoUrl(settings.logo_url || '');
           setSignature(settings.signature_url || '');
           setSignatureMode(settings.signature_type || 'draw');
@@ -544,7 +544,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           setAddress(profile.address || '');
           setTaxId(profile.taxId || '');
           setPan(profile.pan || '');
-          setCurrency(profile.currency || 'USD');
+          setCurrency(profile.currency || 'INR');
           setDefaultTaxRate(profile.defaultTaxRate || 0);
           setLogoUrl(profile.logoUrl || '');
           setSignature(profile.signature || '');
@@ -838,21 +838,42 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
     const selectedCountry = Country.getCountryByCode(isoCode);
     if (selectedCountry) {
       setCountry(selectedCountry.name);
-      setCurrency(selectedCountry.currency || 'USD');
+      setCurrency(selectedCountry.currency || 'INR');
       
       // Update phone prefix
       if (selectedCountry.phonecode) {
         setPhone('+' + selectedCountry.phonecode + ' ');
       }
       
-      // Try to map currency to symbol
+      // Comprehensive currency → symbol map for all major world currencies
       const symbolMap: { [key: string]: string } = {
-        USD: '$', EUR: '€', GBP: '£', JPY: '¥', INR: '₹', CAD: 'C$', AUD: 'A$', IDR: 'Rp'
+        // Major / G20
+        USD: '$',   EUR: '€',   GBP: '£',   JPY: '¥',   INR: '₹',
+        CAD: 'C$',  AUD: 'A$',  CHF: 'Fr',  CNY: '¥',   HKD: 'HK$',
+        SGD: 'S$',  NZD: 'NZ$', KRW: '₩',   BRL: 'R$',  MXN: '$',
+        RUB: '₽',   ZAR: 'R',   TRY: '₺',   SAR: '﷼',   AED: 'د.إ',
+        SEK: 'kr',  NOK: 'kr',  DKK: 'kr',  PLN: 'zł',  THB: '฿',
+        IDR: 'Rp',  MYR: 'RM',  PHP: '₱',   VND: '₫',   NGN: '₦',
+        // Other commonly used
+        EGP: 'E£',  PKR: '₨',   BDT: '৳',   LKR: '₨',   NPR: '₨',
+        MMK: 'K',   KWD: 'KD',  BHD: 'BD',  OMR: '﷼',   QAR: '﷼',
+        JOD: 'JD',  ILS: '₪',   CZK: 'Kč',  HUF: 'Ft',  RON: 'lei',
+        HRK: 'kn',  BGN: 'лв',  UAH: '₴',   GEL: '₾',   AMD: '֏',
+        AZN: '₼',   KZT: '₸',   UZS: 'soʻm',MNT: '₮',   TWD: 'NT$',
+        CLP: '$',   COP: '$',   PEN: 'S/',  ARS: '$',   UYU: '$U',
+        VEF: 'Bs',  GTQ: 'Q',   CRC: '₡',   HNL: 'L',   DOP: 'RD$',
+        MAD: 'MAD', TND: 'DT',  DZD: 'DA',  LYD: 'LD',  GHS: '₵',
+        KES: 'KSh', TZS: 'TSh', UGX: 'USh', ETB: 'Br',  RWF: 'Fr',
+        XOF: 'Fr',  XAF: 'Fr',  MUR: '₨',   SCR: '₨',   MVR: 'Rf',
+        BTN: 'Nu',  AFN: '؋',   IRR: '﷼',   IQD: 'عد',  SYP: '£S',
+        LBP: 'LL',  YER: '﷼',   BAM: 'KM',  RSD: 'din', MKD: 'ден',
+        ALL: 'L',   ISK: 'kr',  CYP: '£',   FJD: 'FJ$', PGK: 'K',
+        WST: 'WS$', TOP: 'T$',  VUV: 'VT',  SBD: 'SI$',
       };
       if (selectedCountry.currency && symbolMap[selectedCountry.currency]) {
         setCurrencySymbol(symbolMap[selectedCountry.currency]);
       } else {
-        setCurrencySymbol(selectedCountry.currency || ''); // fallback
+        setCurrencySymbol(selectedCountry.currency || ''); // fallback to code if unknown
       }
       
       // Reset state when country changes
@@ -1323,6 +1344,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         state_code: stateCode,
         address,
         currency_symbol: currencySymbol,
+        currency,
         mobile,
         email,
         gstin: taxId,
@@ -1386,9 +1408,12 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           (errMsg === '' && Object.keys(settingError).length === 0);
 
         if (isColumnError) {
-          console.warn("[SETTINGS] New columns not found in DB yet (PGRST204), retrying without doc-numbering fields...");
+          console.warn("[SETTINGS] New columns not found in DB yet (PGRST204), retrying without new columns...");
+          // Strip all potentially-new columns that may not exist in older DB schemas
           const { proforma_prefix, starting_proforma_number, debit_note_prefix, starting_debit_note_number,
             credit_note_prefix, starting_credit_note_number, quote_prefix, starting_quote_number,
+            purchase_order_prefix, starting_purchase_order_number, purchases_prefix, starting_purchases_number,
+            currency: _currency, // may not exist in older schemas
             ...fallbackData } = settingData;
 
           ({ data: savedSetting, error: settingError } = await supabase

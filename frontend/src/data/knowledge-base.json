@@ -1,859 +1,1379 @@
 [
   {
-    "topic": "Billing Dashboard",
-    "route": "/dashboard",
-    "summary": "The main dashboard overview showing quick actions and recent business metrics.",
+    "topic": "Main Application Authentication and Workspace Router",
+    "route": "/",
+    "source_file": "\\src\\App.tsx",
+    "summary": "Main application entry point handling theme states, offline/online capabilities, data synchronization, security locks (PIN/biometrics), and routing between marketing pages, login screens, and the core dashboard.",
     "steps": [
-      "Click 'Billing Dashboard' in the sidebar to view your business summary.",
-      "Use the 'Quick Bill' button for rapid invoice generation.",
-      "Use the 'Quick Actions' section to rapidly create invoices or clients.",
-      "View your recent invoice list and top clients."
+      "Launch the application to view the homepage or dashboard based on your authentication status.",
+      "Click 'Continue with Google' or use custom signup/login options to authenticate.",
+      "Enter your 4-digit PIN if PIN lock is enabled to unlock your workspace."
     ],
     "keywords": [
-      "home",
+      "login",
+      "signup",
+      "authentication",
+      "workspace",
+      "pin lock",
       "dashboard",
-      "main page",
-      "overview",
-      "metrics",
-      "stats",
-      "charts",
-      "summary",
-      "landing",
-      "start",
-      "how to dashboard home",
-      "i want to know about dashboard home",
-      "what is dashboard home",
-      "tell me about dashboard home",
-      "explain dashboard home",
-      "dashboard home kya hai",
-      "mujhe dashboard home ke baare me batao",
-      "need help with dashboard home",
-      "dashboard home details pls",
-      "can u show dashboard home",
-      "where to find dashboard home",
-      "setup dashboard home",
-      "how do i use dashboard home",
-      "teh dashboard home",
-      "hwo to dashboard home",
-      "pls dashboard home",
-      "about dashboard home"
-    ],
-    "related_topics": [
-      "Reports",
-      "Create Invoice"
-    ],
-    "not_this": "Not for detailed financial reports or ledger views."
+      "security settings",
+      "theme switcher"
+    ]
   },
   {
-    "topic": "PIN Lock Security",
-    "route": "/settings",
-    "summary": "Enable or disable a numeric PIN lock or biometric authentication for app security.",
+    "topic": "Authentication Screen",
+    "route": "/auth",
+    "source_file": "\\src\\components\\AuthScreen.tsx",
+    "summary": "Handles user registration, login via email/phone/Google, password strength checking, OTP verification, and password reset.",
     "steps": [
-      "Navigate to 'Settings' from the sidebar.",
-      "Locate the 'Security' section.",
-      "Click 'Enable' under 'App PIN Lock' to set a new PIN.",
-      "Use 'Disable' to remove the PIN lock requirement."
+      "Select 'Sign Up' or 'Log In' from the form toggle bar.",
+      "Choose your login method: Email, Phone, or Google.",
+      "For email signup, fill out 'Your Name', 'Company Name', 'Phone Number', 'Email Address', and 'Password'.",
+      "Click 'Create Account' or 'Log In'."
     ],
     "keywords": [
-      "pin",
-      "password",
-      "security",
-      "lock",
-      "unlock",
-      "biometrics",
-      "fingerprint",
-      "face id",
-      "secure app",
-      "protect data",
-      "passcode",
-      "how to pin lock security",
-      "i want to know about pin lock security",
-      "what is pin lock security",
-      "tell me about pin lock security",
-      "explain pin lock security",
-      "pin lock security kya hai",
-      "mujhe pin lock security ke baare me batao",
-      "need help with pin lock security",
-      "pin lock security details pls",
-      "can u show pin lock security",
-      "where to find pin lock security",
-      "setup pin lock security",
-      "how do i use pin lock security",
-      "teh pin lock security",
-      "hwo to pin lock security",
-      "pls pin lock security",
-      "about pin lock security"
-    ],
-    "related_topics": [
-      "Security Settings",
-      "Reset PIN"
-    ],
-    "not_this": "Not for changing your account login password or email."
-  },
-  {
-    "topic": "Create New Invoice",
-    "route": "/invoices",
-    "summary": "Create a new invoice, add client details, items, and taxes, and save it.",
-    "steps": [
-      "Click 'Invoices Ledger' in the sidebar or 'Create Invoice' from the Invoices Ledger or 'Quick Bill' from the sidebar.",
-      "Select an existing client or enter new client details.",
-      "Click '+ Add Item' to add products or services to the bill.",
-      "Select GST rates and add any transport charges if applicable.",
-      "Click 'Save' to finalize the invoice."
-    ],
-    "keywords": [
-      "create invoice",
-      "make a bill",
-      "new invoice",
-      "generate bill",
-      "raise invoice",
-      "billing",
-      "add invoice",
-      "create bill",
-      "tax invoice",
-      "how to create new invoice",
-      "i want to know about create new invoice",
-      "what is create new invoice",
-      "tell me about create new invoice",
-      "explain create new invoice",
-      "create new invoice kya hai",
-      "mujhe create new invoice ke baare me batao",
-      "need help with create new invoice",
-      "create new invoice details pls",
-      "can u show create new invoice",
-      "where to find create new invoice",
-      "setup create new invoice",
-      "how do i use create new invoice",
-      "teh create new invoice",
-      "hwo to create new invoice",
-      "pls create new invoice",
-      "about create new invoice"
-    ],
-    "related_topics": [
-      "Edit Invoice",
-      "Add Item",
-      "GST Config"
-    ],
-    "not_this": "Not for creating draft estimates or proforma invoices unless saved as draft."
-  },
-  {
-    "topic": "Add Items to Invoice",
-    "route": "/invoices",
-    "summary": "Add line items, products, or services to an active invoice.",
-    "steps": [
-      "While creating or editing an invoice, click '+ Add Item'.",
-      "Enter the item description, quantity, and rate.",
-      "Select the applicable tax (GST) slab.",
-      "The total amount will auto-calculate."
-    ],
-    "keywords": [
-      "add item",
-      "add product",
-      "line item",
-      "services",
-      "goods",
-      "add row",
-      "add to bill",
-      "how to add items to invoice",
-      "i want to know about add items to invoice",
-      "what is add items to invoice",
-      "tell me about add items to invoice",
-      "explain add items to invoice",
-      "add items to invoice kya hai",
-      "mujhe add items to invoice ke baare me batao",
-      "need help with add items to invoice",
-      "add items to invoice details pls",
-      "can u show add items to invoice",
-      "where to find add items to invoice",
-      "setup add items to invoice",
-      "how do i use add items to invoice",
-      "teh add items to invoice",
-      "hwo to add items to invoice",
-      "pls add items to invoice",
-      "about add items to invoice"
-    ],
-    "related_topics": [
-      "Create New Invoice",
-      "GST Config"
-    ],
-    "not_this": "Not for adding clients or transport details."
-  },
-  {
-    "topic": "Transport & Shipping Details",
-    "route": "/invoices",
-    "summary": "Add e-way bill numbers, vehicle numbers, and transport charges to your invoice.",
-    "steps": [
-      "In the invoice editor, locate the 'Transport & Shipping' section.",
-      "Click 'Add' next to Freight/Transport Charges if applicable.",
-      "Enter the E-way Bill No., Vehicle No., and Mode of Transport.",
-      "Enter the Shipping Address if different from the billing address."
-    ],
-    "keywords": [
-      "transport",
-      "shipping",
-      "freight",
-      "delivery charge",
-      "e-way bill",
-      "eway bill",
-      "vehicle number",
-      "dispatch",
-      "courier",
-      "transportation",
-      "how to transport & shipping details",
-      "i want to know about transport & shipping details",
-      "what is transport & shipping details",
-      "tell me about transport & shipping details",
-      "explain transport & shipping details",
-      "transport & shipping details kya hai",
-      "mujhe transport & shipping details ke baare me batao",
-      "need help with transport & shipping details",
-      "transport & shipping details details pls",
-      "can u show transport & shipping details",
-      "where to find transport & shipping details",
-      "setup transport & shipping details",
-      "how do i use transport & shipping details",
-      "teh transport & shipping details",
-      "hwo to transport & shipping details",
-      "pls transport & shipping details",
-      "about transport & shipping details"
-    ],
-    "related_topics": [
-      "Create New Invoice"
-    ],
-    "not_this": "Not for basic client address details."
-  },
-  {
-    "topic": "Edit Invoice",
-    "route": "/invoices",
-    "summary": "Modify an existing invoice that has already been saved.",
-    "steps": [
-      "Go to the 'Invoices' tab.",
-      "Find the invoice in the list and click the 'Edit' (pencil) icon.",
-      "Make necessary changes to items, client, or taxes.",
-      "Click 'Save Changes'."
-    ],
-    "keywords": [
-      "edit invoice",
-      "change bill",
-      "modify invoice",
-      "update bill",
-      "correct invoice",
-      "edit bill",
-      "how to edit invoice",
-      "i want to know about edit invoice",
-      "what is edit invoice",
-      "tell me about edit invoice",
-      "explain edit invoice",
-      "edit invoice kya hai",
-      "mujhe edit invoice ke baare me batao",
-      "need help with edit invoice",
-      "edit invoice details pls",
-      "can u show edit invoice",
-      "where to find edit invoice",
-      "setup edit invoice",
-      "how do i use edit invoice",
-      "teh edit invoice",
-      "hwo to edit invoice",
-      "pls edit invoice",
-      "about edit invoice"
-    ],
-    "related_topics": [
-      "Create New Invoice",
-      "Delete Invoice"
-    ],
-    "not_this": "Not for creating a completely new invoice from scratch."
-  },
-  {
-    "topic": "Download or Print Invoice",
-    "route": "/invoices",
-    "summary": "Export an invoice as a PDF file or print it directly.",
-    "steps": [
-      "Go to the 'Invoices' tab and select the invoice you want.",
-      "Click the 'Download' icon to save as PDF.",
-      "Alternatively, click the 'Print' icon to open the print dialog."
-    ],
-    "keywords": [
-      "download",
-      "pdf",
-      "print",
-      "export",
-      "save as pdf",
-      "get pdf",
-      "generate pdf",
-      "print bill",
-      "download invoice",
-      "how to download or print invoice",
-      "i want to know about download or print invoice",
-      "what is download or print invoice",
-      "tell me about download or print invoice",
-      "explain download or print invoice",
-      "download or print invoice kya hai",
-      "mujhe download or print invoice ke baare me batao",
-      "need help with download or print invoice",
-      "download or print invoice details pls",
-      "can u show download or print invoice",
-      "where to find download or print invoice",
-      "setup download or print invoice",
-      "how do i use download or print invoice",
-      "teh download or print invoice",
-      "hwo to download or print invoice",
-      "pls download or print invoice",
-      "about download or print invoice"
-    ],
-    "related_topics": [
-      "Share Invoice",
-      "Invoice Template"
-    ],
-    "not_this": "Not for exporting all invoices in bulk to Excel/CSV."
-  },
-  {
-    "topic": "Company Profile",
-    "route": "/company-settings",
-    "summary": "Update your core business details like Business Name, Owner Name, Address, and Contact Info.",
-    "steps": [
-      "Click 'Settings' in the sidebar and select 'Company Profile', or click your business name at the top.",
-      "Update the 'Business Name', 'Owner Name', 'Email', and 'Mobile Number'.",
-      "Update your business 'Address', 'State', and 'Country'.",
-      "Click 'Save' to apply changes."
-    ],
-    "keywords": [
+      "sign up",
+      "log in",
+      "forgot password",
+      "google login",
+      "otp verification",
+      "password strength",
       "company name",
-      "business details",
+      "phone number"
+    ]
+  },
+  {
+    "topic": "Biometric and PIN Security Verification",
+    "route": "/lock",
+    "source_file": "\\src\\components\\BiometricVerification.tsx",
+    "summary": "Screen lock security verification using a 4-digit PIN dialpad, lockout handling for failed attempts, and recovery via security questions or PIN removal.",
+    "steps": [
+      "Enter your 4-digit PIN using the on-screen dialpad or keyboard numbers.",
+      "If you forget your PIN, click 'Forgot PIN?' to initiate recovery or PIN removal."
+    ],
+    "keywords": [
+      "screen lock",
+      "pin lock",
+      "unlock workspace",
+      "forgot pin",
+      "security questions",
+      "dialpad",
+      "account locked",
+      "pin reset kaise kare",
+      "security password set karna hai",
+      "lock open nahi ho raha",
+      "pin code change karna hai",
+      "set security questions"
+    ]
+  },
+  {
+    "topic": "Company Settings Modal - Company Profile",
+    ":": "/#company",
+    "source_file": "\\src\\components\\BusinessProfileModal.tsx",
+    "summary": "Configure primary business profile details including logo, company code, business name, owner name, website, location, contact, and client signature.",
+    "steps": [
+      "Click Upload Logo or Edit Logo to add or change company logo.",
+      "Enter Business Name *",
+      "Enter Owner Name *",
+      "Enter Website URL",
+      "Select Country *",
+      "Select State *",
+      "Enter State Code",
+      "Enter Full Office Address",
+      "Enter Mobile *",
+      "Enter Email *",
+      "Enter Currency Symbol",
+      "Enter GSTIN / Tax ID",
+      "Enter PAN Number",
+      "Configure signature by selecting Draw, Type, or Upload mode",
+      "Adjust Signature Display Size"
+    ],
+    "keywords": [
+      "company profile",
+      "business name",
       "owner name",
-      "change address",
-      "update profile",
-      "business info",
-      "change mobile",
-      "company address",
-      "how to company profile",
-      "i want to know about company profile",
-      "what is company profile",
-      "tell me about company profile",
-      "explain company profile",
-      "company profile kya hai",
-      "mujhe company profile ke baare me batao",
-      "need help with company profile",
-      "company profile details pls",
-      "can u show company profile",
-      "where to find company profile",
-      "setup company profile",
-      "how do i use company profile",
-      "teh company profile",
-      "hwo to company profile",
-      "pls company profile",
-      "about company profile"
-    ],
-    "related_topics": [
-      "Company Logo",
-      "Tax Config",
-      "Bank Details"
-    ],
-    "not_this": "Not for changing bank account details or tax registration numbers."
-  },
-  {
-    "topic": "Bank Details",
-    "route": "/company-settings#banking",
-    "summary": "Add or update your banking information and UPI ID for receiving payments on invoices.",
-    "steps": [
-      "Open Company Settings and click the 'Bank Details' tab.",
-      "Enter your 'Account Number' and 'IFSC Code'.",
-      "Enter your 'UPI ID' (e.g., name@bank).",
-      "Click 'Verify' to ensure the details are correct.",
-      "Click 'Save' to apply changes."
-    ],
-    "keywords": [
-      "bank account",
-      "ifsc",
-      "upi id",
-      "payment details",
-      "add bank",
-      "update bank",
-      "banking",
-      "qr code details",
-      "account number",
-      "how to bank details",
-      "i want to know about bank details",
-      "what is bank details",
-      "tell me about bank details",
-      "explain bank details",
-      "bank details kya hai",
-      "mujhe bank details ke baare me batao",
-      "need help with bank details",
-      "bank details details pls",
-      "can u show bank details",
-      "where to find bank details",
-      "setup bank details",
-      "how do i use bank details",
-      "teh bank details",
-      "hwo to bank details",
-      "pls bank details",
-      "about bank details"
-    ],
-    "related_topics": [
-      "Company Profile",
-      "Billing Settings"
-    ],
-    "not_this": "Not for processing payments within the app; this only prints on invoices."
-  },
-  {
-    "topic": "Tax Config (GST)",
-    "route": "/company-settings#tax",
-    "summary": "Configure your GSTIN, PAN, and default tax rates for invoices.",
-    "steps": [
-      "Open Company Settings and go to the 'Tax Config' tab.",
-      "Enter your business 'GSTIN' and 'PAN Number'.",
-      "Select your 'Default Tax Rate' (e.g., 18%).",
-      "Choose your 'Default Currency'.",
-      "Click 'Save'."
-    ],
-    "keywords": [
+      "logo upload",
       "gstin",
-      "gst number",
-      "pan card",
-      "tax rate",
-      "default gst",
-      "tax config",
-      "taxes",
-      "currency",
-      "add gst",
-      "how to tax config (gst)",
-      "i want to know about tax config (gst)",
-      "what is tax config (gst)",
-      "tell me about tax config (gst)",
-      "explain tax config (gst)",
-      "tax config (gst) kya hai",
-      "mujhe tax config (gst) ke baare me batao",
-      "need help with tax config (gst)",
-      "tax config (gst) details pls",
-      "can u show tax config (gst)",
-      "where to find tax config (gst)",
-      "setup tax config (gst)",
-      "how do i use tax config (gst)",
-      "teh tax config (gst)",
-      "hwo to tax config (gst)",
-      "pls tax config (gst)",
-      "about tax config (gst)"
-    ],
-    "related_topics": [
-      "Create New Invoice",
-      "Company Profile"
-    ],
-    "not_this": "Not for filing GST returns or calculating overall tax liability."
+      "pan",
+      "signature pad",
+      "company code",
+      "address"
+    ]
   },
   {
-    "topic": "Billing Settings",
-    "route": "/company-settings#billing",
-    "summary": "Customize your invoice numbering format, prefixes, and terms & conditions.",
+    "topic": "Company Settings Modal - Banking Details",
+    "route": "/#banking",
+    "source_file": "\\src\\components\\BusinessProfileModal.tsx",
+    "summary": "Manage primary bank account details, account numbers, IFSC codes, and UPI IDs for invoice settlements and payouts.",
     "steps": [
-      "Open Company Settings and go to the 'Billing Settings' tab.",
-      "Set your 'Invoice Prefix' (e.g., INV-2024-).",
-      "Set the 'Next Invoice Number' to resume from a specific sequence.",
-      "Update the default 'Terms & Conditions' printed on all invoices.",
-      "Click 'Save'."
+      "Enter Bank Name",
+      "Enter Account Number",
+      "Enter IFSC Code",
+      "Enter UPI ID",
+      "Click Save Bank Details"
     ],
     "keywords": [
-      "invoice prefix",
-      "invoice number",
-      "next number",
-      "terms and conditions",
-      "t&c",
-      "sequence",
+      "banking details",
+      "bank account",
+      "ifsc code",
+      "upi id",
+      "bank name",
+      "payouts"
+    ]
+  },
+  {
+    "topic": "Company Settings Modal - Billing Config",
+    "route": "/#billing",
+    "source_file": "\\src\\components\\BusinessProfileModal.tsx",
+    "summary": "Configure document numbering prefixes, starting numbers, editing permissions, and default notes and terms.",
+    "steps": [
+      "Enter Invoice Prefix",
+      "Enter Starting Invoice Number",
+      "Enter Proforma Invoice Prefix and Starting Number",
+      "Enter Debit Note Prefix and Starting Number",
+      "Enter Credit Note Prefix and Starting Number",
+      "Enter Quote / Estimate Prefix and Starting Number",
+      "Enter Purchases / Purchase Bill Prefix and Starting Number",
+      "Enter Purchase Order Prefix and Starting Number",
+      "Select Posted Invoice Edit (Enabled/Disabled)",
+      "Select Material Rate Edit (Enabled/Disabled)",
+      "Select Material Categorization (Optional/Required)",
+      "Enter Default Notes",
+      "Enter Default Terms & Conditions"
+    ],
+    "keywords": [
       "billing config",
-      "numbering",
-      "how to billing settings",
-      "i want to know about billing settings",
-      "what is billing settings",
-      "tell me about billing settings",
-      "explain billing settings",
-      "billing settings kya hai",
-      "mujhe billing settings ke baare me batao",
-      "need help with billing settings",
-      "billing settings details pls",
-      "can u show billing settings",
-      "where to find billing settings",
-      "setup billing settings",
-      "how do i use billing settings",
-      "teh billing settings",
-      "hwo to billing settings",
-      "pls billing settings",
-      "about billing settings"
-    ],
-    "related_topics": [
-      "Create New Invoice"
-    ],
-    "not_this": "Not for managing your app subscription billing."
+      "invoice prefix",
+      "starting invoice number",
+      "document numbering",
+      "proforma prefix",
+      "debit note",
+      "credit note",
+      "purchase order prefix",
+      "default terms",
+      "posted invoice edit",
+      "material rate edit",
+      "bill kaise banaye",
+      "bill banana hai",
+      "invoice print kaise kare",
+      "invoice edit karna hai",
+      "bill update kaise kare",
+      "invoice number reset"
+    ]
   },
   {
-    "topic": "Company Logo",
-    "route": "/company-settings#company",
-    "summary": "Upload or change the business logo that appears on your invoices.",
+    "topic": "Company Settings Modal - Tax Config",
+    "route": "/#tax",
+    "source_file": "\\src\\components\\BusinessProfileModal.tsx",
+    "summary": "Configure operating country tax engines, default GST rates for India, or custom tax labels and percentage rates for international operations.",
     "steps": [
-      "Open Company Settings and stay on the 'Company Profile' tab.",
-      "Locate the Logo section and click 'Upload Logo'.",
-      "Select an image file, use the cropping tool to adjust it, and click 'Save'.",
-      "Click 'Save' at the bottom of the modal."
+      "Select Default GST Rate (%) or configure custom tax labels and percentage rates",
+      "Click Add Another Tax to include additional tax rows"
     ],
     "keywords": [
-      "logo",
-      "upload logo",
-      "change logo",
-      "business logo",
-      "brand image",
-      "add logo",
-      "picture",
-      "how to company logo",
-      "i want to know about company logo",
-      "what is company logo",
-      "tell me about company logo",
-      "explain company logo",
-      "company logo kya hai",
-      "mujhe company logo ke baare me batao",
-      "need help with company logo",
-      "company logo details pls",
-      "can u show company logo",
-      "where to find company logo",
-      "setup company logo",
-      "how do i use company logo",
-      "teh company logo",
-      "hwo to company logo",
-      "pls company logo",
-      "about company logo"
-    ],
-    "related_topics": [
-      "Signature",
-      "Invoice Template"
-    ],
-    "not_this": "Not for changing the app's overall theme or appearance."
+      "tax config",
+      "gst rate",
+      "cgst sgst split",
+      "igst rate",
+      "custom tax label",
+      "tax percentage rate",
+      "vat"
+    ]
   },
   {
-    "topic": "Digital Signature",
-    "route": "/company-settings#company",
-    "summary": "Add a digital signature to your invoices by drawing, typing, or uploading an image.",
+    "topic": "Company Settings Modal - Subscription",
+    "route": "/#subscription",
+    "source_file": "\\src\\components\\BusinessProfileModal.tsx",
+    "summary": "View active subscription plan details, authorized token nodes, expiration dates, and request multi-user collaboration keys.",
     "steps": [
-      "Open Company Settings and stay on the 'Company Profile' tab.",
-      "Scroll to the 'Digital Signature' section.",
-      "Choose 'Draw', 'Type', or 'Upload' to create your signature.",
-      "Click 'Save' at the bottom of the modal."
+      "Click Request Key to sync branch key sharing tokens"
     ],
     "keywords": [
-      "signature",
-      "sign",
-      "digital signature",
-      "draw signature",
-      "type signature",
-      "upload signature",
-      "sign bill",
-      "how to digital signature",
-      "i want to know about digital signature",
-      "what is digital signature",
-      "tell me about digital signature",
-      "explain digital signature",
-      "digital signature kya hai",
-      "mujhe digital signature ke baare me batao",
-      "need help with digital signature",
-      "digital signature details pls",
-      "can u show digital signature",
-      "where to find digital signature",
-      "setup digital signature",
-      "how do i use digital signature",
-      "teh digital signature",
-      "hwo to digital signature",
-      "pls digital signature",
-      "about digital signature"
-    ],
-    "related_topics": [
-      "Company Logo"
-    ],
-    "not_this": "Not for legally binding e-signatures (like Aadhaar eSign)."
+      "subscription details",
+      "plan name",
+      "enterprise unlimited",
+      "authorized token node",
+      "multi-user collaboration",
+      "branch key"
+    ]
   },
   {
-    "topic": "Subscription",
-    "route": "/company-settings#subscription",
-    "summary": "View your current MakInvoices plan, features, and upgrade options.",
+    "topic": "Contact Support Desk",
+    "route": "/contact",
+    "source_file": "\\src\\components\\ContactPage.tsx",
+    "summary": "Allows users to reach out to the support desk via direct channels (email, phone, support hours) or submit a message form with their name, email, and message.",
     "steps": [
-      "Open Company Settings and go to the 'Subscription' tab.",
-      "View your current plan tier (e.g., Free, Pro).",
-      "Review the features included in your plan.",
-      "Click 'Upgrade' to change your plan."
+      "Enter Your Name *",
+      "Email Address *",
+      "Message *",
+      "Send Support Message",
+      "Send Another Message"
     ],
     "keywords": [
-      "subscription",
-      "plan",
-      "upgrade",
-      "billing",
-      "premium",
-      "pro plan",
-      "free tier",
-      "pricing",
-      "cost",
-      "how to subscription",
-      "i want to know about subscription",
-      "what is subscription",
-      "tell me about subscription",
-      "explain subscription",
-      "subscription kya hai",
-      "mujhe subscription ke baare me batao",
-      "need help with subscription",
-      "subscription details pls",
-      "can u show subscription",
-      "where to find subscription",
-      "setup subscription",
-      "how do i use subscription",
-      "teh subscription",
-      "hwo to subscription",
-      "pls subscription",
-      "about subscription"
-    ],
-    "related_topics": [
-      "Billing Settings"
-    ],
-    "not_this": "Not for configuring invoice prefixes or numbering."
+      "contact support",
+      "customer service",
+      "help desk",
+      "email support",
+      "phone support",
+      "reach out",
+      "support hours",
+      "send message",
+      "app kaise chalaye",
+      "user guide dikhao",
+      "help video kahan hai",
+      "support se chat kaise kare",
+      "common questions key answer"
+    ]
   },
   {
-    "topic": "Manage Clients",
+    "topic": "Master Records Table & Search",
+    "route": "/dashboard",
+    "source_file": "\\src\\components\\Dashboard.tsx",
+    "summary": "Manages master database registries like clients, vendors, HSN codes, and catalog items with live search, pagination, and inline editing or deletion.",
+    "steps": [
+      "Add Registry Record",
+      "Download Template",
+      "Bulk Upload"
+    ],
+    "keywords": [
+      "master registry",
+      "client database",
+      "vendor database",
+      "hsn registry",
+      "transport database",
+      "material catalog",
+      "product category",
+      "search records",
+      "bulk upload",
+      "download template"
+    ]
+  },
+  {
+    "topic": "Record Editor Modal",
+    "route": "/dashboard",
+    "source_file": "\\src\\components\\Dashboard.tsx",
+    "summary": "Modal dialog for adding or editing individual records within any active master registry table.",
+    "steps": [
+      "Commit Record",
+      "Cancel"
+    ],
+    "keywords": [
+      "edit record",
+      "add record",
+      "registry form",
+      "modal editor"
+    ]
+  },
+  {
+    "topic": "Sales Ledger Document Management",
+    "route": "/invoices",
+    "source_file": "\\src\\components\\Dashboard.tsx",
+    "summary": "View, filter, select, and manage tax invoices, proforma invoices, credit notes, and quotes with bulk export and status update options.",
+    "steps": [
+      "Quick Bill",
+      "Create Invoice",
+      "Create Proforma",
+      "Create Credit Note",
+      "Create Quote",
+      "Drafts"
+    ],
+    "keywords": [
+      "sales ledger",
+      "tax invoices",
+      "proforma invoices",
+      "credit notes",
+      "quotes",
+      "estimates",
+      "bulk export",
+      "bulk delete",
+      "invoice status",
+      "bill kaise banaye",
+      "bill banana hai",
+      "invoice print kaise kare",
+      "invoice edit karna hai",
+      "bill update kaise kare",
+      "invoice number reset"
+    ]
+  },
+  {
+    "topic": "Purchases Ledger Management",
+    "route": "/purchases",
+    "source_file": "\\src\\components\\Dashboard.tsx",
+    "summary": "View and manage purchase bills, purchase orders, and purchase debit notes.",
+    "steps": [
+      "Quick Bill",
+      "Create Purchase Bill",
+      "Create Purchase Order",
+      "Create Debit Note",
+      "Drafts"
+    ],
+    "keywords": [
+      "purchases ledger",
+      "purchase bills",
+      "purchase orders",
+      "debit notes",
+      "supplier bills",
+      "purchase return kaise log kare",
+      "vendor bill entry",
+      "debit note kaise banaye",
+      "supplier records",
+      "purchases entry kaise kare"
+    ]
+  },
+  {
+    "topic": "Drafts Manager",
+    "route": "/drafts",
+    "source_file": "\\src\\components\\Dashboard.tsx",
+    "summary": "Centralized registry to review, resume editing, or delete saved document drafts across sales and purchases.",
+    "steps": [
+      "Resume Editing",
+      "Back to Ledger"
+    ],
+    "keywords": [
+      "drafts",
+      "saved drafts",
+      "resume editing",
+      "pending documents"
+    ]
+  },
+  {
+    "topic": "Billed Clients Ledger Book",
     "route": "/clients",
-    "summary": "View, add, edit, or delete saved client profiles.",
+    "source_file": "\\src\\components\\Dashboard.tsx",
+    "summary": "Manage client profiles for auto-filling billing creation details.",
     "steps": [
-      "Click 'Clients' in the sidebar.",
-      "Click 'Add Client' to create a new profile.",
-      "To edit, click the pencil icon next to an existing client.",
-      "To delete, click the trash icon."
+      "Create First Profile"
     ],
     "keywords": [
-      "clients",
-      "customers",
-      "add client",
-      "manage customers",
-      "edit client",
-      "delete client",
-      "client list",
-      "address book",
-      "how to manage clients",
-      "i want to know about manage clients",
-      "what is manage clients",
-      "tell me about manage clients",
-      "explain manage clients",
-      "manage clients kya hai",
-      "mujhe manage clients ke baare me batao",
-      "need help with manage clients",
-      "manage clients details pls",
-      "can u show manage clients",
-      "where to find manage clients",
-      "setup manage clients",
-      "how do i use manage clients",
-      "teh manage clients",
-      "hwo to manage clients",
-      "pls manage clients",
-      "about manage clients"
-    ],
-    "related_topics": [
-      "Create New Invoice"
-    ],
-    "not_this": "Not for managing your own company profile."
+      "billed clients",
+      "client profiles",
+      "client contact info",
+      "customer directory",
+      "bill kaise banaye",
+      "bill banana hai",
+      "invoice print kaise kare",
+      "invoice edit karna hai",
+      "bill update kaise kare",
+      "invoice number reset"
+    ]
   },
   {
-    "topic": "Manage Products & Materials",
-    "route": "/catalog-material",
-    "summary": "Save commonly used products or services to your catalog for quick invoicing.",
+    "topic": "Accounting Summary & Expense Logger",
+    "route": "/reports",
+    "source_file": "\\src\\components\\Dashboard.tsx",
+    "summary": "Generate customized tax and income-expense ledger reports, log business overhead expenses, and download collective PDF/Excel reports.",
     "steps": [
-      "Click 'Materials' or 'Catalog' in the sidebar.",
-      "Click 'Add New' to create a new product/service entry.",
-      "Enter the item name, default rate, and default GST slab.",
-      "Click 'Save'."
+      "Log Expense",
+      "Ledger PDF",
+      "All Individual Invoices"
     ],
     "keywords": [
-      "materials",
-      "products",
-      "services",
-      "catalog",
-      "items list",
-      "inventory",
-      "add product",
-      "save item",
-      "how to manage products & materials",
-      "i want to know about manage products & materials",
-      "what is manage products & materials",
-      "tell me about manage products & materials",
-      "explain manage products & materials",
-      "manage products & materials kya hai",
-      "mujhe manage products & materials ke baare me batao",
-      "need help with manage products & materials",
-      "manage products & materials details pls",
-      "can u show manage products & materials",
-      "where to find manage products & materials",
-      "setup manage products & materials",
-      "how do i use manage products & materials",
-      "teh manage products & materials",
-      "hwo to manage products & materials",
-      "pls manage products & materials",
-      "about manage products & materials"
-    ],
-    "related_topics": [
-      "Add Items to Invoice"
-    ],
-    "not_this": "Not for managing stock levels or complex inventory tracking."
+      "accounting summary",
+      "tax report",
+      "income expense",
+      "gross profit",
+      "log expense",
+      "receivables aging",
+      "expenditure ledgers"
+    ]
   },
   {
-    "topic": "Data Export & Backup",
+    "topic": "Log Expense Modal",
+    "route": "/reports",
+    "source_file": "\\src\\components\\Dashboard.tsx",
+    "summary": "Form modal to record business overhead expenses with category selection, cost amount, expenditure date, and description.",
+    "steps": [
+      "Log Expense",
+      "Cancel"
+    ],
+    "keywords": [
+      "log expense",
+      "expense modal",
+      "record expense",
+      "overhead cost"
+    ]
+  },
+  {
+    "topic": "Client Profile Editor Modal",
+    "route": "/clients",
+    "source_file": "\\src\\components\\Dashboard.tsx",
+    "summary": "Form modal to add or edit client profile details including full name, company name, email, phone number, and billing address.",
+    "steps": [
+      "Save Profile",
+      "Cancel"
+    ],
+    "keywords": [
+      "edit client profile",
+      "register client",
+      "client form",
+      "client modal"
+    ]
+  },
+  {
+    "topic": "Recover PIN via Security Questions",
+    "route": "/forgot-pin",
+    "source_file": "\\src\\components\\ForgotPinWithQuestions.tsx",
+    "summary": "Allows users to recover access to their account by answering two predefined security questions when they forget their PIN.",
+    "steps": [
+      "Type your answer into the Question 1 input field",
+      "Type your answer into the Question 2 input field",
+      "Click the Verify & Reset PIN button",
+      "Click Back to PIN Entry to return to standard PIN entry",
+      "Click Remove PIN Lock instead if 3 incorrect attempts are reached"
+    ],
+    "keywords": [
+      "forgot pin",
+      "security questions",
+      "recover pin",
+      "reset pin",
+      "pin recovery",
+      "identity verification",
+      "pin reset kaise kare",
+      "security password set karna hai",
+      "lock open nahi ho raha",
+      "pin code change karna hai",
+      "set security questions"
+    ]
+  },
+  {
+    "topic": "Comprehensive User Walkthrough Guide",
+    "route": "/guide",
+    "source_file": "\\src\\components\\GuidePage.tsx",
+    "summary": "Provides a 3-step walkthrough to help users master business profile setup, invoice creation, and PDF export workflows.",
+    "steps": [
+      "Review Step 01 to initialize your business profile, GSTIN, and currency preferences",
+      "Review Step 02 to draft invoices, sketch signatures, and customize layouts",
+      "Review Step 03 to generate high-fidelity PDFs and print documents",
+      "Click the scroll-to-top button to return to the top of the page"
+    ],
+    "keywords": [
+      "user guide",
+      "walkthrough",
+      "help",
+      "documentation",
+      "tutorial",
+      "getting started",
+      "app kaise chalaye",
+      "user guide dikhao",
+      "help video kahan hai",
+      "support se chat kaise kare",
+      "common questions key answer"
+    ]
+  },
+  {
+    "topic": "Homepage & Authentication Hub",
+    "route": "/",
+    "source_file": "\\src\\components\\Homepage.tsx",
+    "summary": "Main landing page featuring product highlights, interactive live preview demos, feature showcases, FAQ accordion, and user authentication forms.",
+    "steps": [
+      "Click Features, Guide, Pricing, FAQ, or Contact in the navigation bar to jump to sections",
+      "Select a language from the language dropdown menu",
+      "Click Log In or Sign Up to access authentication options",
+      "Interact with the color palette, invoice layout, and invoice status buttons in the live preview panel",
+      "Click Get Started for Free to initiate registration"
+    ],
+    "keywords": [
+      "homepage",
+      "landing page",
+      "login",
+      "signup",
+      "dashboard preview",
+      "features",
+      "pricing",
+      "contact",
+      "faq"
+    ]
+  },
+  {
+    "topic": "Quick Bill / Invoice Creation and Editing Modal",
+    "route": "modal (triggered from dashboard/ledger)",
+    "source_file": "\\src\\components\\InvoiceModal.tsx",
+    "summary": "Modal interface to create, edit, customize, and save invoices, proformas, credit notes, estimates, purchase bills, and purchase orders with live preview and PDF generation.",
+    "steps": [
+      "Select document type from the pill tabs or dropdown (Tax Invoice, Proforma, Credit Note, Quote / Est, Purchases, P.O., Debit Note).",
+      "Enter the ID Number.",
+      "Enter optional Ref Number, P.O. Number, and Delivery Note.",
+      "Select Issue Date and Due Date.",
+      "Select Status (Unpaid / Pending, Paid, Cancelled, Approved, Not Approved).",
+      "Fill in Place of Supply and GR/RR No if applicable.",
+      "Select a pre-saved client profile from 'Populate from Clients' or enter Client Name, Client Email, Client Phone, Client Physical Billing Address, Client Country, Client State, Client GSTIN / UIN, and Client PAN manually.",
+      "Fill in Shipped To Details or click 'Same as Client' to copy billing details.",
+      "Enable Transport Details toggle if required, then fill in Transport, Vehicle No., Driver Mobile, Station, and E-Way Bill No.",
+      "Add custom line items by typing Product Name, HSN Code, Size, Rate / Price, Qty, Qty Type, Product Terms, and Item Description, then click 'Add Item to draft'.",
+      "Configure Freight Charges and discount type (Percentage (%) or Flat Amount) and value if applicable.",
+      "Toggle Recurring Invoice Settings to configure billing frequency, first bill date, and ending criteria.",
+      "Enter Custom Footnotes / Payment Instructions and Invoice Terms & Conditions.",
+      "Configure tax compliance policies (Auto Regional Tax or Custom Tax Override with additional taxes).",
+      "Click 'Export PDF Direct' to download the PDF, 'Save as Draft', or click 'Save Invoice' to save to your ledger."
+    ],
+    "keywords": [
+      "invoice generator",
+      "create invoice",
+      "edit invoice",
+      "quick bill",
+      "proforma invoice",
+      "credit note",
+      "debit note",
+      "quotation",
+      "estimate",
+      "purchase order",
+      "tax settings",
+      "line items",
+      "recurring invoice",
+      "shipped to",
+      "transport details",
+      "bill kaise banaye",
+      "bill banana hai",
+      "invoice print kaise kare",
+      "invoice edit karna hai",
+      "bill update kaise kare",
+      "invoice number reset"
+    ]
+  },
+  {
+    "topic": "PIN Setup and Lock Configuration",
+    "route": "modal (triggered from settings or security screen)",
+    "source_file": "\\src\\components\\PinSetupModal.tsx",
+    "summary": "Modal interface to set up or disable a 4-digit PIN lock and configure recovery security questions.",
+    "steps": [
+      "Use the virtual dial pad or physical keyboard to enter a 4-digit PIN.",
+      "For enable mode, re-enter your PIN to confirm.",
+      "Set up two recovery security questions on the subsequent step.",
+      "For disable mode, enter your current PIN to confirm disabling.",
+      "Click 'Cancel' to abort the operation."
+    ],
+    "keywords": [
+      "pin lock",
+      "security pin",
+      "app lock",
+      "set pin",
+      "disable pin",
+      "security questions",
+      "two-factor recovery",
+      "pin reset kaise kare",
+      "security password set karna hai",
+      "lock open nahi ho raha",
+      "pin code change karna hai",
+      "set security questions"
+    ]
+  },
+  {
+    "topic": "Pricing Plans and Subscription Tiers",
+    "route": "/pricing",
+    "source_file": "\\src\\components\\PricingPage.tsx",
+    "summary": "Displays subscription plans (Starter Free, MakInvoices Pro, Custom Enterprise) with monthly and yearly billing toggle options.",
+    "steps": [
+      "Toggle between Monthly Billing and Yearly Billing using the billing switch.",
+      "Review the features for Starter, Pro, or Enterprise plans.",
+      "Click 'Start Free Trial' or 'Upgrade to Pro' to proceed to signup.",
+      "Click 'Contact Sales' to navigate to the contact page for enterprise inquiries."
+    ],
+    "keywords": [
+      "pricing",
+      "subscription plans",
+      "pro plan",
+      "starter plan",
+      "enterprise",
+      "billing plans",
+      "upgrade"
+    ]
+  },
+  {
+    "topic": "Public Navigation Bar",
+    "route": "/",
+    "source_file": "\\src\\components\\PublicNavbar.tsx",
+    "summary": "Public landing page navigation bar allowing users to switch languages, access public links, log in, or sign up.",
+    "steps": [
+      "Click the language dropdown button to view available languages",
+      "Click Log In to go to the login page",
+      "Click Sign Up to go to the signup page"
+    ],
+    "keywords": [
+      "navbar",
+      "navigation",
+      "language",
+      "translate",
+      "login",
+      "signup",
+      "menu"
+    ]
+  },
+  {
+    "topic": "Security Questions Recovery Setup",
     "route": "/settings",
-    "summary": "Export your business data for backup or accounting purposes.",
+    "source_file": "\\src\\components\\SecurityQuestionsStep.tsx",
+    "summary": "Step to configure two security questions and answers for recovering your PIN passcode lock.",
     "steps": [
-      "Navigate to 'Settings' in the sidebar.",
-      "Scroll down to 'Data Management'.",
-      "Click 'Export Data' to download a backup file containing your invoices and clients."
+      "Click the Security Question 1 dropdown to choose a question",
+      "Type your answer in the Your answer… field for the first question",
+      "Click the Security Question 2 dropdown to choose a second different question",
+      "Type your answer in the Your answer… field for the second question",
+      "Click Save & Enable PIN Lock",
+      "Click ← Back to PIN Setup to go back"
     ],
     "keywords": [
-      "export",
-      "backup",
-      "download data",
-      "save data",
-      "excel export",
-      "csv",
-      "data management",
-      "how to data export & backup",
-      "i want to know about data export & backup",
-      "what is data export & backup",
-      "tell me about data export & backup",
-      "explain data export & backup",
-      "data export & backup kya hai",
-      "mujhe data export & backup ke baare me batao",
-      "need help with data export & backup",
-      "data export & backup details pls",
-      "can u show data export & backup",
-      "where to find data export & backup",
-      "setup data export & backup",
-      "how do i use data export & backup",
-      "teh data export & backup",
-      "hwo to data export & backup",
-      "pls data export & backup",
-      "about data export & backup"
-    ],
-    "related_topics": [
-      "Cloud Sync"
-    ],
-    "not_this": "Not for downloading a single PDF invoice."
+      "security questions",
+      "pin lock recovery",
+      "passcode reset",
+      "account security",
+      "pin reset kaise kare",
+      "security password set karna hai",
+      "lock open nahi ho raha",
+      "pin code change karna hai",
+      "set security questions"
+    ]
   },
   {
-    "topic": "Cloud Sync",
+    "topic": "App Settings - Appearance",
     "route": "/settings",
-    "summary": "Ensure your data is safely backed up to the cloud and available across devices.",
+    "source_file": "\\src\\components\\SettingsPage.tsx",
+    "summary": "Configure workspace theme mode, compact layout view, and inspect invoice layout presets.",
     "steps": [
-      "Navigate to 'Settings' in the sidebar.",
-      "Look at the 'Sync Status' section.",
-      "If you are logged in and online, sync happens automatically.",
-      "You can manually click 'Sync Now' to push pending changes."
+      "Click the Dark Mode / Light Mode button to toggle workspace appearance",
+      "Click the Compact Layout toggle to enable or disable denser workspace view"
     ],
     "keywords": [
-      "sync",
-      "cloud",
-      "backup to cloud",
-      "save online",
-      "sync data",
-      "upload data",
-      "cross device",
-      "how to cloud sync",
-      "i want to know about cloud sync",
-      "what is cloud sync",
-      "tell me about cloud sync",
-      "explain cloud sync",
-      "cloud sync kya hai",
-      "mujhe cloud sync ke baare me batao",
-      "need help with cloud sync",
-      "cloud sync details pls",
-      "can u show cloud sync",
-      "where to find cloud sync",
-      "setup cloud sync",
-      "how do i use cloud sync",
-      "teh cloud sync",
-      "hwo to cloud sync",
-      "pls cloud sync",
-      "about cloud sync"
-    ],
-    "related_topics": [
-      "Data Export & Backup"
-    ],
-    "not_this": "Not for exporting data to a local file."
-  },
-  {
-    "topic": "Dark Mode / Theme",
-    "route": "/settings",
-    "summary": "Switch the application appearance between light and dark mode.",
-    "steps": [
-      "Look for the Sun/Moon icon in the top header, OR go to 'Settings'.",
-      "Click the icon or select the 'Appearance' option to toggle Dark Mode."
-    ],
-    "keywords": [
+      "appearance",
+      "theme",
       "dark mode",
       "light mode",
-      "theme",
-      "appearance",
-      "colors",
-      "display",
-      "night mode",
-      "ui",
-      "how to dark mode / theme",
-      "i want to know about dark mode / theme",
-      "what is dark mode / theme",
-      "tell me about dark mode / theme",
-      "explain dark mode / theme",
-      "dark mode / theme kya hai",
-      "mujhe dark mode / theme ke baare me batao",
-      "need help with dark mode / theme",
-      "dark mode / theme details pls",
-      "can u show dark mode / theme",
-      "where to find dark mode / theme",
-      "setup dark mode / theme",
-      "how do i use dark mode / theme",
-      "teh dark mode / theme",
-      "hwo to dark mode / theme",
-      "pls dark mode / theme",
-      "about dark mode / theme"
-    ],
-    "related_topics": [
-      "Company Logo"
-    ],
-    "not_this": "Not for changing the colors of printed invoices."
+      "compact layout",
+      "invoice font",
+      "currency display"
+    ]
   },
   {
-    "topic": "Invoice Template",
-    "route": "/invoice-templates",
-    "summary": "Choose from different professional layouts and designs for your invoices.",
+    "topic": "App Settings - Notifications",
+    "route": "/settings",
+    "source_file": "\\src\\components\\SettingsPage.tsx",
+    "summary": "Manage invoice activity alerts, payment reminders, and cloud sync notification preferences.",
     "steps": [
-      "Click 'Invoice Template' in the sidebar.",
-      "Browse the available template designs (e.g., Professional, Modern, Classic).",
-      "Select a template to preview it with your data.",
-      "Click 'Set as Default' to use it for future invoices."
+      "Click the Invoice Activity Alerts toggle to enable or disable",
+      "Click the Payment Reminders toggle to enable or disable",
+      "Click the Cloud Sync Alerts toggle to enable or disable"
     ],
     "keywords": [
-      "templates",
-      "invoice design",
-      "layout",
-      "colors",
-      "professional template",
-      "change look",
-      "invoice style",
-      "how to invoice templates",
-      "i want to know about invoice templates",
-      "what is invoice templates",
-      "tell me about invoice templates",
-      "explain invoice templates",
-      "invoice templates kya hai",
-      "mujhe invoice templates ke baare me batao",
-      "need help with invoice templates",
-      "invoice templates details pls",
-      "can u show invoice templates",
-      "where to find invoice templates",
-      "setup invoice templates",
-      "how do i use invoice templates",
-      "teh invoice templates",
-      "hwo to invoice templates",
-      "pls invoice templates",
-      "about invoice templates"
+      "notifications",
+      "alerts",
+      "payment reminders",
+      "cloud sync",
+      "push notifications"
+    ]
+  },
+  {
+    "topic": "App Settings - Security",
+    "route": "/settings",
+    "source_file": "\\src\\components\\SettingsPage.tsx",
+    "summary": "Manage PIN passcode lock requirements and draft auto-save preferences.",
+    "steps": [
+      "Click the Enable or Disable button next to PIN Passcode Lock",
+      "Click the Auto-Save Drafts toggle to enable or disable"
     ],
-    "related_topics": [
-      "Company Logo",
-      "Billing Settings"
+    "keywords": [
+      "security",
+      "pin lock",
+      "passcode",
+      "auto save",
+      "session",
+      "pin reset kaise kare",
+      "security password set karna hai",
+      "lock open nahi ho raha",
+      "pin code change karna hai",
+      "set security questions"
+    ]
+  },
+  {
+    "topic": "App Settings - Data & Storage",
+    "route": "/settings",
+    "source_file": "\\src\\components\\SettingsPage.tsx",
+    "summary": "Export workspace data, force cloud synchronization, or clear local storage cache.",
+    "steps": [
+      "Click Export All Data to download invoices, clients and settings as JSON",
+      "Click Force Cloud Sync to push local changes to the cloud",
+      "Click Clear Local Cache to remove all locally cached data",
+      "Click Yes, Clear All to confirm cache clearing, or Cancel to abort"
     ],
-    "not_this": "Not for changing app themes (dark/light mode)."
+    "keywords": [
+      "data",
+      "storage",
+      "export",
+      "sync",
+      "cloud sync",
+      "clear cache",
+      "database"
+    ]
+  },
+  {
+    "topic": "App Settings - Account",
+    "route": "/settings",
+    "source_file": "\\src\\components\\SettingsPage.tsx",
+    "summary": "View account profile details, app version, platform environment, and sign out.",
+    "steps": [
+      "Click Sign Out of Account to sign out"
+    ],
+    "keywords": [
+      "account",
+      "profile",
+      "sign out",
+      "logout",
+      "version"
+    ]
+  },
+  {
+    "topic": "AI Smart Billing",
+    "route": "/invoice/new",
+    "source_file": "/src/components/SmartBillingBox.tsx",
+    "summary": "Self-contained UI for AI Smart Billing that allows users to describe invoices in plain English and automatically fill fields in their template.",
+    "steps": [
+      "Type a billing description into the smart-billing-prompt-input field",
+      "Click the Generate button or press Enter to generate invoice fields",
+      "Click the Undo2 button to revert the last AI prompt change",
+      "Click the Redo2 button to re-apply the next AI prompt change",
+      "Click the ↺ All button to regenerate and overwrite all fields"
+    ],
+    "keywords": [
+      "AI Smart Billing",
+      "smart billing",
+      "auto-fill invoice",
+      "AI invoice generator",
+      "prompt billing",
+      "bill kaise banaye",
+      "bill banana hai",
+      "invoice print kaise kare",
+      "invoice edit karna hai",
+      "bill update kaise kare",
+      "invoice number reset"
+    ]
+  },
+  {
+    "topic": "Live Chat Support",
+    "route": "/support/chat",
+    "source_file": "/src/components/SupportChatPage.tsx",
+    "summary": "Real-time multilingual support chat interface powered by MakInvoices AI with escalation to human support.",
+    "steps": [
+      "Select a preferred language from the list of languages",
+      "Type a message into the input field",
+      "Click the Send button to send the message",
+      "Click the Change Language button to switch languages",
+      "Click the Talk to Human button to escalate the chat"
+    ],
+    "keywords": [
+      "Live Chat Support",
+      "AI chat",
+      "MakInvoices AI",
+      "support chat",
+      "talk to human",
+      "app kaise chalaye",
+      "user guide dikhao",
+      "help video kahan hai",
+      "support se chat kaise kare",
+      "common questions key answer"
+    ]
+  },
+  {
+    "topic": "Help & Support",
+    "route": "/support",
+    "source_file": "/src/components/SupportPage.tsx",
+    "summary": "Comprehensive help and support hub featuring quick support channels, FAQs, support ticket submission, user feedback rating, and resource links.",
+    "steps": [
+      "Type in the Search questions… input to search FAQs",
+      "Click on an FAQ item to expand and view its answer",
+      "Select an Issue Category button for the support ticket",
+      "Type a brief description of the issue in the Subject * input",
+      "Type a detailed description in the Detailed Description * textarea",
+      "Click the Submit Ticket button",
+      "Click a star rating button and type optional feedback, then click Submit Feedback",
+      "Click on the Getting Started Guide, Video Tutorials, or Privacy & Security Policy resources"
+    ],
+    "keywords": [
+      "Help & Support",
+      "support ticket",
+      "FAQ",
+      "contact support",
+      "user feedback",
+      "customer support",
+      "app kaise chalaye",
+      "user guide dikhao",
+      "help video kahan hai",
+      "support se chat kaise kare",
+      "common questions key answer"
+    ]
+  },
+  {
+    "topic": "Interactive Onboarding Guide",
+    "route": "/support/getting-started",
+    "source_file": "/src/components/SupportPage.tsx",
+    "summary": "Step-by-step interactive onboarding wizard to configure workspace parameters and start billing.",
+    "steps": [
+      "Click on any step button (1 to 5) to navigate through the setup wizard",
+      "Click action trigger buttons like Configure Company Info, Manage Registries, Open Template Builder, Open Sales Ledger, Open Purchases Ledger, or View Accounting Summary",
+      "Click the Previous or Next Step buttons to move between steps",
+      "Click Finish & Start Billing on the final step"
+    ],
+    "keywords": [
+      "Getting Started Guide",
+      "onboarding wizard",
+      "setup workspace",
+      "first invoice setup",
+      "app kaise chalaye",
+      "user guide dikhao",
+      "help video kahan hai",
+      "support se chat kaise kare",
+      "common questions key answer"
+    ]
+  },
+  {
+    "topic": "Video Tutorials",
+    "route": "/support/video-tutorials",
+    "source_file": "/src/components/SupportPage.tsx",
+    "summary": "Step-by-step visual video guides covering dashboard navigation, template builders, tax splits, and purchases ledgers.",
+    "steps": [
+      "Click on a video tutorial card to open the video player modal",
+      "Click the close ✕ button to close the video player modal"
+    ],
+    "keywords": [
+      "Video Tutorials",
+      "video guides",
+      "walkthroughs",
+      "training videos"
+    ]
+  },
+  {
+    "topic": "Privacy & Security Center",
+    "route": "/support/privacy-policy",
+    "source_file": "/src/components/PrivacyPolicy.tsx",
+    "summary": "Information center detailing data protection, encryption, sandbox storage, and offline-first architecture.",
+    "steps": [
+      "Click the Run Diagnostics Check button to execute a security integrity check",
+      "Click the Reset Check button to reset the diagnostics state"
+    ],
+    "keywords": [
+      "Privacy & Security Policy",
+      "data protection",
+      "security shield",
+      "offline-first storage",
+      "PIN security",
+      "zero telemetry",
+      "pin reset kaise kare",
+      "security password set karna hai",
+      "lock open nahi ho raha",
+      "pin code change karna hai",
+      "set security questions"
+    ]
+  },
+  {
+    "topic": "Advanced Studio Template Builder",
+    "route": "/advanced-studio",
+    "source_file": "\\src\\components\\TemplateBuilder\\AdvancedStudio.tsx",
+    "summary": "An advanced layout customizer studio that lets users fine-tune invoice templates step by step with a live preview canvas, undo/redo history, and customizable sections.",
+    "steps": [
+      "Click on Undo or Redo buttons in the top header to manage template history.",
+      "Navigate through steps in the left sidebar under General & Layout, Data Sections, Financials, Footer, and Advanced Design.",
+      "Enter a custom name in the Template Name field.",
+      "Select a document type from the Document Type dropdown.",
+      "Type a description in the Description textarea.",
+      "Click Save Template to save changes.",
+      "Click Cancel to exit.",
+      "Use zoom controls or drag/pan the live preview canvas to inspect the invoice."
+    ],
+    "keywords": [
+      "template builder",
+      "advanced studio",
+      "invoice customizer",
+      "layout builder",
+      "template editor",
+      "invoice template"
+    ]
+  },
+  {
+    "topic": "Quick Builder Wizard",
+    "route": "/templates/quick-builder",
+    "source_file": "\\src\\components\\TemplateBuilder\\QuickBuilder.tsx",
+    "summary": "Step-by-step wizard to quickly generate and customize invoice templates with live preview and branding options.",
+    "steps": [
+      "Click Cancel to exit the wizard",
+      "Select Document Purpose by clicking on Invoice, Estimate, Proforma, Credit Note, Purchases, Purchase Order, or Purchase Debit Note",
+      "Click Next or Back to navigate between wizard steps",
+      "Select Base Template Style: Modern, Corporate, Minimal, or Premium",
+      "Configure Brand Customization by checking 'Reserve space for corporate logo', entering a Theme Accent Color, choosing Primary Typography from the dropdown, and selecting Invoice Title Position (Left, Center, Right)",
+      "Selectable Sections: Toggle checkboxes for Company, Customer (Bill To), Ship To, Gst, Transport, Payment, Qr Code, Signature, Terms, and Notes",
+      "Itemized Grid Layout: Select between Compact, Standard, and Detailed View",
+      "On the final step, click 'Save Template' or 'Go Advanced Studio', or click 'Finish'"
+    ],
+    "keywords": [
+      "quick builder",
+      "invoice wizard",
+      "template creation",
+      "branding settings",
+      "document purpose",
+      "invoice styles"
+    ]
+  },
+  {
+    "topic": "Step Canvas Section Reordering",
+    "route": "/templates/advanced/canvas",
+    "source_file": "\\src\\components\\TemplateBuilder\\StepCanvas.tsx",
+    "summary": "Drag and drop canvas settings to reorder sections and toggle their visibility using the eye icon.",
+    "steps": [
+      "Drag sections using the grip handle to reorder them on the canvas",
+      "Click the eye icon to show or hide a section completely"
+    ],
+    "keywords": [
+      "canvas reorder",
+      "section visibility",
+      "drag and drop sections",
+      "template sections"
+    ]
+  },
+  {
+    "topic": "Template Step Controls",
+    "route": "/templates/advanced/controls",
+    "source_file": "\\src\\components\\TemplateBuilder\\StepControls.tsx",
+    "summary": "Comprehensive configuration controls for document type, layout, header, company info, tax, payment, transport, terms, and signature settings.",
+    "steps": [
+      "Select Category Theme Preset from the dropdown (User Custom, GST Standard, Service, Retail, Default Standard)",
+      "Select Document Type from the dropdown (Invoice (Tax Invoice), Credit Note, Proforma Invoice, Quote / Estimate, Purchases (Purchase Bill), Purchase Order, Purchase Debit Note)",
+      "Select Layout Type from the dropdown (Classic, Modern, Minimal, Corporate, GST Standard, Retail, Modal Classic, Fully Custom)",
+      "Select Page Size (A4, Letter)",
+      "Check 'Enable Watermark' and enter Watermark Text and Opacity (0.1 to 1)",
+      "Check 'Show Logo' and select Logo Position (Left, Center, Right)",
+      "Enter Logo Width (px)",
+      "Enter Invoice Title / Heading and select Title Alignment",
+      "Check company field options to show OWNER / CONTACT PERSON, EMAIL, PHONE, ADDRESS, STATE, COUNTRY, GSTIN, PAN, or WEBSITE",
+      "Check invoice meta fields to show Invoice No., Dated, Due Date, Place of Supply, GR/RR No., Ref. No., PO Number, or Delivery Note",
+      "Select Block Alignment for invoice info (Left, Center, Right)",
+      "Check fields to display for Bill To section (NAME, ADDRESS, GSTIN, PAN, PHONE, EMAIL)",
+      "Check fields to display for Ship To section (NAME, ADDRESS, GSTIN, PAN, PHONE, EMAIL)",
+      "Manage columns for product table by checking or unchecking visibility and editing column labels",
+      "Configure tax breakdown options: Show Taxable Amount, Show CGST & SGST (If Local), Show IGST (If Interstate), Show Grand Total, Enable Breakdown Block",
+      "Check 'Generate QR Code for UPI automatically' and enter Custom Payment Note",
+      "Configure design settings: set Primary Color, Table Header Background, check 'Use Rounded Corners', and 'Alternating Table Row Colors'",
+      "Select fields to display for Transport section: Vehicle No, Driver Mobile, E-Way Bill No, Transport Name, Station, GR/RR No.",
+      "Check 'Enable Amount in Words' and select Format (Indian, International)",
+      "Enter Notes / Greetings and Terms & Conditions",
+      "Check 'Show Signature Block', 'Show Stamp Area', and enter Signatory Name and Designation",
+      "Configure footer settings: check 'Show Page Numbers', enter Footer Message, and toggle 'Show Contact (Email & Phone)' and 'Show Website'"
+    ],
+    "keywords": [
+      "step controls",
+      "template configuration",
+      "tax settings",
+      "payment settings",
+      "transport settings",
+      "signature settings",
+      "invoice layout",
+      "table columns"
+    ]
+  },
+  {
+    "topic": "Choose Builder Mode",
+    "route": "/invoice-templates/quick-builder",
+    "source_file": "\\src\\components\\TemplateBuilder\\TemplateCreationHub.tsx",
+    "summary": "Selection hub to choose between the Quick Guided Builder wizard and the Advanced Studio Editor for invoice templates.",
+    "steps": [
+      "Click Back to Library",
+      "Click Quick Guided Builder",
+      "Click Advanced Studio Editor"
+    ],
+    "keywords": [
+      "builder mode",
+      "template creation",
+      "quick guided builder",
+      "advanced studio editor",
+      "invoice templates"
+    ]
+  },
+  {
+    "topic": "Invoice Template Manager Library",
+    "route": "/invoice-templates",
+    "source_file": "\\src\\components\\TemplateManager.tsx",
+    "summary": "Central manager to view, sort, search, and manage custom and system invoice template presets.",
+    "steps": [
+      "Click New Template",
+      "Click My Templates",
+      "Click System Presets",
+      "Type Search templates...",
+      "Click All",
+      "Click Invoice",
+      "Click Proforma Invoice",
+      "Click Debit Note",
+      "Click Credit Note",
+      "Click Quote",
+      "Click Purchase Order",
+      "Click Purchases",
+      "Click View Details"
+    ],
+    "keywords": [
+      "template manager",
+      "invoice templates",
+      "custom templates",
+      "system presets",
+      "tax invoice",
+      "proforma",
+      "debit note",
+      "credit note",
+      "quotation",
+      "purchase order",
+      "bill kaise banaye",
+      "bill banana hai",
+      "invoice print kaise kare",
+      "invoice edit karna hai",
+      "bill update kaise kare",
+      "invoice number reset"
+    ]
+  },
+  {
+    "topic": "Template Details Modal",
+    "route": "/invoice-templates",
+    "source_file": "\\src\\components\\TemplateManager.tsx",
+    "summary": "Modal displaying a full preview and specifications of a selected template, with options to edit, duplicate, set as default, export PDF, or delete.",
+    "steps": [
+      "Click Edit Template",
+      "Click Use This Preset",
+      "Click Set Default",
+      "Click Duplicate",
+      "Click PDF",
+      "Click Delete"
+    ],
+    "keywords": [
+      "template details",
+      "preview template",
+      "set default template",
+      "duplicate template",
+      "export pdf",
+      "delete template"
+    ]
+  },
+  {
+    "topic": "Sales Ledger - Tax Invoices",
+    "route": "/invoices",
+    "source_file": "/src/components/Dashboard.tsx",
+    "summary": "Manage and create standard tax invoices, view GST split breakdowns, vehicles shipping details, and auto-generate scan-to-pay QR codes.",
+    "steps": [
+      "Navigate to the Sales Ledger under Invoices.",
+      "Select the Tax Invoices subsection.",
+      "Click Create Invoice or Quick Bill.",
+      "Add client, product line items, and applicable taxes."
+    ],
+    "keywords": [
+      "tax invoice",
+      "sales bill",
+      "gst invoice",
+      "cgst sgst split",
+      "eway bill",
+      "vehicle number",
+      "tax invoice kaise banaye",
+      "sales ledger",
+      "tax invoices",
+      "create tax invoice",
+      "sales return",
+      "bill kaise banaye",
+      "bill banana hai",
+      "invoice print kaise kare",
+      "invoice edit karna hai",
+      "bill update kaise kare",
+      "invoice number reset"
+    ]
+  },
+  {
+    "topic": "Sales Ledger - Proforma Invoices",
+    "route": "/invoices#proforma",
+    "source_file": "/src/components/Dashboard.tsx",
+    "summary": "Draft and manage proforma invoices for customers. Proforma invoices use the default proforma prefix and number sequence.",
+    "steps": [
+      "Navigate to the Sales Ledger under Invoices.",
+      "Select the Proforma Invoices subsection.",
+      "Click Create Proforma Invoice.",
+      "Fill out items and save as proforma draft or final document."
+    ],
+    "keywords": [
+      "proforma invoice",
+      "estimate bill",
+      "draft bill",
+      "proforma prefix",
+      "pre-invoice",
+      "proforma billing",
+      "proforma kaise banaye",
+      "estimate proforma",
+      "bill kaise banaye",
+      "bill banana hai",
+      "invoice print kaise kare",
+      "invoice edit karna hai",
+      "bill update kaise kare",
+      "invoice number reset"
+    ]
+  },
+  {
+    "topic": "Sales Ledger - Credit Notes",
+    "route": "/invoices#credit-notes",
+    "source_file": "/src/components/Dashboard.tsx",
+    "summary": "Issue credit notes for sales returns, product damages, adjustments, or billing write-offs.",
+    "steps": [
+      "Navigate to the Sales Ledger under Invoices.",
+      "Select the Credit Notes subsection.",
+      "Click Create Credit Note.",
+      "Enter items being returned or values being adjusted, select original invoice reference, and save."
+    ],
+    "keywords": [
+      "credit note",
+      "sales return",
+      "refund bill",
+      "adjust billing",
+      "credit memo",
+      "credit note kaise banaye",
+      "returned items",
+      "bill kaise banaye",
+      "bill banana hai",
+      "invoice print kaise kare",
+      "invoice edit karna hai",
+      "bill update kaise kare",
+      "invoice number reset"
+    ]
+  },
+  {
+    "topic": "Sales Ledger - Quotes & Estimates",
+    "route": "/invoices#quotes",
+    "source_file": "/src/components/Dashboard.tsx",
+    "summary": "Draft quotations and price estimates for prospective clients. These do not count as finalized accounting transactions.",
+    "steps": [
+      "Navigate to the Sales Ledger under Invoices.",
+      "Select the Quotes & Estimates subsection.",
+      "Click Create Quote.",
+      "Enter product estimates, select customer, customize template styling, and download as PDF."
+    ],
+    "keywords": [
+      "quotes",
+      "estimates",
+      "price quotation",
+      "offer letter",
+      "estimate pdf",
+      "proposal",
+      "quotation kaise banaye",
+      "estimate rate",
+      "bill kaise banaye",
+      "bill banana hai",
+      "invoice print kaise kare",
+      "invoice edit karna hai",
+      "bill update kaise kare",
+      "invoice number reset"
+    ]
+  },
+  {
+    "topic": "Purchases Ledger - Purchase Bills",
+    "route": "/purchases",
+    "source_file": "/src/components/Dashboard.tsx",
+    "summary": "Track incoming tax invoices and bills from suppliers to monitor spending.",
+    "steps": [
+      "Navigate to the Purchases Ledger under Purchases.",
+      "Select the Purchase Bills subsection.",
+      "Click Create Purchase Bill.",
+      "Select vendor, enter items and tax rates, and log purchase amount."
+    ],
+    "keywords": [
+      "purchase bill",
+      "supplier invoice",
+      "vendor bill",
+      "log purchase",
+      "expense invoice",
+      "purchase ledger",
+      "purchases",
+      "purchase bill kaise log kare",
+      "bill kaise banaye",
+      "bill banana hai",
+      "invoice print kaise kare",
+      "invoice edit karna hai",
+      "bill update kaise kare",
+      "invoice number reset",
+      "purchase return kaise log kare",
+      "vendor bill entry",
+      "debit note kaise banaye",
+      "supplier records",
+      "purchases entry kaise kare"
+    ]
+  },
+  {
+    "topic": "Purchases Ledger - Purchase Orders",
+    "route": "/purchases#po",
+    "source_file": "/src/components/Dashboard.tsx",
+    "summary": "Issue purchase orders (PO) to vendors to request goods or services under agreed terms.",
+    "steps": [
+      "Navigate to the Purchases Ledger under Purchases.",
+      "Select the Purchase Orders subsection.",
+      "Click Create Purchase Order.",
+      "Select vendor, add items and quantities, set delivery terms, and download/email PO."
+    ],
+    "keywords": [
+      "purchase order",
+      "po",
+      "order form",
+      "vendor order",
+      "order goods",
+      "purchase order kaise banaye",
+      "po pdf",
+      "purchase return kaise log kare",
+      "vendor bill entry",
+      "debit note kaise banaye",
+      "supplier records",
+      "purchases entry kaise kare"
+    ]
+  },
+  {
+    "topic": "Purchases Ledger - Purchase Debit Notes",
+    "route": "/purchases#debit-notes",
+    "source_file": "/src/components/Dashboard.tsx",
+    "summary": "Issue debit notes to document purchase returns, damaged goods returned to suppliers, or cost adjustments.",
+    "steps": [
+      "Navigate to the Purchases Ledger.",
+      "Select the Debit Notes subsection.",
+      "Click Create Debit Note.",
+      "Enter the returned items and adjustment details, choose vendor, and save."
+    ],
+    "keywords": [
+      "debit note",
+      "purchase return",
+      "supplier refund",
+      "return to vendor",
+      "debit memo",
+      "debit note kaise banaye",
+      "purchase return kaise log kare",
+      "vendor bill entry",
+      "debit note kaise banaye",
+      "supplier records",
+      "purchases entry kaise kare"
+    ]
+  },
+  {
+    "topic": "Billed Vendors Directory",
+    "route": "/purchasers",
+    "source_file": "/src/components/Dashboard.tsx",
+    "summary": "View and manage supplier profiles automatically generated from finalized purchase bills, POs, and debit notes.",
+    "steps": [
+      "Go to the Billed Vendors tab in the sidebar.",
+      "Search for specific suppliers or view their total billing history.",
+      "Click edit to update supplier contact info or tax numbers."
+    ],
+    "keywords": [
+      "billed vendors",
+      "supplier directory",
+      "vendor profiles",
+      "list vendors",
+      "supplier database",
+      "vendors registry",
+      "vendor list",
+      "bill kaise banaye",
+      "bill banana hai",
+      "invoice print kaise kare",
+      "invoice edit karna hai",
+      "bill update kaise kare",
+      "invoice number reset",
+      "purchase return kaise log kare",
+      "vendor bill entry",
+      "debit note kaise banaye",
+      "supplier records",
+      "purchases entry kaise kare"
+    ]
+  },
+  {
+    "topic": "Learn MakInvoices - User Guide walkthrough",
+    "route": "/learn",
+    "source_file": "/src/components/Dashboard.tsx",
+    "summary": "Comprehensive step-by-step user guide walkthrough for setting up company profiles, master registries, designing templates, managing ledgers, exporting reports, and enabling PIN security.",
+    "steps": [
+      "Select 'Learn MakInvoices' under Tools & Design in the sidebar menu.",
+      "Read the Part A Structural Walkthrough modules to set up business profile, registries, templates, ledgers, reports, and security PIN.",
+      "Check Part B Company Policies for billing standardizations, logo sizing, bank account protocols, tax structures, and backup requirements."
+    ],
+    "keywords": [
+      "learn makinvoices",
+      "user guide",
+      "app manual",
+      "walkthrough",
+      "step-by-step tutorial",
+      "getting started",
+      "how to use",
+      "how to start",
+      "documentation",
+      "how to configure",
+      "kaise use kare",
+      "seekho",
+      "guide",
+      "bill kaise banaye",
+      "bill banana hai",
+      "invoice print kaise kare",
+      "invoice edit karna hai",
+      "bill update kaise kare",
+      "invoice number reset",
+      "app kaise chalaye",
+      "user guide dikhao",
+      "help video kahan hai",
+      "support se chat kaise kare",
+      "common questions key answer"
+    ]
+  },
+  {
+    "topic": "Learn MakInvoices - Quick Utilities and Tips",
+    "route": "/learn#tips",
+    "source_file": "/src/components/Dashboard.tsx",
+    "summary": "Quick tips, keyboard shortcuts, and auditing protocols for invoicing efficiency.",
+    "steps": [
+      "Select 'Learn MakInvoices' in the sidebar.",
+      "Locate the Quick Utilities card in the sidebar of the page.",
+      "Learn keyboard controls (e.g. Ctrl+P for printing), sidebar toggles, and tax auditing protocols."
+    ],
+    "keywords": [
+      "keyboard shortcuts",
+      "printing shortcuts",
+      "quick tips",
+      "billing tips",
+      "efficiency tips",
+      "shortcuts",
+      "sidebar toggle",
+      "tax auditing guidelines",
+      "bill kaise banaye",
+      "bill banana hai",
+      "invoice print kaise kare",
+      "invoice edit karna hai",
+      "bill update kaise kare",
+      "invoice number reset",
+      "app kaise chalaye",
+      "user guide dikhao",
+      "help video kahan hai",
+      "support se chat kaise kare",
+      "common questions key answer"
+    ]
+  },
+  {
+    "topic": "Help & Support - Frequently Asked Questions (FAQs)",
+    "route": "/support",
+    "source_file": "/src/components/SupportPage.tsx",
+    "summary": "Quick references, answer cards, and troubleshooting steps for commonly asked billing, tax, sync, security, templates, and catalog questions.",
+    "steps": [
+      "Navigate to the Help & Support page from the sidebar.",
+      "Type in the search bar to locate specific questions.",
+      "Click on any FAQ category tabs (Billing, Technical, Account, Feature).",
+      "Click on a question to expand and view the detailed answer."
+    ],
+    "keywords": [
+      "help support",
+      "faqs",
+      "frequently asked questions",
+      "quick references",
+      "troubleshoot",
+      "help center",
+      "support desk",
+      "billing questions",
+      "common issues",
+      "refunds",
+      "problems",
+      "help me",
+      "support card",
+      "queries",
+      "help and support",
+      "app kaise chalaye",
+      "user guide dikhao",
+      "help video kahan hai",
+      "support se chat kaise kare",
+      "common questions key answer"
+    ]
   }
 ]

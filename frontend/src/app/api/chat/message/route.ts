@@ -38,21 +38,19 @@ export async function POST(request: Request) {
       .select('model_name, requests, input_tokens, output_tokens')
       .eq('date', todayStr);
 
-    let totalRequests = 0;
     let modelUsage: Record<string, number> = {
-      'gemini-2.5-flash-lite': 0,
-      'gemini-2.5-flash': 0
+      'gemini-3.5-flash-lite': 0,
+      'gemini-3.5-flash': 0
     };
     
     if (quotaData) {
       for (const row of quotaData) {
-        totalRequests += (row.requests || 0);
         modelUsage[row.model_name] = row.requests || 0;
       }
     }
 
     // Two models * 20 limit each = 40 total
-    if (modelUsage['gemini-2.5-flash-lite'] >= 20 && modelUsage['gemini-2.5-flash'] >= 20) {
+    if (modelUsage['gemini-3.5-flash-lite'] >= 20 && modelUsage['gemini-3.5-flash'] >= 20) {
       return NextResponse.json({ 
         reply: "I've reached my daily limit of questions for today — please try again tomorrow, or click 'Talk to a human' to get help right now.", 
         route: null 
@@ -145,7 +143,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ reply, features });
     }
 
-    if (modelUsage['gemini-2.5-flash-lite'] + modelUsage['gemini-2.5-flash'] >= 38) {
+    if (modelUsage['gemini-3.5-flash-lite'] + modelUsage['gemini-3.5-flash'] >= 38) {
       console.log("[BUCKET] MEDIUM (DEGRADED) - Zero API calls. Limit reached.");
       const reply = "I've almost reached my daily limit and don't have enough context to answer this accurately right now. Please click 'Talk to a human' for further assistance.";
       const features: any[] = [];
@@ -217,8 +215,8 @@ ${historyContext}
 `;
 
     const modelsToTry = [
-      'gemini-2.5-flash-lite', 
-      'gemini-2.5-flash'
+      'gemini-3.5-flash-lite', 
+      'gemini-3.5-flash'
     ];
     let generateResponse: any = null;
     let lastError = null;
@@ -249,10 +247,11 @@ ${historyContext}
         break;
       } catch (err: any) {
         lastError = err;
-        console.error(`Model ${modelName} failed:`, err.message);
+        console.error(`Model ${modelName} failed:`, err.message || err);
         
-        if (err.message && err.message.includes("429")) {
-           console.log(`Rate limit or Quota exhausted for ${modelName}, falling back to next available model...`);
+        const errMsg = (err.message || "").toLowerCase();
+        if (errMsg.includes("429") || errMsg.includes("404") || errMsg.includes("not found") || errMsg.includes("no longer available") || errMsg.includes("not_found")) {
+           console.log(`Model ${modelName} returned temporary, quota, or availability error, falling back to next available model...`);
            continue;
         } else {
            // If it's a different error (e.g. invalid prompt, context too large), throw immediately
