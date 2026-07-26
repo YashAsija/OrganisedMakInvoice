@@ -51,6 +51,16 @@ export default function Homepage({
   isOnline,
   onNavigate
 }: HomepageProps) {
+  const [wordIndex, setWordIndex] = useState(0);
+  const targetWords = ["Freelancers", "Agencies", "Startups", "Creators", "Enterprise"];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWordIndex((prev) => (prev + 1) % targetWords.length);
+    }, 2800);
+    return () => clearInterval(interval);
+  }, []);
+
   // Tabs for Auth: 'login' or 'signup'
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -681,18 +691,31 @@ export default function Homepage({
               <span className="font-extrabold uppercase">Newly Launched</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-slate-805">
-              The Intelligent <br />
+            <h1 className="text-4xl sm:text-5xl lg:text-6.5xl font-black tracking-tight leading-[1.08] text-slate-805">
+              Professional Billing, <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-sky-600 to-indigo-500">
-                Billing & Estimate
+                Automated for
               </span> <br />
-              Platform.
+              <span className="inline-block relative h-[1.25em] overflow-hidden min-w-[260px] pb-1">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={wordIndex}
+                    initial={{ y: 24, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -24, opacity: 0 }}
+                    transition={{ duration: 0.35, ease: 'easeInOut' }}
+                    className="absolute left-0 text-slate-900 dark:text-white"
+                  >
+                    {targetWords[wordIndex]}.
+                  </motion.span>
+                </AnimatePresence>
+              </span>
             </h1>
 
-            <p className="text-base sm:text-lg text-slate-600 dark:text-slate-350 font-normal leading-relaxed max-w-2xl">
-              Focus on doing what you love while MakInvoices automates your billing lifecycle.
-              Generate high-performance estimates, automate repeating client invoice cycles, 
-              drawn signatures, visual financial analytics, and download professional PDFs instantly.
+            <p className="text-base sm:text-lg text-slate-650 dark:text-slate-350 font-normal leading-relaxed max-w-2xl">
+              Focus on doing what you love while **MakInvoices** handles the heavy lifting.
+              Generate elegant Estimates, automate recurring invoice cycles, drawn signatures,
+              track detailed financial analytics, and download professional PDFs instantly.
             </p>
 
             {/* Feature Highlights Grid */}
