@@ -68,7 +68,8 @@ import {
   GripVertical, 
   AlertTriangle,
   Settings,
-  Building
+  Building,
+  Crown
 } from 'lucide-react';
 import { useConfirm } from './ConfirmContext';
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from '../types';
@@ -82,6 +83,7 @@ import { LivePreview } from './TemplateBuilder/LivePreview';
 import SettingsPage from './SettingsPage';
 import SupportPage from './SupportPage';
 import SupportChatPage from './SupportChatPage';
+import SubscriptionPage from './SubscriptionPage';
 
 export interface MasterVendor { id: string; name?: string; company?: string; email?: string; phone?: string; address?: string; category?: string; [key: string]: any; }
 export interface MasterHsnCode { id: string; code?: string; description?: string; gstRate?: number; [key: string]: any; }
@@ -157,6 +159,19 @@ export default function Dashboard({
   const [localActiveTab, setLocalActiveTab] = useState<string>('dashboard');
   const activeTab = propActiveTab !== undefined ? propActiveTab : localActiveTab;
   const setActiveTab = onTabChange !== undefined ? onTabChange : setLocalActiveTab;
+  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro' | 'enterprise'>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('makbills_subscription_tier');
+      return (cached as 'free' | 'pro' | 'enterprise') || 'free';
+    }
+    return 'free';
+  });
+
+  const handleUpgrade = (tier: 'free' | 'pro' | 'enterprise') => {
+    setSubscriptionTier(tier);
+    localStorage.setItem('makbills_subscription_tier', tier);
+  };
+
   const [draftsSection, setDraftsSection] = useState<string>('all');
   const [draftsOrigin, setDraftsOrigin] = useState<'sales' | 'purchases'>('sales');
   
@@ -750,285 +765,316 @@ export default function Dashboard({
           : 'bg-transparent text-[#0f172a] group-hover:bg-white/80 dark:group-hover:bg-zinc-800 group-hover:text-[#4A3C2F]'
       }`;
 
+    const smallNavItemClass = (tab: string) => {
+      const isActive = activeTab === tab;
+      return `w-full px-2 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all duration-300 flex items-center justify-between cursor-pointer group ${
+        isActive
+          ? 'bg-white text-[#4A3C2F] dark:bg-zinc-900/90 dark:text-white shadow-[0_2px_8px_rgba(136,118,92,0.05)] border border-[#e2e8f0]/50 dark:border-zinc-800/60 font-black relative overflow-hidden'
+          : 'text-[#0f172a] hover:text-[#4A3C2F] dark:text-zinc-300 hover:bg-white/40 dark:hover:bg-zinc-800/30 border border-transparent'
+      }`;
+    };
+
+    const smallIconWrapper = (isActive: boolean, colorClass: string) => 
+      `flex items-center justify-center w-6 h-6 rounded-md transition-colors ${
+        isActive 
+          ? `${colorClass} shadow-xs ring-1 ring-black/5 dark:ring-white/5` 
+          : 'bg-transparent text-[#0f172a] group-hover:bg-white/80 dark:group-hover:bg-zinc-800 group-hover:text-[#4A3C2F]'
+      }`;
     return (
-      <div className="flex flex-col h-full space-y-3 text-sans select-none">
+      <div className="flex flex-col h-full text-sans select-none overflow-hidden">
         
-        {/* QUICK BILL ACTIONS */}
-        <div className="px-1">
-          <button
-            onClick={() => {
-              onOpenInvoiceEditor(null);
-              if (isMobileView) setIsMobileDrawerOpen(false);
-            }}
-            className="group relative w-full flex items-center justify-start gap-3 px-2 py-2 bg-[#059669] hover:bg-[#047857] text-white rounded-[14px] font-bold text-[13px] shadow-[0_4px_12px_rgba(5,150,105,0.25)] hover:shadow-[0_6px_16px_rgba(5,150,105,0.4)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] transition-all duration-200 border border-[#047857]/50"
-          >
-            <div className="w-8 h-8 rounded-[10px] bg-white/20 flex items-center justify-center shrink-0 group-hover:bg-white/30 group-hover:scale-105 transition-all duration-300 shadow-sm">
-              <Zap className="w-4 h-4 fill-white drop-shadow-sm" />
-            </div>
-            <span className="tracking-wide pr-2 text-center flex-1 -ml-6">Quick Bill</span>
-          </button>
-        </div>
-
-        {/* SETTINGS MENU */}
-        <div className="space-y-1">
-          <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1">Financial Hub</span>
-          
-          <button onClick={() => handleTabClick('dashboard')} className={navItemClass('dashboard')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'dashboard', 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400')}><BarChart3 className="w-3.5 h-3.5" /></div>
-              <span>Billing Dashboard</span>
-            </div>
-          </button>
-
-          {/* Sales Ledger Accordion Section */}
-          <div className="space-y-0.5">
+        {/* Scrollable Navigation Items */}
+        <div className="flex-1 overflow-y-auto pr-0.5 space-y-3 no-scrollbar pb-3">
+          {/* QUICK BILL ACTIONS */}
+          <div className="px-1">
             <button
               onClick={() => {
-                if (activeTab !== 'invoices') {
-                  handleTabClick('invoices');
-                }
-                setIsSalesLedgerExpanded(!isSalesLedgerExpanded);
+                onOpenInvoiceEditor(null);
+                if (isMobileView) setIsMobileDrawerOpen(false);
               }}
-              className={navItemClass('invoices')}
+              className="group relative w-full flex items-center justify-start gap-3 px-2 py-2 bg-[#059669] hover:bg-[#047857] text-white rounded-[14px] font-bold text-[13px] shadow-[0_4px_12px_rgba(5,150,105,0.25)] hover:shadow-[0_6px_16px_rgba(5,150,105,0.4)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] transition-all duration-200 border border-[#047857]/50"
             >
-              <div className="flex items-center gap-2.5">
-                <div className={iconWrapper(activeTab === 'invoices', 'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400')}><FileText className="w-3.5 h-3.5" /></div>
-                <span>Sales Ledger</span>
+              <div className="w-8 h-8 rounded-[10px] bg-white/20 flex items-center justify-center shrink-0 group-hover:bg-white/30 group-hover:scale-105 transition-all duration-300 shadow-sm">
+                <Zap className="w-4 h-4 fill-white drop-shadow-sm" />
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'invoices' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
-                  {invoices.filter(i => i.status !== 'draft').length}
-                </span>
-                <ChevronDown className={`w-3.5 h-3.5 text-[#64748b]/70 transition-transform duration-200 ${isSalesLedgerExpanded ? 'rotate-180' : ''}`} />
+              <span className="tracking-wide pr-2 text-center flex-1 -ml-6">Quick Bill</span>
+            </button>
+          </div>
+
+          {/* SETTINGS MENU */}
+          <div className="space-y-1">
+            <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1">Financial Hub</span>
+            
+            <button onClick={() => handleTabClick('dashboard')} className={navItemClass('dashboard')}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'dashboard', 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400')}><BarChart3 className="w-3.5 h-3.5" /></div>
+                <span>Billing Dashboard</span>
               </div>
             </button>
 
-            {/* Accordion Sub-items */}
-            {isSalesLedgerExpanded && (
-              <div className="pl-6 space-y-0.5 pt-0.5">
-                {[
-                  { id: 'invoice', label: 'Tax Invoices', count: documentTypeCounts.invoice, activeBg: 'bg-emerald-600 dark:bg-emerald-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-emerald-600 dark:hover:text-emerald-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
-                  { id: 'proforma', label: 'Proforma Invoice', count: documentTypeCounts.proforma, activeBg: 'bg-sky-600 dark:bg-sky-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-sky-600 dark:hover:text-sky-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
-                  { id: 'credit_note', label: 'Credit Note', count: documentTypeCounts.credit_note, activeBg: 'bg-violet-600 dark:bg-violet-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-violet-600 dark:hover:text-violet-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
-                  { id: 'quote', label: 'Quote / Estimate', count: documentTypeCounts.quote, activeBg: 'bg-teal-600 dark:bg-teal-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-teal-600 dark:hover:text-teal-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' }
-                ].map(sub => {
-                  const isSubActive = activeTab === 'invoices' && ledgerSection === sub.id;
-                  return (
-                    <button
-                      key={sub.id}
-                      onClick={() => {
-                        handleTabClick('invoices');
-                        setLedgerSection(sub.id as any);
-                        const pathMap: Record<string, string> = {
-                          invoice: '/invoices/tax-invoices',
-                          proforma: '/invoices/proforma-invoices',
-                          credit_note: '/invoices/credit-notes',
-                          quote: '/invoices/quotes-estimates'
-                        };
-                        if (typeof window !== 'undefined' && pathMap[sub.id]) {
-                          window.history.pushState(null, '', pathMap[sub.id]);
-                        }
-                      }}
-                      className={`w-full px-3 py-2 rounded-xl text-left text-[11px] font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
-                        isSubActive
-                          ? sub.activeBg
-                          : `text-slate-700 dark:text-zinc-300 ${sub.color} hover:bg-slate-100/70 dark:hover:bg-zinc-800/60`
-                      }`}
-                    >
-                      <span className="truncate">{sub.label}</span>
-                      <span className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-black ${isSubActive ? sub.activeBadge : sub.badge}`}>
-                        {sub.count}
-                      </span>
-                    </button>
-                  );
-                })}
+            {/* Sales Ledger Accordion Section */}
+            <div className="space-y-0.5">
+              <button
+                onClick={() => {
+                  if (activeTab !== 'invoices') {
+                    handleTabClick('invoices');
+                  }
+                  setIsSalesLedgerExpanded(!isSalesLedgerExpanded);
+                }}
+                className={navItemClass('invoices')}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={iconWrapper(activeTab === 'invoices', 'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400')}><FileText className="w-3.5 h-3.5" /></div>
+                  <span>Sales Ledger</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'invoices' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
+                    {invoices.filter(i => i.status !== 'draft').length}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-[#64748b]/70 transition-transform duration-200 ${isSalesLedgerExpanded ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
+
+              {/* Accordion Sub-items */}
+              {isSalesLedgerExpanded && (
+                <div className="pl-6 space-y-0.5 pt-0.5">
+                  {[
+                    { id: 'invoice', label: 'Tax Invoices', count: documentTypeCounts.invoice, activeBg: 'bg-emerald-600 dark:bg-emerald-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-emerald-600 dark:hover:text-emerald-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
+                    { id: 'proforma', label: 'Proforma Invoice', count: documentTypeCounts.proforma, activeBg: 'bg-sky-600 dark:bg-sky-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-sky-600 dark:hover:text-sky-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
+                    { id: 'credit_note', label: 'Credit Note', count: documentTypeCounts.credit_note, activeBg: 'bg-violet-600 dark:bg-violet-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-violet-600 dark:hover:text-violet-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
+                    { id: 'quote', label: 'Quote / Estimate', count: documentTypeCounts.quote, activeBg: 'bg-teal-600 dark:bg-teal-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-teal-600 dark:hover:text-teal-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' }
+                  ].map(sub => {
+                    const isSubActive = activeTab === 'invoices' && ledgerSection === sub.id;
+                    return (
+                      <button
+                        key={sub.id}
+                        onClick={() => {
+                          handleTabClick('invoices');
+                          setLedgerSection(sub.id as any);
+                          const pathMap: Record<string, string> = {
+                            invoice: '/invoices/tax-invoices',
+                            proforma: '/invoices/proforma-invoices',
+                            credit_note: '/invoices/credit-notes',
+                            quote: '/invoices/quotes-estimates'
+                          };
+                          if (typeof window !== 'undefined' && pathMap[sub.id]) {
+                            window.history.pushState(null, '', pathMap[sub.id]);
+                          }
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-left text-[11px] font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
+                          isSubActive
+                            ? sub.activeBg
+                            : `text-slate-700 dark:text-zinc-300 ${sub.color} hover:bg-slate-100/70 dark:hover:bg-zinc-800/60`
+                        }`}
+                      >
+                        <span className="truncate">{sub.label}</span>
+                        <span className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-black ${isSubActive ? sub.activeBadge : sub.badge}`}>
+                          {sub.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Purchases Ledger Accordion Section */}
+            <div className="space-y-0.5">
+              <button
+                onClick={() => {
+                  if (activeTab !== 'purchases') {
+                    handleTabClick('purchases');
+                  }
+                  setIsPurchasesLedgerExpanded(!isPurchasesLedgerExpanded);
+                }}
+                className={navItemClass('purchases')}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={iconWrapper(activeTab === 'purchases', 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400')}><Briefcase className="w-3.5 h-3.5" /></div>
+                  <span>Purchases Ledger</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'purchases' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
+                    {(documentTypeCounts.purchases || 0) + (documentTypeCounts.purchase_order || 0) + (documentTypeCounts.purchase_debit_note || 0)}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-[#64748b]/70 transition-transform duration-200 ${isPurchasesLedgerExpanded ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
+
+              {/* Accordion Sub-items */}
+              {isPurchasesLedgerExpanded && (
+                <div className="pl-6 space-y-0.5 pt-0.5">
+                  {[
+                    { id: 'purchases', label: 'Purchases', count: documentTypeCounts.purchases || 0, activeBg: 'bg-blue-600 dark:bg-blue-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-blue-600 dark:hover:text-blue-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
+                    { id: 'purchase_order', label: 'Purchase Order', count: documentTypeCounts.purchase_order || 0, activeBg: 'bg-amber-600 dark:bg-amber-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-amber-600 dark:hover:text-amber-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
+                    { id: 'purchase_debit_note', label: 'Debit Note', count: documentTypeCounts.purchase_debit_note || 0, activeBg: 'bg-indigo-600 dark:bg-indigo-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-indigo-600 dark:hover:text-indigo-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' }
+                  ].map(sub => {
+                    const isSubActive = activeTab === 'purchases' && purchaseLedgerSection === sub.id;
+                    return (
+                      <button
+                        key={sub.id}
+                        onClick={() => {
+                          handleTabClick('purchases');
+                          setPurchaseLedgerSection(sub.id as any);
+                          const pathMap: Record<string, string> = {
+                            purchases: '/purchases/purchases',
+                            purchase_order: '/purchases/purchase-order',
+                            purchase_debit_note: '/purchases/debit-note'
+                          };
+                          if (typeof window !== 'undefined' && pathMap[sub.id]) {
+                            window.history.pushState(null, '', pathMap[sub.id]);
+                          }
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-left text-[11px] font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
+                          isSubActive
+                            ? sub.activeBg
+                            : `text-slate-700 dark:text-zinc-300 ${sub.color} hover:bg-slate-100/70 dark:hover:bg-zinc-800/60`
+                        }`}
+                      >
+                        <span className="truncate">{sub.label}</span>
+                        <span className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-black ${isSubActive ? sub.activeBadge : sub.badge}`}>
+                          {sub.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <button onClick={() => handleTabClick('clients')} className={navItemClass('clients')}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'clients', 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400')}><Users2 className="w-3.5 h-3.5" /></div>
+                <span>Billed Clients</span>
               </div>
-            )}
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'clients' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
+                {billedClientsFiltered.length}
+              </span>
+            </button>
+
+            <button onClick={() => handleTabClick('purchasers')} className={navItemClass('purchasers')}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'purchasers', 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400')}><Users2 className="w-3.5 h-3.5" /></div>
+                <span>Billed Vendors</span>
+              </div>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'purchasers' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
+                {purchasersFiltered.length}
+              </span>
+            </button>
+
+            <button onClick={() => handleTabClick('reports')} className={navItemClass('reports')}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'reports', 'bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400')}><TrendingUp className="w-3.5 h-3.5" /></div>
+                <span>Accounting Summary</span>
+              </div>
+            </button>
           </div>
 
-          {/* Purchases Ledger Accordion Section */}
-          <div className="space-y-0.5">
-            <button
-              onClick={() => {
-                if (activeTab !== 'purchases') {
-                  handleTabClick('purchases');
-                }
-                setIsPurchasesLedgerExpanded(!isPurchasesLedgerExpanded);
-              }}
-              className={navItemClass('purchases')}
-            >
+          {/* TOOLS & CUSTOMIZATION */}
+          <div className="space-y-1">
+            <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1 mt-2">Tools & Design</span>
+
+            <button onClick={() => handleTabClick('invoice_templates')} className={navItemClass('invoice_templates')}>
               <div className="flex items-center gap-2.5">
-                <div className={iconWrapper(activeTab === 'purchases', 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400')}><Briefcase className="w-3.5 h-3.5" /></div>
-                <span>Purchases Ledger</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'purchases' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
-                  {(documentTypeCounts.purchases || 0) + (documentTypeCounts.purchase_order || 0) + (documentTypeCounts.purchase_debit_note || 0)}
-                </span>
-                <ChevronDown className={`w-3.5 h-3.5 text-[#64748b]/70 transition-transform duration-200 ${isPurchasesLedgerExpanded ? 'rotate-180' : ''}`} />
+                <div className={iconWrapper(activeTab === 'invoice_templates', 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400')}><Layout className="w-3.5 h-3.5" /></div>
+                <span>Invoice Template</span>
               </div>
             </button>
 
-            {/* Accordion Sub-items */}
-            {isPurchasesLedgerExpanded && (
-              <div className="pl-6 space-y-0.5 pt-0.5">
-                {[
-                  { id: 'purchases', label: 'Purchases', count: documentTypeCounts.purchases || 0, activeBg: 'bg-blue-600 dark:bg-blue-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-blue-600 dark:hover:text-blue-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
-                  { id: 'purchase_order', label: 'Purchase Order', count: documentTypeCounts.purchase_order || 0, activeBg: 'bg-amber-600 dark:bg-amber-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-amber-600 dark:hover:text-amber-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
-                  { id: 'purchase_debit_note', label: 'Debit Note', count: documentTypeCounts.purchase_debit_note || 0, activeBg: 'bg-indigo-600 dark:bg-indigo-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-indigo-600 dark:hover:text-indigo-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' }
-                ].map(sub => {
-                  const isSubActive = activeTab === 'purchases' && purchaseLedgerSection === sub.id;
-                  return (
-                    <button
-                      key={sub.id}
-                      onClick={() => {
-                        handleTabClick('purchases');
-                        setPurchaseLedgerSection(sub.id as any);
-                        const pathMap: Record<string, string> = {
-                          purchases: '/purchases/purchases',
-                          purchase_order: '/purchases/purchase-order',
-                          purchase_debit_note: '/purchases/debit-note'
-                        };
-                        if (typeof window !== 'undefined' && pathMap[sub.id]) {
-                          window.history.pushState(null, '', pathMap[sub.id]);
-                        }
-                      }}
-                      className={`w-full px-3 py-2 rounded-xl text-left text-[11px] font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
-                        isSubActive
-                          ? sub.activeBg
-                          : `text-slate-700 dark:text-zinc-300 ${sub.color} hover:bg-slate-100/70 dark:hover:bg-zinc-800/60`
-                      }`}
-                    >
-                      <span className="truncate">{sub.label}</span>
-                      <span className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-black ${isSubActive ? sub.activeBadge : sub.badge}`}>
-                        {sub.count}
-                      </span>
-                    </button>
-                  );
-                })}
+            <button onClick={() => handleTabClick('learn')} className={navItemClass('learn')}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'learn', 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400')}><BookOpen className="w-3.5 h-3.5" /></div>
+                <span>Learn MakInvoices</span>
               </div>
-            )}
+            </button>
           </div>
 
+          {/* MASTER REGISTRY */}
+          <div className="space-y-1">
+            <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1 mt-2">Master Registry</span>
 
+            <button onClick={() => handleTabClick('master_vendor')} className={navItemClass('master_vendor')}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'master_vendor', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Users2 className="w-3.5 h-3.5" /></div>
+                <span>Client Database</span>
+              </div>
+            </button>
 
-          <button onClick={() => handleTabClick('clients')} className={navItemClass('clients')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'clients', 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400')}><Users2 className="w-3.5 h-3.5" /></div>
-              <span>Billed Clients</span>
-            </div>
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'clients' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
-              {billedClientsFiltered.length}
-            </span>
-          </button>
+            <button onClick={() => handleTabClick('master_actual_vendor')} className={navItemClass('master_actual_vendor')}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'master_actual_vendor', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Users2 className="w-3.5 h-3.5" /></div>
+                <span>Vendor Database</span>
+              </div>
+            </button>
 
-          <button onClick={() => handleTabClick('purchasers')} className={navItemClass('purchasers')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'purchasers', 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400')}><Users2 className="w-3.5 h-3.5" /></div>
-              <span>Billed Vendors</span>
-            </div>
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'purchasers' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
-              {purchasersFiltered.length}
-            </span>
-          </button>
+            <button onClick={() => handleTabClick('master_hsn')} className={navItemClass('master_hsn')}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'master_hsn', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><FileSpreadsheet className="w-3.5 h-3.5" /></div>
+                <span>HSN Registry</span>
+              </div>
+            </button>
 
-          <button onClick={() => handleTabClick('reports')} className={navItemClass('reports')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'reports', 'bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400')}><TrendingUp className="w-3.5 h-3.5" /></div>
-              <span>Accounting Summary</span>
-            </div>
-          </button>
+            <button onClick={() => handleTabClick('master_transport')} className={navItemClass('master_transport')}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'master_transport', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Truck className="w-3.5 h-3.5" /></div>
+                <span>Transport Database</span>
+              </div>
+            </button>
+
+            <button onClick={() => handleTabClick('catalog_category')} className={navItemClass('catalog_category')}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'catalog_category', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Tag className="w-3.5 h-3.5" /></div>
+                <span>Product Category</span>
+              </div>
+            </button>
+
+            <button onClick={() => handleTabClick('catalog_material')} className={navItemClass('catalog_material')}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'catalog_material', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Wrench className="w-3.5 h-3.5" /></div>
+                <span>Material Catalog</span>
+              </div>
+            </button>
+          </div>
         </div>
 
-        {/* TOOLS & CUSTOMIZATION */}
-        <div className="space-y-1">
-          <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1 mt-2">Tools & Design</span>
+        {/* Fixed System Settings & Upgrades Section */}
+        <div className="pt-2 border-t border-slate-200/60 dark:border-zinc-800 shrink-0 space-y-0.5 bg-white dark:bg-zinc-950">
 
-          <button onClick={() => handleTabClick('invoice_templates')} className={navItemClass('invoice_templates')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'invoice_templates', 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400')}><Layout className="w-3.5 h-3.5" /></div>
-              <span>Invoice Template</span>
-            </div>
-          </button>
-
-          <button onClick={() => handleTabClick('learn')} className={navItemClass('learn')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'learn', 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400')}><BookOpen className="w-3.5 h-3.5" /></div>
-              <span>Learn MakInvoices</span>
-            </div>
-          </button>
-        </div>
-
-        {/* MASTER REGISTRY */}
-        <div className="space-y-1">
-          <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1 mt-2">Master Registry</span>
-
-          <button onClick={() => handleTabClick('master_vendor')} className={navItemClass('master_vendor')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'master_vendor', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Users2 className="w-3.5 h-3.5" /></div>
-              <span>Client Database</span>
-            </div>
-          </button>
-
-          <button onClick={() => handleTabClick('master_actual_vendor')} className={navItemClass('master_actual_vendor')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'master_actual_vendor', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Users2 className="w-3.5 h-3.5" /></div>
-              <span>Vendor Database</span>
-            </div>
-          </button>
-
-          <button onClick={() => handleTabClick('master_hsn')} className={navItemClass('master_hsn')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'master_hsn', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><FileSpreadsheet className="w-3.5 h-3.5" /></div>
-              <span>HSN Registry</span>
-            </div>
-          </button>
-
-          <button onClick={() => handleTabClick('master_transport')} className={navItemClass('master_transport')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'master_transport', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Truck className="w-3.5 h-3.5" /></div>
-              <span>Transport Database</span>
-            </div>
-          </button>
-
-          <button onClick={() => handleTabClick('catalog_category')} className={navItemClass('catalog_category')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'catalog_category', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Tag className="w-3.5 h-3.5" /></div>
-              <span>Product Category</span>
-            </div>
-          </button>
-
-          <button onClick={() => handleTabClick('catalog_material')} className={navItemClass('catalog_material')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'catalog_material', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Wrench className="w-3.5 h-3.5" /></div>
-              <span>Material Catalog</span>
-            </div>
-          </button>
-        </div>
-
-        {/* SYSTEM SETTINGS */}
-        <div className="space-y-1">
-          <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1 mt-2">System Settings</span>
-
-          <button onClick={() => handleTabClick('settings')} className={navItemClass('settings')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'settings', 'bg-slate-50 text-slate-650 dark:bg-zinc-800 dark:text-zinc-300')}><Settings className="w-3.5 h-3.5" /></div>
+          <button onClick={() => handleTabClick('settings')} className={smallNavItemClass('settings')}>
+            <div className="flex items-center gap-2">
+              <div className={smallIconWrapper(activeTab === 'settings', 'bg-slate-50 text-slate-650 dark:bg-zinc-800 dark:text-zinc-300')}><Settings className="w-3 h-3" /></div>
               <span>Preferences</span>
             </div>
           </button>
 
-          <button onClick={() => handleTabClick('profile')} className={navItemClass('profile')}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'profile', 'bg-slate-50 text-slate-650 dark:bg-zinc-800 dark:text-zinc-300')}><Building className="w-3.5 h-3.5" /></div>
+          <button onClick={() => handleTabClick('profile')} className={smallNavItemClass('profile')}>
+            <div className="flex items-center gap-2">
+              <div className={smallIconWrapper(activeTab === 'profile', 'bg-slate-50 text-slate-650 dark:bg-zinc-800 dark:text-zinc-300')}><Building className="w-3 h-3" /></div>
               <span>Company Info</span>
             </div>
           </button>
 
-          <button onClick={() => handleTabClick('support')} className={`${navItemClass('support')} mb-3 sm:mb-4`}>
-            <div className="flex items-center gap-2.5">
-              <div className={iconWrapper(activeTab === 'support', 'bg-slate-50 text-slate-650 dark:bg-zinc-800 dark:text-zinc-300')}><HelpCircle className="w-3.5 h-3.5" /></div>
+          <button onClick={() => handleTabClick('support')} className={smallNavItemClass('support')}>
+            <div className="flex items-center gap-2">
+              <div className={smallIconWrapper(activeTab === 'support', 'bg-slate-50 text-slate-650 dark:bg-zinc-800 dark:text-zinc-300')}><HelpCircle className="w-3 h-3" /></div>
               <span>Help & Support</span>
             </div>
+          </button>
+
+          {/* PREMIUM HIGHLIGHTED UPGRADE BUTTON */}
+          <button
+            onClick={() => handleTabClick('subscription')}
+            className="w-full mt-1.5 px-3 py-2 rounded-lg text-left text-[11px] font-black text-white bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 active:scale-98 transition-all duration-300 flex items-center justify-between cursor-pointer group shadow-[0_3px_10px_rgba(245,158,11,0.25)] hover:shadow-[0_5px_15px_rgba(245,158,11,0.35)] border border-amber-400/30"
+          >
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-6 h-6 rounded-md bg-white/20 text-white shadow-sm ring-1 ring-white/10 group-hover:scale-110 transition-transform">
+                <Crown className="w-3.5 h-3.5 fill-white" />
+              </div>
+              <span className="tracking-wide uppercase">Upgrade Plan</span>
+            </div>
+            <span className="text-[8.5px] px-1.5 py-0.5 bg-white text-orange-600 rounded-md uppercase font-black tracking-wider animate-pulse shadow-sm">
+              {subscriptionTier === 'free' ? 'PRO' : subscriptionTier === 'pro' ? 'ENT' : 'MAX'}
+            </span>
           </button>
         </div>
       </div>
@@ -2915,6 +2961,8 @@ export default function Dashboard({
         return 'Workspace / App Settings';
       case 'support':
         return 'Workspace / Help & Support';
+      case 'subscription':
+        return 'Workspace / Subscription & Billing';
       default:
         return 'Financial Hub / Workspace';
     }
@@ -3277,11 +3325,11 @@ export default function Dashboard({
       </div>
 
       {/* Dynamic Main Responsive Workspace - Grid layout turns dual-column on desktop */}
-      <main className="w-full max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4 pt-4 md:pt-6 space-y-4 md:space-y-0 md:flex md:gap-6 lg:gap-8 md:items-start overflow-hidden">
+      <main className="w-full max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4 pt-1.5 md:pt-3 space-y-4 md:space-y-0 md:flex md:gap-6 lg:gap-8 md:items-start overflow-hidden">
         
         {/* DESKTOP BRANDING & CONTROL SIDEBAR - Visible only on md screens and larger */}
         <div className="hidden md:block relative shrink-0">
-          <aside className={`flex flex-col bg-white dark:bg-zinc-950 border border-[#e2e8f0]/80 dark:border-zinc-800/80 rounded-[1.75rem] shadow-[0_8px_30px_rgba(136,118,92,0.08)] h-[calc(100vh-110px)] overflow-y-auto overflow-x-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
+          <aside className={`flex flex-col bg-white dark:bg-zinc-950 border border-[#e2e8f0]/80 dark:border-zinc-800/80 rounded-[1.75rem] shadow-[0_8px_30px_rgba(136,118,92,0.08)] h-[calc(100vh-110px)] overflow-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
             <div className="w-full h-full">
               {renderNavMenuContent(false)}
             </div>
@@ -6149,6 +6197,16 @@ export default function Dashboard({
               setActiveTab('support');
               // Optionally trigger some toast or prefill support page logic
             }} 
+          />
+        )}
+
+        {/* ------------------ TAB: SUBSCRIPTION ------------------ */}
+        {activeTab === 'subscription' && (
+          <SubscriptionPage
+            theme={theme}
+            profile={profile}
+            subscriptionTier={subscriptionTier}
+            onUpgrade={handleUpgrade}
           />
         )}
 

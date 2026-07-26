@@ -9,6 +9,36 @@ import TemplateCreationHub from './TemplateBuilder/TemplateCreationHub';
 import { TEMPLATE_PRESETS } from '../lib/templatePresets';
 import { emitNotification } from '../lib/notifications';
 
+function TemplatePreview({ template, businessProfile }: { template: InvoiceTemplate; businessProfile?: BusinessProfile }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !containerRef.current) return;
+    const updateScale = () => {
+      if (containerRef.current) {
+        const width = containerRef.current.getBoundingClientRect().width;
+        setScale(width / 794);
+      }
+    };
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={containerRef} className="w-full aspect-[794/1123] overflow-hidden relative bg-white">
+      <div 
+        className="w-[794px] h-[1123px] origin-top-left absolute top-0 left-0" 
+        style={{ transform: `scale(${scale})`, width: '794px', height: '1123px' }}
+      >
+        <LivePreview template={template} businessProfile={businessProfile} />
+      </div>
+    </div>
+  );
+}
+
 export default function TemplateManager({ businessProfile }: { businessProfile?: BusinessProfile }) {
   const { confirm } = useConfirm();
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(() => {
@@ -601,13 +631,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
 
                   {/* Full Thumbnail preview */}
                   <div className="w-full aspect-[794/1123] bg-[#FCFAF7] dark:bg-zinc-900 relative overflow-hidden pointer-events-none">
-                    <svg viewBox="0 0 794 1123" className="w-full h-full origin-top" preserveAspectRatio="xMidYMid meet">
-                      <foreignObject width="794" height="1123">
-                        <div className="w-[794px] h-[1123px] bg-white flex flex-col">
-                          <LivePreview template={template} businessProfile={businessProfile} />
-                        </div>
-                      </foreignObject>
-                    </svg>
+                    <TemplatePreview template={template} businessProfile={businessProfile} />
                     
                     {/* Hover overlay */}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4">
@@ -646,13 +670,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
             {/* Left side: Large SVG Preview */}
             <div className="w-full lg:w-[60%] bg-[#FCFAF7] dark:bg-zinc-900 border-t lg:border-t-0 lg:border-r border-[#e2e8f0]/60 dark:border-zinc-800 p-4 sm:p-8 flex items-center justify-center lg:min-h-[60vh]">
               <div className="w-full max-w-[450px] aspect-[794/1123] shadow-lg rounded overflow-hidden relative bg-white">
-                <svg viewBox="0 0 794 1123" className="w-full h-full pointer-events-none" preserveAspectRatio="xMidYMid meet">
-                  <foreignObject width="794" height="1123">
-                    <div className="w-[794px] h-[1123px] flex flex-col bg-white">
-                      <LivePreview template={selectedTemplateForModal} businessProfile={businessProfile} />
-                    </div>
-                  </foreignObject>
-                </svg>
+                <TemplatePreview template={selectedTemplateForModal} businessProfile={businessProfile} />
               </div>
             </div>
 
