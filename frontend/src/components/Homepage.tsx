@@ -43,6 +43,49 @@ interface HomepageProps {
   onNavigate: (path: string) => void;
 }
 
+const words = ["Agencies.", "Freelancers.", "Startups.", "Consultants.", "Enterprises."];
+
+function AnimatedTextWords() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % words.length);
+    }, 2800);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <span className="relative inline-block w-full h-[1.2em]">
+      <AnimatePresence mode="wait">
+        {/* Ghost background word (zoomed/faded) */}
+        <motion.span
+          key={`ghost-${index}`}
+          initial={{ y: 15, opacity: 0 }}
+          animate={{ y: 0, opacity: 0.05 }}
+          exit={{ y: -15, opacity: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute left-0 top-1 text-4xl sm:text-5.5xl lg:text-6.5xl text-slate-900 dark:text-white font-black select-none pointer-events-none tracking-tight leading-none scale-102"
+        >
+          {words[index]}
+        </motion.span>
+        
+        {/* Real foreground word */}
+        <motion.span
+          key={`real-${index}`}
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -20, opacity: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute left-0 top-0 text-slate-800 dark:text-white font-black tracking-tight leading-none"
+        >
+          {words[index]}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  );
+}
+
 export default function Homepage({ 
   theme, 
   onGoogleLogin, 
@@ -51,16 +94,6 @@ export default function Homepage({
   isOnline,
   onNavigate
 }: HomepageProps) {
-  const [wordIndex, setWordIndex] = useState(0);
-  const targetWords = ["Freelancers", "Agencies", "Startups", "Creators", "Enterprise"];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setWordIndex((prev) => (prev + 1) % targetWords.length);
-    }, 2800);
-    return () => clearInterval(interval);
-  }, []);
-
   // Tabs for Auth: 'login' or 'signup'
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -196,6 +229,55 @@ export default function Homepage({
   const [demoAccent, setDemoAccent] = useState<'sky' | 'emerald' | 'indigo' | 'rose'>('sky');
   const [demoStatus, setDemoStatus] = useState<'PAID' | 'PENDING' | 'OVERDUE'>('PAID');
   const [demoLayout, setDemoLayout] = useState<'modern' | 'minimal' | 'agency'>('modern');
+  const [selectedPreset, setSelectedPreset] = useState<'freelance' | 'saas' | 'logistics'>('freelance');
+
+  const demoPresets = {
+    freelance: {
+      client: 'Alex Morgan',
+      company: 'INTEZ Dev Group',
+      location: 'Delhi, India',
+      clientLoc: 'San Francisco, USA',
+      invoiceNo: 'INV-2026-0045',
+      items: [
+        { name: '1x Cloud System Setup', desc: 'Postgres cluster & API backend', price: 800 },
+        { name: '2.5h Custom Layout Design', desc: 'Tailwind responsive code structure', price: 305 }
+      ],
+      status: 'PAID' as const,
+      taxMode: 'GST Intra',
+      taxRate: 0.18,
+      currency: '$'
+    },
+    saas: {
+      client: 'Acme Corp Inc.',
+      company: 'SaaSify Platforms',
+      location: 'Bangalore, India',
+      clientLoc: 'New York, USA',
+      invoiceNo: 'INV-2026-8812',
+      items: [
+        { name: 'Enterprise API License', desc: 'Unlimited endpoints & 99.9% SLA', price: 1200 },
+        { name: 'Priority Support Add-on', desc: 'Dedicated Slack channel & 24/7 phone', price: 299 }
+      ],
+      status: 'PENDING' as const,
+      taxMode: 'GST Inter',
+      taxRate: 0.18,
+      currency: '$'
+    },
+    logistics: {
+      client: 'Global Trade Co.',
+      company: 'FastForward Logistics',
+      location: 'Mumbai, India',
+      clientLoc: 'London, UK',
+      invoiceNo: 'INV-2026-4409',
+      items: [
+        { name: 'Ocean Freight Shipping', desc: '2x Standard 20ft Containers', price: 2400 },
+        { name: 'Customs Clearance Fee', desc: 'Import documentation processing', price: 450 }
+      ],
+      status: 'OVERDUE' as const,
+      taxMode: 'Export Zero-Rated',
+      taxRate: 0.0,
+      currency: '$'
+    }
+  };
 
   const handleNavScroll = (sectionId: string, customAuthMode?: 'login' | 'signup') => {
     if (customAuthMode) {
@@ -691,31 +773,18 @@ export default function Homepage({
               <span className="font-extrabold uppercase">Newly Launched</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6.5xl font-black tracking-tight leading-[1.08] text-slate-805">
+            <h1 className="text-4xl sm:text-5.5xl lg:text-6.5xl font-black tracking-tight leading-[1.08] text-slate-805">
               Professional Billing, <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-sky-600 to-indigo-500">
                 Automated for
               </span> <br />
-              <span className="inline-block relative h-[1.25em] overflow-hidden min-w-[260px] pb-1">
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={wordIndex}
-                    initial={{ y: 24, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: -24, opacity: 0 }}
-                    transition={{ duration: 0.35, ease: 'easeInOut' }}
-                    className="absolute left-0 text-slate-900 dark:text-white"
-                  >
-                    {targetWords[wordIndex]}.
-                  </motion.span>
-                </AnimatePresence>
-              </span>
+              <div className="relative inline-block w-full mt-1.5 h-[1.25em]">
+                <AnimatedTextWords />
+              </div>
             </h1>
 
-            <p className="text-base sm:text-lg text-slate-650 dark:text-slate-350 font-normal leading-relaxed max-w-2xl">
-              Focus on doing what you love while **MakInvoices** handles the heavy lifting.
-              Generate elegant Estimates, automate recurring invoice cycles, drawn signatures,
-              track detailed financial analytics, and download professional PDFs instantly.
+            <p className="text-base sm:text-lg text-slate-600 dark:text-slate-350 font-normal leading-relaxed max-w-2xl">
+              Ditch the spreadsheets. <strong className="font-extrabold text-slate-800 dark:text-white">MakInvoices</strong> is an AI-powered billing hub built to automate your invoices, track real-time expenses, and customize beautiful templates instantly.
             </p>
 
             {/* Feature Highlights Grid */}
@@ -770,349 +839,296 @@ export default function Homepage({
             </div>
           </motion.div>
 
-          {/* Right: Premium Live-Rendered Mockup representing Sample Dashboard and Sample Invoice */}
+          {/* Right: Sleek, Professional Mockup */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:col-span-6 flex flex-col items-center justify-start lg:mt-0 mt-8 relative order-2"
+            className="lg:col-span-6 lg:mt-0 mt-8 relative order-2 flex justify-center w-full"
           >
-            {/* Live Interactive Control Panel */}
-            <div className="w-full max-w-[500px] mb-5 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md rounded-2xl p-4 border border-slate-200/50 dark:border-neutral-800/80 shadow-lg relative z-30 transition-all text-xs">
-              <div className="flex flex-col gap-3">
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-2">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-450 dark:text-neutral-500 flex items-center gap-1.5">
-                    <Sparkles className="w-3 h-3 text-sky-500 animate-pulse" />
-                    Interactive Live Preview
-                  </span>
-                  <span className="text-[9px] px-1.5 py-0.5 bg-sky-500/10 dark:bg-sky-505/15 text-sky-500 rounded-md font-mono font-bold animate-pulse">Try clicking options!</span>
+            {/* Interactive Browser Frame Mockup */}
+            <div className="w-full max-w-[620px] bg-white dark:bg-neutral-900 rounded-3xl border border-slate-200/80 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col relative z-20 transition-colors duration-300">
+              
+              {/* macOS Style Title Bar */}
+              <div className="flex items-center justify-between px-5 py-3 bg-slate-50 dark:bg-neutral-950 border-b border-slate-250/60 dark:border-neutral-800/80">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-rose-500/90 shadow-sm" />
+                  <span className="w-3 h-3 rounded-full bg-amber-500/90 shadow-sm" />
+                  <span className="w-3 h-3 rounded-full bg-emerald-500/90 shadow-sm" />
                 </div>
+                <div className="bg-white dark:bg-neutral-900 px-4 py-1 rounded-lg border border-slate-200/80 dark:border-neutral-800 text-[10px] font-mono text-slate-500 dark:text-neutral-400 select-none shadow-xs">
+                  makinvoices.com/playground
+                </div>
+                <div className="w-14" /> {/* balance */}
+              </div>
 
-                <div className="grid grid-cols-3 gap-4 text-[10px]">
-                  {/* Select Theme Accent */}
+              {/* Playground Workspace Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-12 min-h-[480px]">
+                
+                {/* 1. Control Panel (Left Side - 5 Columns on Desktop, 100% on Mobile) */}
+                <div className="md:col-span-5 bg-slate-50/50 dark:bg-neutral-950/20 border-b md:border-b-0 md:border-r border-slate-200/60 dark:border-neutral-800 p-5 flex flex-col gap-4 text-left">
+                  
+                  {/* Preset Selector */}
                   <div className="space-y-1.5">
-                    <span className="block text-[8px] font-bold uppercase text-slate-400 dark:text-slate-500 tracking-wider">Color Palette</span>
-                    <div className="flex items-center gap-2 pt-0.5">
-                      <button 
-                        type="button"
-                        onClick={() => setDemoAccent('sky')} 
-                        className={`w-5 h-5 rounded-full bg-sky-500 border-2 transition-all cursor-pointer ${demoAccent === 'sky' ? 'ring-2 ring-sky-500/50 scale-110 border-white dark:border-neutral-900' : 'border-transparent opacity-85 hover:opacity-100'}`}
-                        title="Sky Blue"
-                      />
-                      <button 
-                        type="button"
-                        onClick={() => setDemoAccent('emerald')} 
-                        className={`w-5 h-5 rounded-full bg-emerald-500 border-2 transition-all cursor-pointer ${demoAccent === 'emerald' ? 'ring-2 ring-emerald-500/50 scale-110 border-white dark:border-neutral-900' : 'border-transparent opacity-85 hover:opacity-100'}`}
-                        title="Emerald Green"
-                      />
-                      <button 
-                        type="button"
-                        onClick={() => setDemoAccent('indigo')} 
-                        className={`w-5 h-5 rounded-full bg-indigo-500 border-2 transition-all cursor-pointer ${demoAccent === 'indigo' ? 'ring-2 ring-indigo-500/50 scale-110 border-white dark:border-neutral-900' : 'border-transparent opacity-85 hover:opacity-100'}`}
-                        title="Indigo Creative"
-                      />
-                      <button 
-                        type="button"
-                        onClick={() => setDemoAccent('rose')} 
-                        className={`w-5 h-5 rounded-full bg-rose-500 border-2 transition-all cursor-pointer ${demoAccent === 'rose' ? 'ring-2 ring-rose-500/50 scale-110 border-white dark:border-neutral-900' : 'border-transparent opacity-85 hover:opacity-100'}`}
-                        title="Rose Premium"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Select Layout Presets */}
-                  <div className="space-y-1.5">
-                    <span className="block text-[8px] font-bold uppercase text-slate-400 dark:text-slate-500 tracking-wider">Invoice Layout</span>
-                    <div className="flex gap-1 pt-0.5">
-                      {(['modern', 'minimal', 'agency'] as const).map((l) => (
-                        <button 
-                          key={l}
+                    <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-500 uppercase tracking-widest block">1. Select Preset</span>
+                    <div className="flex flex-col gap-2">
+                      {(['freelance', 'saas', 'logistics'] as const).map((preset) => (
+                        <button
+                          key={preset}
                           type="button"
-                          onClick={() => setDemoLayout(l)} 
-                          className={`px-2 py-1 rounded-lg text-[8px] font-extrabold uppercase transition-all cursor-pointer ${
-                            demoLayout === l 
-                              ? 'bg-sky-600 text-white shadow-sm' 
-                              : 'bg-slate-100 dark:bg-neutral-800 text-slate-505 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-neutral-750'
+                          onClick={() => {
+                            setSelectedPreset(preset);
+                            // Auto adjust matching properties for fun demo response
+                            const p = demoPresets[preset];
+                            setDemoStatus(p.status);
+                            if (preset === 'saas') {
+                              setDemoAccent('indigo');
+                              setDemoLayout('modern');
+                            } else if (preset === 'logistics') {
+                              setDemoAccent('emerald');
+                              setDemoLayout('agency');
+                            } else {
+                              setDemoAccent('sky');
+                              setDemoLayout('modern');
+                            }
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all border flex items-center justify-between cursor-pointer ${
+                            selectedPreset === preset
+                              ? 'bg-sky-500/10 border-sky-500/30 text-sky-600 dark:text-sky-400'
+                              : 'bg-white dark:bg-neutral-900 border-slate-200 dark:border-neutral-800 text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-neutral-850'
                           }`}
                         >
-                          {l}
+                          <span className="capitalize">{preset} Invoice</span>
+                          <Sparkles className={`w-3.5 h-3.5 ${selectedPreset === preset ? 'text-sky-500' : 'opacity-30'}`} />
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Select Status */}
+                  {/* Accent Color Picker */}
                   <div className="space-y-1.5">
-                    <span className="block text-[8px] font-bold uppercase text-slate-400 dark:text-slate-500 tracking-wider">Invoice Status</span>
-                    <div className="flex gap-1 pt-0.5">
-                      {(['PAID', 'PENDING', 'OVERDUE'] as const).map((s) => (
-                        <button 
-                          key={s}
+                    <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-500 uppercase tracking-widest block">2. Theme Accent</span>
+                    <div className="flex items-center gap-2">
+                      {(['sky', 'emerald', 'indigo', 'rose'] as const).map((color) => (
+                        <button
+                          key={color}
                           type="button"
-                          onClick={() => setDemoStatus(s)} 
-                          className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase transition-all cursor-pointer ${
-                            demoStatus === s 
-                              ? s === 'PAID' 
-                                ? 'bg-emerald-500 text-white shadow-sm' 
-                                : s === 'PENDING'
-                                  ? 'bg-amber-500 text-white shadow-sm'
-                                  : 'bg-rose-505 text-white shadow-sm'
-                              : 'bg-slate-100 dark:bg-neutral-800 text-slate-505 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-neutral-750'
+                          onClick={() => setDemoAccent(color)}
+                          className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                            color === 'sky' ? 'bg-sky-500' :
+                            color === 'emerald' ? 'bg-emerald-500' :
+                            color === 'indigo' ? 'bg-indigo-500' : 'bg-rose-500'
+                          } ${
+                            demoAccent === color ? 'ring-2 ring-offset-2 ring-slate-400 dark:ring-neutral-200 scale-110' : 'opacity-80 hover:scale-105'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Layout Selector */}
+                  <div className="space-y-1.5">
+                    <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-500 uppercase tracking-widest block">3. Template Style</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {(['modern', 'minimal', 'agency'] as const).map((layout) => (
+                        <button
+                          key={layout}
+                          type="button"
+                          onClick={() => setDemoLayout(layout)}
+                          className={`px-2 py-1.5 rounded-lg text-[9px] font-extrabold uppercase border transition-all cursor-pointer text-center ${
+                            demoLayout === layout
+                              ? 'bg-slate-900 border-slate-900 text-white dark:bg-white dark:border-white dark:text-neutral-900'
+                              : 'bg-white border-slate-200 text-slate-600 dark:bg-neutral-900 dark:border-neutral-800 dark:text-slate-300 hover:bg-slate-50'
                           }`}
                         >
-                          {s === 'PENDING' ? 'Pend' : s === 'OVERDUE' ? 'Ovr' : 'Paid'}
+                          {layout}
                         </button>
                       ))}
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
 
-            {/* Mockup Canvas Screen */}
-            <div className="w-full max-w-full sm:max-w-[580px] overflow-x-auto no-scrollbar pb-6 -mx-2 px-2 sm:mx-0 sm:px-0">
-              <div className="w-full h-[400px] sm:h-[520px] lg:h-[550px] relative overflow-hidden rounded-3xl">
-              
-              {/* Background glowing visual accents */}
-              <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full blur-3xl pointer-events-none transition-colors duration-500 ${
-                demoAccent === 'sky' ? 'bg-sky-505/10 dark:bg-sky-500/15' :
-                demoAccent === 'emerald' ? 'bg-emerald-500/10 dark:bg-emerald-500/15' :
-                demoAccent === 'indigo' ? 'bg-indigo-500/10 dark:bg-indigo-500/15' :
-                'bg-rose-500/10 dark:bg-rose-500/15'
-              }`} />
-              
-              {/* DASHBOARD PREVIEW PANEL (Base Underlay window) */}
-              <div className="absolute left-0 sm:left-2 top-0 sm:top-2 w-[85%] max-w-[440px] rounded-3xl bg-[#090d16] border border-slate-800 shadow-2xl shadow-slate-950/40 overflow-hidden transform -rotate-3 hover:-rotate-1 transition-all duration-550 text-slate-100 p-4 z-10">
-                
-                {/* Window controls bar */}
-                <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-slate-850">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                    <span className="text-[9px] text-slate-400 font-mono ml-2">sales_tracker.sh</span>
-                  </div>
-                  <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${accentClasses[demoAccent].badge}`}>
-                    Sample Dashboard
-                  </span>
-                </div>
-
-                {/* Dynamic stats preview cards */}
-                <div className="grid grid-cols-2 gap-2.5 mb-3.5">
-                  <div className="p-2.5 bg-[#050910] border border-slate-850 rounded-xl">
-                    <span className="text-[8px] text-slate-400 uppercase font-black tracking-wider block">Total Sales</span>
-                    <div className="flex items-baseline gap-1 mt-0.5">
-                      <span className="text-xs font-black text-white">$18,420.00</span>
-                      <span className="text-[8px] text-emerald-400 font-extrabold">+14%</span>
+                  {/* Status Toggle */}
+                  <div className="space-y-1.5">
+                    <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-500 uppercase tracking-widest block">4. Status</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {(['PAID', 'PENDING', 'OVERDUE'] as const).map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => setDemoStatus(status)}
+                          className={`px-1.5 py-1.5 rounded-lg text-[9px] font-extrabold border transition-all cursor-pointer text-center ${
+                            demoStatus === status
+                              ? status === 'PAID' ? 'bg-emerald-500 border-emerald-500 text-white' :
+                                status === 'PENDING' ? 'bg-amber-500 border-amber-500 text-white' :
+                                'bg-rose-500 border-rose-500 text-white'
+                              : 'bg-white border-slate-200 text-slate-600 dark:bg-neutral-900 dark:border-neutral-800 dark:text-slate-350 hover:bg-slate-50'
+                          }`}
+                        >
+                          {status}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  <div className="p-2.5 bg-[#050910] border border-slate-850 rounded-xl">
-                    <span className="text-[8px] text-slate-400 uppercase font-black tracking-wider block">Remaining Debt</span>
-                    <div className="flex items-baseline gap-1 mt-0.5">
-                      <span className="text-xs font-black text-amber-400">$3,550.00</span>
-                    </div>
-                  </div>
                 </div>
 
-                {/* SVG Sparkline Graph Simulation */}
-                <div className="p-2 bg-[#050910]/40 border border-slate-850/80 rounded-xl mb-3.5">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">Weekly Revenue Stream</span>
-                    <span className={`text-[8px] font-mono animate-pulse ${accentClasses[demoAccent].text}`}>Running Live</span>
-                  </div>
+                {/* 2. Interactive Invoice Sheet (Right Side - 7 Columns on Desktop, 100% on Mobile) */}
+                <div className="md:col-span-7 bg-slate-100/50 dark:bg-neutral-950/40 p-4 sm:p-6 flex flex-col items-center justify-center relative overflow-hidden transition-colors duration-300">
                   
-                  {/* SVG Graph path with dynamic pointer */}
-                  <svg className="w-full h-12 overflow-visible" viewBox="0 0 100 30" preserveAspectRatio="none">
-                    {/* Grid background rails */}
-                    <line x1="0" y1="10" x2="100" y2="10" stroke="#101827" strokeWidth="0.5" strokeDasharray="1" />
-                    <line x1="0" y1="20" x2="100" y2="20" stroke="#101827" strokeWidth="0.5" strokeDasharray="1" />
-                    
-                    {/* Underlay glow path */}
-                    <path d="M 0 30 L 0 25 L 20 18 L 40 24 L 60 11 L 80 15 L 100 2 L 100 30 Z" fill={`url(#dash-${demoAccent}-glow)`} opacity="0.25" />
-                    
-                    {/* Stroke path */}
-                    <path d="M 0 25 L 20 18 L 40 24 L 60 11 L 80 15 L 100 2" fill="none" stroke={accentClasses[demoAccent].stroke} strokeWidth="1.8" strokeLinecap="round" />
-                    
-                    {/* Pulsing indicator */}
-                    <circle cx="100" cy="2" r="1.8" fill={accentClasses[demoAccent].stroke} className="animate-ping" style={{ transformOrigin: '100px 2px' }} />
-                    <circle cx="100" cy="2" r="1.5" fill={accentClasses[demoAccent].stroke} />
+                  {/* Soft background glow based on selected accent */}
+                  <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none transition-colors duration-500 ${
+                    demoAccent === 'sky' ? 'bg-sky-500' :
+                    demoAccent === 'emerald' ? 'bg-emerald-500' :
+                    demoAccent === 'indigo' ? 'bg-indigo-500' : 'bg-rose-500'
+                  }`} />
 
-                    <defs>
-                      <linearGradient id={`dash-${demoAccent}-glow`} x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor={accentClasses[demoAccent].stroke} />
-                        <stop offset="100%" stopColor={accentClasses[demoAccent].stroke} stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                </div>
-
-                {/* Recent Ledger Invoices List */}
-                <div className="space-y-1.5">
-                  <span className="text-[8px] text-slate-400 uppercase font-bold tracking-wider">Active Invoices</span>
-                  
-                  <div className="p-2 bg-[#050910] rounded-xl flex items-center justify-between border border-slate-900/60">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span className="text-[9px] font-bold text-white">#INV-0044</span>
-                      <span className="text-[8px] text-slate-450">Alex Morgan</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] font-black text-slate-100">$1,105.00</span>
-                      <span className="text-[7px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded-md font-black uppercase">PAID</span>
-                    </div>
-                  </div>
-
-                  <div className="p-2 bg-[#050910] rounded-xl flex items-center justify-between border border-slate-900/60 transition-all">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        demoStatus === 'PAID' ? 'bg-emerald-500' :
-                        demoStatus === 'PENDING' ? 'bg-amber-400 animate-pulse' : 'bg-rose-500'
-                      }`} />
-                      <span className="text-[9px] font-bold text-white">#INV-0045</span>
-                      <span className="text-[8px] text-slate-455">Corporate Labs</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] font-black text-slate-100">$4,200.00</span>
-                      <span className={`text-[7px] border px-1.5 py-0.5 rounded-md font-black uppercase transition-all ${
-                        demoStatus === 'PAID' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                        demoStatus === 'PENDING' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                        'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                      }`}>{demoStatus}</span>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* HIGH-FIDELITY INVOICE PAPER (Overlapping, angled, beautifully structured) */}
-              <div className={`absolute right-0 sm:right-2 bottom-0 sm:bottom-2 w-[76%] sm:w-[72%] max-w-[320px] bg-white text-slate-800 rounded-2xl shadow-2xl shadow-slate-950/40 border p-3.5 transform rotate-3 hover:rotate-1 transition-all duration-550 z-20 flex flex-col font-sans border-slate-150 ${
-                demoLayout === 'minimal' ? 'border-dashed !shadow-none !bg-slate-50/95 font-mono' : ''
-              }`}>
-                
-                {/* Agency Layout Custom Top Banner Block */}
-                {demoLayout === 'agency' && (
-                  <div className="bg-slate-900 text-white px-2.5 py-1.5 -mx-3.5 -mt-3.5 rounded-t-2xl mb-2 flex items-center justify-between animate-in slide-in-from-top-2 duration-300">
-                    <span className="text-[8.5px] font-extrabold uppercase tracking-widest text-[#0ea5e9]">INTEZ AGENCY</span>
-                    <span className="text-[6.5px] text-slate-400 font-mono">B2B CONTRACTOR</span>
-                  </div>
-                )}
-
-                {/* Invoice Logo & Meta area */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
-                  <div>
-                    <h4 className="text-[10px] font-black tracking-tight text-slate-900 leading-none">INTEZ Systems</h4>
-                    <span className="text-[7.5px] text-slate-400 block mt-0.5 font-mono">DELHI (07) • SELLER</span>
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-[9px] font-black block leading-none transition-colors ${
-                      demoAccent === 'sky' ? 'text-sky-600' :
-                      demoAccent === 'emerald' ? 'text-emerald-600' :
-                      demoAccent === 'indigo' ? 'text-indigo-600' : 'text-rose-600'
-                    }`}>SAMPLE INVOICE</span>
-                    <span className="text-[7px] font-mono text-slate-400 block mt-0.5">#INV-0045</span>
-                  </div>
-                </div>
-
-                {/* Party details */}
-                <div className="grid grid-cols-2 gap-2 mb-2 text-[7.5px] leading-relaxed">
-                  <div>
-                    <span className="font-extrabold text-slate-400 block uppercase tracking-wider text-[6.5px]">Owner</span>
-                    <span className="font-bold text-slate-705 block">INTEZ Dev Group</span>
-                    <span className="text-slate-500 block">Delhi, India</span>
-                  </div>
-                  <div>
-                    <span className="font-extrabold text-slate-400 block uppercase tracking-wider text-[6.5px]">Client</span>
-                    <span className="font-bold text-slate-705 block">Alex Morgan</span>
-                    <span className="text-slate-500 block">San Francisco, USA</span>
-                  </div>
-                </div>
-
-                {/* Itemized Line Table */}
-                <div className="space-y-1 border-t border-b border-slate-100 py-2.5 mb-2.5">
-                  <div className="flex items-center justify-between text-[6.5px] font-black text-slate-400 uppercase tracking-wider">
-                    <span>ITEMIZED DESCRIPTION</span>
-                    <span>TOTAL PRICE</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-[7.5px] text-slate-700">
-                    <div>
-                      <span className="font-bold block">1x Cloud System Setup</span>
-                      <span className="text-[6.5px] text-slate-450 block font-normal">Postgres cluster & API backend</span>
-                    </div>
-                    <span className="font-bold text-slate-900">$800.00</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[7.5px] text-slate-700">
-                    <div>
-                      <span className="font-bold block">2.5h Custom Layout Support</span>
-                      <span className="text-[6.5px] text-slate-450 block font-normal">Tailwind responsive styling</span>
-                    </div>
-                    <span className="font-bold text-slate-900">$305.00</span>
-                  </div>
-                </div>
-
-                {/* Total Summary and Rubber Stamp */}
-                <div className="flex items-start justify-between relative mt-0.5">
-                  {/* Visual Watermarked Dynamic Stamp */}
-                  <div className="absolute top-[-8px] left-1 z-30 pointer-events-none select-none">
-                    {demoStatus === 'PAID' && (
-                      <div className="border-2 border-emerald-500 text-emerald-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-widest leading-none rotate-[-15deg] bg-white/95 shadow-md flex items-center gap-1 animate-in zoom-in-75 duration-300">
-                        <span>PAID ✓</span>
-                      </div>
-                    )}
-                    {demoStatus === 'PENDING' && (
-                      <div className="border-2 border-amber-500 text-amber-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-widest leading-none rotate-[-15deg] bg-white/95 shadow-md flex items-center gap-1 animate-in zoom-in-75 duration-300">
-                        <span>PENDING ⏳</span>
-                      </div>
-                    )}
-                    {demoStatus === 'OVERDUE' && (
-                      <div className="border-2 border-rose-500 text-rose-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-widest leading-none rotate-[-15deg] bg-white/95 shadow-md flex items-center gap-1 animate-in zoom-in-75 duration-300">
-                        <span>OVERDUE ⚠️</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="w-[12px]" /> {/* spacing */}
-
-                  <div className="space-y-0.5 text-right w-1/2">
-                    <div className="flex justify-between items-center text-[7px]">
-                      <span className="text-slate-400 font-semibold">Subtotal:</span>
-                      <span className="font-bold text-slate-700">$1,105.00</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[7px] border-t pt-1 border-slate-100">
-                      <span className="text-slate-900 font-black">Grand Total:</span>
-                      <span className={`font-black text-[8px] transition-colors duration-300 ${
-                        demoAccent === 'sky' ? 'text-sky-600' :
-                        demoAccent === 'emerald' ? 'text-emerald-200' :
-                        demoAccent === 'indigo' ? 'text-indigo-650' : 'text-rose-655'
-                      }`} style={{ color: accentClasses[demoAccent].stroke }}>$1,105.00</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Ink Client Pen Signature Block */}
-                <div className="border-t border-slate-100 pt-1.5 mt-2 flex items-center justify-between">
-                  <div>
-                    <span className="text-[6px] uppercase font-bold text-slate-450 tracking-wider block">Receiver Signature</span>
-                    <svg className="w-14 h-5 mt-0.5 transition-all" viewBox="0 0 100 30" fill="none" style={{ color: accentClasses[demoAccent].stroke }}>
-                      <path d="M10 18 C 18 8, 25 22, 38 12 C 45 4, 52 18, 65 10 C 72 6, 85 18, 92 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                  <div className={`p-0.5 px-1.5 border rounded text-[6px] font-black uppercase tracking-wider leading-none transition-all ${
-                    demoAccent === 'sky' ? 'bg-sky-50 text-sky-600 border-sky-100' :
-                    demoAccent === 'emerald' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                    demoAccent === 'indigo' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                    'bg-rose-50 text-rose-600 border-rose-100'
+                  {/* Crisp Invoice Sheet Container */}
+                  <div className={`w-full bg-white text-slate-800 rounded-2xl shadow-xl p-5 border border-slate-100 transition-all duration-300 relative flex flex-col justify-between aspect-[1/1.25] text-[9px] ${
+                    demoLayout === 'minimal' ? 'border-dashed !shadow-none !bg-slate-50/50 font-mono' : ''
                   }`}>
-                    SECURE LEDGER
+
+                    {/* Agency custom header */}
+                    {demoLayout === 'agency' && (
+                      <div className="bg-slate-900 text-white px-3 py-1.5 -mx-5 -mt-5 rounded-t-2xl mb-3.5 flex items-center justify-between">
+                        <span className="text-[8px] font-black uppercase tracking-wider text-sky-400">INTEZ Agency</span>
+                        <span className="text-[6.5px] text-slate-400 font-mono">B2B CONTRACTOR</span>
+                      </div>
+                    )}
+
+                    {/* Invoice Meta header */}
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2.5">
+                      <div>
+                        <h4 className="text-[10px] font-black tracking-tight text-slate-900 leading-none">
+                          {demoPresets[selectedPreset].company}
+                        </h4>
+                        <span className="text-[7px] text-slate-400 block mt-0.5">
+                          {demoPresets[selectedPreset].location.toUpperCase()} • SELLER
+                        </span>
+                      </div>
+                      <div className="text-right font-sans">
+                        <span className={`text-[8.5px] font-black block leading-none transition-colors ${
+                          demoAccent === 'sky' ? 'text-sky-600' :
+                          demoAccent === 'emerald' ? 'text-emerald-600' :
+                          demoAccent === 'indigo' ? 'text-indigo-600' : 'text-rose-600'
+                        }`}>TAX INVOICE</span>
+                        <span className="text-[7px] font-mono text-slate-455 block mt-0.5">
+                          #{demoPresets[selectedPreset].invoiceNo}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Parties details */}
+                    <div className="grid grid-cols-2 gap-2 mb-2.5 text-[7.5px] leading-relaxed">
+                      <div>
+                        <span className="font-extrabold text-slate-400 block uppercase tracking-wider text-[6px]">From Vendor</span>
+                        <span className="font-bold text-slate-700 block">{demoPresets[selectedPreset].company}</span>
+                        <span className="text-slate-500 block">{demoPresets[selectedPreset].location}</span>
+                      </div>
+                      <div>
+                        <span className="font-extrabold text-slate-400 block uppercase tracking-wider text-[6px]">Bill To Client</span>
+                        <span className="font-bold text-slate-700 block">{demoPresets[selectedPreset].client}</span>
+                        <span className="text-slate-500 block">{demoPresets[selectedPreset].clientLoc}</span>
+                      </div>
+                    </div>
+
+                    {/* Items table lines */}
+                    <div className="space-y-2 border-t border-b border-slate-100 py-2.5 mb-2.5">
+                      <div className="flex items-center justify-between text-[6.5px] font-bold text-slate-400 uppercase tracking-wider">
+                        <span>Description</span>
+                        <span className="text-right">Amount</span>
+                      </div>
+                      
+                      {demoPresets[selectedPreset].items.map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-slate-700">
+                          <div>
+                            <span className="font-bold block text-left">{item.name}</span>
+                            <span className="text-[7px] text-slate-400 block font-normal text-left">{item.desc}</span>
+                          </div>
+                          <span className="font-bold text-slate-900">
+                            {demoPresets[selectedPreset].currency}{item.price.toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Stamp and Total */}
+                    <div className="flex items-start justify-between relative mt-1">
+                      
+                      {/* Watermarked Rubber Stamp */}
+                      <div className="absolute top-[-8px] left-1 z-30 pointer-events-none select-none">
+                        {demoStatus === 'PAID' && (
+                          <div className="border-2 border-emerald-500 text-emerald-600 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest leading-none rotate-[-12deg] bg-white/95 shadow-md">
+                            PAID ✓
+                          </div>
+                        )}
+                        {demoStatus === 'PENDING' && (
+                          <div className="border-2 border-amber-500 text-amber-600 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest leading-none rotate-[-12deg] bg-white/95 shadow-md">
+                            PENDING ⏳
+                          </div>
+                        )}
+                        {demoStatus === 'OVERDUE' && (
+                          <div className="border-2 border-rose-500 text-rose-600 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest leading-none rotate-[-12deg] bg-white/95 shadow-md">
+                            OVERDUE ⚠️
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="w-10" />
+
+                      <div className="space-y-1 text-right w-3/5 ml-auto">
+                        <div className="flex justify-between items-center text-[7.5px]">
+                          <span className="text-slate-400 font-semibold">Subtotal:</span>
+                          <span className="font-bold text-slate-700">
+                            {demoPresets[selectedPreset].currency}
+                            {demoPresets[selectedPreset].items.reduce((sum, item) => sum + item.price, 0).toFixed(2)}
+                          </span>
+                        </div>
+                        {demoPresets[selectedPreset].taxRate > 0 && (
+                          <div className="flex justify-between items-center text-[7.5px]">
+                            <span className="text-slate-400 font-semibold">{demoPresets[selectedPreset].taxMode} Split (18%):</span>
+                            <span className="font-bold text-slate-700">
+                              {demoPresets[selectedPreset].currency}
+                              {(demoPresets[selectedPreset].items.reduce((sum, item) => sum + item.price, 0) * demoPresets[selectedPreset].taxRate).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center text-[7.5px] border-t pt-1 border-slate-100">
+                          <span className="text-slate-900 font-black">Grand Total:</span>
+                          <span className="font-black text-[9px] transition-colors duration-300" style={{ color: accentClasses[demoAccent].stroke }}>
+                            {demoPresets[selectedPreset].currency}
+                            {(
+                              demoPresets[selectedPreset].items.reduce((sum, item) => sum + item.price, 0) * 
+                              (1 + demoPresets[selectedPreset].taxRate)
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Receiver Signature Block */}
+                    <div className="border-t border-slate-100 pt-2.5 mt-2.5 flex items-center justify-between">
+                      <div>
+                        <span className="text-[6px] uppercase font-bold text-slate-400 tracking-wider block">Authorized Signatory</span>
+                        <svg className="w-16 h-5 mt-0.5 transition-colors duration-300" viewBox="0 0 100 30" fill="none" style={{ color: accentClasses[demoAccent].stroke }}>
+                          <path d="M10 18 C 18 8, 25 22, 38 12 C 45 4, 52 18, 65 10 C 72 6, 85 18, 92 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                      <div className={`px-2 py-1 border rounded text-[6px] font-black uppercase tracking-wider leading-none transition-colors duration-300 ${
+                        demoAccent === 'sky' ? 'bg-sky-50 text-sky-600 border-sky-100' :
+                        demoAccent === 'emerald' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                        demoAccent === 'indigo' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                        'bg-rose-50 text-rose-600 border-rose-100'
+                      }`}>
+                        SECURE LEDGER
+                      </div>
+                    </div>
+
                   </div>
+
                 </div>
 
               </div>
 
-            </div>
             </div>
 
           </motion.div>
