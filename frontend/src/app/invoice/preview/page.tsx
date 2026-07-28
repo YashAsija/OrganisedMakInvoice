@@ -82,13 +82,13 @@ function InvoicePreviewContent() {
       <div className="w-full max-w-[794px] flex items-center justify-between mb-6 bg-white dark:bg-zinc-900 p-4 border border-slate-205 dark:border-zinc-800 rounded-2xl shadow-xs">
         <div>
           <h1 className="text-xs font-black uppercase tracking-wider text-slate-805 dark:text-white">Document Preview Portal</h1>
-          <p className="text-[10px] text-slate-400 mt-0.5">{invoice.invoiceType.toUpperCase()} #{invoice.invoiceNumber}</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">{invoice.invoiceType?.toUpperCase() ?? ''} #{invoice.invoiceNumber}</p>
         </div>
         <div className="flex gap-2 shrink-0">
           <button
             onClick={async () => {
               try {
-                await exportInvoicePDFAsync(invoice, profile || {}, 'save', invoice.embeddedTemplate || undefined);
+                await exportInvoicePDFAsync(invoice, (profile ?? {}) as BusinessProfile, 'save', invoice.embeddedTemplate || undefined);
               } catch (err: any) {
                 alert('Failed to export PDF: ' + (err.message || err.toString()));
               }
@@ -128,7 +128,7 @@ function InvoicePreviewContent() {
           <LivePreview
             template={invoice.embeddedTemplate || getDefaultTemplatePreset()}
             invoiceData={invoice}
-            businessProfile={profile || {}}
+            businessProfile={(profile ?? {}) as Partial<BusinessProfile>}
             currencySymbol={currencySymbol}
             isInteractive={false}
             clients={[]}

@@ -1346,7 +1346,7 @@ export default function InvoiceModal({
   const triggerWhatsAppShare = (inv: Invoice) => {
     const sym = activeProfile.currency === 'INR' ? '₹' : (activeProfile.currency === 'USD' ? '$' : activeProfile.currency + ' ');
     const previewUrl = `${window.location.origin}/invoice/preview?id=${inv.id}`;
-    const message = `Hi ${inv.clientName || 'Client'}, please find your ${inv.invoiceType.toUpperCase()} ${inv.invoiceNumber} from ${activeProfile.name || 'us'} for ${sym}${inv.grandTotal.toFixed(2)} (Due: ${inv.dueDate}). You can view the document preview here:\n${previewUrl}\n\nThank you!`;
+    const message = `Hi ${inv.clientName || 'Client'}, please find your ${inv.invoiceType?.toUpperCase() ?? 'INVOICE'} ${inv.invoiceNumber} from ${activeProfile.name || 'us'} for ${sym}${inv.grandTotal.toFixed(2)} (Due: ${inv.dueDate}). You can view the document preview here:\n${previewUrl}\n\nThank you!`;
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
@@ -1354,8 +1354,8 @@ export default function InvoiceModal({
   const triggerEmailShare = (inv: Invoice) => {
     const sym = activeProfile.currency === 'INR' ? '₹' : (activeProfile.currency === 'USD' ? '$' : activeProfile.currency + ' ');
     const previewUrl = `${window.location.origin}/invoice/preview?id=${inv.id}`;
-    const subject = `${inv.invoiceType.toUpperCase()} ${inv.invoiceNumber} from ${activeProfile.name}`;
-    const body = `Hi ${inv.clientName},\n\nPlease find details for your ${inv.invoiceType.toUpperCase()} ${inv.invoiceNumber} for ${sym}${inv.grandTotal.toFixed(2)} at the following link:\n\n${previewUrl}\n\nSummary:\n- Number: ${inv.invoiceNumber}\n- Amount: ${sym}${inv.grandTotal.toFixed(2)}\n- Issue Date: ${inv.date}\n- Due Date: ${inv.dueDate}\n\nThank you for your business.\n\nWarm regards,\n${activeProfile.name}${activeProfile.phone ? '\nTel: ' + activeProfile.phone : ''}${activeProfile.email ? '\nEmail: ' + activeProfile.email : ''}`;
+    const subject = `${inv.invoiceType?.toUpperCase() ?? 'INVOICE'} ${inv.invoiceNumber} from ${activeProfile.name}`;
+    const body = `Hi ${inv.clientName},\n\nPlease find details for your ${inv.invoiceType?.toUpperCase() ?? 'INVOICE'} ${inv.invoiceNumber} for ${sym}${inv.grandTotal.toFixed(2)} at the following link:\n\n${previewUrl}\n\nSummary:\n- Number: ${inv.invoiceNumber}\n- Amount: ${sym}${inv.grandTotal.toFixed(2)}\n- Issue Date: ${inv.date}\n- Due Date: ${inv.dueDate}\n\nThank you for your business.\n\nWarm regards,\n${activeProfile.name}${activeProfile.phone ? '\nTel: ' + activeProfile.phone : ''}${activeProfile.email ? '\nEmail: ' + activeProfile.email : ''}`;
     const mailto = `mailto:${inv.clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailto;
   };
@@ -3306,7 +3306,7 @@ export default function InvoiceModal({
                     Document Saved Successfully!
                   </h3>
                   <p className="text-[10px] md:text-[11px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">
-                    {savedInvoiceForPreview.invoiceType.toUpperCase()} #{savedInvoiceForPreview.invoiceNumber} for {savedInvoiceForPreview.clientName}
+                    {savedInvoiceForPreview.invoiceType?.toUpperCase() ?? 'INVOICE'} #{savedInvoiceForPreview.invoiceNumber} for {savedInvoiceForPreview.clientName}
                   </p>
                 </div>
               </div>
