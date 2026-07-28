@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown, Loader2, ChevronDown } from 'lucide-react';
+import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown, Loader2, ChevronDown, Smartphone, Mail, FileDown } from 'lucide-react';
 import { Invoice, TaxClassification, InvoiceItem, InvoiceStatus, DiscountType, PresetItem, ClientProfile, RecurringInterval, BusinessProfile, InvoiceTemplate } from '../types';
 import { EditableField } from './EditableField';
 import { exportInvoicePDFAsync } from '../lib/pdfExporter';
@@ -82,12 +82,14 @@ export default function InvoiceModal({
 }: InvoiceModalProps) {
   // GUI Preview and Form Edit State
   const [activeMode, setActiveMode] = useState<'edit' | 'preview' | 'editable'>('editable');
+  const [savedInvoiceForPreview, setSavedInvoiceForPreview] = useState<Invoice | null>(null);
 
   // Master Registry Client Database loader
   const [registryClients, setRegistryClients] = useState<any[]>([]);
 
   useEffect(() => {
     if (isOpen) {
+      setSavedInvoiceForPreview(null);
       const cached = localStorage.getItem('makbills_masters_vendors');
       if (cached) {
         try {
@@ -145,6 +147,7 @@ export default function InvoiceModal({
   const [activeTemplate, setActiveTemplate] = useState<InvoiceTemplate>(getDefaultTemplatePreset());
   const [activeProfile, setActiveProfile] = useState<BusinessProfile>(profile);
   const [modalPreviewScale, setModalPreviewScale] = useState(0.88);
+  const [successPreviewScale, setSuccessPreviewScale] = useState(0.82);
 
   useEffect(() => {
     const handleResize = () => {
@@ -153,6 +156,18 @@ export default function InvoiceModal({
         setModalPreviewScale(fitScale);
       } else {
         setModalPreviewScale(0.88);
+      }
+
+      if (window.innerWidth < 768) {
+        const padding = 32; // 16px padding on left & right
+        const fitScale = Math.max(0.35, Math.min(0.82, (window.innerWidth - padding) / 794));
+        setSuccessPreviewScale(fitScale);
+      } else if (window.innerWidth < 1024) { // less than lg
+        const padding = 64;
+        const fitScale = Math.max(0.4, Math.min(0.82, (window.innerWidth - 380 - padding) / 794));
+        setSuccessPreviewScale(fitScale);
+      } else {
+        setSuccessPreviewScale(0.82);
       }
     };
     handleResize();
@@ -1328,6 +1343,168 @@ export default function InvoiceModal({
     onClose();
   };
 
+  const triggerWhatsAppShare = (inv: Invoice) => {
+    const sym = activeProfile.currency === 'INR' ? '₹' : (activeProfile.currency === 'USD' ? '$' : activeProfile.currency + ' ');
+    const previewUrl = `${window.location.origin}/invoice/preview?id=${inv.id}`;
+    const message = `Hi ${inv.clientName || 'Client'}, please find your ${inv.invoiceType.toUpperCase()} ${inv.invoiceNumber} from ${activeProfile.name || 'us'} for ${sym}${inv.grandTotal.toFixed(2)} (Due: ${inv.dueDate}). You can view the document preview here:\n${previewUrl}\n\nThank you!`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
+
+  const triggerEmailShare = (inv: Invoice) => {
+    const sym = activeProfile.currency === 'INR' ? '₹' : (activeProfile.currency === 'USD' ? '$' : activeProfile.currency + ' ');
+    const previewUrl = `${window.location.origin}/invoice/preview?id=${inv.id}`;
+    const subject = `${inv.invoiceType.toUpperCase()} ${inv.invoiceNumber} from ${activeProfile.name}`;
+    const body = `Hi ${inv.clientName},\n\nPlease find details for your ${inv.invoiceType.toUpperCase()} ${inv.invoiceNumber} for ${sym}${inv.grandTotal.toFixed(2)} at the following link:\n\n${previewUrl}\n\nSummary:\n- Number: ${inv.invoiceNumber}\n- Amount: ${sym}${inv.grandTotal.toFixed(2)}\n- Issue Date: ${inv.date}\n- Due Date: ${inv.dueDate}\n\nThank you for your business.\n\nWarm regards,\n${activeProfile.name}${activeProfile.phone ? '\nTel: ' + activeProfile.phone : ''}${activeProfile.email ? '\nEmail: ' + activeProfile.email : ''}`;
+    const mailto = `mailto:${inv.clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailto;
+  };
+
+  const handleExportMSWord = (inv: Invoice) => {
+    const statusUpper = (inv.status || 'PENDING').toUpperCase();
+    let statusBg = '#dcfce7'; // light green
+    let statusTextColor = '#15803d'; // dark green
+    if (statusUpper === 'PENDING') {
+      statusBg = '#fef3c7'; // light amber
+      statusTextColor = '#b45309'; // dark amber
+    } else if (statusUpper === 'OVERDUE' || statusUpper === 'UNPAID') {
+      statusBg = '#fee2e2'; // light red
+      statusTextColor = '#b91c1c'; // dark red
+    }
+
+    const fmt = (n: number, symStr: string) => {
+      return symStr + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    };
+
+    const docHTML = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head><title>Invoice ${inv.invoiceNumber}</title>
+      <style>
+        body { font-family: "Segoe UI", Arial, sans-serif; margin: 40px; color: #0f172a; line-height: 1.5; font-size: 13px; }
+        .header-table { width: 100%; border: none; margin-bottom: 30px; }
+        .biz-title { font-size: 26px; color: #0284c7; font-weight: bold; margin-bottom: 2px; }
+        .doc-title { font-size: 28px; text-align: right; color: #334155; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .status-badge { display: inline-block; padding: 4px 10px; background-color: ${statusBg}; color: ${statusTextColor}; font-size: 11px; font-weight: bold; border-radius: 4px; text-transform: uppercase; text-align: center; }
+        .details-table { width: 100%; margin-top: 20px; border: none; }
+        .details-card { background-color: #f8fafc; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; width: 48%; vertical-align: top; }
+        .items-table { width: 100%; margin-top: 35px; border-collapse: collapse; }
+        .items-table th { background-color: #0f172a; color: #ffffff; padding: 12px; border: 1px solid #1e293b; text-align: left; font-size: 11px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; }
+        .items-table td { border-bottom: 1px solid #e2e8f0; padding: 12px; font-size: 12px; color: #334155; }
+        .items-table tr.stripe { background-color: #f8fafc; }
+        .totals-table { width: 100%; margin-top: 30px; border: none; }
+        .totals-cell { text-align: right; font-size: 13px; color: #475569; padding: 4px; }
+        .grand-total-text { font-size: 18px; color: #0284c7; font-weight: bold; }
+        .footer-note { margin-top: 50px; padding-top: 15px; border-top: 1px solid #e2e8f0; font-style: italic; color: #64748b; font-size: 11px; }
+        .meta-label { font-weight: bold; color: #475569; }
+        .meta-val { color: #0f172a; }
+      </style>
+      </head>
+      <body>
+        <table class="header-table">
+          <tr>
+            <td>
+              <div class="biz-title">${activeProfile.name || 'My Business'}</div>
+              <div>${activeProfile.address || ''}</div>
+              <div>${activeProfile.email || ''}</div>
+            </td>
+            <td style="text-align: right; vertical-align: top;">
+              <div class="doc-title">${inv.invoiceType || 'INVOICE'}</div>
+              <div style="margin-top: 8px;"><span class="status-badge">${statusUpper}</span></div>
+            </td>
+          </tr>
+        </table>
+        
+        <table class="details-table">
+          <tr>
+            <td class="details-card">
+              <div style="font-weight: bold; margin-bottom: 5px; color: #475569;">Billed To:</div>
+              <div style="font-size: 15px; font-weight: bold;">${inv.clientName}</div>
+              <div>${inv.clientAddress || ''}</div>
+              <div>${inv.clientEmail || ''}</div>
+            </td>
+            <td style="width: 4%;"></td>
+            <td class="details-card">
+              <div style="font-weight: bold; margin-bottom: 5px; color: #475569;">Document Details:</div>
+              <div><span class="meta-label">Invoice No:</span> <span class="meta-val">${inv.invoiceNumber}</span></div>
+              <div><span class="meta-label">Date:</span> <span class="meta-val">${inv.date}</span></div>
+              <div><span class="meta-label">Due Date:</span> <span class="meta-val">${inv.dueDate}</span></div>
+              ${inv.poNumber ? `<div><span class="meta-label">P.O. No:</span> <span class="meta-val">${inv.poNumber}</span></div>` : ''}
+            </td>
+          </tr>
+        </table>
+
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Item & Description</th>
+              <th style="text-align: right; width: 100px;">Rate</th>
+              <th style="text-align: center; width: 80px;">Qty</th>
+              <th style="text-align: right; width: 120px;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${inv.items.map((item, idx) => `
+              <tr class="${idx % 2 === 1 ? 'stripe' : ''}">
+                <td>
+                  <div style="font-weight: bold;">${item.name}</div>
+                  ${item.description ? `<div style="font-size: 11px; color: #64748b; margin-top: 2px;">${item.description}</div>` : ''}
+                </td>
+                <td style="text-align: right;">${fmt(item.rate, '')}</td>
+                <td style="text-align: center;">${item.quantity}</td>
+                <td style="text-align: right; font-weight: bold;">${fmt(item.rate * item.quantity, '')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <table class="totals-table">
+          <tr>
+            <td style="width: 50%;"></td>
+            <td>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td class="totals-cell">Subtotal:</td>
+                  <td class="totals-cell" style="width: 120px; font-weight: bold;">${fmt(inv.subtotal, '')}</td>
+                </tr>
+                ${inv.discountTotal ? `
+                <tr>
+                  <td class="totals-cell">Discount:</td>
+                  <td class="totals-cell" style="color: #b91c1c;">-${fmt(inv.discountTotal, '')}</td>
+                </tr>
+                ` : ''}
+                <tr>
+                  <td class="totals-cell">Tax Total:</td>
+                  <td class="totals-cell" style="font-weight: bold;">${fmt(inv.taxTotal, '')}</td>
+                </tr>
+                <tr>
+                  <td class="totals-cell" style="padding-top: 10px;"><span class="grand-total-text">Grand Total:</span></td>
+                  <td class="totals-cell" style="padding-top: 10px; width: 120px;"><span class="grand-total-text">${fmt(inv.grandTotal, '')}</span></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        ${inv.notes ? `
+          <div class="footer-note">
+            <div style="font-weight: bold; margin-bottom: 4px; color: #475569;">Footnotes:</div>
+            <div>${inv.notes}</div>
+          </div>
+        ` : ''}
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff' + docHTML], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Invoice_${inv.invoiceNumber}.doc`;
+    a.click();
+    URL.revokeObjectURL(url);
+    emitNotification('Word Document Downloaded', `Document #${inv.invoiceNumber} exported as MS Word doc.`, 'success');
+  };
+
   const handleSaveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -1421,11 +1598,17 @@ export default function InvoiceModal({
       }
     }
 
-    onSave({
-      id: invoice ? invoice.id : `inv_${Math.random().toString(36).substr(2, 9)}`,
+    let finalInvoiceNumber = invoiceNumber;
+    if (status === 'draft') {
+      const config = getDocTypeConfig(invoiceType);
+      finalInvoiceNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, invoiceType);
+    }
+
+    const finalInvoiceObj: Invoice = {
+      id: draftIdRef.current,
       userId: invoice ? invoice.userId : 'local',
       invoiceType,
-      invoiceNumber,
+      invoiceNumber: finalInvoiceNumber,
       referenceNumber: referenceNumber.trim() || undefined,
       poNumber: poNumber.trim() || undefined,
       deliveryNote: deliveryNote.trim() || undefined,
@@ -1453,7 +1636,7 @@ export default function InvoiceModal({
       discountTotal: parseFloat((totalItemDiscounts + calculatedDiscountTotal).toFixed(2)),
       taxTotal: roundedTaxTotal,
       grandTotal: calculatedGrandTotal,
-      status,
+      status: status === 'draft' ? 'pending' : status,
       paidDate: status === 'paid' ? (invoice?.paidDate || new Date().toISOString().split('T')[0]) : undefined,
       items,
       createdAt: invoice ? invoice.createdAt : new Date().toISOString(),
@@ -1492,11 +1675,14 @@ export default function InvoiceModal({
       shippedToState: shippedToState.trim() || undefined,
       shippedToGstin: shippedToGstin.trim() || undefined,
       shippedToAddress: shippedToAddress.trim() || undefined
-    });
+    };
+
+    onSave(finalInvoiceObj);
 
     // ─── Draft cleanup on successful submit ────────────────────────────────
     // Remove the draft from localStorage so it doesn't show as resumable
     try {
+      localStorage.removeItem('makbills_pending_resume_draft');
       const storageKey = getStorageKey();
       const raw = localStorage.getItem(storageKey);
       if (raw) {
@@ -1528,7 +1714,7 @@ export default function InvoiceModal({
       'success'
     );
 
-    onClose();
+    setSavedInvoiceForPreview(finalInvoiceObj);
   };
 
   if (!isOpen) return null;
@@ -1666,7 +1852,7 @@ export default function InvoiceModal({
                 <ShoppingBag className="w-4 h-4 relative z-10" strokeWidth={2.5} />
               </div>
               <div className="flex flex-col">
-                <h2 className="text-sm md:text-base font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+                <h2 className="text-sm md:text-base font-bold text-slate-805 dark:text-white tracking-tight leading-tight">
                   {invoice ? 'Edit Document' : 'Quick Bill'}
                 </h2>
                 <div className="flex items-center mt-0.5">
@@ -3087,17 +3273,6 @@ export default function InvoiceModal({
             </button>
             <button
               type="button"
-              onClick={handleDirectExportPDF}
-              className="flex px-3 sm:px-5 py-2.5 sm:py-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-medium items-center justify-center gap-1.5 transition-all cursor-pointer"
-              title="Download PDF directly without saving yet"
-            >
-              <svg className="w-4 h-4 text-rose-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <span className="hidden sm:inline">Export PDF Direct</span>
-            </button>
-            <button
-              type="button"
               onClick={handleSaveAsDraft}
               className="flex px-3 sm:px-5 py-2.5 sm:py-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-medium items-center justify-center gap-1.5 transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
               title="Save as Draft"
@@ -3110,12 +3285,176 @@ export default function InvoiceModal({
               className="flex-1 sm:flex-none justify-center px-3 sm:px-6 py-2.5 sm:py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-sky-950/20 active:scale-95 cursor-pointer"
             >
               <Check className="w-4 h-4 shrink-0" />
-              <span className="whitespace-nowrap">Save Invoice</span>
+              <span className="whitespace-nowrap">Save</span>
             </button>
           </div>
 
         </form>
       </div>
+
+      {savedInvoiceForPreview && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-0 md:p-4 bg-slate-900/75 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full h-full md:h-[92dvh] max-w-full md:max-w-5xl lg:max-w-6xl xl:max-w-7xl bg-white dark:bg-zinc-900 rounded-none md:rounded-3xl overflow-hidden shadow-2xl border-none md:border md:border-slate-150 dark:md:border-zinc-800 flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-4 md:p-6 border-b border-slate-100 dark:border-zinc-800 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 flex items-center justify-between relative">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner shrink-0">
+                  <Check className="w-5 h-5" strokeWidth={3} />
+                </div>
+                <div>
+                  <h3 className="text-sm md:text-base font-black text-slate-805 dark:text-white uppercase tracking-wide">
+                    Document Saved Successfully!
+                  </h3>
+                  <p className="text-[10px] md:text-[11px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">
+                    {savedInvoiceForPreview.invoiceType.toUpperCase()} #{savedInvoiceForPreview.invoiceNumber} for {savedInvoiceForPreview.clientName}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setSavedInvoiceForPreview(null);
+                  onClose();
+                }}
+                className="text-[10px] font-black uppercase tracking-widest text-slate-600 hover:text-slate-950 dark:text-zinc-400 dark:hover:text-white cursor-pointer px-4 py-2 rounded-xl bg-slate-100 dark:bg-zinc-800 transition-all hover:scale-105 active:scale-95 shrink-0"
+              >
+                Close Dialog
+              </button>
+            </div>
+
+            {/* Split Content */}
+            <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+              {/* Left pane: Actions & Stats */}
+              <div className="w-full md:w-[380px] shrink-0 border-b md:border-b-0 md:border-r border-slate-100 dark:border-zinc-800 p-4 md:p-6 flex flex-col justify-between overflow-y-auto max-h-[45vh] md:max-h-none space-y-4 md:space-y-6 order-2 md:order-1">
+                <div className="space-y-6">
+                  {/* Summary card */}
+                  <div className="hidden md:block bg-slate-50 dark:bg-zinc-950 p-4 rounded-2xl border border-slate-100 dark:border-zinc-900 space-y-3">
+                    <span className="block text-[10px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
+                      Billing Summary
+                    </span>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between text-slate-500 dark:text-zinc-400 font-medium">
+                        <span>Subtotal</span>
+                        <span>{currencySymbol}{savedInvoiceForPreview.subtotal.toFixed(2)}</span>
+                      </div>
+                      {savedInvoiceForPreview.discountTotal > 0 && (
+                        <div className="flex justify-between text-rose-500 font-medium">
+                          <span>Discount</span>
+                          <span>-{currencySymbol}{savedInvoiceForPreview.discountTotal.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-slate-500 dark:text-zinc-400 font-medium">
+                        <span>Tax Total</span>
+                        <span>{currencySymbol}{savedInvoiceForPreview.taxTotal.toFixed(2)}</span>
+                      </div>
+                      <div className="border-t border-slate-200 dark:border-zinc-800 pt-3 flex justify-between font-black text-slate-805 text-sm dark:text-white">
+                        <span>Grand Total</span>
+                        <span className="text-sky-600 dark:text-sky-400 font-mono text-base">
+                          {currencySymbol}{savedInvoiceForPreview.grandTotal.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dispatch / Share Actions */}
+                  <div className="space-y-2.5">
+                    <span className="block text-[9px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest">
+                      Share & Dispatch
+                    </span>
+                    
+                    <button
+                      type="button"
+                      onClick={() => triggerWhatsAppShare(savedInvoiceForPreview)}
+                      className="w-full flex items-center justify-center gap-2 p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98 cursor-pointer"
+                    >
+                      <Smartphone className="w-4 h-4 shrink-0" />
+                      Share via WhatsApp
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => triggerEmailShare(savedInvoiceForPreview)}
+                      className="w-full flex items-center justify-center gap-2 p-3 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98 cursor-pointer"
+                    >
+                      <Mail className="w-4 h-4 shrink-0" />
+                      Dispatch via Email
+                    </button>
+                  </div>
+
+                  {/* Download Options */}
+                  <div className="space-y-2.5">
+                    <span className="block text-[9px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest">
+                      Local Export
+                    </span>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => exportInvoicePDFAsync(savedInvoiceForPreview, activeProfile, 'save', activeTemplate)}
+                        className="flex items-center justify-center gap-1.5 p-2.5 bg-slate-100 dark:bg-zinc-800 text-slate-805 dark:text-white hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-xl text-xs font-bold cursor-pointer transition-all border border-slate-250 dark:border-zinc-700/80"
+                      >
+                        <FileDown className="w-4 h-4 text-rose-500 shrink-0" />
+                        <span>Export PDF</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleExportMSWord(savedInvoiceForPreview)}
+                        className="flex items-center justify-center gap-1.5 p-2.5 bg-slate-100 dark:bg-zinc-800 text-slate-805 dark:text-white hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-xl text-xs font-bold cursor-pointer transition-all border border-slate-250 dark:border-zinc-700/80"
+                      >
+                        <FileDown className="w-4 h-4 text-blue-500 shrink-0" />
+                        <span>Word Doc</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 dark:border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSavedInvoiceForPreview(null);
+                      onClose();
+                    }}
+                    className="w-full py-3 bg-slate-805 hover:bg-slate-750 text-white dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-xl text-xs font-bold transition-all active:scale-[0.97] cursor-pointer"
+                  >
+                    Finish and Close
+                  </button>
+                </div>
+              </div>
+
+              {/* Right pane: Document Preview */}
+              <div className="flex-1 bg-slate-50 dark:bg-zinc-950 p-4 md:p-6 overflow-auto flex justify-center items-start order-1 md:order-2">
+                <div 
+                  className="bg-white shadow-xl border border-slate-200 dark:border-zinc-800 relative shrink-0"
+                  style={{ 
+                    width: 794 * successPreviewScale, 
+                    height: 1123 * successPreviewScale, 
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div
+                    className="absolute top-0 left-0 origin-top-left"
+                    style={{
+                      width: '794px',
+                      height: '1123px',
+                      transform: `scale(${successPreviewScale})`,
+                    }}
+                  >
+                    <LivePreview
+                      template={activeTemplate}
+                      invoiceData={savedInvoiceForPreview}
+                      businessProfile={activeProfile}
+                      currencySymbol={currencySymbol}
+                      isInteractive={false}
+                      clients={[]}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
