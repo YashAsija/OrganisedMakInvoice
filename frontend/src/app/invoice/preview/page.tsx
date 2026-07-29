@@ -9,6 +9,7 @@ import { exportInvoicePDFAsync } from '../../../lib/pdfExporter';
 function InvoicePreviewContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
+  const autoPrint = searchParams.get('print') === '1';
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,6 +53,14 @@ function InvoicePreviewContent() {
 
     fetchInvoice();
   }, [id]);
+
+  // Auto-trigger print dialog when ?print=1 is in the URL
+  useEffect(() => {
+    if (autoPrint && invoice && !loading) {
+      const timer = setTimeout(() => window.print(), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [autoPrint, invoice, loading]);
 
   if (loading) {
     return (

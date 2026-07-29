@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown, Loader2, ChevronDown, Smartphone, Mail, FileDown } from 'lucide-react';
+import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown, Loader2, ChevronDown, Smartphone, Mail, FileDown, Printer } from 'lucide-react';
 import { Invoice, TaxClassification, InvoiceItem, InvoiceStatus, DiscountType, PresetItem, ClientProfile, RecurringInterval, BusinessProfile, InvoiceTemplate } from '../types';
 import { EditableField } from './EditableField';
 import { exportInvoicePDFAsync } from '../lib/pdfExporter';
@@ -3413,6 +3413,15 @@ export default function InvoiceModal({
                       >
                         <FileDown className="w-4 h-4 text-blue-500 shrink-0" />
                         <span>Word Doc</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => window.open(`${window.location.origin}/invoice/preview?id=${savedInvoiceForPreview.id}&print=1`, '_blank')}
+                        className="col-span-2 flex items-center justify-center gap-1.5 p-2.5 bg-slate-100 dark:bg-zinc-800 text-slate-805 dark:text-white hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-xl text-xs font-bold cursor-pointer transition-all border border-slate-250 dark:border-zinc-700/80"
+                      >
+                        <Printer className="w-4 h-4 text-violet-500 shrink-0" />
+                        <span>Print / Browser Preview</span>
                       </button>
                     </div>
                   </div>
