@@ -1606,7 +1606,7 @@ export default function InvoiceModal({
 
     const finalInvoiceObj: Invoice = {
       id: draftIdRef.current,
-      userId: invoice ? invoice.userId : 'local',
+      userId: userIdRef.current || (invoice ? invoice.userId : 'local'),
       invoiceType,
       invoiceNumber: finalInvoiceNumber,
       referenceNumber: referenceNumber.trim() || undefined,

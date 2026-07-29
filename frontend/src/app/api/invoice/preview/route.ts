@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// IMPORTANT: SUPABASE_SERVICE_ROLE_KEY must be set in Vercel env vars.
+// Without it the anon key is used, RLS blocks all reads (no user session in API routes),
+// and every preview returns "Invoice not found".
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // Helper: derive currency code from symbol (mirrors App.tsx logic)
 const deriveCurrencyCode = (sym: string | null | undefined, fallback: string): string => {
@@ -27,6 +30,12 @@ export async function GET(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: 'Missing invoice id' }, { status: 400 });
+    }
+
+    // Guard: service role key is required to bypass RLS for public preview reads.
+    if (!supabaseServiceKey) {
+      console.error('[get-invoice-preview] SUPABASE_SERVICE_ROLE_KEY is not set. Add it to Vercel environment variables.');
+      return NextResponse.json({ error: 'Server misconfiguration: preview service is unavailable.' }, { status: 503 });
     }
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
