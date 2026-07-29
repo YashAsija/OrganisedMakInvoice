@@ -1883,6 +1883,11 @@ export default function App() {
   };
 
   const handlePublicNavigate = (path: string) => {
+    // /signup and /login are real Next.js pages — do a hard navigation
+    if (path === '/signup' || path === '/login') {
+      window.location.href = path;
+      return;
+    }
     if (path.includes('#')) {
       const [base, hash] = path.split('#');
       setPublicPath(base || '/');

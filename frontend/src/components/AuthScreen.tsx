@@ -14,7 +14,9 @@ import {
   ArrowRight,
   ShieldCheck,
   Eye,
-  EyeOff
+  EyeOff,
+  Zap,
+  BarChart2
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { BusinessProfile } from '../types';
@@ -285,445 +287,422 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
 
 
 
+
   return (
-    <div className={`min-h-screen w-full flex flex-col md:flex-row transition-all duration-300 font-sans ${
-      theme === 'dark' ? 'bg-neutral-955 text-slate-105' : 'bg-slate-50 text-slate-900'
+    <div style={{ fontFamily: "'IBM Plex Sans', sans-serif" }} className={`min-h-screen w-full flex flex-col md:flex-row transition-all duration-300 ${
+      theme === 'dark' ? 'bg-[#0b1329] text-slate-100' : 'bg-[#f4f9ff] text-slate-900'
     }`}>
-      
-      {/* Left side: Premium Minimalist Marketing Panel */}
-      <div className="hidden md:flex md:w-[45%] bg-[#080808] p-16 text-white flex-col justify-between relative overflow-hidden border-r border-neutral-900/60">
-        {/* Soft Modern Mesh Glows */}
-        <div className="absolute -top-[10%] -left-[10%] w-[500px] h-[500px] bg-sky-500/8 rounded-full blur-[130px] pointer-events-none" />
-        <div className="absolute -bottom-[10%] -right-[10%] w-[500px] h-[500px] bg-indigo-500/8 rounded-full blur-[130px] pointer-events-none" />
-        
-        {/* Logo Brand */}
-        <div className="flex items-center gap-3 cursor-pointer z-10 hover:opacity-90 transition-opacity" onClick={() => window.location.href = '/'}>
-          <img src="/logo.svg" alt="MakInvoices Logo" className="w-12 h-12 object-contain drop-shadow-md shrink-0" />
+
+      {/* Google Font imports */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap');
+        .auth-input {
+          width: 100%;
+          padding: 11px 14px;
+          border-radius: 10px;
+          border: 1.5px solid ${theme === 'dark' ? '#223269' : '#bae6fd'};
+          background: ${theme === 'dark' ? '#111a36' : '#ffffff'};
+          color: ${theme === 'dark' ? '#f8fafc' : '#0f172a'};
+          font-family: 'IBM Plex Sans', sans-serif;
+          font-size: 0.88rem;
+          outline: none;
+          transition: border 0.18s, box-shadow 0.18s;
+        }
+        .auth-input:focus {
+          border-color: #0284c7;
+          box-shadow: 0 0 0 3px rgba(2,132,199,0.12);
+        }
+        .auth-input::placeholder { color: ${theme === 'dark' ? '#94a3b8' : '#94a3b8'}; }
+        .auth-label {
+          display: block;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.68rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: ${theme === 'dark' ? '#64748b' : '#64748b'};
+          margin-bottom: 6px;
+        }
+        .auth-btn-primary {
+          width: 100%;
+          padding: 13px 20px;
+          background: #0284c7;
+          border: 1px solid #0369a1;
+          color: #ffffff;
+          border-radius: 10px;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.82rem;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: all 0.2s;
+          box-shadow: 0 4px 14px rgba(2,132,199,0.2);
+        }
+        .auth-btn-primary:hover { background: #0369a1; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(2,132,199,0.3); }
+        .auth-btn-primary:disabled { background: #94a3b8; border-color: #94a3b8; transform: none; box-shadow: none; cursor: not-allowed; }
+        .auth-method-btn {
+          flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+          padding: 10px 6px; border-radius: 10px; font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+          border: 1.5px solid; cursor: pointer; transition: all 0.18s;
+        }
+        .auth-method-btn.active {
+          border-color: #0284c7;
+          background: ${theme === 'dark' ? 'rgba(2,132,199,0.12)' : '#e0f2fe'};
+          color: #0284c7;
+        }
+        .auth-method-btn.inactive {
+          border-color: ${theme === 'dark' ? '#223269' : '#bae6fd'};
+          background: transparent;
+          color: ${theme === 'dark' ? '#64748b' : '#64748b'};
+        }
+        .auth-method-btn.inactive:hover {
+          border-color: #0284c7;
+          color: #0284c7;
+        }
+        .auth-tab-active {
+          background: ${theme === 'dark' ? '#1b264f' : '#0284c7'};
+          color: ${theme === 'dark' ? '#38bdf8' : '#ffffff'};
+          border-radius: 8px;
+        }
+        .auth-tab-inactive {
+          color: ${theme === 'dark' ? '#64748b' : '#64748b'};
+        }
+        .auth-tab-inactive:hover { color: ${theme === 'dark' ? '#f8fafc' : '#0f172a'}; }
+      `}</style>
+
+      {/* ====== LEFT: MARKETING PANEL ====== */}
+      <div className="hidden md:flex md:w-[44%] flex-col justify-between relative overflow-hidden" style={{
+        background: theme === 'dark' ? '#0b1329' : '#0f172a',
+        padding: '52px 56px',
+        borderRight: `1px solid ${theme === 'dark' ? '#223269' : '#1e3a5f'}`
+      }}>
+        {/* Background glow elements */}
+        <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: 440, height: 440, background: 'rgba(2,132,199,0.06)', borderRadius: '50%', filter: 'blur(120px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '-10%', right: '-10%', width: 440, height: 440, background: 'rgba(99,102,241,0.06)', borderRadius: '50%', filter: 'blur(120px)', pointerEvents: 'none' }} />
+
+        {/* Logo */}
+        <div
+          className="flex items-center gap-3 cursor-pointer z-10"
+          onClick={() => window.location.href = '/'}
+          style={{ transition: 'opacity 0.2s' }}
+          onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.opacity = '0.8'}
+          onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.opacity = '1'}
+        >
+          <img src="/logo.svg" alt="MakInvoices Logo" style={{ width: 44, height: 44, objectFit: 'contain' }} />
           <div>
-            <span className="text-xl font-black tracking-tight text-white block leading-none">
-              Mak<span className="text-sky-400">Invoices</span>
+            <span style={{ fontFamily: "'Fraunces', serif", fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', display: 'block', lineHeight: 1 }}>
+              Mak<span style={{ color: '#38bdf8' }}>Invoices</span>
             </span>
-            <span className="text-[10px] font-bold text-slate-400 block tracking-widest uppercase mt-0.5">Ledger Hub</span>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.6rem', fontWeight: 700, color: '#475569', letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block', marginTop: 4 }}>Advanced Ledger Hub</span>
           </div>
         </div>
 
-        {/* Marketing Pitch Section */}
-        <div className="space-y-6 max-w-sm z-10 my-auto">
-          <span className="inline-block px-2.5 py-0.5 bg-sky-500/10 text-sky-400 border border-sky-500/15 rounded-full text-[9px] font-bold uppercase tracking-wider">
-            Workspace Hub
-          </span>
-          <h1 className="text-4xl font-extrabold tracking-tight leading-[1.15] text-white">
-            The modern billing platform for <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">businesses & creators</span>.
+        {/* Marketing copy */}
+        <div className="z-10" style={{ maxWidth: 360, margin: 'auto 0' }}>
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.7rem', fontWeight: 700, color: '#38bdf8', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 20 }}>
+            AI-Powered Billing
+          </div>
+          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(1.8rem, 2.6vw, 2.5rem)', fontWeight: 500, color: '#f8fafc', lineHeight: 1.1, letterSpacing: '-0.02em', marginBottom: 18 }}>
+            Billing software that <em style={{ fontStyle: 'italic', color: '#38bdf8' }}>thinks</em> with you.
           </h1>
-          <p className="text-slate-400 text-[13px] leading-relaxed font-normal">
-            Automate your estimates, track invoices in real-time, generate custom signatures, and export pixel-perfect PDF bills.
+          <p style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: 1.65, marginBottom: 32 }}>
+            Build editable, interactive invoices layer by layer. Let AI draft line items. Manage invoices, quotations, purchase orders, and ledgers from one dashboard.
           </p>
 
-          <div className="space-y-4 pt-6 border-t border-neutral-900">
-            <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-lg bg-sky-500/5 flex items-center justify-center text-sky-400 shrink-0 border border-sky-500/10">
-                <ShieldCheck className="w-4 h-4" />
+          {/* Mini feature list */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, borderTop: '1px solid #1e3a5f', paddingTop: 28 }}>
+            {([
+              { icon: <Zap style={{ width: 15, height: 15 }} />, title: 'Gemini Smart Billing', desc: 'Natural language invoice drafting in seconds.' },
+              { icon: <BarChart2 style={{ width: 15, height: 15 }} />, title: 'Sales & Purchase Ledgers', desc: 'Full transaction history with multi-column filters.' },
+              { icon: <Lock style={{ width: 15, height: 15 }} />, title: 'Bank-Grade Security', desc: '256-bit encrypted data via Supabase.' }
+            ] as { icon: React.ReactNode; title: string; desc: string }[]).map((f, i) => (
+              <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(2,132,199,0.1)', border: '1px solid rgba(2,132,199,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8', flexShrink: 0 }}>
+                  {f.icon}
+                </div>
+                <div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.7rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{f.title}</div>
+                  <div style={{ fontSize: '0.78rem', color: '#475569', lineHeight: 1.45 }}>{f.desc}</div>
+                </div>
               </div>
-              <div>
-                <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-200">Secure Storage</h4>
-                <p className="text-[10.5px] text-slate-400 mt-0.5 leading-normal">Full database encryption and Supabase-secured user compartments.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-lg bg-indigo-500/5 flex items-center justify-center text-indigo-400 shrink-0 border border-neutral-800/10">
-                <CheckCircle className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-200">Always Available</h4>
-                <p className="text-[10.5px] text-slate-400 mt-0.5 leading-normal">Offline sandbox technology keeps your draft data active at all times.</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-[9px] text-slate-500 font-medium uppercase tracking-widest z-10">
-          © {new Date().getFullYear()} MakInvoices Studio.
+        {/* Decorative mini invoice card */}
+        <div className="z-10" style={{ background: 'rgba(17,26,54,0.8)', border: '1px solid #223269', borderRadius: 10, padding: '14px 18px', fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.68rem', color: '#64748b', backdropFilter: 'blur(8px)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: '#94a3b8' }}>
+            <span>INV-0148</span><span style={{ color: '#38bdf8', fontWeight: 700 }}>SENT</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #223269', paddingBottom: 8, marginBottom: 8 }}>
+            <span>Design Services</span><span style={{ color: '#f8fafc' }}>$180.00</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Total Due</span><span style={{ color: '#38bdf8', fontWeight: 700 }}>$215.28</span>
+          </div>
         </div>
       </div>
 
-      {/* Right side: Auth Form Panel */}
-      <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-16 relative bg-slate-50 dark:bg-neutral-950 transition-colors duration-300">
-        
-        {/* Soft Background Mesh on mobile/light */}
-        <div className="absolute top-[20%] right-[10%] w-80 h-80 bg-sky-500/5 rounded-full blur-[110px] pointer-events-none md:hidden" />
+      {/* ====== RIGHT: AUTH FORM PANEL ====== */}
+      <div className="flex-1 flex flex-col justify-center items-center relative" style={{
+        padding: 'clamp(28px, 5vw, 80px) clamp(20px, 4vw, 64px)',
+        background: theme === 'dark' ? '#111a36' : '#ffffff'
+      }}>
+        {/* Subtle background glow (mobile) */}
+        <div className="md:hidden" style={{ position: 'absolute', top: '15%', right: '5%', width: 280, height: 280, background: 'rgba(2,132,199,0.04)', borderRadius: '50%', filter: 'blur(90px)', pointerEvents: 'none' }} />
 
-        {/* Desktop Return button */}
-        <button 
+        {/* Back link */}
+        <button
+          type="button"
           onClick={() => window.location.href = '/'}
-          className="hidden md:flex absolute top-10 left-10 items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wider text-slate-500 hover:text-sky-600 dark:hover:text-sky-400 transition-all cursor-pointer z-10"
+          className="hidden md:flex"
+          style={{ position: 'absolute', top: 32, left: 32, alignItems: 'center', gap: 6, fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', zIndex: 10, transition: 'color 0.2s' }}
+          onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = '#0284c7'}
+          onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = '#64748b'}
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> Return to landing page
+          <ArrowLeft style={{ width: 13, height: 13 }} /> Return home
         </button>
 
-        {/* Form Container Card */}
-        <div className="w-full max-w-sm z-10">
-          <div className={`w-full rounded-2xl border transition-all duration-300 shadow-xl shadow-slate-200/5 dark:shadow-none ${
-            theme === 'dark' 
-              ? 'bg-neutral-900 border-neutral-800/80' 
-              : 'bg-white border-slate-200/50'
-          }`}>
-            
-            {/* Header */}            <div className="text-center pt-8 pb-5 border-b border-slate-100 dark:border-neutral-800/40">
-              <h2 className="text-base font-extrabold text-slate-805 uppercase tracking-wider">
-                {authMode === 'signup' ? 'Create Workspace' : authMode === 'forgot-password' ? 'Reset Password' : 'Welcome Back'}
-              </h2>
-              <p className="text-[9.5px] text-slate-600 dark:text-slate-500 mt-1 uppercase tracking-widest font-bold">
-                {authMode === 'signup' ? 'Get started for free' : authMode === 'forgot-password' ? 'Enter your email to reset' : 'Access your billing portal'}
-              </p>
-            </div>
+        {/* Mobile logo */}
+        <div className="md:hidden flex items-center gap-2 mb-8 cursor-pointer z-10" onClick={() => window.location.href = '/'}>
+          <img src="/logo.svg" alt="MakInvoices Logo" style={{ width: 34, height: 34, objectFit: 'contain' }} />
+          <span style={{ fontFamily: "'Fraunces', serif", fontSize: '1.1rem', fontWeight: 700, color: theme === 'dark' ? '#f8fafc' : '#0f172a' }}>
+            Mak<span style={{ color: '#0284c7' }}>Invoices</span>
+          </span>
+        </div>
 
-            <div className="p-6 sm:p-8">
-              {/* Form Toggle Bar */}
-              {authMode === 'forgot-password' ? (
-                <div className="flex bg-slate-100/60 dark:bg-neutral-900/55 p-1 rounded-xl mb-6 border border-slate-200/10">
-                  <button
-                    type="button"
-                    onClick={() => { setAuthMode('login'); setOtpSent(false); setSuccessMsg(''); }}
-                    className="flex-1 py-1.5 text-center text-[10.5px] font-extrabold uppercase tracking-wide rounded-lg transition-all cursor-pointer bg-white dark:bg-neutral-800 text-slate-600 dark:text-slate-300 shadow-xs hover:text-sky-600 dark:hover:text-sky-400"
-                  >
-                    Back to Login
-                  </button>
-                </div>
-              ) : (
-              <>
-              <div className="flex bg-slate-100/60 dark:bg-neutral-900/55 p-1 rounded-xl mb-6 border border-slate-200/10">
-                <button
-                  type="button"
-                  onClick={() => { setAuthMode('signup'); setOtpSent(false); setSuccessMsg(''); }}
-                  className={`flex-1 py-1.5 text-center text-[10.5px] font-extrabold uppercase tracking-wide rounded-lg transition-all cursor-pointer ${
-                    authMode === 'signup' 
-                      ? 'bg-white dark:bg-neutral-800 text-sky-600 dark:text-sky-400 shadow-xs' 
-                      : 'text-slate-500 dark:text-slate-450 hover:text-slate-800 dark:hover:text-slate-300'
-                  }`}
-                >
+        {/* FORM CARD */}
+        <div className="w-full z-10" style={{ maxWidth: 400 }}>
+          {/* Eyebrow */}
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.68rem', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 18, height: 1, background: '#0284c7', display: 'inline-block' }} />
+            {authMode === 'signup' ? 'Create Your Free Account' : authMode === 'forgot-password' ? 'Password Recovery' : 'Welcome Back'}
+          </div>
+          <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(1.5rem, 2.4vw, 2rem)', fontWeight: 500, color: theme === 'dark' ? '#f8fafc' : '#0f172a', lineHeight: 1.15, letterSpacing: '-0.01em', marginBottom: 6 }}>
+            {authMode === 'signup' ? 'Start billing smarter.' : authMode === 'forgot-password' ? 'Reset your password.' : 'Log into your workspace.'}
+          </h2>
+          <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: 28 }}>
+            {authMode === 'signup' ? 'No credit card required. Free to get started.' : authMode === 'forgot-password' ? 'Enter your email to receive a reset link.' : 'Pick up right where you left off.'}
+          </p>
+
+          {/* Main card */}
+          <div style={{
+            background: theme === 'dark' ? '#1b264f' : '#f8fafc',
+            border: `1.5px solid ${theme === 'dark' ? '#223269' : '#bae6fd'}`,
+            borderRadius: 16,
+            padding: '26px 24px',
+            boxShadow: theme === 'dark' ? '0 8px 40px rgba(0,0,0,0.4)' : '0 8px 40px rgba(2,132,199,0.06)'
+          }}>
+
+            {/* Tab toggle */}
+            {authMode === 'forgot-password' ? (
+              <div style={{ display: 'flex', background: theme === 'dark' ? '#111a36' : '#e0f2fe', borderRadius: 10, padding: 4, marginBottom: 22 }}>
+                <button type="button" onClick={() => { setAuthMode('login'); setOtpSent(false); setSuccessMsg(''); }}
+                  style={{ flex: 1, padding: '9px', borderRadius: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', border: 'none', background: '#0284c7', color: '#ffffff', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <ArrowLeft style={{ width: 12, height: 12 }} /> Back to Login
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', background: theme === 'dark' ? '#111a36' : '#e0f2fe', borderRadius: 10, padding: 4, marginBottom: 22 }}>
+                <button type="button" onClick={() => { setAuthMode('signup'); setOtpSent(false); setSuccessMsg(''); }}
+                  style={{ flex: 1, padding: '9px', borderRadius: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', border: 'none', transition: 'all 0.2s', background: authMode === 'signup' ? '#0284c7' : 'transparent', color: authMode === 'signup' ? '#ffffff' : (theme === 'dark' ? '#64748b' : '#0284c7') }}>
                   Sign Up
                 </button>
-                <button
-                  type="button"
-                  onClick={() => { setAuthMode('login'); setOtpSent(false); setSuccessMsg(''); }}
-                  className={`flex-1 py-1.5 text-center text-[10.5px] font-extrabold uppercase tracking-wide rounded-lg transition-all cursor-pointer ${
-                    authMode === 'login' 
-                      ? 'bg-white dark:bg-neutral-800 text-sky-600 dark:text-sky-400 shadow-xs' 
-                      : 'text-slate-500 dark:text-slate-450 hover:text-slate-800 dark:hover:text-slate-300'
-                  }`}
-                >
+                <button type="button" onClick={() => { setAuthMode('login'); setOtpSent(false); setSuccessMsg(''); }}
+                  style={{ flex: 1, padding: '9px', borderRadius: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', border: 'none', transition: 'all 0.2s', background: authMode === 'login' ? '#0284c7' : 'transparent', color: authMode === 'login' ? '#ffffff' : (theme === 'dark' ? '#64748b' : '#0284c7') }}>
                   Log In
                 </button>
               </div>
+            )}
 
-              {/* Login Method Buttons */}
-              <div className="grid grid-cols-3 gap-2 mb-6">
-                <button
-                  type="button"
-                  onClick={() => { setLoginMethod('email'); setOtpSent(false); setSuccessMsg(''); }}
-                  className={`flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl border transition-all cursor-pointer font-bold ${
-                    loginMethod === 'email' 
-                      ? 'border-sky-500/50 bg-sky-500/5 text-sky-600 dark:text-sky-400 shadow-xs' 
-                      : 'border-slate-150 dark:border-neutral-800 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/30'
-                  }`}
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  <span className="text-[8px] uppercase tracking-widest font-black">Email</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setLoginMethod('phone'); setOtpSent(false); setFormErrors({}); setSuccessMsg(''); }}
-                  className={`flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl border transition-all cursor-pointer font-bold ${
-                    loginMethod === 'phone' 
-                      ? 'border-sky-500/50 bg-sky-500/5 text-sky-600 dark:text-sky-400 shadow-xs' 
-                      : 'border-slate-150 dark:border-neutral-800 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/30'
-                  }`}
-                >
-                  <Phone className="w-3.5 h-3.5" />
-                  <span className="text-[8px] uppercase tracking-widest font-black">Phone</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setLoginMethod('google'); setOtpSent(false); setSuccessMsg(''); }}
-                  className={`flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl border transition-all cursor-pointer font-bold ${
-                    loginMethod === 'google' 
-                      ? 'border-sky-500/50 bg-sky-500/5 text-sky-600 dark:text-sky-400 shadow-xs' 
-                      : 'border-slate-150 dark:border-neutral-800 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/30'
-                  }`}
-                >
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span className="text-[8px] uppercase tracking-widest font-black">Google</span>
-                </button>
+            {/* Method selector (not on forgot-password) */}
+            {authMode !== 'forgot-password' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 }}>
+                {[
+                  { key: 'email', icon: <Mail style={{ width: 14, height: 14 }} />, label: 'Email' },
+                  { key: 'phone', icon: <Phone style={{ width: 14, height: 14 }} />, label: 'Phone' },
+                  { key: 'google', icon: <LogIn style={{ width: 14, height: 14 }} />, label: 'Google' }
+                ].map(m => (
+                  <button key={m.key} type="button"
+                    onClick={() => { setLoginMethod(m.key as any); setOtpSent(false); setFormErrors({}); setSuccessMsg(''); }}
+                    className={`auth-method-btn ${loginMethod === m.key ? 'active' : 'inactive'}`}
+                  >
+                    {m.icon}
+                    {m.label}
+                  </button>
+                ))}
               </div>
-              </>
-              )}
+            )}
 
-              {/* Toast Messages */}
-              {successMsg && (
-                <div className="mb-5 p-3 bg-emerald-550/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl text-[11px] font-bold flex items-center gap-2 animate-in fade-in duration-200">
-                  <CheckCircle className="w-3.5 h-3.5 shrink-0" />
-                  <span>{successMsg}</span>
-                </div>
-              )}
+            {/* Toast messages */}
+            {successMsg && (
+              <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#059669', borderRadius: 10, fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <CheckCircle style={{ width: 14, height: 14, flexShrink: 0 }} />{successMsg}
+              </div>
+            )}
+            {(formErrors.email || formErrors.phone || formErrors.otp) && (
+              <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', borderRadius: 10, fontSize: '0.82rem', fontWeight: 600 }}>
+                {formErrors.email || formErrors.phone || formErrors.otp}
+              </div>
+            )}
 
-              {(formErrors.email || formErrors.phone || formErrors.otp) && (
-                <div className="mb-5 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-[11px] font-bold animate-in fade-in duration-200">
-                  {formErrors.email || formErrors.phone || formErrors.otp}
-                </div>
-              )}
+            {/* ===== GOOGLE METHOD ===== */}
+            {loginMethod === 'google' ? (
+              <button type="button" onClick={handleGoogleLogin}
+                style={{ width: '100%', padding: '12px 18px', background: theme === 'dark' ? '#111a36' : '#ffffff', border: `1.5px solid ${theme === 'dark' ? '#223269' : '#bae6fd'}`, borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: '0.85rem', fontWeight: 600, color: theme === 'dark' ? '#f8fafc' : '#0f172a', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(2,132,199,0.06)' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#0284c7'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 14px rgba(2,132,199,0.12)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = theme === 'dark' ? '#223269' : '#bae6fd'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 8px rgba(2,132,199,0.06)'; }}
+              >
+                <svg style={{ width: 16, height: 16, flexShrink: 0 }} viewBox="0 0 24 24" fill="none">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.09H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.91l2.85-2.22c-.1-.29-.19-.61-.25-.94z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.09l3.66 2.84c.87-2.6 3.3-4.55 6.16-4.55z" fill="#EA4335" />
+                </svg>
+                Continue with Google
+              </button>
 
-              {/* Render Selected Method Form */}
-              {loginMethod === 'google' ? (
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  className="w-full py-3 px-4 bg-white hover:bg-slate-55 dark:bg-neutral-900 dark:hover:bg-neutral-850 text-slate-700 dark:text-slate-200 text-[11px] font-bold tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-2.5 border border-slate-200 dark:border-neutral-800 shadow-xs cursor-pointer hover:scale-[1.01] active:scale-99"
-                >
-                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                    <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.09H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.91l2.85-2.22c-.1-.29-.19-.61-.25-.94z" fill="#FBBC05" />
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.09l3.66 2.84c.87-2.6 3.3-4.55 6.16-4.55z" fill="#EA4335" />
-                  </svg>
-                  <span>Continue with Google</span>
-                </button>
-              ) : loginMethod === 'email' ? (
-                <form onSubmit={handleFormSubmit} className="space-y-4 animate-in fade-in duration-200">
-                  {authMode === 'signup' && (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Your Name</label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          placeholder="e.g. John Doe"
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Company Name</label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.companyName}
-                          onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                          placeholder="e.g. Acme Tech Solutions"
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Phone Number</label>
-                        <input
-                          type="tel"
-                          required
-                          value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          placeholder="e.g. +91 98765 43210"
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
-                        />
-                      </div>
+            ) : loginMethod === 'email' ? (
+              /* ===== EMAIL METHOD ===== */
+              <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {authMode === 'signup' && (
+                  <>
+                    <div>
+                      <label className="auth-label">Your Name</label>
+                      <input className="auth-input" type="text" required placeholder="e.g. John Doe" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                     </div>
-                  )}
-
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Email Address</label>
-                      {authMode === 'login' && (
-                        <button
-                          type="button"
-                          onClick={() => { setAuthMode('forgot-password'); setFormErrors({}); setSuccessMsg(''); }}
-                          className="text-[10px] font-bold text-sky-500 hover:text-sky-600 dark:text-sky-400 dark:hover:text-sky-300 transition-colors"
-                        >
-                          Forgot Password?
-                        </button>
-                      )}
+                    <div>
+                      <label className="auth-label">Company Name</label>
+                      <input className="auth-input" type="text" required placeholder="e.g. Acme Tech Solutions" value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} />
                     </div>
-                    <input
-                      type="email"
-                      required
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="e.g. sales@yourcompany.com"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
-                    />
+                    <div>
+                      <label className="auth-label">Phone Number</label>
+                      <input className="auth-input" type="tel" required placeholder="e.g. +1 555 000 0000" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <label className="auth-label" style={{ margin: 0 }}>Email Address</label>
+                    {authMode === 'login' && (
+                      <button type="button" onClick={() => { setAuthMode('forgot-password'); setFormErrors({}); setSuccessMsg(''); }}
+                        style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.65rem', fontWeight: 700, color: '#0284c7', background: 'none', border: 'none', cursor: 'pointer' }}>
+                        Forgot Password?
+                      </button>
+                    )}
                   </div>
+                  <input className="auth-input" type="email" required placeholder="e.g. sales@yourcompany.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                </div>
 
-                  {authMode !== 'forgot-password' && (
+                {authMode !== 'forgot-password' && (
                   <div>
-                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Password</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        required
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        placeholder="••••••••"
-                        className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 cursor-pointer transition-colors"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
+                    <label className="auth-label">Password</label>
+                    <div style={{ position: 'relative' }}>
+                      <input className="auth-input" type={showPassword ? 'text' : 'password'} required placeholder="Enter your password" style={{ paddingRight: 44 }} value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)}
+                        style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }}>
+                        {showPassword ? <EyeOff style={{ width: 15, height: 15 }} /> : <Eye style={{ width: 15, height: 15 }} />}
                       </button>
                     </div>
                     {authMode === 'signup' && formData.password && (
-                      <div className="mt-2.5 space-y-1 bg-slate-50 dark:bg-slate-900/20 p-2.5 rounded-xl border border-slate-200/5">
-                        <div className="flex justify-between text-[8px] font-bold text-slate-400 uppercase tracking-wider">
-                          <span>Password Strength</span>
-                          <span className={strength.score >= 3 ? 'text-emerald-500' : 'text-amber-500'}>{strength.label}</span>
+                      <div style={{ marginTop: 10, background: theme === 'dark' ? '#111a36' : '#f0f7ff', border: `1px solid ${theme === 'dark' ? '#223269' : '#bae6fd'}`, borderRadius: 8, padding: '8px 12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                          <span style={{ color: '#64748b' }}>Strength</span>
+                          <span style={{ color: strength.score >= 3 ? '#059669' : '#d97706' }}>{strength.label}</span>
                         </div>
-                        <div className="grid grid-cols-4 gap-1 h-1 mt-1">
-                          <div className={`rounded-full ${strength.score >= 1 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
-                          <div className={`rounded-full ${strength.score >= 2 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
-                          <div className={`rounded-full ${strength.score >= 3 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
-                          <div className={`rounded-full ${strength.score >= 4 ? strength.color : 'bg-slate-200 dark:bg-neutral-800'}`} />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 4, height: 4 }}>
+                          {[1, 2, 3, 4].map(i => (
+                            <div key={i} style={{ borderRadius: 99, background: strength.score >= i ? (strength.score >= 4 ? '#059669' : strength.score >= 3 ? '#0284c7' : strength.score >= 2 ? '#d97706' : '#dc2626') : (theme === 'dark' ? '#223269' : '#bae6fd') }} />
+                          ))}
                         </div>
                       </div>
                     )}
                   </div>
-                  )}
+                )}
 
-                  {authMode === 'signup' && (
-                    <div>
-                      <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Confirm Password</label>
-                      <div className="relative">
-                        <input
-                          type={showConfirmPassword ? "text" : "password"}
-                          required
-                          value={formData.confirmPassword}
-                          onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                          placeholder="••••••••"
-                          className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 cursor-pointer transition-colors"
-                        >
-                          {showConfirmPassword ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
+                {authMode === 'signup' && (
+                  <div>
+                    <label className="auth-label">Confirm Password</label>
+                    <div style={{ position: 'relative' }}>
+                      <input className="auth-input" type={showConfirmPassword ? 'text' : 'password'} required placeholder="Confirm your password" style={{ paddingRight: 44 }} value={formData.confirmPassword} onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })} />
+                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }}>
+                        {showConfirmPassword ? <EyeOff style={{ width: 15, height: 15 }} /> : <Eye style={{ width: 15, height: 15 }} />}
+                      </button>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full py-3 px-4 mt-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 disabled:from-slate-400 disabled:to-slate-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-sky-500/10 hover:shadow-sky-500/20 hover:scale-[1.01] active:scale-99"
-                  >
-                    {isLoading ? (
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Mail className="w-3.5 h-3.5" />
-                        <span>{authMode === 'signup' ? 'Create Account' : authMode === 'forgot-password' ? 'Send Reset Link' : 'Log In'}</span>
-                      </>
-                    )}
+                <button type="submit" disabled={isLoading} className="auth-btn-primary" style={{ marginTop: 4 }}>
+                  {isLoading ? (
+                    <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                  ) : (
+                    <>
+                      {authMode === 'signup' ? <UserPlus style={{ width: 15, height: 15 }} /> : authMode === 'forgot-password' ? <KeyRound style={{ width: 15, height: 15 }} /> : <ArrowRight style={{ width: 15, height: 15 }} />}
+                      {authMode === 'signup' ? 'Create Free Account' : authMode === 'forgot-password' ? 'Send Reset Link' : 'Log In'}
+                    </>
+                  )}
+                </button>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              </form>
+
+            ) : (
+              /* ===== PHONE / OTP METHOD ===== */
+              otpSent ? (
+                <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label className="auth-label">Verification Code (OTP)</label>
+                    <input className="auth-input" type="text" required placeholder="e.g. 123456" value={otpValue} onChange={e => setOtpValue(e.target.value)} />
+                  </div>
+                  <button type="submit" disabled={isLoading} className="auth-btn-primary">
+                    {isLoading ? <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} /> : <><KeyRound style={{ width: 15, height: 15 }} />Verify & Proceed</>}
                   </button>
                 </form>
               ) : (
-                otpSent ? (
-                  <form onSubmit={handleVerifyOtp} className="space-y-4 animate-in fade-in duration-200">
-                    <div>
-                      <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Enter Verification Code (OTP)</label>
-                      <input
-                        type="text"
-                        required
-                        value={otpValue}
-                        onChange={(e) => setOtpValue(e.target.value)}
-                        placeholder="e.g. 123456"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={isLoading}
-                      className="w-full py-3 px-4 mt-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 disabled:from-slate-400 disabled:to-slate-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-sky-500/10 hover:shadow-sky-500/20 hover:scale-[1.01] active:scale-99"
-                    >
-                      {isLoading ? (
-                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <KeyRound className="w-3.5 h-3.5" />
-                          <span>Verify & Proceed</span>
-                        </>
-                      )}
-                    </button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleSendOtp} className="space-y-4 animate-in fade-in duration-200">
-                    {authMode === 'signup' && (
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Your Name</label>
-                          <input
-                            type="text"
-                            required
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="e.g. John Doe"
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Company Name</label>
-                          <input
-                            type="text"
-                            required
-                            value={formData.companyName}
-                            onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                            placeholder="e.g. Acme Tech Solutions"
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
-                          />
-                        </div>
-                      </div>
-                    )}
-                    <div>
-                      <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Phone Number</label>
-                      <input
-                        type="tel"
-                        required
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="e.g. +919876543210"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all text-slate-805 dark:text-neutral-100"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={isLoading}
-                      className="w-full py-3 px-4 mt-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 disabled:from-slate-400 disabled:to-slate-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-sky-500/10 hover:shadow-sky-500/20 hover:scale-[1.01] active:scale-99"
-                    >
-                      {isLoading ? (
-                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <Phone className="w-3.5 h-3.5" />
-                          <span>Send Verification OTP</span>
-                        </>
-                      )}
-                    </button>
-                  </form>
-                )
-              )}
-
-
-
-            </div>
+                <form onSubmit={handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {authMode === 'signup' && (
+                    <>
+                      <div><label className="auth-label">Your Name</label><input className="auth-input" type="text" required placeholder="e.g. John Doe" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
+                      <div><label className="auth-label">Company Name</label><input className="auth-input" type="text" required placeholder="e.g. Acme Tech Solutions" value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} /></div>
+                    </>
+                  )}
+                  <div>
+                    <label className="auth-label">Phone Number</label>
+                    <input className="auth-input" type="tel" required placeholder="e.g. +1 555 000 0000" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                  </div>
+                  <button type="submit" disabled={isLoading} className="auth-btn-primary">
+                    {isLoading ? <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} /> : <><Phone style={{ width: 15, height: 15 }} />Send Verification Code</>}
+                  </button>
+                </form>
+              )
+            )}
           </div>
+
+          {/* Footer hint */}
+          <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.78rem', color: '#64748b', fontFamily: "'IBM Plex Mono', monospace" }}>
+            {authMode === 'signup' ? 'Already have an account? ' : 'New to MakInvoices? '}
+            <button type="button"
+              onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setOtpSent(false); setSuccessMsg(''); setFormErrors({}); }}
+              style={{ color: '#0284c7', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit' }}>
+              {authMode === 'signup' ? (
+                <>
+                  Log in
+                  <ArrowRight style={{ width: 12, height: 12, display: 'inline', verticalAlign: 'middle', marginLeft: 2 }} />
+                </>
+              ) : (
+                <>
+                  Create an account
+                  <ArrowRight style={{ width: 12, height: 12, display: 'inline', verticalAlign: 'middle', marginLeft: 2 }} />
+                </>
+              )}
+            </button>
+          </p>
         </div>
       </div>
     </div>
