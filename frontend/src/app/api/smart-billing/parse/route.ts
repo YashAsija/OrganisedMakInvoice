@@ -131,6 +131,7 @@ export async function POST(request: Request) {
     const systemInstruction = `You are a high-fidelity bill parser. Interpret the user's natural language billing request and construct a valid JSON representation matching the schema.
     Use standard fallback fields for today's date ${today} and a due date exactly 14 days later ${defaultDueDate}.
     \nNote: If the user prompt DOES NOT mention any products, services, or items to add, leave the 'items' array blank/empty. Do not invent products.
+    \nCRITICAL RULE FOR ITEMS: In the 'items' array, ONLY return the products/services that are explicitly mentioned, added, or modified in the user's current prompt. Do NOT include other existing items from the current invoice state if they are not mentioned in the prompt. We will merge them on the frontend.
     ${allowedFieldsStr}
     ${currentInvoiceStr}`;
 

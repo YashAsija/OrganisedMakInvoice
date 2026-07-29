@@ -241,6 +241,7 @@ export function SmartBillingBox({ activeTemplate, setters, existingState }: Smar
           `Auto-filled ${filled.size} field${filled.size === 1 ? '' : 's'} from your description.`,
           'success'
         );
+        setPrompt('');
       }
     } catch (err) {
       console.error('[SmartBilling] Unexpected error:', err);

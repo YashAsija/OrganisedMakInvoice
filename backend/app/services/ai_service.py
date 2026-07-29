@@ -84,6 +84,7 @@ def parse_invoice_cached(prompt: str, current_invoice: dict | None = None, allow
    - Transport/freight charges MUST be returned exclusively in the 'freightCharges' property.
    - Discounts MUST be returned exclusively in 'discountValue' and 'discountType' ('percent' or 'flat') properties.
 4. If the user's prompt DOES NOT explicitly mention any products, services, or line items to add to the invoice (e.g. if the prompt is about changing layout, shipping, transport charges, discounts, or advanced settings), DO NOT include any items in the 'items' array. Leave the 'items' array empty. Do not hallucinate or guess products.
+5. CRITICAL RULE FOR ITEMS: In the 'items' array, ONLY return the products/services that are explicitly mentioned, added, or modified in the user's current prompt. Do NOT include other existing items from the current invoice state if they are not mentioned in the prompt. We will merge them on the frontend.
 Use standard fallback fields for today's date {today} and a due date exactly 14 days later."""
 
     schema = types.Schema(
