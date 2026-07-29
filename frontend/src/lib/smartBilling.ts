@@ -301,7 +301,7 @@ export async function extractInvoiceData(
     if (authToken) {
       headers['Authorization'] = `Bearer ${authToken}`;
     }
-    return fetch('/api/ai/parse-invoice', {
+    return fetch('/api/smart-billing/parse', {
       method: 'POST',
       headers,
       body: JSON.stringify({
