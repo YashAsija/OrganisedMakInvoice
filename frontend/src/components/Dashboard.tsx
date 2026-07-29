@@ -2029,12 +2029,13 @@ export default function Dashboard({
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'all'>('all');
+  const [sortBy, setSortBy] = useState<string>('issue_date_desc');
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
 
-  // Automatically flush bulk selection upon any filter/tab alterations
+  // Automatically flush bulk selection upon any filter/tab/sort alterations
   React.useEffect(() => {
     setSelectedInvoiceIds([]);
-  }, [searchTerm, statusFilter, activeTab]);
+  }, [searchTerm, statusFilter, sortBy, activeTab]);
 
   const handleToggleSelectInvoice = (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Avoid triggering detail preview popup overlay
@@ -2402,12 +2403,36 @@ export default function Dashboard({
   }, [invoices, ledgerSection, purchaseLedgerSection, activeTab]);
 
   // --- STATS ENGINES ---
-  const filteredInvoices = sectionInvoices.filter(inv => {
-    const matchesSearch = (inv.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (inv.invoiceNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = statusFilter === 'all' || inv.status === statusFilter;
-    return matchesSearch && matchesFilter;
-  });
+  const filteredInvoices = useMemo(() => {
+    const list = sectionInvoices.filter(inv => {
+      const matchesSearch = (inv.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (inv.invoiceNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFilter = statusFilter === 'all' || inv.status === statusFilter;
+      return matchesSearch && matchesFilter;
+    });
+
+    return [...list].sort((a, b) => {
+      switch (sortBy) {
+        case 'issue_date_asc':
+          return new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime();
+        case 'issue_date_desc':
+          return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+        case 'due_date_asc':
+          return new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime();
+        case 'due_date_desc':
+          return new Date(b.dueDate || 0).getTime() - new Date(a.dueDate || 0).getTime();
+        case 'amount_asc':
+          return (a.grandTotal || 0) - (b.grandTotal || 0);
+        case 'amount_desc':
+          return (b.grandTotal || 0) - (a.grandTotal || 0);
+        case 'number_asc':
+          return (a.invoiceNumber || '').localeCompare(b.invoiceNumber || '', undefined, { numeric: true, sensitivity: 'base' });
+        case 'number_desc':
+        default:
+          return (b.invoiceNumber || '').localeCompare(a.invoiceNumber || '', undefined, { numeric: true, sensitivity: 'base' });
+      }
+    });
+  }, [sectionInvoices, searchTerm, statusFilter, sortBy]);
 
   // Non-draft Tax Invoices only for Global Billing Ledger totals & Analytics
   const allLedgerInvoices = useMemo(() => {
@@ -3448,9 +3473,9 @@ export default function Dashboard({
               </div>
             </div>
 
-            {/* Search Input and status selection filters */}
+            {/* Search Input, status selection, and sort by filters */}
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 sm:gap-3 bg-[#FCFAF7]/60 dark:bg-zinc-950/30 p-2.5 sm:p-3 rounded-2xl border border-[#e2e8f0]/40 dark:border-zinc-800">
-              <div className="sm:col-span-8 relative">
+              <div className="sm:col-span-6 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#64748b]/60" />
                 <input 
                   type="text"
@@ -3460,7 +3485,7 @@ export default function Dashboard({
                   className="w-full pl-8 pr-3 py-1.5 sm:py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 focus:border-[#64748b] dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#64748b]/45 focus:outline-none transition-colors"
                 />
               </div>
-              <div className="sm:col-span-4 flex relative">
+              <div className="sm:col-span-3 flex relative">
                 <select 
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as InvoiceStatus | 'all')}
@@ -3480,6 +3505,22 @@ export default function Dashboard({
                       <option value="cancelled">Cancelled</option>
                     </>
                   )}
+                </select>
+              </div>
+              <div className="sm:col-span-3 flex relative">
+                <select 
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full pl-3 pr-7 py-1.5 sm:py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]/60 cursor-pointer transition-colors"
+                >
+                  <option value="issue_date_desc">Issue Date (Newest)</option>
+                  <option value="issue_date_asc">Issue Date (Oldest)</option>
+                  <option value="due_date_desc">Due Date (Newest)</option>
+                  <option value="due_date_asc">Due Date (Oldest)</option>
+                  <option value="amount_desc">Amount (Highest)</option>
+                  <option value="amount_asc">Amount (Lowest)</option>
+                  <option value="number_desc">Doc No (Highest)</option>
+                  <option value="number_asc">Doc No (Lowest)</option>
                 </select>
               </div>
             </div>
