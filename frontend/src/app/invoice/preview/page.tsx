@@ -140,6 +140,7 @@ function InvoicePreviewContent() {
             businessProfile={(profile ?? {}) as Partial<BusinessProfile>}
             currencySymbol={currencySymbol}
             isInteractive={false}
+            isPrintMode={true}
             clients={[]}
           />
         </div>
