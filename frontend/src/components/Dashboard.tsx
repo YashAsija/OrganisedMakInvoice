@@ -196,7 +196,7 @@ export default function Dashboard({
 
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isDesktopSidebarExpanded, setIsDesktopSidebarExpanded] = useState(true);
-  const [isSalesLedgerExpanded, setIsSalesLedgerExpanded] = useState(true);
+  const [isSalesLedgerExpanded, setIsSalesLedgerExpanded] = useState(false);
   const [isMasterExpanded, setIsMasterExpanded] = useState(true);
   const [isCatalogExpanded, setIsCatalogExpanded] = useState(true);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -2381,7 +2381,7 @@ export default function Dashboard({
   };
 
   const currencySymbol = profile.currencySymbol || getCurrencySymbol(profile.currency);
-  const [isPurchasesLedgerExpanded, setIsPurchasesLedgerExpanded] = useState(true);
+  const [isPurchasesLedgerExpanded, setIsPurchasesLedgerExpanded] = useState(false);
   const [purchaseLedgerSection, setPurchaseLedgerSection] = useState<'purchases' | 'purchase_order' | 'purchase_debit_note'>('purchases');
 
   const documentTypeCounts = useMemo(() => {
