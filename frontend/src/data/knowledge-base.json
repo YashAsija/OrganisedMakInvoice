@@ -1368,12 +1368,78 @@
       "help me",
       "support card",
       "queries",
-      "help and support",
-      "app kaise chalaye",
-      "user guide dikhao",
-      "help video kahan hai",
-      "support se chat kaise kare",
-      "common questions key answer"
+      "help and support"
+    ]
+  },
+  {
+    "topic": "AI Smart Billing - Natural Language Parsing",
+    "route": "/api/smart-billing/parse",
+    "source_file": "/src/lib/smartBilling.ts",
+    "summary": "AI Smart Billing parses natural language prompts to auto-populate invoices. When client name changes, it automatically clears old client details first so stale data doesn't persist. For line items, it automatically merges matching products (matching name & rate, or name with 0 rate/unspecified) by summing/incrementing their quantities instead of duplicating rows or ignoring them. The prompt box also clears automatically on success.",
+    "steps": [
+      "Open the Quick Bill modal from the dashboard.",
+      "Type your prompt in the AI Smart Billing box (e.g., 'Bill Sharma Traders for 5 laptops, rate 45000').",
+      "Press Enter or click the send icon to auto-populate layout and settings.",
+      "To change a client, enter a prompt like 'change client to Tata' to reset old details and lookup new registry records.",
+      "To add more of an existing item, enter a prompt like 'add 10 more laptops' to sum and increment their quantity in the table."
+    ],
+    "keywords": [
+      "ai smart billing",
+      "parse invoice",
+      "natural language billing",
+      "add laptops",
+      "sum quantity",
+      "increment item quantity",
+      "clear old client details",
+      "change client details",
+      "quick bill prompt",
+      "ai assistant",
+      "generate invoice"
+    ]
+  },
+  {
+    "topic": "Ledgers - Sorting and Filtering",
+    "route": "/invoices/tax-invoices",
+    "source_file": "/src/components/Dashboard.tsx",
+    "summary": "Sales Ledger and Purchases Ledger tables now feature interactive and responsive sorting functionality. You can sort bills and invoices by Issue Date, Due Date, Grand Total Amount, and Document/Invoice Number in ascending or descending order.",
+    "steps": [
+      "Open the Sales Ledger or Purchases Ledger in the sidebar.",
+      "Click the 'Sort By' dropdown menu above the table.",
+      "Select your sorting metric: Issue Date, Due Date, Amount, or Invoice Number.",
+      "Toggle between Ascending and Descending order to dynamically update the list sorting."
+    ],
+    "keywords": [
+      "sort by",
+      "sorting ledger",
+      "sales ledger sort",
+      "purchases ledger sort",
+      "sort by issue date",
+      "sort by due date",
+      "sort by amount",
+      "sort by invoice number",
+      "ledger filter",
+      "ledger sorting"
+    ]
+  },
+  {
+    "topic": "High-Fidelity A4 Background Printing",
+    "route": "/invoice/preview",
+    "source_file": "/src/components/InvoiceModal.tsx",
+    "summary": "Direct background printing feature that opens the native browser print prompt instantly without redirecting to a separate browser preview page. Force defaults to standard A4 paper size, with high-fidelity styles matching the exported PDF layout exactly.",
+    "steps": [
+      "Open an invoice in the modal.",
+      "Click the 'Print' button.",
+      "The browser's native print layout opens in the background with A4 size configured.",
+      "Select your physical printer or Save as PDF, and click Print."
+    ],
+    "keywords": [
+      "print invoice",
+      "background printing",
+      "A4 size print",
+      "print layout pdf",
+      "browser print prompt",
+      "print blank page fix",
+      "direct print"
     ]
   }
 ]
