@@ -587,20 +587,37 @@ export function applySmartBillingData(
     setters.setItems((prev) => {
       if (overwrite) return parsedItems;
 
-      // Prevent prompt re-execution item duplication: filter out items already in prev (same name and rate)
-      const trulyNewItems = parsedItems.filter((newItem) => {
+      const updatedList = [...prev];
+
+      parsedItems.forEach((newItem) => {
         const cleanNewName = newItem.name.trim().toLowerCase();
-        const exists = prev.some((existingItem) => {
+
+        // Check helper supporting simple singular/plural match (e.g. laptop matching laptops)
+        const isNameMatch = (n1: string, n2: string) => {
+          const base1 = n1.replace(/s$/, '');
+          const base2 = n2.replace(/s$/, '');
+          return base1 === base2;
+        };
+
+        const existingIdx = updatedList.findIndex((existingItem) => {
           const cleanExistingName = (existingItem.name || '').trim().toLowerCase();
-          return cleanExistingName === cleanNewName && Number(existingItem.rate || 0) === Number(newItem.rate || 0);
+          return isNameMatch(cleanExistingName, cleanNewName) && 
+                 Number(existingItem.rate || 0) === Number(newItem.rate || 0);
         });
-        return !exists;
+
+        if (existingIdx > -1) {
+          // Add the new quantity to the existing quantity
+          updatedList[existingIdx] = {
+            ...updatedList[existingIdx],
+            quantity: (updatedList[existingIdx].quantity || 0) + (newItem.quantity || 1)
+          };
+        } else {
+          // Add as a new item row
+          updatedList.push(newItem);
+        }
       });
 
-      if (trulyNewItems.length === 0) {
-        return prev;
-      }
-      return [...prev, ...trulyNewItems];
+      return updatedList;
     });
     filled.add('items');
   }
