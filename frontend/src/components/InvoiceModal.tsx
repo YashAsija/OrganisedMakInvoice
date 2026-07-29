@@ -1604,8 +1604,16 @@ export default function InvoiceModal({
       finalInvoiceNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, invoiceType);
     }
 
+    // For new invoices (drafted locally), replace the inv_draft_ ID with a real UUID
+    // so the upsert to Supabase uses a valid ID AND the draft cleanup below deletes
+    // the old draft without accidentally deleting the newly saved invoice.
+    const savedDraftId = draftIdRef.current; // keep reference to old draft ID for cleanup
+    const finalInvoiceId = savedDraftId.startsWith('inv_draft_')
+      ? crypto.randomUUID()
+      : savedDraftId;
+
     const finalInvoiceObj: Invoice = {
-      id: draftIdRef.current,
+      id: finalInvoiceId,
       userId: userIdRef.current || (invoice ? invoice.userId : 'local'),
       invoiceType,
       invoiceNumber: finalInvoiceNumber,
@@ -1687,14 +1695,16 @@ export default function InvoiceModal({
       const raw = localStorage.getItem(storageKey);
       if (raw) {
         const all = JSON.parse(raw) as any[];
-        const filtered = all.filter((i: any) => i.id !== draftIdRef.current);
+        // Remove old draft entry (by savedDraftId) — finalInvoiceObj (new UUID) will be added by onSave
+        const filtered = all.filter((i: any) => i.id !== savedDraftId);
         localStorage.setItem(storageKey, JSON.stringify(filtered));
       }
     } catch { /* ignore */ }
-    // Also clean up from Supabase if online
+    // Also clean up the draft from Supabase (use savedDraftId, NOT finalInvoiceId,
+    // so we never accidentally delete the newly-saved real invoice)
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user && draftIdRef.current.startsWith('inv_draft_')) {
-        supabase.from('invoices').delete().eq('id', draftIdRef.current).then(() => { });
+      if (data.session?.user && savedDraftId.startsWith('inv_draft_')) {
+        supabase.from('invoices').delete().eq('id', savedDraftId).then(() => { });
       }
     });
 
