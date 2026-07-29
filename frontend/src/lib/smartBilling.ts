@@ -430,8 +430,6 @@ export function applySmartBillingData(
   ) => {
     const raw = extracted[key];
     if (raw === undefined || raw === null || raw === '') return;
-    const hasExisting = existingVal !== '' && existingVal !== 0 && existingVal !== false;
-    if (hasExisting && !overwrite) return;
     const val = transform ? transform(raw) : (raw as unknown as T);
     setter(val);
     filled.add(key as string);
@@ -443,25 +441,23 @@ export function applySmartBillingData(
     const badWords = ['ship to', 'bill to', 'same as', 'copy bill', 'details same'];
     if (!badWords.some(w => lowerName.includes(w))) {
       const cleanName = toTitleCase(String(extracted.clientName));
-      if (!existing.clientName || overwrite) {
-        setters.setClientName(cleanName);
-        filled.add('clientName');
+      setters.setClientName(cleanName);
+      filled.add('clientName');
 
-        // Registry lookup — auto-fill other client fields
-        const found = existing.registryClients.find((c: any) =>
-          c.name?.toLowerCase() === cleanName.toLowerCase() ||
-          cleanName.toLowerCase().includes(c.name?.toLowerCase() || '') ||
-          (c.name?.toLowerCase() || '').includes(cleanName.toLowerCase())
-        );
-        if (found) {
-          if (found.email && (!existing.clientEmail || overwrite)) { setters.setClientEmail(found.email); filled.add('clientEmail'); }
-          if (found.phone && (!existing.clientPhone || overwrite)) { setters.setClientPhone(found.phone); filled.add('clientPhone'); }
-          if (found.address && (!existing.clientAddress || overwrite)) { setters.setClientAddress(found.address); filled.add('clientAddress'); }
-          if (found.gstin && (!existing.clientGstin || overwrite)) { setters.setClientGstin(found.gstin); filled.add('clientGstin'); }
-          if (found.pan && (!existing.clientPan || overwrite)) { setters.setClientPan(found.pan); filled.add('clientPan'); }
-          if (found.state && (!existing.clientState || overwrite)) { setters.setClientState(found.state); filled.add('clientState'); }
-          if (found.country && (!existing.clientCountry || overwrite)) { setters.setClientCountry(found.country); filled.add('clientCountry'); }
-        }
+      // Registry lookup — auto-fill other client fields
+      const found = existing.registryClients.find((c: any) =>
+        c.name?.toLowerCase() === cleanName.toLowerCase() ||
+        cleanName.toLowerCase().includes(c.name?.toLowerCase() || '') ||
+        (c.name?.toLowerCase() || '').includes(cleanName.toLowerCase())
+      );
+      if (found) {
+        if (found.email) { setters.setClientEmail(found.email); filled.add('clientEmail'); }
+        if (found.phone) { setters.setClientPhone(found.phone); filled.add('clientPhone'); }
+        if (found.address) { setters.setClientAddress(found.address); filled.add('clientAddress'); }
+        if (found.gstin) { setters.setClientGstin(found.gstin); filled.add('clientGstin'); }
+        if (found.pan) { setters.setClientPan(found.pan); filled.add('clientPan'); }
+        if (found.state) { setters.setClientState(found.state); filled.add('clientState'); }
+        if (found.country) { setters.setClientCountry(found.country); filled.add('clientCountry'); }
       }
     }
   }
