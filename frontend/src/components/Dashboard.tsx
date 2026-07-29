@@ -2434,14 +2434,13 @@ export default function Dashboard({
     });
   }, [sectionInvoices, searchTerm, statusFilter, sortBy]);
 
-  // Helper to format numeric values based on profile country selection
-  const formatNum = useCallback((val: number | string) => {
+  const formatNum = useCallback((val: number | string, forceDecimals: boolean = false) => {
     const num = typeof val === 'string' ? parseFloat(val) : val;
     if (isNaN(num)) return '0';
     const isIndia = profile?.country?.toLowerCase() === 'india' || profile?.country?.toLowerCase() === 'in';
     const locale = isIndia ? 'en-IN' : 'en-US';
     return num.toLocaleString(locale, {
-      minimumFractionDigits: num % 1 === 0 ? 0 : 1,
+      minimumFractionDigits: forceDecimals ? 2 : (num % 1 === 0 ? 0 : 1),
       maximumFractionDigits: 2
     });
   }, [profile?.country]);
@@ -3397,7 +3396,7 @@ export default function Dashboard({
                 <div>
                   <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Total Amount</span>
                   <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-blue-600 dark:text-blue-450 block">
-                    {currencySymbol}{activeLedgerStats.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {currencySymbol}{formatNum(activeLedgerStats.total, true)}
                   </span>
                 </div>
                 {/* Micro Sparkline */}
@@ -3415,7 +3414,7 @@ export default function Dashboard({
                 <div>
                   <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Paid</span>
                   <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-emerald-600 dark:text-emerald-450 block">
-                    {currencySymbol}{activeLedgerStats.paid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {currencySymbol}{formatNum(activeLedgerStats.paid, true)}
                   </span>
                 </div>
                 {/* Micro Sparkline */}
@@ -3433,7 +3432,7 @@ export default function Dashboard({
                 <div>
                   <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Pending</span>
                   <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-amber-600 dark:text-amber-450 block">
-                    {currencySymbol}{activeLedgerStats.pending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {currencySymbol}{formatNum(activeLedgerStats.pending, true)}
                   </span>
                 </div>
                 {/* Micro Sparkline */}
