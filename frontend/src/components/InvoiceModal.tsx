@@ -1360,37 +1360,56 @@ export default function InvoiceModal({
     window.location.href = mailto;
   };
 
-  const handleDirectPrint = (inv: Invoice) => {
-    const existingFrame = document.getElementById('invoice-print-iframe');
-    if (existingFrame) {
-      existingFrame.remove();
-    }
+  const handleDirectPrint = async (inv: Invoice) => {
+    emitNotification('Preparing Print', 'Generating document print view...', 'info');
 
-    const iframe = document.createElement('iframe');
-    iframe.id = 'invoice-print-iframe';
-    iframe.style.position = 'fixed';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
-    iframe.style.bottom = '0';
-    iframe.style.right = '0';
-    iframe.style.visibility = 'hidden';
-    
-    iframe.onload = () => {
-      try {
-        // Wait a tiny bit for layout to render within iframe before opening print prompt
-        setTimeout(() => {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        }, 300);
-      } catch (err) {
-        console.error('Direct print failed, redirecting to fallback preview:', err);
-        window.open(`${window.location.origin}/invoice/preview?id=${inv.id}&print=1`, '_blank');
+    try {
+      const pdfBlob = await exportInvoicePDFAsync(inv, activeProfile, 'blob', activeTemplate);
+      if (!pdfBlob || !(pdfBlob instanceof Blob)) {
+        throw new Error('Failed to generate PDF blob');
       }
-    };
-    
-    iframe.src = `${window.location.origin}/invoice/preview?id=${inv.id}`;
-    document.body.appendChild(iframe);
+
+      const existingFrame = document.getElementById('invoice-print-iframe');
+      if (existingFrame) {
+        existingFrame.remove();
+      }
+
+      const blobUrl = URL.createObjectURL(pdfBlob);
+
+      const iframe = document.createElement('iframe');
+      iframe.id = 'invoice-print-iframe';
+      iframe.style.position = 'fixed';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      iframe.style.bottom = '0';
+      iframe.style.right = '0';
+      iframe.style.visibility = 'hidden';
+      
+      iframe.onload = () => {
+        try {
+          // Give the browser iframe container a moment to focus the PDF
+          setTimeout(() => {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          }, 300);
+          
+          // Cleanup the object URL after 1 minute (allows print dialog to read it)
+          setTimeout(() => {
+            URL.revokeObjectURL(blobUrl);
+          }, 60000);
+        } catch (err) {
+          console.error('Direct PDF print failed, opening in new tab:', err);
+          window.open(blobUrl, '_blank');
+        }
+      };
+      
+      iframe.src = blobUrl;
+      document.body.appendChild(iframe);
+    } catch (err: any) {
+      console.error('PDF print generation failed:', err);
+      emitNotification('Print Failed', err.message || 'Could not generate print view', 'error');
+    }
   };
 
   const handleExportMSWord = (inv: Invoice) => {
