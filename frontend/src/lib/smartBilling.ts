@@ -601,8 +601,14 @@ export function applySmartBillingData(
 
         const existingIdx = updatedList.findIndex((existingItem) => {
           const cleanExistingName = (existingItem.name || '').trim().toLowerCase();
-          return isNameMatch(cleanExistingName, cleanNewName) && 
-                 Number(existingItem.rate || 0) === Number(newItem.rate || 0);
+          const nameMatches = isNameMatch(cleanExistingName, cleanNewName);
+          if (nameMatches) {
+            const newRate = Number(newItem.rate || 0);
+            const existingRate = Number(existingItem.rate || 0);
+            // Match if rates are identical, OR if the new item doesn't specify a rate (i.e. rate is 0)
+            return newRate === 0 || existingRate === newRate;
+          }
+          return false;
         });
 
         if (existingIdx > -1) {
