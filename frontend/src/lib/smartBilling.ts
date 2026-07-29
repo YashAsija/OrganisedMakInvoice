@@ -441,6 +441,18 @@ export function applySmartBillingData(
     const badWords = ['ship to', 'bill to', 'same as', 'copy bill', 'details same'];
     if (!badWords.some(w => lowerName.includes(w))) {
       const cleanName = toTitleCase(String(extracted.clientName));
+      
+      // If the client name is changing, clear the old client details first so we don't persist stale data
+      if (cleanName.toLowerCase() !== (existing.clientName || '').toLowerCase()) {
+        setters.setClientEmail('');
+        setters.setClientPhone('');
+        setters.setClientAddress('');
+        setters.setClientGstin('');
+        setters.setClientPan('');
+        setters.setClientState('');
+        setters.setClientCountry('');
+      }
+
       setters.setClientName(cleanName);
       filled.add('clientName');
 
