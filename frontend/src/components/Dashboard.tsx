@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { 
   Plus, 
@@ -1662,7 +1662,7 @@ export default function Dashboard({
                                 </div>
                               ) : col.key === 'rate' ? (
                                 <span className="text-xs font-mono font-semibold text-[#0f172a] dark:text-zinc-200">
-                                  {currencySymbol}{parseFloat(cellVal || 0).toLocaleString()}
+                                  {currencySymbol}{formatNum(cellVal || 0)}
                                 </span>
                               ) : col.key === 'category' ? (
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${getCategoryBadgeStyle(cellVal)}`}>
@@ -1762,7 +1762,7 @@ export default function Dashboard({
                               <span className="text-xs text-[#0f172a] dark:text-zinc-200 font-medium text-right break-words overflow-hidden">
                                 {col.key === 'rate' ? (
                                   <span className="font-mono font-bold">
-                                    {currencySymbol}{parseFloat(cellVal || 0).toLocaleString()}
+                                    {currencySymbol}{formatNum(cellVal || 0)}
                                   </span>
                                 ) : col.key === 'category' ? (
                                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${getCategoryBadgeStyle(cellVal)}`}>
@@ -2433,6 +2433,18 @@ export default function Dashboard({
       }
     });
   }, [sectionInvoices, searchTerm, statusFilter, sortBy]);
+
+  // Helper to format numeric values based on profile country selection
+  const formatNum = useCallback((val: number | string) => {
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num)) return '0';
+    const isIndia = profile?.country?.toLowerCase() === 'india' || profile?.country?.toLowerCase() === 'in';
+    const locale = isIndia ? 'en-IN' : 'en-US';
+    return num.toLocaleString(locale, {
+      minimumFractionDigits: num % 1 === 0 ? 0 : 1,
+      maximumFractionDigits: 2
+    });
+  }, [profile?.country]);
 
   // Non-draft Tax Invoices only for Global Billing Ledger totals & Analytics
   const allLedgerInvoices = useMemo(() => {
@@ -4547,7 +4559,7 @@ export default function Dashboard({
                 <div className="mt-2 min-w-0">
                   <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block truncate">Gross Profit</span>
                   <span className="text-sm sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono truncate">
-                    {currencySymbol}{reportedIncomePaid.toLocaleString()}
+                    {currencySymbol}{formatNum(reportedIncomePaid)}
                   </span>
                 </div>
                 {/* Sparkline bars */}
@@ -4573,7 +4585,7 @@ export default function Dashboard({
                 <div className="mt-2 min-w-0">
                   <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block truncate">Business Expenses</span>
                   <span className="text-sm sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono truncate">
-                    {currencySymbol}{totalReportedExpenses.toLocaleString()}
+                    {currencySymbol}{formatNum(totalReportedExpenses)}
                   </span>
                 </div>
                 {/* Sparkline bars */}
@@ -4599,7 +4611,7 @@ export default function Dashboard({
                 <div className="mt-2 min-w-0">
                   <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block truncate">Pending Receivables</span>
                   <span className="text-sm sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono truncate">
-                    {currencySymbol}{reportedOutstanding.toLocaleString()}
+                    {currencySymbol}{formatNum(reportedOutstanding)}
                   </span>
                 </div>
                 {/* Sparkline bars */}
@@ -4625,7 +4637,7 @@ export default function Dashboard({
                 <div className="mt-2 min-w-0">
                   <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block truncate">Tax Liabilities</span>
                   <span className="text-sm sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono truncate">
-                    {currencySymbol}{reportedTaxTotal.toLocaleString()}
+                    {currencySymbol}{formatNum(reportedTaxTotal)}
                   </span>
                 </div>
                 {/* Sparkline bars */}
@@ -4961,8 +4973,8 @@ export default function Dashboard({
                             <g transform={`translate(${tooltipX}, ${tooltipY})`} className="pointer-events-none filter drop-shadow-[0_2px_4px_rgba(110,96,80,0.12)]">
                               <rect width={tooltipWidth} height={tooltipHeight} rx="6" fill="rgba(35, 32, 29, 0.95)" stroke="#e2e8f0" strokeWidth="0.5" />
                               <text x="8" y="12" fill="#e2e8f0" className="text-[8px] font-black uppercase tracking-wider font-mono">{rec.label}</text>
-                              <text x="8" y="24" fill="#10B981" className="text-[8px] font-bold font-mono">Profit: {currencySymbol}{rec.income.toLocaleString()}</text>
-                              <text x="8" y="34" fill="#38BDF8" className="text-[8px] font-bold font-mono">Tax: {currencySymbol}{rec.tax.toLocaleString()}</text>
+                              <text x="8" y="24" fill="#10B981" className="text-[8px] font-bold font-mono">Profit: {currencySymbol}{formatNum(rec.income)}</text>
+                              <text x="8" y="34" fill="#38BDF8" className="text-[8px] font-bold font-mono">Tax: {currencySymbol}{formatNum(rec.tax)}</text>
                             </g>
                           );
                         })()}
@@ -5098,8 +5110,8 @@ export default function Dashboard({
                             <g transform={`translate(${tooltipX}, ${tooltipY})`} className="pointer-events-none filter drop-shadow-[0_2px_4px_rgba(110,96,80,0.12)]">
                               <rect width={tooltipWidth} height={tooltipHeight} rx="6" fill="rgba(35, 32, 29, 0.95)" stroke="#e2e8f0" strokeWidth="0.5" />
                               <text x="8" y="12" fill="#e2e8f0" className="text-[8px] font-black uppercase tracking-wider font-mono">{rec.label}</text>
-                              <text x="8" y="24" fill="#10B981" className="text-[8px] font-bold font-mono">Earned: {currencySymbol}{rec.income.toLocaleString()}</text>
-                              <text x="8" y="34" fill="#EF4444" className="text-[8px] font-bold font-mono">Spent: {currencySymbol}{rec.expense.toLocaleString()}</text>
+                              <text x="8" y="24" fill="#10B981" className="text-[8px] font-bold font-mono">Earned: {currencySymbol}{formatNum(rec.income)}</text>
+                              <text x="8" y="34" fill="#EF4444" className="text-[8px] font-bold font-mono">Spent: {currencySymbol}{formatNum(rec.expense)}</text>
                             </g>
                           );
                         })()}
@@ -5141,7 +5153,7 @@ export default function Dashboard({
 
                     <div className="text-center sm:text-right shrink-0">
                       <span className={`text-2xl font-black font-mono tracking-tight block ${isProfitable ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
-                        {isProfitable ? '+' : ''}{currencySymbol}{netCash.toLocaleString()}
+                        {isProfitable ? '+' : ''}{currencySymbol}{formatNum(netCash)}
                       </span>
                       <span className={`text-[8.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md mt-1 inline-block ${isProfitable ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-500'}`}>
                         {isProfitable ? 'Healthy Status' : 'Attention Required'}
@@ -5184,7 +5196,7 @@ export default function Dashboard({
                             <td className="py-3 font-extrabold text-[#0f172a] dark:text-white">{inv.invoiceNumber}</td>
                             <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[150px]">{inv.clientName}</td>
                             <td className="py-3 font-medium text-rose-500 font-sans">Due: {inv.dueDate || inv.date}</td>
-                            <td className="py-3 font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{inv.grandTotal.toLocaleString()}</td>
+                            <td className="py-3 font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{formatNum(inv.grandTotal)}</td>
                             <td className="py-3">
                               <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-900/30 text-amber-600 dark:text-amber-400">
                                 PENDING
@@ -5246,7 +5258,7 @@ export default function Dashboard({
                             <td className="py-3 font-extrabold text-[#0f172a] dark:text-white uppercase tracking-tight font-mono text-[10px]">{exp.category}</td>
                             <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[200px]">{exp.description || 'General category expenditure'}</td>
                             <td className="py-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans">{exp.date}</td>
-                            <td className="py-3 font-extrabold font-mono text-rose-500">-{currencySymbol}{exp.amount.toLocaleString()}</td>
+                            <td className="py-3 font-extrabold font-mono text-rose-500">-{currencySymbol}{formatNum(exp.amount)}</td>
                             <td className="py-3 text-right">
                               <button
                                 onClick={() => onDeleteExpense(exp.id)}
@@ -5401,7 +5413,7 @@ export default function Dashboard({
                   <div className="mt-3">
                     <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Settled Earnings</span>
                     <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
-                      {currencySymbol}{totalBilled.toLocaleString()}
+                      {currencySymbol}{formatNum(totalBilled)}
                     </span>
                   </div>
                   {/* Sparkline bars */}
@@ -5427,7 +5439,7 @@ export default function Dashboard({
                   <div className="mt-3">
                     <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Pending Receivables</span>
                     <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
-                      {currencySymbol}{totalOutstanding.toLocaleString()}
+                      {currencySymbol}{formatNum(totalOutstanding)}
                     </span>
                   </div>
                   {/* Sparkline bars */}
@@ -5453,7 +5465,7 @@ export default function Dashboard({
                   <div className="mt-3">
                     <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Operating Expenses</span>
                     <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
-                      {currencySymbol}{totalReportedExpenses.toLocaleString()}
+                      {currencySymbol}{formatNum(totalReportedExpenses)}
                     </span>
                   </div>
                   {/* Sparkline bars */}
@@ -5479,7 +5491,7 @@ export default function Dashboard({
                   <div className="mt-3">
                     <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Tax Liabilities</span>
                     <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
-                      {currencySymbol}{totalTax.toLocaleString()}
+                      {currencySymbol}{formatNum(totalTax)}
                     </span>
                   </div>
                   {/* Sparkline bars */}
@@ -5652,10 +5664,10 @@ export default function Dashboard({
                             />
                             <text x="8" y="12" fill="#e2e8f0" className="text-[8px] font-black uppercase tracking-wider font-mono">{rec.label}</text>
                             <text x="8" y="24" fill="#10B981" className="text-[8px] font-bold font-mono">
-                              Earn: {currencySymbol}{rec.income.toLocaleString()}
+                              Earn: {currencySymbol}{formatNum(rec.income)}
                             </text>
                             <text x="8" y="34" fill="#F59E0B" className="text-[8px] font-bold font-mono">
-                              Due: {currencySymbol}{rec.receivables.toLocaleString()}
+                              Due: {currencySymbol}{formatNum(rec.receivables)}
                             </text>
                           </g>
                         );
@@ -5794,7 +5806,7 @@ export default function Dashboard({
                               <td className="py-3 font-extrabold text-[#0f172a] dark:text-white">{inv.invoiceNumber}</td>
                               <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[120px]">{inv.clientName}</td>
                               <td className="py-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans">{inv.dueDate || inv.date}</td>
-                              <td className="py-3 font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{inv.grandTotal.toLocaleString()}</td>
+                              <td className="py-3 font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{formatNum(inv.grandTotal)}</td>
                               <td className="py-3">
                                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
                                   {inv.status}
