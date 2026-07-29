@@ -125,7 +125,7 @@ function InvoicePreviewContent() {
         }}
       >
         <div
-          className="absolute top-0 left-0 origin-top-left"
+          className="invoice-print-sheet absolute top-0 left-0 origin-top-left"
           style={{
             width: '794px',
             minHeight: '1123px',

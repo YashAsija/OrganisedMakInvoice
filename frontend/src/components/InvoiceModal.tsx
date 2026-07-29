@@ -1360,6 +1360,39 @@ export default function InvoiceModal({
     window.location.href = mailto;
   };
 
+  const handleDirectPrint = (inv: Invoice) => {
+    const existingFrame = document.getElementById('invoice-print-iframe');
+    if (existingFrame) {
+      existingFrame.remove();
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'invoice-print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    iframe.style.bottom = '0';
+    iframe.style.right = '0';
+    iframe.style.visibility = 'hidden';
+    
+    iframe.onload = () => {
+      try {
+        // Wait a tiny bit for layout to render within iframe before opening print prompt
+        setTimeout(() => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        }, 300);
+      } catch (err) {
+        console.error('Direct print failed, redirecting to fallback preview:', err);
+        window.open(`${window.location.origin}/invoice/preview?id=${inv.id}&print=1`, '_blank');
+      }
+    };
+    
+    iframe.src = `${window.location.origin}/invoice/preview?id=${inv.id}`;
+    document.body.appendChild(iframe);
+  };
+
   const handleExportMSWord = (inv: Invoice) => {
     const statusUpper = (inv.status || 'PENDING').toUpperCase();
     let statusBg = '#dcfce7'; // light green
@@ -3418,11 +3451,11 @@ export default function InvoiceModal({
 
                       <button
                         type="button"
-                        onClick={() => window.open(`${window.location.origin}/invoice/preview?id=${savedInvoiceForPreview.id}&print=1`, '_blank')}
+                        onClick={() => handleDirectPrint(savedInvoiceForPreview)}
                         className="col-span-2 flex items-center justify-center gap-1.5 p-2.5 bg-slate-100 dark:bg-zinc-800 text-slate-805 dark:text-white hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-xl text-xs font-bold cursor-pointer transition-all border border-slate-250 dark:border-zinc-700/80"
                       >
                         <Printer className="w-4 h-4 text-violet-500 shrink-0" />
-                        <span>Print / Browser Preview</span>
+                        <span>Print Document</span>
                       </button>
                     </div>
                   </div>
