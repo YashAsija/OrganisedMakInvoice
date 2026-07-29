@@ -3322,6 +3322,7 @@ export default function InvoiceModal({
               </div>
               <button
                 onClick={() => {
+                  localStorage.removeItem('makbills_pending_resume_draft');
                   setSavedInvoiceForPreview(null);
                   onClose();
                 }}
@@ -3431,6 +3432,7 @@ export default function InvoiceModal({
                   <button
                     type="button"
                     onClick={() => {
+                      localStorage.removeItem('makbills_pending_resume_draft');
                       setSavedInvoiceForPreview(null);
                       onClose();
                     }}
