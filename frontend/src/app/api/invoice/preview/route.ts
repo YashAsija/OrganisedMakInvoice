@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-// IMPORTANT: SUPABASE_SERVICE_ROLE_KEY must be set in Vercel env vars.
-// Without it the anon key is used, RLS blocks all reads (no user session in API routes),
-// and every preview returns "Invoice not found".
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+// Prefer service role key (bypasses RLS entirely — no extra policy needed).
+// Falls back to anon key — works once "Allow public read for invoice preview"
+// policies are applied in Supabase (see supabase_preview_public_policy.sql).
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Helper: derive currency code from symbol (mirrors App.tsx logic)
 const deriveCurrencyCode = (sym: string | null | undefined, fallback: string): string => {
@@ -32,52 +35,47 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Missing invoice id' }, { status: 400 });
     }
 
-    // Guard: service role key is required to bypass RLS for public preview reads.
-    if (!supabaseServiceKey) {
-      console.error('[get-invoice-preview] SUPABASE_SERVICE_ROLE_KEY is not set. Add it to Vercel environment variables.');
-      return NextResponse.json({ error: 'Server misconfiguration: preview service is unavailable.' }, { status: 503 });
-    }
-
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+    const client = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false },
     });
 
-    // 1. Fetch the invoice
-    const { data: invoice, error: invoiceError } = await adminClient
+    // 1. Fetch the invoice (bypasses RLS with service role; or uses public-read policy with anon key)
+    const { data: invoice, error: invoiceError } = await client
       .from('invoices')
       .select('*')
       .eq('id', id)
       .maybeSingle();
 
     if (invoiceError) {
-      console.error('[get-invoice-preview] Supabase select error:', invoiceError);
+      console.error('[invoice-preview] Supabase select error:', invoiceError);
       return NextResponse.json({ error: invoiceError.message }, { status: 500 });
     }
 
     if (!invoice) {
+      console.error(`[invoice-preview] Invoice not found for id=${id}. Using key type: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'service_role' : 'anon'}`);
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
 
-    // Restore embeddedTemplate from selectedTemplateStyle if present
+    // Restore embeddedTemplate from selectedTemplateStyle column if present
     if (invoice.selectedTemplateStyle && invoice.selectedTemplateStyle.startsWith('{')) {
       try {
         invoice.embeddedTemplate = JSON.parse(invoice.selectedTemplateStyle);
       } catch (e) {}
     }
 
-    // 2. Fetch business profile details of the owner
+    // 2. Fetch business profile of the owner
     let profile = null;
     const userId = invoice.userId;
 
     if (userId && userId !== 'local') {
       try {
-        const { data: cloudProf } = await adminClient
+        const { data: cloudProf } = await client
           .from('users')
           .select('*')
           .eq('uid', userId)
           .maybeSingle();
 
-        const { data: companySettings } = await adminClient
+        const { data: companySettings } = await client
           .from('company_settings')
           .select('*')
           .eq('user_id', userId)
@@ -119,13 +117,13 @@ export async function GET(req: NextRequest) {
           } : cloudProf;
         }
       } catch (err) {
-        console.error('[get-invoice-preview] Error resolving profile:', err);
+        console.error('[invoice-preview] Error resolving profile:', err);
       }
     }
 
     return NextResponse.json({ invoice, profile });
   } catch (err) {
-    console.error('[get-invoice-preview] Unexpected error:', err);
+    console.error('[invoice-preview] Unexpected error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
