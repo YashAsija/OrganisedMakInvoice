@@ -334,6 +334,10 @@ button:active,
    HIGH-QUALITY PRINT MEDIA QUERIES
    ========================================== */
 @media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
 
   /* Hide standard headers, sidebars, backgrounds, modals, tabs and buttons */
   body,
