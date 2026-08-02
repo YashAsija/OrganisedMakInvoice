@@ -159,15 +159,15 @@ export default function Dashboard({
   const [localActiveTab, setLocalActiveTab] = useState<string>('dashboard');
   const activeTab = propActiveTab !== undefined ? propActiveTab : localActiveTab;
   const setActiveTab = onTabChange !== undefined ? onTabChange : setLocalActiveTab;
-  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro' | 'enterprise'>(() => {
+  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise'>(() => {
     if (typeof window !== 'undefined') {
       const cached = localStorage.getItem('makbills_subscription_tier');
-      return (cached as 'free' | 'pro' | 'enterprise') || 'free';
+      return (cached as 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise') || 'free';
     }
     return 'free';
   });
 
-  const handleUpgrade = (tier: 'free' | 'pro' | 'enterprise') => {
+  const handleUpgrade = (tier: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise') => {
     setSubscriptionTier(tier);
     localStorage.setItem('makbills_subscription_tier', tier);
   };
@@ -1073,7 +1073,7 @@ export default function Dashboard({
               <span className="tracking-wide uppercase">Upgrade Plan</span>
             </div>
             <span className="text-[8.5px] px-1.5 py-0.5 bg-white text-orange-600 rounded-md uppercase font-black tracking-wider animate-pulse shadow-sm">
-              {subscriptionTier === 'free' ? 'PRO' : subscriptionTier === 'pro' ? 'ENT' : 'MAX'}
+              {subscriptionTier === 'free' ? 'PRO' : subscriptionTier === 'basic' ? 'PRO' : subscriptionTier === 'pro' ? 'UNLTD' : 'MAX'}
             </span>
           </button>
         </div>
@@ -4375,15 +4375,15 @@ export default function Dashboard({
             {/* ── Ledger & Invoice Report (unified card) ── */}
             <section
               className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden relative"
-              style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.09), 0 4px 14px rgba(110,96,80,0.07), inset 0 1px 0 rgba(255,255,255,0.85)' }}
+              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.09), 0 4px 14px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.85)' }}
             >
               {/* top highlight */}
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e2e8f0]/80 to-transparent" />
 
               {/* Card header */}
-              <div className="flex flex-wrap items-start sm:items-center justify-between gap-3 px-5 sm:px-6 py-3.5 border-b border-[#e2e8f0]/40 dark:border-zinc-800" style={{ background: 'linear-gradient(to right, #FDFAF7, #FAF7F4)' }}>
+              <div className="flex flex-wrap items-start sm:items-center justify-between gap-3 px-5 sm:px-6 py-3.5 border-b border-[#e2e8f0]/40 dark:border-zinc-800" style={{ background: 'linear-gradient(to right, var(--color-slate-50), var(--color-slate-100))' }}>
                 <div className="flex items-center gap-2.5">
-                  <div className="w-1.5 h-4 rounded-full" style={{ background: 'linear-gradient(to bottom, #D4B896, #C6A87D)' }} />
+                  <div className="w-1.5 h-4 rounded-full" style={{ background: 'linear-gradient(to bottom, var(--color-sky-600), var(--color-sky-700))' }} />
                   <div>
                     <span className="text-[10px] font-black uppercase tracking-widest text-[#0f172a] dark:text-zinc-300 block">Ledger &amp; Invoice Report</span>
                     <span className="text-[9px] text-[#64748b]/60 dark:text-zinc-500 block mt-0.5">Filter records and download compiled reports or individual invoices</span>
@@ -4506,7 +4506,7 @@ export default function Dashboard({
                       exportCollectiveReportPDF(reportedInvoices, profile, rangeLabel);
                     }}
                     className="group relative px-4 py-2.5 rounded-xl text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.98] cursor-pointer overflow-hidden whitespace-nowrap"
-                    style={{ background: 'linear-gradient(135deg, #0f172a 0%, #7A6B5A 100%)', boxShadow: '0 2px 8px rgba(110,96,80,0.28), inset 0 1px 0 rgba(255,255,255,0.10)' }}
+                    style={{ background: 'linear-gradient(135deg, var(--color-slate-705) 0%, var(--color-slate-350) 100%)', boxShadow: '0 2px 8px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.10)' }}
                   >
                     <span className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-150" />
                     <FileText className="w-3.5 h-3.5 shrink-0" />
@@ -4535,7 +4535,7 @@ export default function Dashboard({
 
             <div className="mt-8 mb-4 flex flex-wrap items-center justify-between gap-3 px-2">
               <div className="flex items-center gap-2.5">
-                <div className="w-1.5 h-4 rounded-full" style={{ background: 'linear-gradient(to bottom, #D4B896, #C6A87D)' }} />
+                <div className="w-1.5 h-4 rounded-full" style={{ background: 'linear-gradient(to bottom, var(--color-sky-600), var(--color-sky-700))' }} />
                 <div>
                   <span className="text-[10px] font-black uppercase tracking-widest text-[#0f172a] dark:text-zinc-300 block">Income &amp; Expense Analytics</span>
                   <span className="text-[9px] text-[#64748b]/60 dark:text-zinc-500 block mt-0.5">Overview of cash flow, liabilities, and profitability based on current ledger</span>
@@ -6257,6 +6257,7 @@ export default function Dashboard({
           <SubscriptionPage
             theme={theme}
             profile={profile}
+            invoices={invoices}
             subscriptionTier={subscriptionTier}
             onUpgrade={handleUpgrade}
           />

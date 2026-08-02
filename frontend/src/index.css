@@ -93,112 +93,112 @@ a,
   --color-sky-955: var(--color-sky-955);
 }
 
-/* ROOT/LIGHT CONTEXT (Aesthetic Warm Beige, French Beige & Creamy White theme) */
+/* ROOT/LIGHT CONTEXT (Premium Navy & Sky Blue theme) */
 :root {
-  --color-slate-50: #FCFAF7;
-  /* Gorgeous warm off-white cream background */
-  --color-slate-100: #F4EFE6;
-  /* Luxurious classic soft beige */
-  --color-slate-150: #EADFC9;
-  /* Medium-light French beige detail line */
-  --color-slate-200: #E5D9C4;
-  /* Soft beige borders */
-  --color-slate-205: #D1C7BD;
+  --color-slate-50: #f4f9ff;
+  /* Very light blue-white background */
+  --color-slate-100: #f8fafc;
+  /* Auxiliary light background */
+  --color-slate-150: #e0f2fe;
+  /* Light blue inner panels */
+  --color-slate-200: #bae6fd;
+  /* Soft blue borders */
+  --color-slate-205: #bae6fd;
   /* Balanced light detail contrast variable */
-  --color-slate-350: #998369;
-  /* Descriptions in French beige */
-  --color-slate-405: #8C7558;
-  /* French beige labels */
-  --color-slate-450: #7C664C;
-  --color-slate-550: #6B553D;
-  --color-slate-650: #5C4A36;
-  --color-slate-705: #493B2B;
-  /* Deep organic dark wood text */
-  --color-slate-750: #352B20;
-  --color-slate-805: #2C231A;
-  --color-slate-850: #E5D9C4;
+  --color-slate-350: #475569;
+  /* Descriptions in muted slate */
+  --color-slate-405: #475569;
+  /* Muted slate labels */
+  --color-slate-450: #475569;
+  --color-slate-550: #475569;
+  --color-slate-650: #0f172a;
+  --color-slate-705: #0f172a;
+  /* Deep slate text */
+  --color-slate-750: #0f172a;
+  --color-slate-805: #0f172a;
+  --color-slate-850: #bae6fd;
   /* Fallback light outline */
-  --color-slate-900: #FFFFFF;
+  --color-slate-900: #ffffff;
   /* Card backgrounds are pure clean white */
-  --color-slate-950: #F2EBE1;
-  /* Aux light beige */
+  --color-slate-950: #f8fafc;
+  /* Aux light background */
 
-  /* Map standard Sky buttons & brand elements to highly readable French Beige */
-  --color-sky-50: #FCFAF7;
-  --color-sky-102: #F4EFE6;
-  --color-sky-100: #F4EFE6;
-  --color-sky-305: #D1C7BD;
-  --color-sky-600: #8C7558;
-  /* HIGH contrast legible French beige button background */
-  --color-sky-650: #735F48;
-  --color-sky-700: #5C4A36;
-  --color-sky-750: #493B2B;
-  --color-sky-800: #352B20;
-  --color-sky-850: #2C231A;
-  --color-sky-955: #EADFC9;
+  /* Map standard Sky buttons & brand elements to highly readable Sky Blue */
+  --color-sky-50: #f4f9ff;
+  --color-sky-102: #f8fafc;
+  --color-sky-100: #f8fafc;
+  --color-sky-305: #2563eb;
+  --color-sky-600: #0284c7;
+  /* Primary sky blue button background */
+  --color-sky-650: #0369a1;
+  --color-sky-700: #0369a1;
+  --color-sky-750: #0369a1;
+  --color-sky-800: #0f172a;
+  --color-sky-850: #0f172a;
+  --color-sky-955: #e0f2fe;
 
-  --color-teal-300: #8C7558;
-  --color-teal-850: #493B2B;
+  --color-teal-300: #0284c7;
+  --color-teal-850: #0f172a;
 }
 
-/* DARK CONTEXT (Aesthetic Premium Carbon Black, Deep Greys & Luminous White Text theme) */
+/* DARK CONTEXT (Premium Navy Blue & Luminous Sky Blue theme) */
 .dark,
 html.dark,
 .dark :root {
-  --color-slate-50: #080808;
-  /* Premium pitch-black base canvas */
-  --color-slate-100: #121212;
+  --color-slate-50: #0b1329;
+  /* Navy base canvas */
+  --color-slate-100: #0b1329;
   /* Auxiliary dark elements */
-  --color-slate-150: #1F1F1F;
-  /* High-end dark gray guides */
-  --color-slate-205: #2E2E2E;
-  --color-slate-200: #262626;
-  /* Clean charcoal borders */
-  --color-slate-350: #6B6B6B;
-  --color-slate-405: #9E9E9E;
+  --color-slate-150: #1b264f;
+  /* Navy panels */
+  --color-slate-205: #223269;
+  --color-slate-200: #223269;
+  /* Navy borders */
+  --color-slate-350: #94a3b8;
+  --color-slate-405: #94a3b8;
   /* Clear supporting details */
-  --color-slate-450: #AEAEAE;
-  --color-slate-550: #CCCCCC;
-  --color-slate-650: #E0E0E0;
-  --color-slate-705: #F0F0F0;
-  --color-slate-750: #F9F9F9;
-  --color-slate-805: #FFFFFF;
-  /* High legibility black / white text swaps */
-  --color-slate-850: #262626;
-  /* Dark gray borders */
-  --color-slate-900: #161616;
-  /* Clean elevated dark panel cards */
-  --color-slate-950: #0B0B0B;
+  --color-slate-450: #94a3b8;
+  --color-slate-550: #94a3b8;
+  --color-slate-650: #f8fafc;
+  --color-slate-705: #f8fafc;
+  --color-slate-750: #f8fafc;
+  --color-slate-805: #f8fafc;
+  /* High legibility navy / white text swaps */
+  --color-slate-850: #223269;
+  /* Navy borders */
+  --color-slate-900: #111a36;
+  /* elevated navy cards */
+  --color-slate-950: #0b1329;
   /* Deep pitch dark cards inner */
 
   /* Enable bright clear slate-blue colors for dark mode primary elements */
-  --color-sky-50: #161616;
-  --color-sky-102: #212121;
-  --color-sky-100: #212121;
-  --color-sky-305: #60A5FA;
-  --color-sky-600: #2563EB;
-  /* Premium radiant cobalt dark mode links/buttons */
-  --color-sky-650: #1D4ED8;
-  --color-sky-700: #1D4ED8;
-  --color-sky-750: #1E40AF;
-  --color-sky-800: #1E3A8A;
-  --color-sky-850: #172554;
-  --color-sky-955: #111827;
+  --color-sky-50: #0b1329;
+  --color-sky-102: #0b1329;
+  --color-sky-100: #0b1329;
+  --color-sky-305: #60a5fa;
+  --color-sky-600: #38bdf8;
+  /* Premium radiant sky blue dark mode links/buttons */
+  --color-sky-650: #0284c7;
+  --color-sky-700: #0284c7;
+  --color-sky-750: #0284c7;
+  --color-sky-800: #f8fafc;
+  --color-sky-850: #f8fafc;
+  --color-sky-955: #1b264f;
 
-  --color-teal-300: #2DD4BF;
-  --color-teal-850: #115E59;
+  --color-teal-300: #38bdf8;
+  --color-teal-850: #1b264f;
 }
 
 /* Default elements configurations */
 body {
-  background-color: #FAF8F5;
-  color: #352B20;
+  background-color: #f4f9ff;
+  color: #0f172a;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .dark body {
-  background-color: #080808 !important;
-  color: #F5F5F5 !important;
+  background-color: #0b1329 !important;
+  color: #f8fafc !important;
 }
 
 .dark .bg-white {

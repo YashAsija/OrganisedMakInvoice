@@ -179,7 +179,7 @@ export function SecurityQuestionsStep({ onSave, onBack, isSaving }: SecurityQues
         onClick={handleSave}
         disabled={isSaving || !q1 || !a1.trim() || !q2 || !a2.trim()}
         className="w-full py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-wider text-white transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        style={{ background: 'linear-gradient(135deg, #88765C, #6b5a44)' }}
+        style={{ background: 'linear-gradient(135deg, var(--color-sky-600), var(--color-sky-700))' }}
       >
         {isSaving ? (
           <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />

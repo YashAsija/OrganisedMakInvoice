@@ -141,7 +141,7 @@ export function PinSetupModal({
         style={{ animation: 'pinModalIn 0.25s cubic-bezier(0.34,1.56,0.64,1)' }}
       >
         {/* Header */}
-        <div className="relative px-6 pt-8 pb-5 text-center" style={{ background: 'linear-gradient(135deg, #88765C 0%, #6b5a44 100%)' }}>
+        <div className="relative px-6 pt-8 pb-5 text-center" style={{ background: 'linear-gradient(135deg, var(--color-sky-600) 0%, var(--color-sky-700) 100%)' }}>
           <button
             onClick={onCancel}
             className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white transition-all"
@@ -201,10 +201,10 @@ export function PinSetupModal({
               {/* Step indicator for enable mode */}
               {mode === 'enable' && (
                 <div className="flex justify-center gap-2 mt-1 mb-1">
-                  <div className={`h-1 w-8 rounded-full transition-all ${step === 'enter' ? 'bg-[#88765C]' : 'bg-[#88765C]/30'}`} />
-                  <div className={`h-1 w-8 rounded-full transition-all ${step === 'confirm' ? 'bg-[#88765C]' : 'bg-[#88765C]/30'}`} />
+                  <div className={`h-1 w-8 rounded-full transition-all ${step === 'enter' ? 'bg-sky-600' : 'bg-sky-600/30'}`} />
+                  <div className={`h-1 w-8 rounded-full transition-all ${step === 'confirm' ? 'bg-sky-600' : 'bg-sky-600/30'}`} />
                   {totalSteps === 3 && (
-                    <div className={`h-1 w-8 rounded-full transition-all bg-[#88765C]/30`} />
+                    <div className={`h-1 w-8 rounded-full transition-all bg-sky-600/30`} />
                   )}
                 </div>
               )}
@@ -234,7 +234,7 @@ export function PinSetupModal({
                           key={ki}
                           onClick={() => handleDigit(key)}
                           disabled={isLoading}
-                          className="group flex flex-col items-center justify-center h-14 rounded-2xl bg-slate-50 dark:bg-zinc-800 hover:bg-[#88765C] hover:text-white dark:hover:bg-[#88765C] text-slate-800 dark:text-zinc-200 transition-all duration-150 active:scale-95 shadow-sm border border-slate-100 dark:border-zinc-700/50"
+                          className="group flex flex-col items-center justify-center h-14 rounded-2xl bg-slate-50 dark:bg-zinc-800 hover:bg-sky-600 hover:text-white dark:hover:bg-sky-600 text-slate-800 dark:text-zinc-200 transition-all duration-150 active:scale-95 shadow-sm border border-slate-100 dark:border-zinc-700/50"
                         >
                           <span className="text-xl font-bold leading-tight">{key}</span>
                           <span className="text-[8px] font-semibold uppercase tracking-widest opacity-40 group-hover:opacity-70 leading-tight">
@@ -273,16 +273,16 @@ export function PinSetupModal({
         {/* Step indicator for security_questions step */}
         {step === 'security_questions' && mode === 'enable' && (
           <div className="absolute top-[calc(8rem+1px)] left-1/2 -translate-x-1/2 flex gap-2 pointer-events-none">
-            <div className="h-1 w-8 rounded-full bg-[#88765C]/30" />
-            <div className="h-1 w-8 rounded-full bg-[#88765C]/30" />
-            <div className="h-1 w-8 rounded-full bg-[#88765C]" />
+            <div className="h-1 w-8 rounded-full bg-sky-600/30" />
+            <div className="h-1 w-8 rounded-full bg-sky-600/30" />
+            <div className="h-1 w-8 rounded-full bg-sky-600" />
           </div>
         )}
 
         {/* Loading overlay */}
         {isLoading && (
           <div className="absolute inset-0 bg-white/70 dark:bg-zinc-900/70 flex items-center justify-center rounded-3xl">
-            <div className="w-8 h-8 border-3 border-[#88765C] border-t-transparent rounded-full animate-spin" style={{ borderWidth: '3px' }} />
+            <div className="w-8 h-8 border-3 border-sky-600 border-t-transparent rounded-full animate-spin" style={{ borderWidth: '3px' }} />
           </div>
         )}
       </div>

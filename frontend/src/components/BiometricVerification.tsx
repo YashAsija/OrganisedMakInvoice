@@ -286,10 +286,10 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
   if (screen === 'forgotSent') {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 select-none"
-        style={{ background: 'linear-gradient(135deg, #1a1410 0%, #0f0c08 50%, #1a1410 100%)' }}>
+        style={{ background: 'linear-gradient(135deg, #0b1329 0%, #111a36 50%, #0b1329 100%)' }}>
         <div className="w-full max-w-sm text-center">
           <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl"
-            style={{ background: 'linear-gradient(135deg, #88765C, #6b5a44)' }}>
+            style={{ background: 'linear-gradient(135deg, var(--color-sky-600), var(--color-sky-700))' }}>
             <ShieldCheck className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight mb-3">PIN Removed</h1>
@@ -299,7 +299,7 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
           <button
             onClick={handleBypassAndEnter}
             className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider text-white shadow-lg transition-all active:scale-95"
-            style={{ background: 'linear-gradient(135deg, #88765C, #6b5a44)' }}
+            style={{ background: 'linear-gradient(135deg, var(--color-sky-600), var(--color-sky-700))' }}
           >
             Continue to Dashboard
           </button>
@@ -312,12 +312,12 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
   if (screen === 'forgot') {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 select-none"
-        style={{ background: 'linear-gradient(135deg, #1a1410 0%, #0f0c08 50%, #1a1410 100%)' }}>
+        style={{ background: 'linear-gradient(135deg, #0b1329 0%, #111a36 50%, #0b1329 100%)' }}>
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xl"
-              style={{ background: 'rgba(136,118,92,0.2)', border: '1px solid rgba(136,118,92,0.4)' }}>
-              <Mail className="w-8 h-8" style={{ color: '#88765C' }} />
+              style={{ background: 'rgba(2,132,199,0.2)', border: '1px solid rgba(2,132,199,0.4)' }}>
+              <Mail className="w-8 h-8" style={{ color: '#38bdf8' }} />
             </div>
             <h1 className="text-2xl font-black text-white tracking-tight mb-2">Forgot PIN?</h1>
             <p className="text-sm text-white/60 leading-relaxed max-w-xs mx-auto">
@@ -326,9 +326,9 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
           </div>
 
           {forgotEmail && (
-            <div className="rounded-2xl p-4 mb-6 text-center" style={{ background: 'rgba(136,118,92,0.1)', border: '1px solid rgba(136,118,92,0.3)' }}>
+            <div className="rounded-2xl p-4 mb-6 text-center" style={{ background: 'rgba(2,132,199,0.1)', border: '1px solid rgba(2,132,199,0.3)' }}>
               <p className="text-xs text-white/50 mb-1">Logged in as</p>
-              <p className="text-sm font-bold" style={{ color: '#c4a97e' }}>{forgotEmail}</p>
+              <p className="text-sm font-bold" style={{ color: '#38bdf8' }}>{forgotEmail}</p>
             </div>
           )}
 
@@ -337,7 +337,7 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
               onClick={handleForgotPin}
               disabled={forgotLoading}
               className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider text-white shadow-lg transition-all active:scale-95 disabled:opacity-60"
-              style={{ background: 'linear-gradient(135deg, #88765C, #6b5a44)' }}
+              style={{ background: 'linear-gradient(135deg, var(--color-sky-600), var(--color-sky-700))' }}
             >
               {forgotLoading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -382,11 +382,11 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
     return (
       <div
         className="fixed inset-0 z-50 flex flex-col items-center justify-between select-none"
-        style={{ background: 'linear-gradient(135deg, #1a1410 0%, #0f0c08 50%, #1a1410 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #0b1329 0%, #111a36 50%, #0b1329 100%)' }}
       >
         {/* Top Badge */}
         <div className="mt-10 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest"
-          style={{ background: 'rgba(136,118,92,0.15)', border: '1px solid rgba(136,118,92,0.3)', color: '#c4a97e' }}>
+          style={{ background: 'rgba(2,132,199,0.15)', border: '1px solid rgba(2,132,199,0.3)', color: '#38bdf8' }}>
           <ShieldCheck className="w-3.5 h-3.5" />
           MakInvoices — Set New PIN
         </div>
@@ -397,9 +397,9 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
             <div
               className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-2xl"
               style={{
-                background: 'linear-gradient(135deg, rgba(136,118,92,0.25) 0%, rgba(107,90,68,0.25) 100%)',
-                border: '1px solid rgba(136,118,92,0.4)',
-                color: '#c4a97e',
+                background: 'linear-gradient(135deg, rgba(2,132,199,0.25) 0%, rgba(2,132,199,0.1) 100%)',
+                border: '1px solid rgba(2,132,199,0.4)',
+                color: '#38bdf8',
               }}
             >
               <Lock className="w-9 h-9" />
@@ -417,8 +417,8 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
 
           {/* Step indicator */}
           <div className="flex gap-2 mb-6">
-            <div className={`h-1 w-10 rounded-full transition-all ${resetStep === 'enter' ? 'bg-[#88765C]' : 'bg-[#88765C]/30'}`} />
-            <div className={`h-1 w-10 rounded-full transition-all ${resetStep === 'confirm' ? 'bg-[#88765C]' : 'bg-[#88765C]/30'}`} />
+            <div className={`h-1 w-10 rounded-full transition-all ${resetStep === 'enter' ? 'bg-sky-600' : 'bg-sky-600/30'}`} />
+            <div className={`h-1 w-10 rounded-full transition-all ${resetStep === 'confirm' ? 'bg-sky-600' : 'bg-sky-600/30'}`} />
           </div>
 
           {/* PIN Dots */}
@@ -428,10 +428,10 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
                 key={i}
                 className="w-4 h-4 rounded-full transition-all duration-150"
                 style={{
-                  backgroundColor: i < activePin.length ? '#88765C' : 'transparent',
-                  border: `2px solid ${i < activePin.length ? '#88765C' : 'rgba(255,255,255,0.2)'}`,
+                  backgroundColor: i < activePin.length ? 'var(--color-sky-600)' : 'transparent',
+                  border: `2px solid ${i < activePin.length ? 'var(--color-sky-600)' : 'rgba(255,255,255,0.2)'}`,
                   transform: i < activePin.length ? 'scale(1.2)' : 'scale(1)',
-                  boxShadow: i < activePin.length ? '0 0 10px rgba(136,118,92,0.5)' : 'none',
+                  boxShadow: i < activePin.length ? '0 0 10px rgba(56,189,248,0.5)' : 'none',
                 }}
               />
             ))}
@@ -477,10 +477,10 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
                         background: 'rgba(255,255,255,0.06)',
                         border: '1px solid rgba(255,255,255,0.1)',
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(136,118,92,0.25)')}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(2,132,199,0.25)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
-                      onMouseDown={e => (e.currentTarget.style.background = 'rgba(136,118,92,0.4)')}
-                      onMouseUp={e => (e.currentTarget.style.background = 'rgba(136,118,92,0.25)')}
+                      onMouseDown={e => (e.currentTarget.style.background = 'rgba(2,132,199,0.4)')}
+                      onMouseUp={e => (e.currentTarget.style.background = 'rgba(2,132,199,0.25)')}
                     >
                       <span className="text-xl font-bold text-white leading-tight">{key}</span>
                       <span className="text-[8px] font-semibold uppercase tracking-widest text-white/30 leading-tight">
@@ -499,9 +499,9 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
           <button
             onClick={() => setScreen('securityQuestions')}
             className="w-full mt-5 py-3 text-xs font-bold uppercase tracking-wider transition-all text-center"
-            style={{ color: 'rgba(196,169,126,0.6)' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#c4a97e')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(196,169,126,0.6)')}
+            style={{ color: 'rgba(56,189,248,0.6)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#38bdf8')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(56,189,248,0.6)')}
           >
             ← Back
           </button>
@@ -526,11 +526,11 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col items-center justify-between select-none"
-      style={{ background: 'linear-gradient(135deg, #1a1410 0%, #0f0c08 50%, #1a1410 100%)' }}
+      style={{ background: 'linear-gradient(135deg, #0b1329 0%, #111a36 50%, #0b1329 100%)' }}
     >
       {/* Top Badge */}
       <div className="mt-10 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest"
-        style={{ background: 'rgba(136,118,92,0.15)', border: '1px solid rgba(136,118,92,0.3)', color: '#c4a97e' }}>
+        style={{ background: 'rgba(2,132,199,0.15)', border: '1px solid rgba(2,132,199,0.3)', color: '#38bdf8' }}>
         <ShieldCheck className="w-3.5 h-3.5" />
         MakInvoices — Screen Lock
       </div>
@@ -546,9 +546,9 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
               : ''
           }`}
             style={!isLocked ? {
-              background: 'linear-gradient(135deg, rgba(136,118,92,0.25) 0%, rgba(107,90,68,0.25) 100%)',
-              border: '1px solid rgba(136,118,92,0.4)',
-              color: '#c4a97e'
+              background: 'linear-gradient(135deg, rgba(2,132,199,0.25) 0%, rgba(2,132,199,0.1) 100%)',
+              border: '1px solid rgba(2,132,199,0.4)',
+              color: '#38bdf8'
             } : {}}>
             {isLocked ? <AlertTriangle className="w-9 h-9" /> : <Lock className="w-9 h-9" />}
           </div>
@@ -578,10 +578,10 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
                 key={i}
                 className="w-4 h-4 rounded-full transition-all duration-150"
                 style={{
-                  backgroundColor: i < pin.length ? '#88765C' : 'transparent',
-                  border: `2px solid ${i < pin.length ? '#88765C' : 'rgba(255,255,255,0.2)'}`,
+                  backgroundColor: i < pin.length ? 'var(--color-sky-600)' : 'transparent',
+                  border: `2px solid ${i < pin.length ? 'var(--color-sky-600)' : 'rgba(255,255,255,0.2)'}`,
                   transform: i < pin.length ? 'scale(1.2)' : 'scale(1)',
-                  boxShadow: i < pin.length ? '0 0 10px rgba(136,118,92,0.5)' : 'none',
+                  boxShadow: i < pin.length ? '0 0 10px rgba(56,189,248,0.5)' : 'none',
                 }}
               />
             ))}
@@ -634,10 +634,10 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
                       background: 'rgba(255,255,255,0.06)',
                       border: '1px solid rgba(255,255,255,0.1)',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(136,118,92,0.25)')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(2,132,199,0.25)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
-                    onMouseDown={e => (e.currentTarget.style.background = 'rgba(136,118,92,0.4)')}
-                    onMouseUp={e => (e.currentTarget.style.background = 'rgba(136,118,92,0.25)')}
+                    onMouseDown={e => (e.currentTarget.style.background = 'rgba(2,132,199,0.4)')}
+                    onMouseUp={e => (e.currentTarget.style.background = 'rgba(2,132,199,0.25)')}
                   >
                     <span className="text-xl font-bold text-white leading-tight">{key}</span>
                     <span className="text-[8px] font-semibold uppercase tracking-widest text-white/30 leading-tight">
@@ -656,9 +656,9 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
         <button
           onClick={() => setScreen(hasSecurityQuestions ? 'securityQuestions' : 'forgot')}
           className="w-full mt-5 py-3 text-xs font-bold uppercase tracking-wider transition-all text-center"
-          style={{ color: 'rgba(196,169,126,0.6)' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#c4a97e')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(196,169,126,0.6)')}
+          style={{ color: 'rgba(56,189,248,0.6)' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#38bdf8')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(56,189,248,0.6)')}
         >
           Forgot PIN?
         </button>

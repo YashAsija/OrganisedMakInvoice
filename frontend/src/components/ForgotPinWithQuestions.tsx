@@ -59,16 +59,16 @@ export function ForgotPinWithQuestions({ onSuccess, onBack, onFallback }: Forgot
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 select-none"
-      style={{ background: 'linear-gradient(135deg, #1a1410 0%, #0f0c08 50%, #1a1410 100%)' }}
+      style={{ background: 'linear-gradient(135deg, #0b1329 0%, #111a36 50%, #0b1329 100%)' }}
     >
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="text-center mb-8">
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xl"
-            style={{ background: 'rgba(136,118,92,0.2)', border: '1px solid rgba(136,118,92,0.4)' }}
+            style={{ background: 'rgba(2,132,199,0.2)', border: '1px solid rgba(2,132,199,0.4)' }}
           >
-            <ShieldQuestion className="w-8 h-8" style={{ color: '#c4a97e' }} />
+            <ShieldQuestion className="w-8 h-8" style={{ color: '#38bdf8' }} />
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight mb-2">Recover via Questions</h1>
           <p className="text-sm text-white/60 leading-relaxed max-w-xs mx-auto">
@@ -80,7 +80,7 @@ export function ForgotPinWithQuestions({ onSuccess, onBack, onFallback }: Forgot
         <div className="mb-5">
           <p
             className="text-[11px] font-black uppercase tracking-widest mb-2"
-            style={{ color: '#c4a97e' }}
+            style={{ color: '#38bdf8' }}
           >
             Question 1
           </p>
@@ -94,11 +94,11 @@ export function ForgotPinWithQuestions({ onSuccess, onBack, onFallback }: Forgot
             className="w-full px-4 py-3 rounded-2xl text-sm font-medium outline-none transition-all disabled:opacity-50"
             style={{
               background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(136,118,92,0.35)',
+              border: '1px solid rgba(56,189,248,0.35)',
               color: 'white',
             }}
-            onFocus={e => (e.target.style.borderColor = '#88765C')}
-            onBlur={e => (e.target.style.borderColor = 'rgba(136,118,92,0.35)')}
+            onFocus={e => (e.target.style.borderColor = '#38bdf8')}
+            onBlur={e => (e.target.style.borderColor = 'rgba(56,189,248,0.35)')}
           />
         </div>
 
@@ -106,7 +106,7 @@ export function ForgotPinWithQuestions({ onSuccess, onBack, onFallback }: Forgot
         <div className="mb-6">
           <p
             className="text-[11px] font-black uppercase tracking-widest mb-2"
-            style={{ color: '#c4a97e' }}
+            style={{ color: '#38bdf8' }}
           >
             Question 2
           </p>
@@ -120,11 +120,11 @@ export function ForgotPinWithQuestions({ onSuccess, onBack, onFallback }: Forgot
             className="w-full px-4 py-3 rounded-2xl text-sm font-medium outline-none transition-all disabled:opacity-50"
             style={{
               background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(136,118,92,0.35)',
+              border: '1px solid rgba(56,189,248,0.35)',
               color: 'white',
             }}
-            onFocus={e => (e.target.style.borderColor = '#88765C')}
-            onBlur={e => (e.target.style.borderColor = 'rgba(136,118,92,0.35)')}
+            onFocus={e => (e.target.style.borderColor = '#38bdf8')}
+            onBlur={e => (e.target.style.borderColor = 'rgba(56,189,248,0.35)')}
           />
         </div>
 
@@ -144,7 +144,7 @@ export function ForgotPinWithQuestions({ onSuccess, onBack, onFallback }: Forgot
             onClick={handleSubmit}
             disabled={loading || attempts >= 3}
             className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider text-white shadow-lg transition-all active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
-            style={{ background: 'linear-gradient(135deg, #88765C, #6b5a44)' }}
+            style={{ background: 'linear-gradient(135deg, #38bdf8, #0284c7)' }}
           >
             {loading ? (
               <><RefreshCw className="w-4 h-4 animate-spin" /> Verifying…</>
@@ -156,9 +156,9 @@ export function ForgotPinWithQuestions({ onSuccess, onBack, onFallback }: Forgot
             onClick={onBack}
             disabled={loading}
             className="w-full py-3 rounded-2xl font-semibold text-sm transition-all flex items-center justify-center gap-1.5"
-            style={{ color: 'rgba(196,169,126,0.6)' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#c4a97e')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(196,169,126,0.6)')}
+            style={{ color: 'rgba(56,189,248,0.6)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#38bdf8')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(56,189,248,0.6)')}
           >
             <ChevronLeft className="w-3.5 h-3.5" />
             Back to PIN Entry
