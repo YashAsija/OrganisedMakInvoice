@@ -142,10 +142,29 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
                     onSubmit={async (e) => {
                       e.preventDefault();
                       setContactLoading(true);
-                      await new Promise(r => setTimeout(r, 1000));
-                      setContactLoading(false);
-                      setContactSubmitted(true);
-                      setContactForm({ name: '', email: '', message: '' });
+                      try {
+                        const res = await fetch('/api/tickets', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            category: 'other',
+                            priority: 'medium',
+                            subject: `Contact Form Inquiry from ${contactForm.name}`,
+                            message: `From: ${contactForm.name} <${contactForm.email}>\n\n${contactForm.message}`,
+                          }),
+                        });
+                        if (!res.ok) {
+                          const err = await res.json().catch(() => ({}));
+                          throw new Error(err?.detail || 'Failed to send message');
+                        }
+                        setContactSubmitted(true);
+                        setContactForm({ name: '', email: '', message: '' });
+                      } catch (err) {
+                        console.error('Contact form submission failed', err);
+                        alert('Failed to send your message. Please try again.');
+                      } finally {
+                        setContactLoading(false);
+                      }
                     }} 
                     className="space-y-4"
                   >

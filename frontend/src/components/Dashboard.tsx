@@ -6161,7 +6161,7 @@ export default function Dashboard({
                       
                       <div className="mt-3 flex items-center justify-center bg-white dark:bg-zinc-900 border border-[#e2e8f0]/30 dark:border-zinc-800 rounded-lg p-2 h-16 relative overflow-hidden">
                         {profile.signature ? (
-                          <img src={profile.signature} alt="Signature Preview" className="max-h-full max-w-full object-contain" />
+                          <img src={profile.signature.startsWith('data:') ? profile.signature : `${profile.signature}${profile.signature.includes('?') ? '&' : '?'}t=${Date.now()}`} alt="Signature Preview" className="max-h-full max-w-full object-contain" />
                         ) : (
                           <span className="text-[10px] text-[#64748b]/50 uppercase tracking-wider font-bold">No Signature Configured</span>
                         )}

@@ -49,8 +49,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Build the final draft record — always override userId with the verified value
+    const sanitizedDraft = { ...draft };
+    delete sanitizedDraft.deliveryNote;
+
     const draftRecord = {
-      ...draft,
+      ...sanitizedDraft,
       status: 'draft',
       updatedAt: new Date().toISOString(),
       userId: finalUserId

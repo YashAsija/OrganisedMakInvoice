@@ -127,6 +127,9 @@ export interface BusinessProfile {
   logoUrl?: string;
   signature?: string; // Base64 data URI of drawn signature
   signatureSize?: number; // Size/width of signature in pixels (e.g. 100 to 300)
+  signatureMode?: 'draw' | 'type' | 'upload';
+  signatureText?: string;
+  signatureFont?: string;
   currency: string;
   defaultTaxRate: number;
   themeAccent?: 'sky' | 'emerald' | 'indigo' | 'violet' | 'rose' | 'orange';

@@ -13,6 +13,15 @@ interface BusinessProfileModalProps {
   onSave: (pf: BusinessProfile) => void;
 }
 
+const SIGNATURE_FONTS = [
+  'Caveat', 'Sacramento', 'Dancing Script', 'Great Vibes', 'Alex Brush',
+  'Parisienne', 'Yellowtail', 'Mrs Saint Delafield', 'Reenie Beanie',
+  'Herr Von Muellerhoff', 'Monsieur La Doulaise', 'Pinyon Script', 'Zeyada',
+  'Mr De Haviland', 'La Belle Aurore', 'Allura', 'Arizonia', 'Clicker Script',
+  'Kristi', 'Marck Script', 'Meie Script', 'Ruthie', 'Seaweed Script',
+  'Tangerine', 'WindSong'
+];
+
 export default function BusinessProfileModal({ profile, isOpen, isOnboarding = false, onClose, onSave }: BusinessProfileModalProps) {
   // Tabs State: 'company' | 'banking' | 'billing' | 'subscription' | 'tax'
   type TabType = 'company' | 'banking' | 'billing' | 'subscription' | 'tax';
@@ -75,9 +84,9 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const [website, setWebsite] = useState(() => isOnboarding ? '' : (profile.website || ''));
   const [signature, setSignature] = useState(() => isOnboarding ? '' : (profile.signature || ''));
   const [signatureSize, setSignatureSize] = useState<number>(() => isOnboarding ? 150 : (profile.signatureSize || 150));
-  const [signatureMode, setSignatureMode] = useState<'draw' | 'type' | 'upload'>('draw');
-  const [signatureText, setSignatureText] = useState('');
-  const [signatureFont, setSignatureFont] = useState<string>('Caveat');
+  const [signatureMode, setSignatureMode] = useState<'draw' | 'type' | 'upload'>(() => isOnboarding ? 'draw' : (profile.signatureMode || 'draw'));
+  const [signatureText, setSignatureText] = useState(() => isOnboarding ? '' : (profile.signatureText || ''));
+  const [signatureFont, setSignatureFont] = useState<string>(() => isOnboarding ? 'Caveat' : (profile.signatureFont || 'Caveat'));
   const [themeAccent, setThemeAccent] = useState<'sky' | 'emerald' | 'indigo' | 'violet' | 'rose' | 'orange'>(() => isOnboarding ? 'sky' : (profile.themeAccent || 'sky'));
   const [invoiceFont, setInvoiceFont] = useState<'inter' | 'space' | 'playfair' | 'mono'>(() => isOnboarding ? 'inter' : (profile.invoiceFont || 'inter'));
   const [invoiceLayout, setInvoiceLayout] = useState<'modern' | 'minimal' | 'agency' | 'professional' | 'startup' | 'enterprise'>(() => isOnboarding ? 'professional' : (profile.invoiceLayout || 'professional'));
@@ -148,6 +157,47 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isPanningLogo, setIsPanningLogo] = useState(false);
   const panStart = useRef({ x: 0, y: 0 });
+
+  // Signature Crop/Adjust States
+  const [sigToCrop, setSigToCrop] = useState<string | null>(null);
+  const [sigCropZoom, setSigCropZoom] = useState<number>(1);
+  const [sigCropRotation, setSigCropRotation] = useState<number>(0);
+  const [sigCropPanX, setSigCropPanX] = useState<number>(0);
+  const [sigCropPanY, setSigCropPanY] = useState<number>(0);
+  const sigCropCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isPanningSig, setIsPanningSig] = useState(false);
+  const sigPanStart = useRef({ x: 0, y: 0 });
+
+  const estimateBlur = (imageData: ImageData): boolean => {
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+    
+    let totalDiff = 0;
+    let count = 0;
+    
+    for (let y = 1; y < height - 1; y += 2) {
+      for (let x = 1; x < width - 1; x += 2) {
+        const idx = (y * width + x) * 4;
+        const val = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+        
+        const rightIdx = (y * width + (x + 1)) * 4;
+        const rightVal = (data[rightIdx] + data[rightIdx + 1] + data[rightIdx + 2]) / 3;
+        
+        const bottomIdx = ((y + 1) * width + x) * 4;
+        const bottomVal = (data[bottomIdx] + data[bottomIdx + 1] + data[bottomIdx + 2]) / 3;
+        
+        const diffX = Math.abs(val - rightVal);
+        const diffY = Math.abs(val - bottomVal);
+        
+        totalDiff += (diffX + diffY);
+        count++;
+      }
+    }
+    
+    const avgGradient = totalDiff / (count * 2);
+    return avgGradient < 4.5;
+  };
 
   const validateCompanyProfile = (): boolean => {
     if (!name.trim()) {
@@ -500,8 +550,21 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           setPan(settings.pan || '');
           setCurrency(settings.currency || 'INR');
           setLogoUrl(settings.logo_url || '');
-          setSignature(settings.signature_url || '');
+          setSignature(settings.signature_url ? `${settings.signature_url.split('?')[0]}?t=${Date.now()}` : '');
           setSignatureMode(settings.signature_type || 'draw');
+          
+          if (settings.custom_templates) {
+            try {
+              const extra = typeof settings.custom_templates === 'string'
+                ? JSON.parse(settings.custom_templates)
+                : settings.custom_templates;
+              if (extra.signatureSize) setSignatureSize(extra.signatureSize);
+              if (extra.signatureText) setSignatureText(extra.signatureText);
+              if (extra.signatureFont) setSignatureFont(extra.signatureFont);
+            } catch (e) {
+              console.warn("Failed to parse signature configuration:", e);
+            }
+          }
           
           setCompanyCode(settings.company_code || '');
           setState(settings.state || '');
@@ -820,6 +883,173 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
     setIsPanningLogo(false);
   };
 
+  // Render signature crop preview
+  useEffect(() => {
+    if (!sigToCrop || !sigCropCanvasRef.current) return;
+    const canvas = sigCropCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const cropW = 240;
+      const cropH = 100;
+
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      ctx.beginPath();
+      ctx.rect(cx - cropW/2, cy - cropH/2, cropW, cropH);
+      ctx.clip();
+
+      ctx.translate(cx + sigCropPanX, cy + sigCropPanY);
+      ctx.rotate((sigCropRotation * Math.PI) / 180);
+      
+      const drawW = img.width * sigCropZoom;
+      const drawH = img.height * sigCropZoom;
+      
+      ctx.drawImage(
+        img,
+        - drawW / 2,
+        - drawH / 2,
+        drawW,
+        drawH
+      );
+
+      ctx.restore();
+
+      ctx.strokeStyle = '#0ea5e9';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx - cropW/2, cy - cropH/2, cropW, cropH);
+
+      ctx.fillStyle = 'rgba(9, 13, 22, 0.7)';
+      ctx.fillRect(0, 0, canvas.width, cy - cropH/2);
+      ctx.fillRect(0, cy + cropH/2, canvas.width, cy - cropH/2);
+      ctx.fillRect(0, cy - cropH/2, cx - cropW/2, cropH);
+      ctx.fillRect(cx + cropW/2, cy - cropH/2, cx - cropW/2, cropH);
+    };
+    img.src = sigToCrop;
+  }, [sigToCrop, sigCropZoom, sigCropRotation, sigCropPanX, sigCropPanY]);
+
+  const handleApplySigCrop = () => {
+    if (!sigToCrop) return;
+    const img = new Image();
+    img.onload = () => {
+      const croppedCanvas = document.createElement('canvas');
+      const cropW = 240;
+      const cropH = 100;
+      croppedCanvas.width = cropW;
+      croppedCanvas.height = cropH;
+      const ctx = croppedCanvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return;
+
+      ctx.save();
+      ctx.translate(cropW / 2 + sigCropPanX, cropH / 2 + sigCropPanY);
+      ctx.rotate((sigCropRotation * Math.PI) / 180);
+      
+      const drawW = img.width * sigCropZoom;
+      const drawH = img.height * sigCropZoom;
+      ctx.drawImage(
+        img,
+        - drawW / 2,
+        - drawH / 2,
+        drawW,
+        drawH
+      );
+      ctx.restore();
+
+      const imgData = ctx.getImageData(0, 0, cropW, cropH);
+      const data = imgData.data;
+      
+      // 1. Calculate min and max brightness
+      let minBrightness = 255;
+      let maxBrightness = 0;
+      const brightnessValues = new Float32Array(data.length / 4);
+      
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i+1], b = data[i+2];
+        const brightness = (0.299 * r + 0.587 * g + 0.114 * b);
+        brightnessValues[i / 4] = brightness;
+        if (brightness < minBrightness) minBrightness = brightness;
+        if (brightness > maxBrightness) maxBrightness = brightness;
+      }
+      
+      // 2. Set dynamic threshold (75% of the range from min to max brightness)
+      const threshold = minBrightness + (maxBrightness - minBrightness) * 0.75;
+      
+      let minX = cropW, minY = cropH, maxX = 0, maxY = 0;
+      let hasSignature = false;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const brightness = brightnessValues[i / 4];
+        
+        if (brightness > threshold) {
+          data[i+3] = 0; // Make background transparent
+        } else {
+          // Color signature ink pure black
+          data[i] = 0;
+          data[i+1] = 0;
+          data[i+2] = 0;
+          
+          // Scale opacity based on how dark it is compared to the threshold
+          const ratio = (threshold - brightness) / (threshold - minBrightness || 1);
+          data[i+3] = Math.round(ratio * 255);
+          
+          const x = (i / 4) % cropW;
+          const y = Math.floor((i / 4) / cropW);
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+          hasSignature = true;
+        }
+      }
+
+      if (hasSignature) {
+        ctx.putImageData(imgData, 0, 0);
+        const finalCanvas = getCroppedCanvas(croppedCanvas);
+        setSignature(finalCanvas.toDataURL('image/png'));
+        setSignatureMode('upload');
+      } else {
+        setSignature(croppedCanvas.toDataURL('image/png'));
+        setSignatureMode('upload');
+      }
+
+      setSigToCrop(null);
+    };
+    img.src = sigToCrop;
+  };
+
+  const handleSigPanStart = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    setIsPanningSig(true);
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    sigPanStart.current = {
+      x: clientX - sigCropPanX,
+      y: clientY - sigCropPanY
+    };
+  };
+
+  const handleSigPanMove = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isPanningSig) return;
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setSigCropPanX(clientX - sigPanStart.current.x);
+    setSigCropPanY(clientY - sigPanStart.current.y);
+  };
+
+  const handleSigPanEnd = () => {
+    setIsPanningSig(false);
+  };
+
     // Country change automatically updates states and currency
     // Map of Indian State ISO codes to numeric GST state codes
   const INDIAN_NUMERIC_STATE_CODES: { [key: string]: string } = {
@@ -920,8 +1150,9 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         const b = data[index + 2];
         const a = data[index + 3];
         
-        // Check if pixel is not fully white and has some alpha transparency
-        if (a > 10 && (r < 250 || g < 250 || b < 250)) {
+        const brightness = (0.299 * r + 0.587 * g + 0.114 * b);
+        // Bounding content check: non-transparent and not near white background
+        if (a > 10 && brightness < 240) {
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
           if (y < minY) minY = y;
@@ -949,7 +1180,28 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
     const cropCtx = cropCanvas.getContext('2d');
     if (!cropCtx) return canvas;
     
-    cropCtx.drawImage(canvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+    const croppedData = ctx.getImageData(minX, minY, cropW, cropH);
+    const cData = croppedData.data;
+    
+    // Force transparency for all background pixels
+    for (let i = 0; i < cData.length; i += 4) {
+      const r = cData[i];
+      const g = cData[i+1];
+      const b = cData[i+2];
+      const a = cData[i+3];
+      const brightness = (0.299 * r + 0.587 * g + 0.114 * b);
+      
+      if (brightness > 240 || a < 10) {
+        cData[i+3] = 0; // Transparent
+      } else {
+        // Pure high-contrast black ink for signatures
+        cData[i] = 0;
+        cData[i+1] = 0;
+        cData[i+2] = 0;
+      }
+    }
+    
+    cropCtx.putImageData(croppedData, 0, 0);
     return cropCanvas;
   };
 
@@ -979,12 +1231,13 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return;
       
+      let active = true;
       const drawText = () => {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (!active) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         if (signatureText.trim()) {
-          ctx.font = `italic 96px "${signatureFont}", "Brush Script MT", cursive`;
+          ctx.font = `96px "${signatureFont}", "Brush Script MT", cursive`;
           ctx.fillStyle = '#000000';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -997,11 +1250,26 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         }
       };
 
+      // Draw immediately
+      drawText();
+
+      // Redraw when the specific font finishes loading
       if (document.fonts) {
-        document.fonts.load(`italic 96px "${signatureFont}"`).then(drawText).catch(drawText);
-      } else {
-        drawText();
+        document.fonts.load(`96px "${signatureFont}"`).then(() => {
+          drawText();
+        }).catch(() => {
+          drawText();
+        });
+
+        // Redraw when all layout font files are loaded/ready
+        document.fonts.ready.then(() => {
+          drawText();
+        });
       }
+
+      return () => {
+        active = false;
+      };
     }
   }, [signatureText, signatureMode, signatureFont]);
   const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -1086,71 +1354,38 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
-      const canvas = canvasRef.current;
-      if (!canvas) {
-        // Fallback: just save the image directly as the signature
-        setSignature(dataUrl);
-        return;
-      }
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (!ctx) return;
-
-      const img = new Image();
-      img.onload = () => {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = img.width;
-        tempCanvas.height = img.height;
-        const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-        if (!tempCtx) return;
-        
-        tempCtx.drawImage(img, 0, 0);
-        const imgData = tempCtx.getImageData(0, 0, img.width, img.height);
-        const data = imgData.data;
-        
-        let minX = img.width, minY = img.height, maxX = 0, maxY = 0;
-        let hasSignature = false;
-        
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i], g = data[i+1], b = data[i+2];
-          const brightness = (0.299 * r + 0.587 * g + 0.114 * b);
+      
+      // Perform Blur Detection
+      const tempImg = new Image();
+      tempImg.onload = () => {
+        const checkCanvas = document.createElement('canvas');
+        checkCanvas.width = Math.min(tempImg.width, 400);
+        checkCanvas.height = Math.min(tempImg.height, 300);
+        const checkCtx = checkCanvas.getContext('2d');
+        if (checkCtx) {
+          checkCtx.drawImage(tempImg, 0, 0, checkCanvas.width, checkCanvas.height);
+          const imgData = checkCtx.getImageData(0, 0, checkCanvas.width, checkCanvas.height);
           
-          if (brightness > 200) {
-            data[i+3] = 0; // Transparent
-          } else {
-            data[i] = 0; data[i+1] = 0; data[i+2] = 0; data[i+3] = 255;
-            const x = (i / 4) % img.width;
-            const y = Math.floor((i / 4) / img.width);
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
-            hasSignature = true;
+          const isBlurry = estimateBlur(imgData);
+          if (isBlurry) {
+            setNotification({
+              title: 'Blurry Image Detected',
+              message: 'The uploaded signature image appears to be blurry or low resolution. For best results on invoices, please use a sharp, clear photo taken under good lighting.',
+              type: 'info'
+            });
           }
         }
         
-        if (hasSignature) {
-          tempCtx.putImageData(imgData, 0, 0);
-          const sigWidth = maxX - minX;
-          const sigHeight = maxY - minY;
-          const scale = Math.min((canvas.width - 40) / sigWidth, (canvas.height - 40) / sigHeight);
-          const drawW = sigWidth * scale;
-          const drawH = sigHeight * scale;
-          const drawX = (canvas.width - drawW) / 2;
-          const drawY = (canvas.height - drawH) / 2;
-          
-          ctx.drawImage(tempCanvas, minX, minY, sigWidth, sigHeight, drawX, drawY, drawW, drawH);
-        }
-        
-        setSignatureMode('upload');
-        setSignature(canvas.toDataURL('image/png'));
+        // Open Signature Cropping Modal
+        setSigToCrop(dataUrl);
+        setSigCropZoom(1);
+        setSigCropRotation(0);
+        setSigCropPanX(0);
+        setSigCropPanY(0);
       };
-      img.src = dataUrl;
+      tempImg.src = dataUrl;
     };
     reader.readAsDataURL(file);
-    // Reset so same file can be re-uploaded
     e.target.value = '';
   };
 
@@ -1213,6 +1448,66 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
     const success = await saveSettingsToDB();
     if (success) {
+      if (onSave) {
+        const updatedProfile: BusinessProfile = {
+          uid: profile.uid,
+          name,
+          displayName,
+          email,
+          phone,
+          address,
+          taxId,
+          pan,
+          currency,
+          defaultTaxRate,
+          logoUrl,
+          website,
+          signature,
+          signatureSize,
+          signatureMode,
+          signatureText,
+          signatureFont,
+          themeAccent,
+          invoiceFont,
+          invoiceLayout,
+          companyCode,
+          state,
+          stateCode,
+          country,
+          currencySymbol,
+          mobile,
+          bankName,
+          accountNumber,
+          ifsc,
+          upiId,
+          invoicePrefix,
+          startingInvoiceNumber,
+          proformaPrefix,
+          startingProformaNumber,
+          debitNotePrefix,
+          startingDebitNoteNumber,
+          creditNotePrefix,
+          startingCreditNoteNumber,
+          quotePrefix,
+          startingQuoteNumber,
+          purchaseOrderPrefix,
+          startingPurchaseOrderNumber,
+          purchasesPrefix,
+          startingPurchasesNumber,
+          postedInvoiceEdit,
+          materialRateEdit,
+          materialCategorization,
+          defaultNotes,
+          defaultTerms,
+          taxMode,
+          customTaxName,
+          customTaxPercentage,
+          customTaxCols,
+          additionalTaxes,
+          updatedAt: new Date().toISOString()
+        };
+        onSave(updatedProfile);
+      }
       emitNotification('Company Settings Updated', 'Your business profile and settings have been successfully saved.', 'success');
       setNotification({ message: 'Settings saved successfully!', type: 'success' });
     }
@@ -1283,6 +1578,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               .from(bucketUsed)
               .getPublicUrl(`${user.id}/logo.png`);
             uploadedLogoUrl = publicUrl;
+            setLogoUrl(publicUrl);
           }
         } catch (uploadErr: any) {
           console.error("[SETTINGS] Logo convert/upload exception:", uploadErr);
@@ -1312,15 +1608,16 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 upsert: true
               });
             if (uploadError) {
-              console.error("[SETTINGS] Signature upload error:", uploadError);
-              setNotification({ message: `Failed to upload signature: ${uploadError.message}`, type: 'error' });
-              setIsSaving(false);
-              return false;
+               console.error("[SETTINGS] Signature upload error:", uploadError);
+               setNotification({ message: `Failed to upload signature: ${uploadError.message}`, type: 'error' });
+               setIsSaving(false);
+               return false;
             }
             const { data: { publicUrl } } = supabase.storage
               .from('Signature')
               .getPublicUrl(`${user.id}/signature.png`);
             uploadedSignatureUrl = publicUrl;
+            setSignature(publicUrl);
           }
         } catch (uploadErr: any) {
           console.error("[SETTINGS] Signature convert/upload exception:", uploadErr);
@@ -1375,6 +1672,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         material_categorization: materialCategorization.toLowerCase(),
         default_notes: defaultNotes,
         default_terms: defaultTerms,
+        custom_templates: JSON.stringify({ signatureSize, signatureText, signatureFont, signatureMode }),
         updated_at: new Date().toISOString()
       };
 
@@ -1413,7 +1711,6 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           const { proforma_prefix, starting_proforma_number, debit_note_prefix, starting_debit_note_number,
             credit_note_prefix, starting_credit_note_number, quote_prefix, starting_quote_number,
             purchase_order_prefix, starting_purchase_order_number, purchases_prefix, starting_purchases_number,
-            currency: _currency, // may not exist in older schemas
             ...fallbackData } = settingData;
 
           ({ data: savedSetting, error: settingError } = await supabase
@@ -2017,21 +2314,9 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                             className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium cursor-pointer"
                             style={{ fontFamily: signatureFont }}
                           >
-                            <option value="Caveat" style={{ fontFamily: 'Caveat' }}>Caveat</option>
-                            <option value="Sacramento" style={{ fontFamily: 'Sacramento' }}>Sacramento</option>
-                            <option value="Dancing Script" style={{ fontFamily: 'Dancing Script' }}>Dancing Script</option>
-                            <option value="Great Vibes" style={{ fontFamily: 'Great Vibes' }}>Great Vibes</option>
-                            <option value="Alex Brush" style={{ fontFamily: 'Alex Brush' }}>Alex Brush</option>
-                            <option value="Parisienne" style={{ fontFamily: 'Parisienne' }}>Parisienne</option>
-                            <option value="Yellowtail" style={{ fontFamily: 'Yellowtail' }}>Yellowtail</option>
-                            <option value="Mrs Saint Delafield" style={{ fontFamily: 'Mrs Saint Delafield' }}>Mrs Saint Delafield</option>
-                            <option value="Reenie Beanie" style={{ fontFamily: 'Reenie Beanie' }}>Reenie Beanie</option>
-                            <option value="Herr Von Muellerhoff" style={{ fontFamily: 'Herr Von Muellerhoff' }}>Herr Von Muellerhoff</option>
-                            <option value="Monsieur La Doulaise" style={{ fontFamily: 'Monsieur La Doulaise' }}>Monsieur La Doulaise</option>
-                            <option value="Pinyon Script" style={{ fontFamily: 'Pinyon Script' }}>Pinyon Script</option>
-                            <option value="Zeyada" style={{ fontFamily: 'Zeyada' }}>Zeyada</option>
-                            <option value="Mr De Haviland" style={{ fontFamily: 'Mr De Haviland' }}>Mr De Haviland</option>
-                            <option value="La Belle Aurore" style={{ fontFamily: 'La Belle Aurore' }}>La Belle Aurore</option>
+                            {SIGNATURE_FONTS.map(f => (
+                              <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
+                            ))}
                           </select>
                         </div>
                       </div>
@@ -2063,7 +2348,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                         <div className="w-full h-32 bg-transparent flex items-center justify-center p-4">
                           {signature ? (
                             <img 
-                              src={signature} 
+                              src={signature.startsWith('data:') ? signature : `${signature}${signature.includes('?') ? '&' : '?'}t=${Date.now()}`} 
                               alt="Signature Preview" 
                               className="max-w-full max-h-full object-contain" 
                             />
@@ -3232,6 +3517,110 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           </div>
         </div>
       )}
+
+      {/* Signature Cropping and Adjustment Modal */}
+      {sigToCrop && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center z-[999] p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-100 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-scale-up">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-850 dark:text-white">Adjust & Crop Signature</h3>
+              <button
+                type="button"
+                onClick={() => setSigToCrop(null)}
+                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-605 dark:hover:text-white cursor-pointer transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Canvas Body */}
+            <div className="p-6 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-955/50">
+              <canvas
+                ref={sigCropCanvasRef}
+                width={300}
+                height={200}
+                onMouseDown={handleSigPanStart}
+                onMouseMove={handleSigPanMove}
+                onMouseUp={handleSigPanEnd}
+                onMouseLeave={handleSigPanEnd}
+                onTouchStart={handleSigPanStart}
+                onTouchMove={handleSigPanMove}
+                onTouchEnd={handleSigPanEnd}
+                className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-[#090d16] cursor-move shadow-inner"
+              />
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-medium">Drag on the box above to pan/reposition the signature.</p>
+            </div>
+
+            {/* Controls */}
+            <div className="p-5 space-y-4">
+              {/* Zoom Slider */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  <span>Zoom / Scale</span>
+                  <span className="font-mono text-slate-700 dark:text-slate-350">{Math.round(sigCropZoom * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="3.0"
+                  step="0.05"
+                  value={sigCropZoom}
+                  onChange={(e) => setSigCropZoom(parseFloat(e.target.value))}
+                  className="w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-600"
+                />
+              </div>
+
+              {/* Rotation */}
+              <div className="space-y-1.5">
+                <span className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Rotate Image</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSigCropRotation((prev) => (prev + 90) % 360)}
+                    className="flex-1 py-2 text-[10px] font-bold uppercase rounded-lg border border-slate-200 dark:border-zinc-800 text-sky-600 dark:text-[#e2e8f0] bg-white dark:bg-zinc-950 hover:bg-slate-50 dark:hover:bg-zinc-850 cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>🔄 Rotate 90° CW</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSigCropRotation((prev) => (prev - 90 + 360) % 360)}
+                    className="flex-1 py-2 text-[10px] font-bold uppercase rounded-lg border border-slate-200 dark:border-zinc-800 text-sky-600 dark:text-[#e2e8f0] bg-white dark:bg-zinc-950 hover:bg-slate-50 dark:hover:bg-zinc-850 cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>🔄 Rotate 90° CCW</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2 bg-slate-50/50 dark:bg-slate-955/20">
+              <button
+                type="button"
+                onClick={() => setSigToCrop(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleApplySigCrop}
+                className="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                Apply Crop
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden element to force download of Google Fonts for canvas rendering */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', visibility: 'hidden', height: 0, width: 0, overflow: 'hidden' }}>
+        {SIGNATURE_FONTS.map(f => (
+          <span key={f} style={{ fontFamily: f }}>load {f}</span>
+        ))}
+      </div>
     </div>
   );
 }

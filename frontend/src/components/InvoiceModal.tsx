@@ -51,6 +51,9 @@ const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesL
   let maxNum = startNum - 1;
   if (invoicesList && invoicesList.length > 0) {
     invoicesList.forEach(inv => {
+      if (inv.status === 'draft') {
+        return;
+      }
       const invNum = inv.invoiceNumber || '';
       if (invNum.startsWith(formatPrefix)) {
         const suffix = invNum.substring(formatPrefix.length);
@@ -392,7 +395,17 @@ export default function InvoiceModal({
     setShowClientNameError(false);
     setShowLineItemsError(false);
     if (invoice) {
-      setInvoiceNumber(invoice.invoiceNumber);
+      const isDraft = invoice.status === 'draft';
+      const type = invoice.invoiceType || 'invoice';
+      const numberIsTaken = invoices.some(inv => inv.status !== 'draft' && inv.invoiceNumber === invoice.invoiceNumber && (inv.invoiceType || 'invoice') === type);
+      
+      if (isDraft && numberIsTaken) {
+        const config = getDocTypeConfig(type);
+        const nextAvailableNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, type);
+        setInvoiceNumber(nextAvailableNumber);
+      } else {
+        setInvoiceNumber(invoice.invoiceNumber);
+      }
       setDate(invoice.date);
       setDueDate(invoice.dueDate);
       setClientName(invoice.clientName);
@@ -611,6 +624,13 @@ export default function InvoiceModal({
     }
   }, [isOpen, invoice, invoiceType, invoices, getDocTypeConfig]);
 
+  // Synchronize activeProfile state when profile prop changes
+  useEffect(() => {
+    if (profile) {
+      setActiveProfile(profile);
+    }
+  }, [profile]);
+
   // Fetch fresh company settings from Supabase on modal mount/open
   useEffect(() => {
     if (isOpen) {
@@ -624,10 +644,23 @@ export default function InvoiceModal({
               .eq('user_id', user.id)
               .single();
             if (settings) {
+              let extraConfig: any = {};
+              if (settings.custom_templates) {
+                try {
+                  extraConfig = typeof settings.custom_templates === 'string'
+                    ? JSON.parse(settings.custom_templates)
+                    : settings.custom_templates;
+                } catch (e) {}
+              }
+
               setActiveProfile(prev => ({
                 ...prev,
                 logoUrl: settings.logo_url || prev.logoUrl,
-                signature: settings.signature_url || prev.signature,
+                signature: settings.signature_url ? `${settings.signature_url.split('?')[0]}?t=${Date.now()}` : prev.signature,
+                signatureSize: extraConfig.signatureSize || prev.signatureSize || 150,
+                signatureText: extraConfig.signatureText || prev.signatureText || '',
+                signatureFont: extraConfig.signatureFont || prev.signatureFont || 'Caveat',
+                signatureMode: settings.signature_type || extraConfig.signatureMode || prev.signatureMode || 'draw',
                 name: settings.business_name || prev.name,
                 displayName: settings.owner_name || prev.displayName,
                 ownerName: settings.owner_name || prev.ownerName,

@@ -10,7 +10,7 @@ async function main() {
     // If the RPC helper doesn't exist, we can query information_schema or just do a select on a dummy row
     console.log("RPC get_table_columns failed, attempting to select a dummy row...");
     const { data: selectData, error: selectError } = await supabase
-      .from('company_settings')
+      .from('users')
       .select('*')
       .limit(1);
     if (selectError) {

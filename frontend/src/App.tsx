@@ -611,6 +611,15 @@ export default function App() {
 
               if (cloudProf) {
                 // Merge company_settings fields into the profile if available
+                let extraConfig: any = {};
+                if (companySettings && companySettings.custom_templates) {
+                  try {
+                    extraConfig = typeof companySettings.custom_templates === 'string'
+                      ? JSON.parse(companySettings.custom_templates)
+                      : companySettings.custom_templates;
+                  } catch (e) {}
+                }
+
                 const mergedProf: BusinessProfile = companySettings ? {
                   ...(cloudProf as BusinessProfile),
                   name: companySettings.business_name || cloudProf.name || '',
@@ -623,7 +632,11 @@ export default function App() {
                   taxId: companySettings.gstin || cloudProf.taxId || '',
                   pan: companySettings.pan || cloudProf.pan || '',
                   logoUrl: companySettings.logo_url || cloudProf.logoUrl || '',
-                  signature: companySettings.signature_url || cloudProf.signature || '',
+                  signature: companySettings.signature_url ? `${companySettings.signature_url.split('?')[0]}?t=${Date.now()}` : (cloudProf.signature || ''),
+                  signatureSize: extraConfig.signatureSize || cloudProf.signatureSize || 150,
+                  signatureText: extraConfig.signatureText || extraConfig.signature_text || '',
+                  signatureFont: extraConfig.signatureFont || extraConfig.signature_font || 'Caveat',
+                  signatureMode: companySettings.signature_type || extraConfig.signatureMode || cloudProf.signatureMode || 'draw',
                   country: companySettings.country || cloudProf.country || '',
                   state: companySettings.state || cloudProf.state || '',
                   stateCode: companySettings.state_code || cloudProf.stateCode || '',
@@ -1281,6 +1294,9 @@ export default function App() {
 
   // 2. Save Profile (Settings modifier)
   const handleSaveProfile = async (updatedProfile: BusinessProfile) => {
+    const oldCurrency = profile.currency || 'INR';
+    const newCurrency = updatedProfile.currency || 'INR';
+
     setProfile(updatedProfile);
     localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(updatedProfile));
 
@@ -1290,6 +1306,117 @@ export default function App() {
         await supabase.from('users').upsert({ ...updatedProfile, uid: user.id });
       } catch (error) {
         handleSupabaseError(error, OperationType.WRITE, path);
+      }
+    }
+
+    if (oldCurrency !== newCurrency) {
+      try {
+        const response = await fetch('https://open.er-api.com/v6/latest/USD');
+        if (response.ok) {
+          const data = await response.json();
+          const rates = data.rates;
+          
+          if (rates && rates[oldCurrency] && rates[newCurrency]) {
+            const factor = rates[newCurrency] / rates[oldCurrency];
+            
+            // 1. Convert all invoices
+            const convertedInvoices = invoices.map(inv => {
+              const items = (inv.items || []).map(item => ({
+                ...item,
+                rate: Number((item.rate * factor).toFixed(2))
+              }));
+
+              const subtotal = Number((inv.subtotal * factor).toFixed(2));
+              const discountTotal = Number((inv.discountTotal * factor).toFixed(2));
+              const taxTotal = Number((inv.taxTotal * factor).toFixed(2));
+              const grandTotal = Number((inv.grandTotal * factor).toFixed(2));
+              
+              let discountValue = inv.discountValue;
+              if (inv.discountType === 'flat') {
+                discountValue = Number((inv.discountValue * factor).toFixed(2));
+              }
+
+              let freightCharges = inv.freightCharges;
+              if (freightCharges !== undefined) {
+                freightCharges = Number((freightCharges * factor).toFixed(2));
+              }
+
+              return {
+                ...inv,
+                items,
+                subtotal,
+                discountTotal,
+                taxTotal,
+                grandTotal,
+                discountValue,
+                freightCharges
+              };
+            });
+            
+            setInvoices(convertedInvoices);
+            localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(convertedInvoices));
+            
+            if (user) {
+              const sanitizedInvoices = convertedInvoices.map(inv => {
+                const sanitized: any = {};
+                const validCols = [
+                  'id', 'userId', 'invoiceType', 'invoiceNumber', 'referenceNumber', 'poNumber',
+                  'date', 'dueDate', 'clientName', 'clientEmail', 'clientPhone', 'clientAddress',
+                  'notes', 'subtotal', 'discountType', 'discountValue', 'discountTotal',
+                  'taxTotal', 'grandTotal', 'status', 'items', 'createdAt', 'updatedAt',
+                  'paidDate', 'recurringSettings', 'parentInvoiceId', 'selectedTemplateStyle',
+                  'selectedCustomTemplateId', 'qrCodeTriggerUrl', 'companyState', 'companyCountry',
+                  'customTaxCols', 'clientState', 'clientCountry', 'taxMode', 'customTaxName',
+                  'customTaxPercentage', 'customTaxType', 'additionalTaxes', 'invoiceTerms',
+                  'placeOfSupply', 'grRrNo', 'transport', 'vehicleNo', 'driverMobile',
+                  'station', 'ewayBillNo', 'shippedToName', 'shippedToPhone', 'shippedToEmail',
+                  'shippedToPan', 'shippedToState', 'shippedToCountry', 'shippedToGstin',
+                  'shippedToAddress', 'clientGstin', 'clientPan', 'embeddedTemplate'
+                ];
+                validCols.forEach(col => {
+                  if ((inv as any)[col] !== undefined) {
+                    sanitized[col] = (inv as any)[col];
+                  }
+                });
+                return sanitized;
+              });
+
+              const { error } = await supabase.from('invoices').upsert(sanitizedInvoices);
+              if (error) {
+                console.error('[SETTINGS] Error upserting converted invoices:', error);
+              }
+            }
+
+            // 2. Convert all expenses
+            const convertedExpenses = expenses.map(exp => ({
+              ...exp,
+              amount: Number((exp.amount * factor).toFixed(2))
+            }));
+            
+            setExpenses(convertedExpenses);
+            localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(convertedExpenses));
+            
+            if (user) {
+              const sanitizedExpenses = convertedExpenses.map(exp => {
+                const sanitized: any = {};
+                const validCols = ['id', 'userId', 'category', 'amount', 'date', 'description', 'createdAt'];
+                validCols.forEach(col => {
+                  if ((exp as any)[col] !== undefined) {
+                    sanitized[col] = (exp as any)[col];
+                  }
+                });
+                return sanitized;
+              });
+
+              const { error } = await supabase.from('expenses').upsert(sanitizedExpenses);
+              if (error) {
+                console.error('[SETTINGS] Error upserting converted expenses:', error);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error converting currency values:', err);
       }
     }
   };

@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   MessageCircle, Mail, Phone, FileText, ChevronRight, ChevronDown,
   ExternalLink, Search, Zap, BookOpen, AlertCircle, CheckCircle2,
   Star, ThumbsUp, Send, HelpCircle, Shield, Video, ArrowRight,
-  ArrowLeft, Play, Code, Lock, Briefcase
+  ArrowLeft, Play, Code, Lock, Briefcase, Clock, MessageSquare, Loader2
 } from 'lucide-react';
 import { emitNotification } from '../lib/notifications';
+import { supabase } from '../lib/supabase';
 
 type TicketCategory = 'billing' | 'technical' | 'account' | 'feature' | 'other';
 
@@ -244,6 +245,87 @@ interface SupportPageProps {
 
 export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageProps) {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // --- Ticket Viewer & Chat State ---
+  const [ticketViewMode, setTicketViewMode] = useState<'submit' | 'list' | 'chat'>('submit');
+  const [userSession, setUserSession] = useState<any>(null);
+  const [ticketsList, setTicketsList] = useState<any[]>([]);
+  const [ticketsListLoading, setTicketsListLoading] = useState(false);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [ticketDetails, setTicketDetails] = useState<any>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [replyLoading, setReplyLoading] = useState(false);
+  const [ticketFilter, setTicketFilter] = useState<'all' | 'open' | 'closed'>('all');
+  
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (ticketViewMode === 'chat' && chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [ticketDetails, ticketViewMode]);
+
+  const fetchTickets = async () => {
+    setTicketsListLoading(true);
+    try {
+      const session = userSession || (await supabase.auth.getSession()).data.session;
+      if (!session) {
+        setTicketsList([]);
+        return;
+      }
+      const res = await fetch('/api/tickets', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTicketsList(data.tickets || []);
+      } else {
+        console.error("Failed to fetch tickets:", res.statusText);
+      }
+    } catch (err) {
+      console.error("Error fetching tickets:", err);
+    } finally {
+      setTicketsListLoading(false);
+    }
+  };
+
+  const fetchTicketDetails = async (ticketId: string) => {
+    setDetailsLoading(true);
+    try {
+      const session = userSession || (await supabase.auth.getSession()).data.session;
+      if (!session) return;
+      const res = await fetch(`/api/tickets/${ticketId}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTicketDetails(data); // { ticket: ..., messages: [...] }
+      } else {
+        console.error("Failed to fetch ticket details");
+      }
+    } catch (err) {
+      console.error("Error fetching ticket details:", err);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
   const [activeResource, setActiveResource] = useState<'guide' | 'video' | 'privacy' | 'shortcuts' | null>(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
@@ -271,9 +353,11 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
   const [ticketCategory, setTicketCategory] = useState<TicketCategory>('technical');
+  const [ticketPriority, setTicketPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketBody, setTicketBody] = useState('');
   const [ticketSubmitted, setTicketSubmitted] = useState(false);
+  const [ticketLoading, setTicketLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeRating, setActiveRating] = useState<number | null>(() => {
     if (typeof window !== 'undefined') {
@@ -307,16 +391,76 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
     return isMatched;
   });
 
-  const handleTicketSubmit = (e: React.FormEvent) => {
+  const handleTicketSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ticketSubject.trim() || !ticketBody.trim()) return;
-    setTicketSubmitted(true);
-    emitNotification('Support Ticket Submitted', `Your ticket "${ticketSubject}" has been received. Our team will contact you shortly.`, 'success');
-    setTimeout(() => {
-      setTicketSubmitted(false);
-      setTicketSubject('');
-      setTicketBody('');
-    }, 4000);
+    setTicketLoading(true);
+    try {
+      const session = userSession || (await supabase.auth.getSession()).data.session;
+      const user = session?.user;
+      const res = await fetch('/api/tickets', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+        },
+        body: JSON.stringify({
+          name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
+          email: user?.email || 'user@example.com',
+          category: ticketCategory,
+          priority: ticketPriority,
+          subject: ticketSubject,
+          message: ticketBody,
+          user_id: user?.id || null
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.detail || 'Failed to submit ticket');
+      }
+      setTicketSubmitted(true);
+      emitNotification('Support Ticket Submitted', `Your ticket "${ticketSubject}" has been received. Our team will contact you shortly.`, 'success');
+      setTimeout(() => {
+        setTicketSubmitted(false);
+        setTicketSubject('');
+        setTicketBody('');
+        setTicketPriority('medium');
+      }, 4000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to submit ticket';
+      emitNotification('Submission Failed', msg, 'error');
+    } finally {
+      setTicketLoading(false);
+    }
+  };
+
+  const handleReplySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyText.trim() || !selectedTicketId) return;
+    setReplyLoading(true);
+    try {
+      const session = userSession || (await supabase.auth.getSession()).data.session;
+      if (!session) return;
+      const res = await fetch(`/api/tickets/${selectedTicketId}/reply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ message: replyText })
+      });
+      if (res.ok) {
+        setReplyText('');
+        await fetchTicketDetails(selectedTicketId);
+      } else {
+        emitNotification('Reply Failed', 'Could not send message. Please try again.', 'error');
+      }
+    } catch (err) {
+      console.error("Error sending reply:", err);
+      emitNotification('Reply Failed', 'Could not send message. Please try again.', 'error');
+    } finally {
+      setReplyLoading(false);
+    }
   };
 
   const categories: { id: TicketCategory; label: string }[] = [
@@ -900,7 +1044,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
         <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden">
           <div className="relative overflow-hidden">
             <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#e2e8f0] via-[#C6A87D] to-[#64748b]" />
-            <div className="p-5 pb-3">
+            <div className="p-4 pb-2">
               <h2 className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-widest">Frequently Asked Questions</h2>
               <div className="relative mt-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#64748b]/60" />
@@ -915,7 +1059,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
             </div>
           </div>
 
-          <div className="px-5 pb-5 space-y-1.5 max-h-[480px] overflow-y-auto">
+          <div className="px-4 pb-4 space-y-1.5 overflow-y-auto">
             {filteredFaqs.length === 0 ? (
               <div className="py-8 text-center text-[11px] text-[#64748b]/60 dark:text-zinc-500">
                 <HelpCircle className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -946,85 +1090,364 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
             ))}
           </div>
         </div>
-
-        {/* Support Ticket Form */}
-        <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden">
-          <div className="relative overflow-hidden">
+        {/* Support Ticket Form or Viewer */}
+        <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden flex flex-col">
+          <div className="relative overflow-hidden shrink-0">
             <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#e2e8f0] via-[#C6A87D] to-[#64748b]" />
-            <div className="p-5 pb-3">
-              <h2 className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-widest">Submit a Support Ticket</h2>
-              <p className="text-[10px] text-[#64748b]/70 dark:text-zinc-500 mt-0.5">Our team will respond within 1 business day</p>
-            </div>
-          </div>
-
-          <div className="px-5 pb-5">
-            {ticketSubmitted ? (
-              <div className="py-10 text-center space-y-3">
-                <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950/30 flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-7 h-7 text-emerald-500" />
-                </div>
+            
+            {ticketViewMode === 'submit' && (
+              <div className="p-4 pb-2 flex justify-between items-center">
                 <div>
-                  <p className="text-sm font-black text-[#0f172a] dark:text-white">Ticket Submitted!</p>
-                  <p className="text-[11px] text-[#64748b]/70 dark:text-zinc-500 mt-1">We&apos;ll reach back at your registered email shortly.</p>
+                  <h2 className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-widest">Submit a Support Ticket</h2>
+                  <p className="text-[10px] text-[#64748b]/70 dark:text-zinc-500 mt-0.5">Our team will respond within 1 business day</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTicketViewMode('list');
+                    fetchTickets();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 hover:border-[#64748b]/50 hover:bg-slate-50 dark:hover:bg-zinc-900 text-slate-800 dark:text-zinc-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-2xs hover:scale-102"
+                >
+                  <Clock className="w-3.5 h-3.5 text-amber-500" />
+                  My Tickets
+                </button>
               </div>
-            ) : (
-              <form onSubmit={handleTicketSubmit} className="space-y-3.5">
-                {/* Category picker */}
+            )}
+
+            {ticketViewMode === 'list' && (
+              <div className="p-4 pb-2 flex justify-between items-center">
                 <div>
-                  <label className="block text-[9.5px] font-extrabold uppercase tracking-widest text-[#64748b] mb-1.5">Issue Category</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {categories.map(cat => (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => setTicketCategory(cat.id)}
-                        className={`px-2.5 py-1 rounded-lg text-[9.5px] font-bold transition-all cursor-pointer border ${
-                          ticketCategory === cat.id
-                            ? 'bg-[#0f172a] text-white border-[#0f172a]'
-                            : 'bg-[#FCFAF7] dark:bg-zinc-950 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-[#64748b]/50'
-                        }`}
-                      >
-                        {cat.label}
-                      </button>
-                    ))}
+                  <h2 className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-widest">My Support Tickets</h2>
+                  <p className="text-[10px] text-[#64748b]/70 dark:text-zinc-500 mt-0.5">View your raised tickets and admin responses</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTicketViewMode('submit')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 hover:border-[#64748b]/50 hover:bg-slate-50 dark:hover:bg-zinc-900 text-slate-800 dark:text-zinc-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-2xs hover:scale-102"
+                >
+                  <Send className="w-3.5 h-3.5 text-[#64748b]" />
+                  New Ticket
+                </button>
+              </div>
+            )}
+
+            {ticketViewMode === 'chat' && (
+              <div className="p-4 pb-2 flex justify-between items-center border-b border-[#e2e8f0]/30 dark:border-zinc-800">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTicketViewMode('list');
+                      setTicketDetails(null);
+                      setSelectedTicketId(null);
+                      fetchTickets();
+                    }}
+                    className="w-7 h-7 rounded-full bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 text-slate-800 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-colors cursor-pointer shrink-0 hover:scale-105"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                  <div className="min-w-0">
+                    <h2 className="text-[11px] font-black text-[#0f172a] dark:text-white uppercase tracking-wider truncate">
+                      {ticketDetails?.ticket?.subject || 'Loading Details...'}
+                    </h2>
+                    <p className="text-[9px] text-[#64748b]/75 dark:text-zinc-500 mt-0.5 uppercase font-bold tracking-wider">
+                      Category: {ticketDetails?.ticket?.category || 'General'} • Priority: {ticketDetails?.ticket?.priority || 'Medium'}
+                    </p>
                   </div>
                 </div>
+                <div className="flex-shrink-0 ml-2">
+                  <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                    ticketDetails?.ticket?.status === 'Closed' || ticketDetails?.ticket?.status === 'Resolved'
+                      ? 'bg-slate-500/10 text-slate-500 dark:text-zinc-400 border-slate-500/20'
+                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border border-emerald-500/20'
+                  }`}>
+                    {ticketDetails?.ticket?.status || 'Open'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
 
-                {/* Subject */}
-                <div>
-                  <label className="block text-[9.5px] font-extrabold uppercase tracking-widest text-[#64748b] mb-1.5">Subject *</label>
-                  <input
-                    type="text"
-                    value={ticketSubject}
-                    onChange={e => setTicketSubject(e.target.value)}
-                    required
-                    placeholder="Brief description of your issue"
-                    className="w-full px-3.5 py-2.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#64748b]/60 transition-colors"
-                  />
+          <div className="p-4 flex flex-col overflow-y-auto min-h-0">
+            {ticketViewMode === 'submit' && (
+              <div className="flex flex-col gap-4">
+                {ticketSubmitted ? (
+                  <div className="py-16 text-center space-y-3 flex-1 flex flex-col justify-center items-center">
+                    <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950/30 flex items-center justify-center mx-auto animate-bounce">
+                      <CheckCircle2 className="w-7 h-7 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-[#0f172a] dark:text-white">Ticket Submitted!</p>
+                      <p className="text-[11px] text-[#64748b]/70 dark:text-zinc-500 mt-1">We&apos;ll reach back at your registered email shortly.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleTicketSubmit} className="space-y-4">
+                    {/* Category picker */}
+                    <div>
+                      <label className="block text-[9.5px] font-extrabold uppercase tracking-widest text-[#64748b] mb-1.5">Issue Category</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {categories.map(cat => (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => setTicketCategory(cat.id)}
+                            className={`px-2.5 py-1 rounded-lg text-[9.5px] font-bold transition-all cursor-pointer border ${
+                              ticketCategory === cat.id
+                                ? 'bg-[#0f172a] text-white border-[#0f172a]'
+                                : 'bg-[#FCFAF7] dark:bg-zinc-950 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-[#64748b]/50'
+                            }`}
+                          >
+                            {cat.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Subject */}
+                    <div>
+                      <label className="block text-[9.5px] font-extrabold uppercase tracking-widest text-[#64748b] mb-1.5">Subject *</label>
+                      <input
+                        type="text"
+                        value={ticketSubject}
+                        onChange={e => setTicketSubject(e.target.value)}
+                        required
+                        placeholder="Brief description of your issue"
+                        className="w-full px-3.5 py-2.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#64748b]/60 transition-colors"
+                      />
+                    </div>
+
+                    {/* Body */}
+                    <div>
+                      <label className="block text-[9.5px] font-extrabold uppercase tracking-widest text-[#64748b] mb-1.5">Detailed Description *</label>
+                      <textarea
+                        value={ticketBody || ''}
+                        onChange={e => setTicketBody(e.target.value)}
+                        required
+                        rows={5}
+                        placeholder="Please describe the issue in detail. Include steps to reproduce, expected behavior, and what actually happened…"
+                        className="w-full px-3.5 py-2.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#64748b]/60 transition-colors resize-none"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={ticketLoading}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#0f172a] hover:bg-[#5C5043] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm disabled:opacity-60 disabled:cursor-not-allowed hover:scale-[1.01]"
+                    >
+                      {ticketLoading ? (
+                        <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                      {ticketLoading ? 'Submitting…' : 'Submit Ticket'}
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {ticketViewMode === 'list' && (
+              <div className="flex-1 flex flex-col min-h-[380px] min-w-0">
+                {/* Tickets Filter Tabs */}
+                <div className="flex gap-1.5 mb-3.5 shrink-0 border-b border-[#e2e8f0]/30 dark:border-zinc-800 pb-2.5">
+                  {(['all', 'open', 'closed'] as const).map((filter) => {
+                    const isActive = ticketFilter === filter;
+                    const count = ticketsList.filter(t => {
+                      if (filter === 'open') return t.status !== 'Closed' && t.status !== 'Resolved';
+                      if (filter === 'closed') return t.status === 'Closed' || t.status === 'Resolved';
+                      return true;
+                    }).length;
+
+                    return (
+                      <button
+                        key={filter}
+                        type="button"
+                        onClick={() => setTicketFilter(filter)}
+                        className={`px-3 py-1 text-[9.5px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-[#0f172a] text-white border-[#0f172a] dark:bg-zinc-800 dark:border-zinc-700'
+                            : 'bg-[#FCFAF7] text-slate-600 dark:bg-zinc-950 border-[#e2e8f0]/60 dark:border-zinc-800 hover:border-[#64748b]/50 text-slate-700 dark:text-zinc-350 hover:bg-slate-50 dark:hover:bg-zinc-900'
+                        }`}
+                      >
+                        {filter} ({count})
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {/* Body */}
-                <div>
-                  <label className="block text-[9.5px] font-extrabold uppercase tracking-widest text-[#64748b] mb-1.5">Detailed Description *</label>
-                  <textarea
-                    value={ticketBody || ''}
-                    onChange={e => setTicketBody(e.target.value)}
-                    required
-                    rows={5}
-                    placeholder="Please describe the issue in detail. Include steps to reproduce, expected behavior, and what actually happened…"
-                    className="w-full px-3.5 py-2.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#64748b]/60 transition-colors resize-none"
-                  />
-                </div>
+                {ticketsListLoading ? (
+                  <div className="flex-1 flex flex-col items-center justify-center py-12 text-slate-500">
+                    <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+                    <span className="text-[10px] uppercase font-black tracking-widest mt-3">Loading tickets...</span>
+                  </div>
+                ) : ticketsList.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center py-16 text-center text-slate-500">
+                    <MessageSquare className="w-12 h-12 mb-3 text-slate-300 dark:text-zinc-700 stroke-1" />
+                    <h3 className="text-xs font-black uppercase tracking-wider text-[#0f172a] dark:text-white">No Tickets Found</h3>
+                    <p className="text-[10.5px] text-[#64748b] dark:text-zinc-450 mt-1 max-w-[280px]">You haven't raised any support tickets yet. Click "New Ticket" to create one.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                    {ticketsList
+                      .filter(t => {
+                        if (ticketFilter === 'open') return t.status !== 'Closed' && t.status !== 'Resolved';
+                        if (ticketFilter === 'closed') return t.status === 'Closed' || t.status === 'Resolved';
+                        return true;
+                      })
+                      .map((t) => {
+                        const dateStr = t.created_at ? new Date(t.created_at).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        }) : '';
+                        const isClosed = t.status === 'Closed' || t.status === 'Resolved';
 
-                <button
-                  type="submit"
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#0f172a] hover:bg-[#5C5043] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  Submit Ticket
-                </button>
-              </form>
+                        return (
+                          <div
+                            key={t.id}
+                            onClick={() => {
+                              setSelectedTicketId(t.id);
+                              setTicketViewMode('chat');
+                              fetchTicketDetails(t.id);
+                            }}
+                            className="p-4 bg-[#FCFAF7] dark:bg-zinc-950/40 border border-[#e2e8f0]/40 dark:border-zinc-800 hover:border-[#64748b]/40 rounded-2xl cursor-pointer group transition-all duration-200 flex justify-between items-center gap-4 hover:shadow-xs hover:scale-[1.01] hover:bg-slate-50/50 dark:hover:bg-zinc-900/20"
+                          >
+                            <div className="min-w-0 space-y-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-350">
+                                  {t.category || 'Support'}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider border ${
+                                  t.priority === 'urgent' || t.priority === 'high'
+                                    ? 'bg-rose-500/10 text-rose-600 border-rose-500/20 dark:text-rose-400'
+                                    : 'bg-slate-500/10 text-slate-600 border-slate-500/20 dark:text-zinc-400'
+                                }`}>
+                                  {t.priority}
+                                </span>
+                              </div>
+                              <h4 className="text-xs font-black uppercase tracking-tight text-[#0f172a] dark:text-white truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                                {t.subject}
+                              </h4>
+                              <div className="flex items-center gap-1.5 text-[9px] text-[#64748b]/80 dark:text-zinc-550 font-bold">
+                                <Clock className="w-3 h-3 shrink-0" />
+                                <span>Opened on {dateStr}</span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 shrink-0">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                isClosed
+                                  ? 'bg-slate-500/10 text-slate-500 dark:text-zinc-400 border-slate-500/20'
+                                  : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border border-emerald-500/20'
+                              }`}>
+                                {t.status}
+                              </span>
+                              <ArrowRight className="w-4 h-4 text-slate-400 dark:text-zinc-600 group-hover:text-amber-500 transition-colors transform group-hover:translate-x-0.5" />
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {ticketViewMode === 'chat' && (
+              <div className="flex-1 flex flex-col min-h-[380px] justify-between">
+                {detailsLoading ? (
+                  <div className="flex-1 flex flex-col items-center justify-center py-12 text-slate-500">
+                    <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+                    <span className="text-[10px] uppercase font-black tracking-widest mt-3">Loading messages...</span>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col h-full justify-between">
+                    {/* Chat Bubble Thread */}
+                    <div className="flex-1 overflow-y-auto max-h-[310px] mb-4 pr-1.5 space-y-3.5 scrollbar-thin">
+                      {ticketDetails?.messages?.map((msg: any) => {
+                        const isAdmin = msg.sender_type === 'admin';
+                        const timeStr = msg.created_at ? new Date(msg.created_at).toLocaleTimeString(undefined, {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : '';
+                        
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex flex-col max-w-[85%] ${
+                              isAdmin ? 'self-start items-start' : 'self-end items-end ml-auto'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5 mb-1 px-1">
+                              {isAdmin ? (
+                                <>
+                                  <div className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center text-[8px] font-black text-white shrink-0">
+                                    A
+                                  </div>
+                                  <span className="text-[8.5px] font-black uppercase tracking-wider text-slate-700 dark:text-zinc-350">
+                                    Support Agent
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-[8.5px] font-black uppercase tracking-wider text-slate-500 dark:text-zinc-500">
+                                  You
+                                </span>
+                              )}
+                              <span className="text-[8px] text-slate-400 dark:text-zinc-600">
+                                {timeStr}
+                              </span>
+                            </div>
+                            
+                            <div className={`p-3.5 rounded-2xl text-[11.5px] leading-relaxed break-words font-medium shadow-2xs border ${
+                              isAdmin
+                                ? 'bg-white dark:bg-zinc-850 text-slate-800 dark:text-zinc-200 rounded-tl-none border-[#e2e8f0]/40 dark:border-zinc-800'
+                                : 'bg-[#0f172a] dark:bg-zinc-800 text-white rounded-tr-none border-transparent'
+                            }`}>
+                              {msg.message}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div ref={chatEndRef} />
+                    </div>
+
+                    {/* Chat Input or Closed Banner */}
+                    <div className="border-t border-[#e2e8f0]/30 dark:border-zinc-800 pt-3.5 shrink-0">
+                      {ticketDetails?.ticket?.status === 'Closed' || ticketDetails?.ticket?.status === 'Resolved' ? (
+                        <div className="p-3.5 bg-rose-500/5 dark:bg-rose-950/10 border border-rose-500/20 rounded-2xl flex items-center gap-2.5">
+                          <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                          <p className="text-[10.5px] font-bold text-rose-800 dark:text-rose-450 leading-normal">
+                            This ticket has been marked as closed. Please submit a new ticket if you have further inquiries.
+                          </p>
+                        </div>
+                      ) : (
+                        <form onSubmit={handleReplySubmit} className="flex gap-2">
+                          <input
+                            type="text"
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            required
+                            placeholder="Type your reply here..."
+                            className="flex-1 px-3.5 py-2 text-xs bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#64748b]/60 transition-colors"
+                          />
+                          <button
+                            type="submit"
+                            disabled={replyLoading || !replyText.trim()}
+                            className="px-4 py-2 bg-[#0f172a] hover:bg-[#5C5043] dark:bg-[#0f172a] dark:hover:bg-[#5C5043] text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center shrink-0 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-102"
+                          >
+                            {replyLoading ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Send className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

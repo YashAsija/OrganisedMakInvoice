@@ -5,7 +5,10 @@ from contextlib import asynccontextmanager
 import asyncio
 from app.api import ai_routes
 from app.api import pin_routes
+from app.api import admin_routes
+from app.api import ticket_routes
 from app.services.scheduler import scheduler_loop
+from app.services import admin_db
 
 load_dotenv()
 
@@ -50,6 +53,8 @@ app.add_middleware(
 app.include_router(ai_routes.router)
 app.include_router(ai_routes.jobs_router)
 app.include_router(pin_routes.router)
+app.include_router(admin_routes.router)
+app.include_router(ticket_routes.router)
 
 @app.get("/api/health")
 async def health_check():

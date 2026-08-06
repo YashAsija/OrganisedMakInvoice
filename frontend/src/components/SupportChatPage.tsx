@@ -175,12 +175,22 @@ export default function SupportChatPage({ userEmail, onBack, onEscalate }: Suppo
   const handleEscalate = async () => {
     try {
       const transcript = messages.map(m => `${m.role}: ${m.content}`).join('\n\n');
-      await fetch('/api/chat/escalate', {
+      const subject = `Chat Escalation${userEmail ? ` – ${userEmail}` : ''}`;
+      const res = await fetch('/api/tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript, sessionId, userEmail })
+        body: JSON.stringify({
+          category: 'technical',
+          priority: 'high',
+          subject,
+          message: `This ticket was escalated from a live chat session.\n\n--- Chat Transcript ---\n\n${transcript}`,
+        }),
       });
-      onEscalate("Escalated from Live Chat", "Please see the attached context.");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData?.detail || 'Escalation failed');
+      }
+      onEscalate(subject, "Escalated from Live Chat. See ticket for full transcript.");
     } catch (err) {
       console.error("Escalation failed", err);
     }
