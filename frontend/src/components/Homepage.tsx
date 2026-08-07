@@ -278,7 +278,7 @@ export default function Homepage({
         .footer-logo-row img { width: 36px; height: 36px; object-fit: contain; }
         .footer-brand-text { display: flex; flex-direction: column; }
         .footer-brand-name { font-size: 0.95rem; font-weight: 800; letter-spacing: -0.01em; color: var(--text-dark-bg); line-height: 1; }
-        .footer-brand-name span { color: var(--stamp-red); }
+        .footer-brand-name span { color: #0ea5e9; }
         .footer-brand-sub { font-size: 0.62rem; font-weight: 700; color: var(--text-dark-bg-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 3px; }
         .footer-tagline { font-size: 0.83rem; color: var(--text-dark-bg-dim); line-height: 1.65; max-width: 240px; }
         .footer-tagline a, .footer-tagline span.hl { color: var(--stamp-red); text-decoration: none; font-weight: 500; }
@@ -390,8 +390,8 @@ export default function Homepage({
           <div className="logo-container group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <img src="/logo.svg" alt="MakInvoices Logo" className="w-10 h-10 object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300 shrink-0" />
             <div>
-              <span className="text-base font-black tracking-tight text-slate-805 block leading-none">
-                Mak<span style={{ color: 'var(--stamp-red)' }}>Invoices</span>
+              <span className="text-base font-black tracking-tight text-slate-805 dark:text-white block leading-none">
+                Mak<span style={{ color: '#0ea5e9' }}>Invoices</span>
               </span>
               <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-500 block tracking-wider uppercase mt-1">Advanced Ledger Hub</span>
             </div>
@@ -402,6 +402,7 @@ export default function Homepage({
             <button type="button" onClick={() => onNavigate('/pricing')}>Pricing</button>
             <button type="button" onClick={() => handleNavScroll('compare')}>Compare</button>
             <button type="button" onClick={() => handleNavScroll('faq')}>FAQ</button>
+            <button type="button" onClick={() => onNavigate('/contact')}>Contact</button>
           </div>
           <div className="nav-actions">
             <button type="button" className="nav-login" onClick={() => onNavigate('/login')}>Log in</button>
@@ -538,7 +539,7 @@ export default function Homepage({
         </div>
       </section>
 
-      <section className="block on-paper" id="compare" style={{ paddingTop: 0 }}>
+      <section className="block" id="compare" style={{ paddingTop: '100px' }}>
         <div className="wrap">
           <div className="block-head">
             <div className="eyebrow">Comparison</div>
@@ -566,7 +567,7 @@ export default function Homepage({
       </section>
 
       {/* ═══════════════ TRUST SECTION ═══════════════ */}
-      <section className="block" id="trust" style={{ paddingTop: 0 }}>
+      <section className="block on-paper" id="trust" style={{ paddingTop: '100px' }}>
         <div className="wrap">
           <div className="block-head">
             <div className="eyebrow">Trust &amp; Security</div>
@@ -688,7 +689,7 @@ export default function Homepage({
             <div className="footer-col">
               <h5>Trust</h5>
               <ul>
-                <li><button type="button" onClick={() => handleNavScroll('faq')}>Security</button></li>
+                <li><button type="button" onClick={() => onNavigate('/security')}>Security</button></li>
                 <li><button type="button" onClick={() => onNavigate('/terms')}>Terms of Service</button></li>
                 <li><button type="button" onClick={() => onNavigate('/privacy')}>Privacy Policy</button></li>
               </ul>
@@ -698,8 +699,9 @@ export default function Homepage({
             <div className="footer-col">
               <h5>Company</h5>
               <ul>
-                <li><button type="button" onClick={() => onNavigate('/about')}>About</button></li>
                 <li><button type="button" onClick={() => onNavigate('/contact')}>Contact</button></li>
+                <li><button type="button" onClick={() => onNavigate('/login')}>Log In</button></li>
+                <li><button type="button" onClick={() => onNavigate('/signup')}>Get Started</button></li>
               </ul>
             </div>
 

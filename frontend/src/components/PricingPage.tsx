@@ -303,7 +303,7 @@ export default function PricingPage({ theme, onNavigate }: PricingPageProps) {
     .pr-footer-logo { display: flex; align-items: center; gap: 10px; cursor: pointer; width: fit-content; }
     .pr-footer-logo img { width: 36px; height: 36px; object-fit: contain; }
     .pr-footer-brand-name { font-size: 0.95rem; font-weight: 800; letter-spacing: -0.01em; color: ${isDark ? '#f8fafc' : '#0f172a'}; line-height: 1; }
-    .pr-footer-brand-name span { color: ${isDark ? '#38bdf8' : '#0284c7'}; }
+    .pr-footer-brand-name span { color: #0ea5e9; }
     .pr-footer-brand-sub { font-size: 0.62rem; font-weight: 700; color: ${isDark ? '#94a3b8' : '#475569'}; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 3px; }
     .pr-footer-tagline { font-size: 0.83rem; color: ${isDark ? '#94a3b8' : '#475569'}; line-height: 1.65; max-width: 240px; font-family: 'IBM Plex Sans', sans-serif; }
     .pr-footer-tagline .hl { color: ${isDark ? '#38bdf8' : '#0284c7'}; font-weight: 500; }
@@ -331,7 +331,7 @@ export default function PricingPage({ theme, onNavigate }: PricingPageProps) {
             <img src="/logo.svg" alt="MakInvoices Logo" />
             <div>
               <span style={{ fontSize: '0.95rem', fontWeight: 800, letterSpacing: '-0.01em', color: isDark ? '#f8fafc' : '#0f172a', display: 'block', lineHeight: 1 }}>
-                Mak<span style={{ color: isDark ? '#38bdf8' : '#0284c7' }}>Invoices</span>
+                Mak<span style={{ color: '#0ea5e9' }}>Invoices</span>
               </span>
               <span style={{ fontSize: '0.62rem', fontWeight: 700, color: isDark ? '#94a3b8' : '#475569', display: 'block', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 3 }}>Advanced Ledger Hub</span>
             </div>
@@ -342,6 +342,7 @@ export default function PricingPage({ theme, onNavigate }: PricingPageProps) {
             <button type="button" className="active">Pricing</button>
             <button type="button" onClick={() => onNavigate('/#compare')}>Compare</button>
             <button type="button" onClick={() => onNavigate('/#faq')}>FAQ</button>
+            <button type="button" onClick={() => onNavigate('/contact')}>Contact</button>
           </div>
           <div className="pr-nav-actions">
             <button type="button" className="pr-login" onClick={() => onNavigate('/login')}>Log in</button>
@@ -462,7 +463,7 @@ export default function PricingPage({ theme, onNavigate }: PricingPageProps) {
             <div className="pr-footer-col">
               <h5>Trust</h5>
               <ul>
-                <li><button type="button" onClick={() => onNavigate('/#faq')}>Security</button></li>
+                <li><button type="button" onClick={() => onNavigate('/security')}>Security</button></li>
                 <li><button type="button" onClick={() => onNavigate('/terms')}>Terms of Service</button></li>
                 <li><button type="button" onClick={() => onNavigate('/privacy')}>Privacy Policy</button></li>
               </ul>
@@ -470,8 +471,9 @@ export default function PricingPage({ theme, onNavigate }: PricingPageProps) {
             <div className="pr-footer-col">
               <h5>Company</h5>
               <ul>
-                <li><button type="button" onClick={() => onNavigate('/about')}>About</button></li>
                 <li><button type="button" onClick={() => onNavigate('/contact')}>Contact</button></li>
+                <li><button type="button" onClick={() => onNavigate('/login')}>Log In</button></li>
+                <li><button type="button" onClick={() => onNavigate('/signup')}>Get Started</button></li>
               </ul>
             </div>
           </div>

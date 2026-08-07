@@ -1,18 +1,15 @@
-import React, { useState } from 'react';
-import { Mail, Phone, Globe, Check, ArrowRight } from 'lucide-react';
+import React from 'react';
+import { Shield, Lock, FileCheck, EyeOff, Server, HardDrive, RefreshCw } from 'lucide-react';
 
-interface ContactPageProps {
+interface SecurityPageProps {
   theme: 'light' | 'dark';
   onNavigate: (path: string) => void;
   onGoogleLogin: () => void;
 }
 
-export default function ContactPage({ theme, onNavigate, onGoogleLogin }: ContactPageProps) {
-  const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
-  const [contactSubmitted, setContactSubmitted] = useState(false);
-  const [contactLoading, setContactLoading] = useState(false);
+export default function SecurityPage({ theme, onNavigate, onGoogleLogin }: SecurityPageProps) {
 
-  // Determine dynamic variables based on theme
+  // Dynamic color variables based on the theme
   const variables = theme === 'dark' ? `
     :root {
       --ink-deep: #0b1329;
@@ -70,7 +67,7 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
     .logo-container { display: flex; align-items: center; gap: 10px; cursor: pointer; }
     .navlinks { display: flex; gap: 34px; font-size: 0.92rem; color: var(--text-dark-bg-dim); }
     .navlinks button { background: none; border: none; font-size: inherit; color: inherit; cursor: pointer; transition: color .2s; font-weight: bold; font-family: 'IBM Plex Sans', sans-serif; }
-    .navlinks button:hover, .navlinks button.active { color: var(--stamp-red); }
+    .navlinks button:hover { color: var(--stamp-red); }
     .nav-actions { display: flex; align-items: center; gap: 10px; }
     .nav-login {
       font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; background: transparent; color: var(--stamp-red);
@@ -88,92 +85,55 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
     @media (max-width: 820px) { .navlinks { display: none; } }
     @media (max-width: 480px) { .nav-login { display: none; } }
 
-    /* ---------- MAIN CONTACT SECTION ---------- */
-    .contact-hero { padding: 80px 0; position: relative; }
-    .contact-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 56px; align-items: start; }
-    @media (max-width: 900px) { .contact-grid { grid-template-columns: 1fr; gap: 40px; } }
-
+    /* ---------- SECURITY HEADER ---------- */
+    .sec-hero { padding: 90px 0 60px; text-align: center; }
     .eyebrow {
       font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
-      color: var(--stamp-red); display: flex; align-items: center; gap: 10px; margin-bottom: 22px; font-weight: bold;
+      color: var(--stamp-red); display: inline-flex; align-items: center; gap: 10px; margin-bottom: 22px; font-weight: bold;
     }
-    .eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--stamp-red); }
-
-    h1.contact-h1 {
-      font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(2.2rem, 4vw, 3.4rem);
-      line-height: 1.1; margin: 0 0 18px; letter-spacing: -0.02em; color: var(--text-dark-bg);
+    .eyebrow::before, .eyebrow::after { content: ""; width: 22px; height: 1px; background: var(--stamp-red); }
+    
+    h1.sec-h1 {
+      font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(2.4rem, 5vw, 3.8rem);
+      line-height: 1.1; margin: 0 auto 20px; letter-spacing: -0.02em; color: var(--text-dark-bg); max-width: 800px;
     }
-    .contact-sub { font-size: 1.05rem; color: var(--text-dark-bg-dim); max-width: 500px; margin: 0 0 34px; line-height: 1.6; }
+    .sec-sub { font-size: 1.1rem; color: var(--text-dark-bg-dim); max-width: 620px; margin: 0 auto; line-height: 1.6; }
 
-    /* Left Info Cards */
-    .info-list { display: flex; flex-direction: column; gap: 24px; }
-    .info-item { display: flex; gap: 18px; align-items: flex-start; }
-    .info-icon {
-      width: 44px; height: 44px; border-radius: 12px;
+    /* ---------- SECURITY BARS GRID ---------- */
+    .sec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 48px; }
+    @media (max-width: 820px) { .sec-grid { grid-template-columns: 1fr; } }
+    
+    .sec-card {
+      background: var(--ink-panel); border: 1px solid var(--paper-line);
+      border-radius: 16px; padding: 36px;
+      box-shadow: ${theme === 'dark' ? '0 10px 30px rgba(0,0,0,0.3)' : '0 10px 30px rgba(2,132,199,0.02)'};
+      display: flex; gap: 24px; align-items: flex-start;
+    }
+    @media (max-width: 480px) { .sec-card { padding: 24px; gap: 16px; } }
+
+    .sec-icon-wrap {
+      width: 52px; height: 52px; border-radius: 14px;
       background: var(--ink-panel-2); border: 1px solid var(--paper-line);
       display: flex; align-items: center; justify-content: center;
       color: var(--stamp-red); flex-shrink: 0;
     }
-    .info-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; font-weight: 700; color: var(--text-dark-bg); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-    .info-val { font-size: 0.92rem; color: var(--text-dark-bg-dim); line-height: 1.5; font-weight: bold; }
-    .info-val a { color: var(--stamp-red); text-decoration: none; transition: opacity 0.2s; }
-    .info-val a:hover { opacity: 0.8; }
+    .sec-card-body h3 { font-family: 'Fraunces', serif; font-size: 1.35rem; margin: 0 0 12px; color: var(--text-dark-bg); font-weight: 600; }
+    .sec-card-body p { font-size: 0.92rem; color: var(--text-dark-bg-dim); line-height: 1.6; margin: 0; }
 
-    /* Form Card */
-    .contact-card {
-      background: var(--ink-panel); border: 1px solid var(--paper-line);
-      border-radius: 16px; padding: 32px;
-      box-shadow: ${theme === 'dark' ? '0 15px 45px rgba(0,0,0,0.5)' : '0 15px 45px rgba(2,132,199,0.04)'};
+    /* ---------- REGULATORY & STANDARDS ---------- */
+    .compliance-sec { padding: 80px 0; border-top: 1px solid var(--paper-line); margin-top: 60px; }
+    .compliance-box {
+      background: var(--ink-panel-2); border: 1.5px dashed var(--paper-line);
+      border-radius: 16px; padding: 40px; text-align: center;
     }
-    @media (max-width: 480px) { .contact-card { padding: 20px; } }
-
-    .form-group { margin-bottom: 20px; }
-    .form-label {
-      display: block; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
-      font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-      color: var(--text-dark-bg-dim); margin-bottom: 8px;
+    .comp-title { font-family: 'Fraunces', serif; font-size: 1.6rem; color: var(--text-dark-bg); margin-bottom: 12px; font-weight: 600; }
+    .comp-desc { font-size: 0.96rem; color: var(--text-dark-bg-dim); max-width: 700px; margin: 0 auto 30px; line-height: 1.65; }
+    .comp-badges { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+    .comp-badge {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; font-weight: bold;
+      padding: 8px 20px; border-radius: 20px; background: var(--ink-panel);
+      border: 1px solid var(--paper-line); color: var(--stamp-red);
     }
-    .form-input {
-      width: 100%; padding: 12px 16px; border-radius: 10px;
-      border: 1.5px solid var(--paper-line); background: var(--paper-dim);
-      color: var(--text-dark-bg); font-family: 'IBM Plex Sans', sans-serif;
-      font-size: 0.88rem; outline: none; transition: border 0.2s, box-shadow 0.2s;
-    }
-    .form-input:focus {
-      border-color: var(--stamp-red);
-      box-shadow: 0 0 0 3px ${theme === 'dark' ? 'rgba(56,189,248,0.15)' : 'rgba(2,132,199,0.12)'};
-    }
-    .form-textarea { resize: none; min-height: 120px; }
-
-    .btn-submit {
-      width: 100%; padding: 14px; background: var(--stamp-red);
-      border: 1px solid var(--stamp-red-dark); color: #ffffff;
-      border-radius: 10px; font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.88rem; font-weight: 700; letter-spacing: 0.04em;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      gap: 10px; transition: all 0.2s;
-      box-shadow: 0 4px 12px rgba(2,132,199,0.15);
-    }
-    .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(2,132,199,0.3); background: var(--stamp-red-dark); }
-    .btn-submit:disabled { background: var(--text-dark-bg-dim); border-color: var(--text-dark-bg-dim); cursor: not-allowed; transform: none; box-shadow: none; }
-
-    /* Success Block */
-    .success-block { text-align: center; padding: 40px 0; }
-    .success-icon {
-      width: 52px; height: 52px; border-radius: 50%;
-      background: rgba(22,163,74,0.1); color: #16a34a;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 18px; font-size: 1.5rem;
-    }
-    .success-title { font-family: 'Fraunces', serif; font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--text-dark-bg); }
-    .success-desc { font-size: 0.92rem; color: var(--text-dark-bg-dim); margin-bottom: 24px; line-height: 1.5; }
-    
-    .btn-reset {
-      font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; background: transparent;
-      color: var(--stamp-red); border: 1.5px solid var(--stamp-red);
-      padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: bold;
-    }
-    .btn-reset:hover { background: var(--stamp-red); color: #ffffff; }
 
     /* ---------- FOOTER ---------- */
     .site-footer { background: var(--ink-panel); border-top: 1px solid var(--paper-line); padding: 64px 0 0; font-family: 'IBM Plex Sans', sans-serif; }
@@ -261,14 +221,14 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
     <div className="min-h-dvh w-full max-w-full overflow-x-hidden transition-colors duration-250 select-none text-left" style={{ background: 'var(--ink-deep)', color: 'var(--text-dark-bg)', fontFamily: 'var(--font-body)' }}>
       <style dangerouslySetInnerHTML={{ __html: css }} />
 
-      {/* Embedded topnav matching the homepage exactly */}
+      {/* Embedded Topnav Navigation Header */}
       <nav className="topnav">
         <div className="topnav-inner">
-          {/* Brand Logo Container */}
+          {/* Logo container */}
           <div className="logo-container group" onClick={() => onNavigate('/')}>
-            <img src="/logo.svg" alt="MakInvoices Logo" className="w-10 h-10 object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300 shrink-0" />
+            <img src="/logo.svg" alt="MakInvoices Logo" className="w-10 h-10 object-contain drop-shadow-md shrink-0" />
             <div>
-              <span className="text-base font-black tracking-tight text-slate-805 dark:text-white block leading-none">
+              <span className="text-base font-black tracking-tight text-slate-805 block leading-none" style={{ color: theme === 'dark' ? '#fff' : '#0f172a' }}>
                 Mak<span style={{ color: '#0ea5e9' }}>Invoices</span>
               </span>
               <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-500 block tracking-wider uppercase mt-1">Advanced Ledger Hub</span>
@@ -280,7 +240,7 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
             <button type="button" onClick={() => onNavigate('/pricing')}>Pricing</button>
             <button type="button" onClick={() => onNavigate('/#compare')}>Compare</button>
             <button type="button" onClick={() => onNavigate('/#faq-section')}>FAQ</button>
-            <button type="button" className="active" onClick={() => onNavigate('/contact')}>Contact</button>
+            <button type="button" onClick={() => onNavigate('/contact')}>Contact</button>
           </div>
           <div className="nav-actions">
             <button type="button" className="nav-login" onClick={() => onNavigate('/login')}>Log in</button>
@@ -289,135 +249,94 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
         </div>
       </nav>
 
-      {/* ---------- HERO & CONTENT ---------- */}
-      <section className="contact-hero">
-        <div className="wrap contact-grid">
-          <div>
-            <div className="eyebrow">Contact Us</div>
-            <h1 className="contact-h1">Let's talk about your billing system.</h1>
-            <p className="contact-sub">Have questions about integrations, security configurations, custom layouts, or business plans? Reach our support team anytime.</p>
-            
-            <div className="info-list">
-              <div className="info-item">
-                <div className="info-icon">
-                  <Mail style={{ width: 18, height: 18 }} />
-                </div>
-                <div>
-                  <div className="info-title">Email Address</div>
-                  <div className="info-val"><a href="mailto:support@makinvoices.com">support@makinvoices.com</a></div>
-                </div>
-              </div>
+      {/* ---------- HERO ---------- */}
+      <section className="sec-hero">
+        <div className="wrap">
+          <div className="eyebrow">Hardened Ledger Protection</div>
+          <h1 className="sec-h1">Bank-grade isolation. Enterprise security.</h1>
+          <p className="sec-sub">How we protect your invoicing records, financial transaction metadata, client rosters, and tax structures.</p>
+        </div>
+      </section>
 
-              <div className="info-item">
-                <div className="info-icon">
-                  <Phone style={{ width: 18, height: 18 }} />
-                </div>
-                <div>
-                  <div className="info-title">Phone Support</div>
-                  <div className="info-val">+1 (800) 555-MAKI</div>
-                </div>
-              </div>
-
-              <div className="info-item">
-                <div className="info-icon">
-                  <Globe style={{ width: 18, height: 18 }} />
-                </div>
-                <div>
-                  <div className="info-title">Support Hours</div>
-                  <div className="info-val">24/7 Global Response Desk</div>
-                </div>
-              </div>
+      {/* ---------- DETAILED CARDS ---------- */}
+      <section style={{ paddingBottom: '60px' }}>
+        <div className="wrap sec-grid">
+          
+          <div className="sec-card">
+            <div className="sec-icon-wrap">
+              <Lock style={{ width: 22, height: 22 }} />
+            </div>
+            <div className="sec-card-body">
+              <h3>AES-256 Ledger Encryption</h3>
+              <p>All invoicing transactions, client sheets, and ledger balances are fully encrypted at rest using AES-256 cryptographic standards. Data in transit is protected with TLS 1.3/SSL wrappers.</p>
             </div>
           </div>
 
-          <div className="contact-card">
-            {contactSubmitted ? (
-              <div className="success-block">
-                <div className="success-icon">
-                  <Check style={{ width: 24, height: 24 }} />
-                </div>
-                <h3 className="success-title">Message Sent!</h3>
-                <p className="success-desc">Thank you for reaching out. A ticket has been created and our support team will respond to your registered email shortly.</p>
-                <button type="button" onClick={() => setContactSubmitted(false)} className="btn-reset">Send Another Message</button>
-              </div>
-            ) : (
-              <form 
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  setContactLoading(true);
-                  try {
-                    const res = await fetch('/api/tickets', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        category: 'other',
-                        priority: 'medium',
-                        subject: `Contact Form Inquiry from ${contactForm.name}`,
-                        message: `From: ${contactForm.name} <${contactForm.email}>\n\n${contactForm.message}`,
-                      }),
-                    });
-                    if (!res.ok) {
-                      const err = await res.json().catch(() => ({}));
-                      throw new Error(err?.detail || 'Failed to send message');
-                    }
-                    setContactSubmitted(true);
-                    setContactForm({ name: '', email: '', message: '' });
-                  } catch (err) {
-                    console.error('Contact form submission failed', err);
-                    alert('Failed to send your message. Please try again.');
-                  } finally {
-                    setContactLoading(false);
-                  }
-                }}
-              >
-                <div className="form-group">
-                  <label className="form-label">Your Name</label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={contactForm.name}
-                    onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                    placeholder="e.g. John Doe" 
-                    className="form-input" 
-                  />
-                </div>
+          <div className="sec-card">
+            <div className="sec-icon-wrap">
+              <Shield style={{ width: 22, height: 22 }} />
+            </div>
+            <div className="sec-card-body">
+              <h3>Secure PIN Lock System</h3>
+              <p>Protect your application session with custom PIN gates and cryptographic salt derivations. Enables offline synchronization security, keeping local offline database records locked until unlocked by you.</p>
+            </div>
+          </div>
 
-                <div className="form-group">
-                  <label className="form-label">Email Address</label>
-                  <input 
-                    type="email" 
-                    required 
-                    value={contactForm.email}
-                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                    placeholder="you@company.com" 
-                    className="form-input" 
-                  />
-                </div>
+          <div className="sec-card">
+            <div className="sec-icon-wrap">
+              <EyeOff style={{ width: 22, height: 22 }} />
+            </div>
+            <div className="sec-card-body">
+              <h3>Absolute Data Privacy</h3>
+              <p>We maintain strict multi-tenant isolation rules. Your client lists, company tax profiles, settings, and invoice tallies are private and visible only to authorized users on your team.</p>
+            </div>
+          </div>
 
-                <div className="form-group">
-                  <label className="form-label">Your Message</label>
-                  <textarea 
-                    required 
-                    value={contactForm.message}
-                    onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                    placeholder="Describe how we can help your business..." 
-                    className="form-input form-textarea"
-                    rows={4}
-                  />
-                </div>
+          <div className="sec-card">
+            <div className="sec-icon-wrap">
+              <Server style={{ width: 22, height: 22 }} />
+            </div>
+            <div className="sec-card-body">
+              <h3>Hardened Cloud Nodes</h3>
+              <p>Ledger databases route through multi-region secure virtual nodes. Firewalls block automated injection vectors, DDoS attacks, and unauthorized session hijacking attempts.</p>
+            </div>
+          </div>
 
-                <button type="submit" disabled={contactLoading} className="btn-submit">
-                  {contactLoading ? (
-                    <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
-                  ) : (
-                    <>
-                      <span>Send Support Request</span>
-                      <ArrowRight style={{ width: 14, height: 14 }} />
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
+          <div className="sec-card">
+            <div className="sec-icon-wrap">
+              <FileCheck style={{ width: 22, height: 22 }} />
+            </div>
+            <div className="sec-card-body">
+              <h3>Cryptographic Audit Logs</h3>
+              <p>Every ledger modification, tax rate update, preset item change, and client profile edit is timestamped and cryptographically signed to maintain a clean, tamper-evident audit history.</p>
+            </div>
+          </div>
+
+          <div className="sec-card">
+            <div className="sec-icon-wrap">
+              <RefreshCw style={{ width: 22, height: 22 }} />
+            </div>
+            <div className="sec-card-body">
+              <h3>Continuous Backups</h3>
+              <p>Ledger changes are synced and backed up instantly to secure cloud backups. If connection cuts off, local synchronization automatically queues items to write once connection is re-established.</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ---------- REGULATORY & STANDARDS ---------- */}
+      <section className="compliance-sec">
+        <div className="wrap">
+          <div className="compliance-box">
+            <div className="comp-title">Compliance Frameworks</div>
+            <p className="comp-desc">Our billing architecture structures and exports invoicing schemas that comply with standard international tax laws, regional reporting frameworks, and data governance practices.</p>
+            <div className="comp-badges">
+              <span className="comp-badge">GDPR Compliant</span>
+              <span className="comp-badge">DPDP Compliant (India)</span>
+              <span className="comp-badge">AES-256 Storage</span>
+              <span className="comp-badge">TLS 1.3 Transit</span>
+            </div>
           </div>
         </div>
       </section>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { X, Check, Trash2, Upload, CreditCard, ShieldCheck, Sparkles, Building2, Landmark, Sliders, Award, FileSpreadsheet, KeyRound, ArrowLeft, ArrowRight, Plus, AlertCircle, Lock, Banknote, SlidersHorizontal, Hash, FileText, HelpCircle, RefreshCw } from 'lucide-react';
 import { BusinessProfile } from '../types';
 import { Country, State } from 'country-state-city';
@@ -420,7 +420,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const renderSidebarBadge = (tab: typeof activeTab, defaultIcon: React.ReactNode, index: number) => {
     if (!isOnboarding) {
       return (
-        <div className={`w-6.5 h-6.5 rounded-lg flex items-center justify-center transition-colors ${activeTab === tab ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-zinc-800 text-sky-600'}`}>
+        <div className={`w-6.5 h-6.5 rounded-lg flex items-center justify-center transition-colors ${activeTab === tab ? 'bg-white/20 text-white' : 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7]'}`}>
           {defaultIcon}
         </div>
       );
@@ -432,10 +432,10 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
     return (
       <div className={`w-6.5 h-6.5 rounded-full flex items-center justify-center font-extrabold text-[10px] transition-all border ${
         activeTab === tab 
-          ? 'bg-white text-sky-600 border-white shadow-sm'
+          ? 'bg-white dark:bg-[#111a36] text-[#0284c7] dark:text-[#38bdf8] border-[#bae6fd]/40 shadow-sm'
           : hasPassed
             ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
-            : 'bg-slate-100 dark:bg-zinc-850 text-sky-600 border-slate-200 dark:border-zinc-800'
+            : 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border-[#bae6fd]/50 dark:border-[#223269]/50'
       }`}>
         {hasPassed ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : (index + 1)}
       </div>
@@ -1845,10 +1845,10 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
       <div 
         id="profile-modal" 
-        className="relative w-full max-w-6xl bg-slate-50 dark:bg-zinc-900 text-slate-800 dark:text-[#e2e8f0] rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[95dvh] my-auto"
+        className="relative w-full max-w-6xl bg-white dark:bg-[#111a36] text-[#0f172a] dark:text-[#e2e8f0] rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 flex flex-col max-h-[95dvh] my-auto"
       >
         {/* Hidden File Picker reference */}
         <input 
@@ -1868,7 +1868,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         />
 
         {/* Modal Header */}
-        <div className="p-6 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-950">
+        <div className="p-6 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex items-center justify-between bg-[#f4f9ff] dark:bg-[#0b1329]/60">
           <div className="flex items-center gap-2.5">
             {activeTab !== 'company' && (
               <button 
@@ -1878,23 +1878,23 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   else if (activeTab === 'billing') setActiveTab('banking');
                   else if (activeTab === 'banking') setActiveTab('company');
                 }}
-                className="w-10 h-10 rounded-2xl bg-white dark:bg-zinc-800 text-sky-600 flex items-center justify-center shadow-sm border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 transition-all cursor-pointer"
+                className="w-10 h-10 rounded-2xl bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] flex items-center justify-center shadow-sm border border-[#bae6fd] dark:border-[#223269] hover:bg-[#bae6fd]/50 transition-all cursor-pointer"
                 aria-label="Go back"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
             )}
-            <div className="w-10 h-10 rounded-2xl bg-sky-600 text-white flex items-center justify-center shadow-md">
+            <div className="w-10 h-10 rounded-2xl bg-[#0284c7] text-white flex items-center justify-center shadow-md shadow-[#0284c7]/30">
               <Building2 className="w-5 h-5 text-amber-100" />
             </div>
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white">Company Settings</h2>
-              <p className="text-[11px] font-medium text-sky-600/70 dark:text-slate-400">Used as the seller details on every invoice.</p>
+              <h2 className="text-xl font-bold tracking-tight text-[#0f172a] dark:text-white">Company Settings</h2>
+              <p className="text-[11px] font-medium text-[#0284c7]/70 dark:text-[#38bdf8]/60">Used as the seller details on every invoice.</p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-1.5 rounded-full text-sky-600 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-full text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] transition-colors cursor-pointer"
             aria-label="Close settings modal"
           >
             <X className="w-5 h-5" />
@@ -1904,20 +1904,20 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         {/* Modal Form container with Sidebar */}
         <form onSubmit={handleFormSubmit} className="flex-1 overflow-hidden flex flex-col md:flex-row">
                 {/* LEFT SIDEBAR (Tabs) */}
-          <div className="md:w-64 lg:w-72 border-b md:border-b-0 md:border-r border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-955/30 flex flex-row md:flex-col p-4 md:p-6 gap-3 overflow-x-auto md:overflow-y-auto shrink-0 hide-scrollbar">
-            <div className="text-[10px] font-extrabold uppercase tracking-widest text-sky-600/60 dark:text-zinc-500 mb-2 hidden md:block px-2">Settings Menu</div>
+          <div className="md:w-64 lg:w-72 border-b md:border-b-0 md:border-r border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f4f9ff] dark:bg-[#0b1329]/40 flex flex-row md:flex-col p-4 md:p-6 gap-3 overflow-x-auto md:overflow-y-auto shrink-0 hide-scrollbar">
+            <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7]/60 dark:text-[#38bdf8]/40 mb-2 hidden md:block px-2">Settings Menu</div>
             
             <div className="relative flex flex-row md:flex-col gap-2 md:gap-3 flex-1 md:flex-none">
               {/* Vertical stepper connector line behind icons */}
-              <div className="absolute left-[27px] top-6 bottom-6 w-[1.5px] bg-[#e2e8f0]/80 dark:bg-zinc-800 hidden md:block pointer-events-none" />
+              <div className="absolute left-[27px] top-6 bottom-6 w-[1.5px] bg-[#bae6fd]/60 dark:bg-[#223269]/60 hidden md:block pointer-events-none" />
 
               <button
                 type="button"
                 onClick={() => handleTabChange('company')}
                 className={`z-10 flex-1 md:flex-none py-2.5 px-4 rounded-xl text-left text-xs font-semibold tracking-wide transition-all duration-300 cursor-pointer flex items-center gap-3 ${getTabOpacityClass('company')} ${
                   activeTab === 'company'
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-sky-600 dark:text-[#e2e8f0] hover:text-slate-800 hover:bg-slate-100/50 dark:hover:bg-zinc-850'
+                    ? 'bg-[#0284c7] text-white shadow-sm'
+                    : 'text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f]/50'
                 }`}
               >
                 {renderSidebarBadge('company', <Building2 className="w-3.5 h-3.5" />, 0)}
@@ -1930,8 +1930,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 onClick={() => handleTabChange('banking')}
                 className={`z-10 flex-1 md:flex-none py-2.5 px-4 rounded-xl text-left text-xs font-semibold tracking-wide transition-all duration-300 cursor-pointer flex items-center gap-3 ${getTabOpacityClass('banking')} ${
                   activeTab === 'banking'
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-sky-600 dark:text-[#e2e8f0] hover:text-slate-800 hover:bg-slate-100/50 dark:hover:bg-zinc-850'
+                    ? 'bg-[#0284c7] text-white shadow-sm'
+                    : 'text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f]/50'
                 }`}
               >
                 {renderSidebarBadge('banking', <Landmark className="w-3.5 h-3.5" />, 1)}
@@ -1944,8 +1944,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 onClick={() => handleTabChange('billing')}
                 className={`z-10 flex-1 md:flex-none py-2.5 px-4 rounded-xl text-left text-xs font-semibold tracking-wide transition-all duration-300 cursor-pointer flex items-center gap-3 ${getTabOpacityClass('billing')} ${
                   activeTab === 'billing'
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-sky-600 dark:text-[#e2e8f0] hover:text-slate-800 hover:bg-slate-100/50 dark:hover:bg-zinc-850'
+                    ? 'bg-[#0284c7] text-white shadow-sm'
+                    : 'text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f]/50'
                 }`}
               >
                 {renderSidebarBadge('billing', <FileSpreadsheet className="w-3.5 h-3.5" />, 2)}
@@ -1958,8 +1958,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 onClick={() => handleTabChange('tax')}
                 className={`z-10 flex-1 md:flex-none py-2.5 px-4 rounded-xl text-left text-xs font-semibold tracking-wide transition-all duration-300 cursor-pointer flex items-center gap-3 ${getTabOpacityClass('tax')} ${
                   activeTab === 'tax'
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-sky-600 dark:text-[#e2e8f0] hover:text-slate-800 hover:bg-slate-100/50 dark:hover:bg-zinc-850'
+                    ? 'bg-[#0284c7] text-white shadow-sm'
+                    : 'text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f]/50'
                 }`}
               >
                 {renderSidebarBadge('tax', <Sliders className="w-3.5 h-3.5" />, 3)}
@@ -1972,8 +1972,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 onClick={() => handleTabChange('subscription')}
                 className={`z-10 flex-1 md:flex-none py-2.5 px-4 rounded-xl text-left text-xs font-semibold tracking-wide transition-all duration-300 cursor-pointer flex items-center gap-3 ${getTabOpacityClass('subscription')} ${
                   activeTab === 'subscription'
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-sky-600 dark:text-[#e2e8f0] hover:text-slate-800 hover:bg-slate-100/50 dark:hover:bg-zinc-850'
+                    ? 'bg-[#0284c7] text-white shadow-sm'
+                    : 'text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f]/50'
                 }`}
               >
                 {renderSidebarBadge('subscription', <Award className="w-3.5 h-3.5" />, 4)}
@@ -1988,7 +1988,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
             <div className="p-6 md:p-8 space-y-8 flex-1">
           {/* TAB 1: COMPANY */}
           {activeTab === 'company' && (
-            <div className="space-y-6 animate-fade-in text-slate-800 dark:text-[#e2e8f0]">
+            <div className="space-y-6 animate-fade-in text-[#0f172a] dark:text-[#e2e8f0]">
               {validationError && (
                 <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-2xl text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-2.5 shadow-sm">
                   <AlertCircle className="w-5 h-5 shrink-0" />
@@ -1997,16 +1997,16 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               )}
 
               {/* CARD 1: COMPANY IDENTITY */}
-              <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
-                <div className="bg-slate-100 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-800 dark:text-[#e2e8f0]">
+              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
+                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
                   Company Identity
                 </div>
                 <div className="p-6 space-y-6">
                   <div className="grid md:grid-cols-12 gap-6 items-stretch">
                     {/* Logo upload (cols 5) */}
-                    <div className="md:col-span-5 p-5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-955/30 flex flex-col items-center justify-center space-y-4">
+                    <div className="md:col-span-5 p-5 rounded-2xl border-2 border-dashed border-[#bae6fd]/60 dark:border-[#223269]/60 bg-[#f4f9ff] dark:bg-[#0b1329]/50 flex flex-col items-center justify-center space-y-4">
                       <div 
-                        className="w-32 h-32 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 relative overflow-hidden flex items-center justify-center group cursor-pointer transition-all hover:border-sky-500"
+                        className="w-32 h-32 rounded-xl border border-[#bae6fd]/60 dark:border-[#223269]/60 bg-[#f4f9ff] dark:bg-[#0b1329] relative overflow-hidden flex items-center justify-center group cursor-pointer transition-all hover:border-[#0284c7]"
                         onClick={() => logoUrl ? setShowLogoPreview(true) : triggerLogoUpload()}
                       >
                         {logoUrl ? (
@@ -2017,7 +2017,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                             className="w-full h-full object-contain p-2"
                           />
                         ) : (
-                          <span className="text-[10px] font-bold text-sky-600/60 dark:text-zinc-500 uppercase tracking-widest">LOGO</span>
+                          <span className="text-[10px] font-bold text-[#0284c7]/50 dark:text-[#38bdf8]/40 uppercase tracking-widest">LOGO</span>
                         )}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                           {logoUrl ? (
@@ -2032,7 +2032,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                         <button
                           type="button"
                           onClick={() => logoUrl ? setShowLogoOptions(true) : triggerLogoUpload()}
-                          className="px-4 py-2 bg-slate-100 hover:bg-[#e2e8f0] border border-slate-200 font-extrabold text-[10px] uppercase tracking-wider text-slate-800 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                          className="px-4 py-2 bg-[#e0f2fe] hover:bg-[#bae6fd]/60 border border-[#bae6fd] dark:border-[#223269] font-extrabold text-[10px] uppercase tracking-wider text-[#0284c7] rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
                         >
                           <Upload className="w-3.5 h-3.5" />
                           {logoUrl ? 'Edit Logo' : 'Upload Logo'}
@@ -2053,13 +2053,13 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     {/* Right side fields (cols 7) */}
                     <div className="md:col-span-7 space-y-4">
                       {/* System Company Code card */}
-                      <div className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/30 flex items-center justify-between">
+                      <div className="p-4 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f4f9ff] dark:bg-[#0b1329]/50 flex items-center justify-between">
                         <div>
-                          <span className="block text-[8px] font-bold text-sky-600/70 dark:text-zinc-400 uppercase tracking-widest mb-1">System Company Code</span>
-                          <span className="text-xl sm:text-2xl font-extrabold font-mono text-slate-800 dark:text-[#e2e8f0] tracking-wider block">
+                          <span className="block text-[8px] font-bold text-[#0284c7]/70 dark:text-[#38bdf8]/60 uppercase tracking-widest mb-1">System Company Code</span>
+                          <span className="text-xl sm:text-2xl font-extrabold font-mono text-[#0f172a] dark:text-[#e2e8f0] tracking-wider block">
                             {companyCode || 'C0045'}
                           </span>
-                          <span className="text-[9px] text-sky-600/60 dark:text-zinc-500 block mt-0.5">Immutable code linked to all system records.</span>
+                          <span className="text-[9px] text-[#0284c7]/50 dark:text-[#38bdf8]/40 block mt-0.5">Immutable code linked to all system records.</span>
                         </div>
                         <span className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded text-[9px] font-extrabold uppercase tracking-wider">
                           Active License
@@ -2068,7 +2068,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
                       {/* Business Name */}
                       <div>
-                        <label htmlFor="company-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Business Name *</label>
+                        <label htmlFor="company-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Business Name *</label>
                         <input 
                           id="company-name"
                           type="text"
@@ -2076,14 +2076,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           placeholder="e.g. Acme Corporation"
-                          className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none shadow-sm transition-all font-medium ${showErrors && !name.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200 dark:border-zinc-800 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10'}`}
+                          className={`w-full px-3 py-2.5 rounded-xl border bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none shadow-sm transition-all font-medium ${showErrors && !name.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[#bae6fd]/60 dark:border-[#223269]/60 focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15'}`}
                         />
                         {showErrors && !name.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Business Name is required</p>}
                       </div>
 
                       {/* Owner Name */}
                       <div>
-                        <label htmlFor="company-display-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Owner Name *</label>
+                        <label htmlFor="company-display-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Owner Name *</label>
                         <input 
                           id="company-display-name"
                           type="text"
@@ -2091,21 +2091,21 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                           value={displayName}
                           onChange={(e) => setDisplayName(e.target.value)}
                           placeholder="e.g. John Doe"
-                          className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none shadow-sm transition-all font-medium ${showErrors && !displayName.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200 dark:border-zinc-800 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10'}`}
+                          className={`w-full px-3 py-2.5 rounded-xl border bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none shadow-sm transition-all font-medium ${showErrors && !displayName.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[#bae6fd]/60 dark:border-[#223269]/60 focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15'}`}
                         />
                         {showErrors && !displayName.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Owner Name is required</p>}
                       </div>
 
                       {/* Website URL */}
                       <div>
-                        <label htmlFor="company-website" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Website URL</label>
+                        <label htmlFor="company-website" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Website URL</label>
                         <input 
                           id="company-website"
                           type="text"
                           value={website}
                           onChange={(e) => setWebsite(e.target.value)}
                           placeholder="e.g. www.acme.com"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none shadow-sm transition-all font-medium focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none transition-all font-medium focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15"
                         />
                       </div>
                     </div>
@@ -2114,30 +2114,30 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               </div>
 
               {/* CARD 2: LOCATION DETAILS */}
-              <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
-                <div className="bg-slate-100 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-800 dark:text-[#e2e8f0]">
+              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
+                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
                   Location Details
                 </div>
                 <div className="p-6 space-y-6">
                   <div className="grid md:grid-cols-3 gap-6">
                     <div>
-                      <label htmlFor="company-country" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Country *</label>
+                      <label htmlFor="company-country" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Country *</label>
                       <select 
                         id="company-country"
                         required
                         value={Country.getAllCountries().find(c => c.name === country)?.isoCode || ''}
                         onChange={(e) => handleCountryChange(e.target.value)}
-                        className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none shadow-sm transition-all font-medium cursor-pointer ${showErrors && !country.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200 dark:border-zinc-800 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10'}`}
+                        className={`w-full px-3 py-2.5 rounded-xl border bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none shadow-sm transition-all font-medium cursor-pointer ${showErrors && !country.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[#bae6fd]/60 dark:border-[#223269]/60 focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15'}`}
                       >
-                        <option value="" disabled className="bg-white dark:bg-zinc-900 text-slate-800 dark:text-white">Select Country</option>
+                        <option value="" disabled className="bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Select Country</option>
                         {Country.getAllCountries().map((c) => (
-                          <option key={c.isoCode} value={c.isoCode} className="bg-white dark:bg-zinc-900 text-slate-800 dark:text-white">{c.name}</option>
+                          <option key={c.isoCode} value={c.isoCode} className="bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white">{c.name}</option>
                         ))}
                       </select>
                       {showErrors && !country.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Country is required</p>}
                     </div>
                     <div>
-                      <label htmlFor="company-state" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">State *</label>
+                      <label htmlFor="company-state" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">State *</label>
                       <select 
                         id="company-state"
                         value={(() => {
@@ -2146,56 +2146,56 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                           return State.getStatesOfCountry(cCode).find(s => s.name === state)?.isoCode || '';
                         })()}
                         onChange={(e) => handleStateChange(e.target.value, country)}
-                        className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none shadow-sm transition-all font-medium cursor-pointer ${showErrors && !state.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200 dark:border-zinc-800 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10'}`}
+                        className={`w-full px-3 py-2.5 rounded-xl border bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none shadow-sm transition-all font-medium cursor-pointer ${showErrors && !state.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[#bae6fd]/60 dark:border-[#223269]/60 focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15'}`}
                         required
                       >
-                        <option value="" disabled className="bg-white dark:bg-zinc-900 text-slate-500">Select State</option>
+                        <option value="" disabled className="bg-white dark:bg-[#111a36] text-[#64748b]">Select State</option>
                         {(() => {
                           const cCode = Country.getAllCountries().find(c => c.name === country)?.isoCode;
                           if (!cCode) return null;
                           return State.getStatesOfCountry(cCode).map((st) => (
-                            <option key={st.isoCode} value={st.isoCode} className="bg-white dark:bg-zinc-900 text-slate-800 dark:text-white">{st.name}</option>
+                            <option key={st.isoCode} value={st.isoCode} className="bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white">{st.name}</option>
                           ));
                         })()}
                       </select>
                       {showErrors && !state.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">State is required</p>}
                     </div>
                     <div>
-                      <label htmlFor="company-state-code" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">State Code</label>
+                      <label htmlFor="company-state-code" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">State Code</label>
                       <input 
                         id="company-state-code"
                         type="text"
                         value={stateCode}
                         onChange={(e) => setStateCode(e.target.value)}
                         placeholder="07"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm focus:ring-4 focus:ring-sky-500/10 transition-all font-mono font-medium"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all font-mono font-medium"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label htmlFor="company-address" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Full Office Address</label>
+                    <label htmlFor="company-address" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Full Office Address</label>
                     <textarea 
                       id="company-address"
                       value={address || ''}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="e.g. 123 Business Rd, City Centre"
                       rows={2}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm focus:ring-4 focus:ring-sky-500/10 transition-all resize-none"
+                      className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all resize-none"
                     />
                   </div>
                 </div>
               </div>
 
               {/* CARD 3: CONTACT & COMPLIANCE */}
-              <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
-                <div className="bg-slate-100 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-800 dark:text-[#e2e8f0]">
+              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
+                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
                   Contact & Compliance
                 </div>
                 <div className="p-6 space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <label htmlFor="company-mobile" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Mobile *</label>
+                      <label htmlFor="company-mobile" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Mobile *</label>
                       <input 
                         id="company-mobile"
                         type="text"
@@ -2203,12 +2203,12 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                         value={mobile}
                         onChange={(e) => setMobile(e.target.value.replace(/[^\d\s+]/g, ''))}
                         placeholder="e.g. +1 555-0199"
-                        className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none shadow-sm transition-all font-medium ${showErrors && !mobile.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200 dark:border-zinc-800 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10'}`}
+                        className={`w-full px-3 py-2.5 rounded-xl border bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none shadow-sm transition-all font-medium ${showErrors && !mobile.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[#bae6fd]/60 dark:border-[#223269]/60 focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15'}`}
                       />
                       {showErrors && !mobile.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Mobile Number is required</p>}
                     </div>
                     <div>
-                      <label htmlFor="company-email" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Email *</label>
+                      <label htmlFor="company-email" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Email *</label>
                       <input 
                         id="company-email"
                         type="email"
@@ -2216,43 +2216,43 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="e.g. contact@acme.com"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm focus:ring-4 focus:ring-sky-500/10 transition-all font-medium"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all font-medium"
                       />
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-3 gap-6">
                     <div>
-                      <label htmlFor="company-currency-symbol" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Currency Symbol</label>
+                      <label htmlFor="company-currency-symbol" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Currency Symbol</label>
                       <input 
                         id="company-currency-symbol"
                         type="text"
                         value={currencySymbol}
                         onChange={(e) => setCurrencySymbol(e.target.value)}
                         placeholder="e.g. ₹"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm focus:ring-4 focus:ring-sky-500/10 transition-all font-medium"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all font-medium"
                       />
                     </div>
                     <div>
-                      <label htmlFor="company-gstin" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">GSTIN / Tax ID</label>
+                      <label htmlFor="company-gstin" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">GSTIN / Tax ID</label>
                       <input 
                         id="company-gstin"
                         type="text"
                         value={taxId}
                         onChange={(e) => setTaxId(e.target.value)}
                         placeholder="e.g. GSTIN99238"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm focus:ring-4 focus:ring-sky-500/10 transition-all font-mono"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] shadow-sm focus:ring-2 focus:ring-[#0284c7]/15 transition-all font-mono"
                       />
                     </div>
                     <div>
-                      <label htmlFor="company-pan" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">PAN Number</label>
+                      <label htmlFor="company-pan" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">PAN Number</label>
                       <input 
                         id="company-pan"
                         type="text"
                         value={pan}
                         onChange={(e) => setPan(e.target.value)}
                         placeholder="e.g. ABCDE1234F"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm focus:ring-4 focus:ring-sky-500/10 transition-all font-mono uppercase"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] shadow-sm focus:ring-2 focus:ring-[#0284c7]/15 transition-all font-mono uppercase"
                       />
                     </div>
                   </div>
@@ -2260,35 +2260,35 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               </div>
 
               {/* CARD 4: CLIENT SIGNATURE PAD */}
-              <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
-                <div className="bg-slate-100 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-800 dark:text-[#e2e8f0]">
+              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
+                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
                   Client Signature Pad
                 </div>
                 <div className="p-6 space-y-6">
                   <div>
                     <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400">Signature Configuration</label>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300">Signature Configuration</label>
                       
                       {/* Signature Mode Switcher */}
-                      <div className="flex bg-slate-50 dark:bg-zinc-900 p-0.5 rounded-lg border border-slate-200 dark:border-zinc-800">
+                      <div className="flex bg-[#e0f2fe]/40 dark:bg-[#0b1329] p-0.5 rounded-lg border border-[#bae6fd]/50 dark:border-[#223269]/50">
                         <button
                           type="button"
                           onClick={() => setSignatureMode('draw')}
-                          className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all cursor-pointer ${signatureMode === 'draw' ? 'bg-sky-600 text-white shadow-sm' : 'text-sky-600/70 hover:text-slate-800 dark:hover:text-zinc-300'}`}
+                          className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all cursor-pointer ${signatureMode === 'draw' ? 'bg-[#0284c7] text-white shadow-sm' : 'text-[#0284c7]/70 hover:text-[#0f172a] dark:hover:text-zinc-300'}`}
                         >
                           Draw
                         </button>
                         <button
                           type="button"
                           onClick={() => setSignatureMode('type')}
-                          className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all cursor-pointer ${signatureMode === 'type' ? 'bg-sky-600 text-white shadow-sm' : 'text-sky-600/70 hover:text-slate-800 dark:hover:text-zinc-300'}`}
+                          className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all cursor-pointer ${signatureMode === 'type' ? 'bg-[#0284c7] text-white shadow-sm' : 'text-[#0284c7]/70 hover:text-[#0f172a] dark:hover:text-zinc-300'}`}
                         >
                           Type
                         </button>
                         <button
                           type="button"
                           onClick={() => signatureImageInputRef.current?.click()}
-                          className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all flex items-center gap-1 cursor-pointer ${signatureMode === 'upload' ? 'bg-sky-600 text-white shadow-sm' : 'text-sky-600/70 hover:text-slate-800 dark:hover:text-zinc-300'}`}
+                          className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all flex items-center gap-1 cursor-pointer ${signatureMode === 'upload' ? 'bg-[#0284c7] text-white shadow-sm' : 'text-[#0284c7]/70 hover:text-[#0f172a] dark:hover:text-zinc-300'}`}
                         >
                           <Upload className="w-3 h-3" />
                           Upload
@@ -2304,14 +2304,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                             value={signatureText}
                             onChange={(e) => setSignatureText(e.target.value)}
                             placeholder="Type your signature here..."
-                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium"
+                            className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all font-medium"
                           />
                         </div>
                         <div className="w-48">
                           <select
                             value={signatureFont}
                             onChange={(e) => setSignatureFont(e.target.value)}
-                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 transition-all font-medium cursor-pointer"
+                            className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all font-medium cursor-pointer"
                             style={{ fontFamily: signatureFont }}
                           >
                             {SIGNATURE_FONTS.map(f => (
@@ -2329,7 +2329,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                       </div>
                     )}
 
-                    <div className="relative rounded-2xl overflow-hidden border-2 border-dashed border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950 flex flex-col my-4">
+                    <div className="relative rounded-2xl overflow-hidden border-2 border-dashed border-[#bae6fd]/60 dark:border-[#223269]/60 bg-[#f4f9ff] dark:bg-[#0b1329] flex flex-col my-4">
                       {signatureMode === 'draw' ? (
                         <canvas 
                           ref={canvasRef}
@@ -2353,7 +2353,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                               className="max-w-full max-h-full object-contain" 
                             />
                           ) : (
-                            <span className="text-sky-600/60 text-xs font-semibold uppercase tracking-wider">No signature entered yet</span>
+                            <span className="text-[#0284c7]/50 dark:text-[#38bdf8]/40 text-xs font-semibold uppercase tracking-wider">No signature entered yet</span>
                           )}
                           {/* Mount canvas hidden so text/upload crop drawing works in background */}
                            <canvas 
@@ -2375,16 +2375,16 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                         </button>
                       )}
                       
-                      <div className="absolute bottom-2 left-3 flex items-center gap-1.5 pointer-events-none text-sky-600/50 dark:text-zinc-500 text-[8px] font-bold uppercase tracking-wider">
+                      <div className="absolute bottom-2 left-3 flex items-center gap-1.5 pointer-events-none text-[#0284c7]/40 dark:text-[#38bdf8]/30 text-[8px] font-bold uppercase tracking-wider">
                         <span>{signatureMode === 'draw' ? 'Draw your signature above.' : signatureMode === 'type' ? 'Your typed signature preview.' : 'Extracted signature preview.'}</span>
                       </div>
                     </div>
 
                     {/* Signature Size Adjuster */}
-                    <div className="mt-5 p-4 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800/80">
+                    <div className="mt-5 p-4 rounded-xl bg-[#f4f9ff] dark:bg-[#0b1329]/50 border border-[#bae6fd]/40 dark:border-[#223269]/40">
                       <div className="flex justify-between items-center mb-3">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400">Signature Display Size</span>
-                        <span className="text-xs font-extrabold text-sky-600 bg-white dark:bg-zinc-950 px-2.5 py-1 rounded-md border border-slate-200">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300">Signature Display Size</span>
+                        <span className="text-xs font-extrabold text-[#0284c7] dark:text-[#38bdf8] bg-white dark:bg-[#111a36] px-2.5 py-1 rounded-md border border-[#bae6fd]/60 dark:border-[#223269]/60">
                           Size: {Math.max(1, Math.min(10, Math.round((signatureSize - 60) / 10) + 1))}
                         </span>
                       </div>
@@ -2401,9 +2401,9 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                             const val = parseInt(e.target.value);
                             setSignatureSize(60 + (val - 1) * 10);
                           }}
-                          className="w-full h-1.5 bg-[#e2e8f0] dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-sky-600 focus:outline-none"
+                          className="w-full h-1.5 bg-[#bae6fd]/40 dark:bg-[#223269]/40 rounded-lg appearance-none cursor-pointer accent-[#0284c7] focus:outline-none"
                         />
-                        <div className="flex justify-between text-[8px] font-extrabold text-sky-600/60 uppercase tracking-widest">
+                        <div className="flex justify-between text-[8px] font-extrabold text-[#0284c7]/50 dark:text-[#38bdf8]/40 uppercase tracking-widest">
                           <span>1 (Small)</span>
                           <span>5 (Medium)</span>
                           <span>10 (Large)</span>
@@ -2421,7 +2421,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                             key={preset.value}
                             type="button"
                             onClick={() => setSignatureSize(preset.value)}
-                            className={`flex-1 py-2 rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition-all border cursor-pointer ${signatureSize === preset.value ? 'bg-sky-600 text-white border-sky-600 shadow-sm' : 'bg-white dark:bg-zinc-950 text-sky-600 border-slate-200 dark:border-zinc-800 hover:bg-slate-50'}`}
+                            className={`flex-1 py-2 rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition-all border cursor-pointer ${signatureSize === preset.value ? 'bg-[#0284c7] text-white border-[#0284c7] shadow-sm' : 'bg-white dark:bg-[#0b1329] text-[#0284c7] dark:text-[#38bdf8] border-[#bae6fd]/60 dark:border-[#223269]/60 hover:bg-[#e0f2fe]/40'}`}
                           >
                             {preset.label}
                           </button>
@@ -2436,27 +2436,27 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
           {/* TAB 2: BANKING */}
           {activeTab === 'banking' && (
-            <div className="space-y-6 animate-fade-in text-slate-800 dark:text-[#e2e8f0]">
+            <div className="space-y-6 animate-fade-in text-[#0f172a] dark:text-[#e2e8f0]">
               {/* White background main Card with brown border */}
-              <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
-                <div className="bg-slate-100 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-800 dark:text-[#e2e8f0]">
+              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
+                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
                   Primary Bank Account
                 </div>
                 <div className="p-6 space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <label htmlFor="bank-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Bank Name</label>
+                      <label htmlFor="bank-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Bank Name</label>
                       <input 
                         id="bank-name"
                         type="text"
                         value={bankName}
                         onChange={(e) => setBankName(e.target.value)}
                         placeholder="e.g. HDFC Bank"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium"
                       />
                     </div>
                     <div>
-                      <label htmlFor="bank-account" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5 flex justify-between items-center">
+                      <label htmlFor="bank-account" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5 flex justify-between items-center">
                         <span>Account Number</span>
                         {accountVerified && <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold uppercase flex items-center gap-0.5"><ShieldCheck className="w-3 h-3" /> Verified</span>}
                       </label>
@@ -2472,10 +2472,10 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                           }}
                           onBlur={() => handleVerifyAccount()}
                           placeholder="e.g. 50100234567890"
-                          className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none shadow-sm focus:ring-4 transition-all duration-300 font-mono font-medium ${
+                          className={`w-full px-3 py-2.5 rounded-xl border bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none shadow-sm focus:ring-4 transition-all duration-300 font-mono font-medium ${
                             accountVerified === true ? 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500/10' :
                             accountVerified === false ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' :
-                            'border-slate-200 dark:border-zinc-800 focus:border-sky-500 focus:ring-sky-500/10'
+                            'border-[#bae6fd]/50 dark:border-[#223269]/50 focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-[#0284c7]/15'
                           }`}
                         />
                         {accountChecking && (
@@ -2490,7 +2490,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <label htmlFor="bank-ifsc" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5 flex justify-between items-center">
+                      <label htmlFor="bank-ifsc" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5 flex justify-between items-center">
                         <span>IFSC Code</span>
                         {ifscVerified && <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold uppercase flex items-center gap-0.5"><ShieldCheck className="w-3 h-3" /> Verified</span>}
                       </label>
@@ -2506,10 +2506,10 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                           }}
                           onBlur={() => handleVerifyIFSC()}
                           placeholder="e.g. HDFC0001234"
-                          className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none shadow-sm focus:ring-4 transition-all duration-300 font-mono uppercase font-medium ${
+                          className={`w-full px-3 py-2.5 rounded-xl border bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none shadow-sm focus:ring-4 transition-all duration-300 font-mono uppercase font-medium ${
                             ifscVerified === true ? 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500/10' :
                             ifscVerified === false ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' :
-                            'border-slate-200 dark:border-zinc-800 focus:border-sky-500 focus:ring-sky-500/10'
+                            'border-[#bae6fd]/50 dark:border-[#223269]/50 focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-[#0284c7]/15'
                           }`}
                         />
                         {ifscChecking && (
@@ -2521,7 +2521,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                       {ifscError && <p className="text-[10px] text-rose-500 font-medium mt-1">{ifscError}</p>}
                     </div>
                     <div>
-                      <label htmlFor="bank-upi" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5 flex justify-between items-center">
+                      <label htmlFor="bank-upi" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5 flex justify-between items-center">
                         <span>UPI ID</span>
                         {upiVerified && <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold uppercase flex items-center gap-0.5"><ShieldCheck className="w-3 h-3" /> Verified</span>}
                       </label>
@@ -2537,10 +2537,10 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                           }}
                           onBlur={() => handleVerifyUPI()}
                           placeholder="e.g. upi@okaxis"
-                          className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none shadow-sm focus:ring-4 transition-all duration-300 font-medium ${
+                          className={`w-full px-3 py-2.5 rounded-xl border bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none shadow-sm focus:ring-4 transition-all duration-300 font-medium ${
                             upiVerified === true ? 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500/10' :
                             upiVerified === false ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' :
-                            'border-slate-200 dark:border-zinc-800 focus:border-sky-500 focus:ring-sky-500/10'
+                            'border-[#bae6fd]/50 dark:border-[#223269]/50 focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-[#0284c7]/15'
                           }`}
                         />
                         {upiChecking && (
@@ -2553,11 +2553,11 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     </div>
                   </div>
 
-                  <div className="border-t border-slate-200 dark:border-zinc-800 pt-6 flex items-center justify-start">
+                  <div className="border-t border-[#bae6fd]/50 dark:border-[#223269]/50 pt-6 flex items-center justify-start">
                     <button
                       type="submit"
                       disabled={isSaving}
-                      className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer disabled:opacity-50"
+                      className="px-6 py-2.5 bg-[#0284c7] hover:bg-[#e0f2fe]0 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer disabled:opacity-50"
                     >
                       <Check className="w-4 h-4" />
                       {isSaving ? 'Saving...' : 'Save Bank Details'}
@@ -2568,30 +2568,30 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
               {/* Three Beige Info Cards */}
               <div className="grid md:grid-cols-3 gap-5">
-                <div className="p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-100/40 dark:bg-zinc-900/40 text-slate-800 dark:text-[#e2e8f0] space-y-2 flex flex-col justify-start">
+                <div className="p-5 rounded-2xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-slate-100/40 dark:bg-[#111a36]/40 text-[#0f172a] dark:text-[#e2e8f0] space-y-2 flex flex-col justify-start">
                   <div className="flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-sky-600" />
+                    <Lock className="w-4 h-4 text-[#0284c7]" />
                     <span className="text-[10px] font-extrabold uppercase tracking-wider">Secure Storage</span>
                   </div>
-                  <p className="text-[10px] text-sky-600/80 dark:text-slate-400 leading-normal">
+                  <p className="text-[10px] text-[#0284c7]/80 dark:text-[#94a3b8] leading-normal">
                     Your banking data is encrypted and stored according to industry standards.
                   </p>
                 </div>
-                <div className="p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-100/40 dark:bg-zinc-900/40 text-slate-800 dark:text-[#e2e8f0] space-y-2 flex flex-col justify-start">
+                <div className="p-5 rounded-2xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-slate-100/40 dark:bg-[#111a36]/40 text-[#0f172a] dark:text-[#e2e8f0] space-y-2 flex flex-col justify-start">
                   <div className="flex items-center gap-2">
-                    <Banknote className="w-4 h-4 text-sky-600" />
+                    <Banknote className="w-4 h-4 text-[#0284c7]" />
                     <span className="text-[10px] font-extrabold uppercase tracking-wider">Automated Payouts</span>
                   </div>
-                  <p className="text-[10px] text-sky-600/80 dark:text-slate-400 leading-normal">
+                  <p className="text-[10px] text-[#0284c7]/80 dark:text-[#94a3b8] leading-normal">
                     Ensure accuracy to prevent delays in processing your invoice settlements.
                   </p>
                 </div>
-                <div className="p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-100/40 dark:bg-zinc-900/40 text-slate-800 dark:text-[#e2e8f0] space-y-2 flex flex-col justify-start">
+                <div className="p-5 rounded-2xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-slate-100/40 dark:bg-[#111a36]/40 text-[#0f172a] dark:text-[#e2e8f0] space-y-2 flex flex-col justify-start">
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-sky-600" />
+                    <ShieldCheck className="w-4 h-4 text-[#0284c7]" />
                     <span className="text-[10px] font-extrabold uppercase tracking-wider">Verification</span>
                   </div>
-                  <p className="text-[10px] text-sky-600/80 dark:text-slate-400 leading-normal">
+                  <p className="text-[10px] text-[#0284c7]/80 dark:text-[#94a3b8] leading-normal">
                     Changes to banking details may require a one-time verification step.
                   </p>
                 </div>
@@ -2601,35 +2601,35 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
           {/* TAB 3: BILLING / CUSTOMIZATION */}
           {activeTab === 'billing' && (
-            <div className="space-y-6 animate-fade-in text-slate-800 dark:text-[#e2e8f0]">
+            <div className="space-y-6 animate-fade-in text-[#0f172a] dark:text-[#e2e8f0]">
               
               {/* Card 1: Invoice Numbering */}
-              <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
-                <div className="bg-slate-100 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-800 dark:text-[#e2e8f0]">
+              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
+                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
                   Invoice Numbering
                 </div>
                 <div className="p-6 space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <label htmlFor="billing-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Invoice Prefix</label>
+                      <label htmlFor="billing-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Invoice Prefix</label>
                       <input 
                         id="billing-prefix"
                         type="text"
                         value={invoicePrefix}
                         onChange={(e) => setInvoicePrefix(e.target.value)}
                         placeholder="e.g. INV"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium uppercase"
                       />
                     </div>
                     <div>
-                      <label htmlFor="billing-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Starting Invoice Number</label>
+                      <label htmlFor="billing-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Starting Invoice Number</label>
                       <input 
                         id="billing-start-num"
                         type="number"
                         value={startingInvoiceNumber}
                         onChange={(e) => setStartingInvoiceNumber(e.target.value)}
                         placeholder="1"
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium"
                       />
                     </div>
                   </div>
@@ -2637,40 +2637,40 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               </div>
 
               {/* Card 1b: Document Numbering */}
-              <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
-                <div className="bg-slate-100 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-800 dark:text-[#e2e8f0]">
+              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
+                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
                   Document Numbering
                 </div>
                 <div className="p-6 space-y-6">
-                  <p className="text-[10px] text-slate-500 dark:text-zinc-500 -mt-2">Set the prefix and starting number for each document type. These will be used when creating new documents.</p>
+                  <p className="text-[10px] text-[#64748b] dark:text-zinc-400 -mt-2">Set the prefix and starting number for each document type. These will be used when creating new documents.</p>
 
                   {/* Proforma Invoice */}
                   <div>
-                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-sky-600 dark:text-sky-400 mb-3 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-sky-500 inline-block"></span>
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#0284c7] dark:text-sky-400 mb-3 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#e0f2fe]0 inline-block"></span>
                       Proforma Invoice
                     </div>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <label htmlFor="proforma-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Prefix</label>
+                        <label htmlFor="proforma-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Prefix</label>
                         <input
                           id="proforma-prefix"
                           type="text"
                           value={proformaPrefix}
                           onChange={(e) => setProformaPrefix(e.target.value)}
                           placeholder="e.g. PRO"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium uppercase"
                         />
                       </div>
                       <div>
-                        <label htmlFor="proforma-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Starting Number</label>
+                        <label htmlFor="proforma-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Starting Number</label>
                         <input
                           id="proforma-start-num"
                           type="number"
                           value={startingProformaNumber}
                           onChange={(e) => setStartingProformaNumber(e.target.value)}
                           placeholder="1"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium"
                         />
                       </div>
                     </div>
@@ -2684,25 +2684,25 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     </div>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <label htmlFor="debit-note-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Prefix</label>
+                        <label htmlFor="debit-note-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Prefix</label>
                         <input
                           id="debit-note-prefix"
                           type="text"
                           value={debitNotePrefix}
                           onChange={(e) => setDebitNotePrefix(e.target.value)}
                           placeholder="e.g. DN"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium uppercase"
                         />
                       </div>
                       <div>
-                        <label htmlFor="debit-note-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Starting Number</label>
+                        <label htmlFor="debit-note-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Starting Number</label>
                         <input
                           id="debit-note-start-num"
                           type="number"
                           value={startingDebitNoteNumber}
                           onChange={(e) => setStartingDebitNoteNumber(e.target.value)}
                           placeholder="1"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium"
                         />
                       </div>
                     </div>
@@ -2716,25 +2716,25 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     </div>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <label htmlFor="credit-note-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Prefix</label>
+                        <label htmlFor="credit-note-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Prefix</label>
                         <input
                           id="credit-note-prefix"
                           type="text"
                           value={creditNotePrefix}
                           onChange={(e) => setCreditNotePrefix(e.target.value)}
                           placeholder="e.g. CN"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium uppercase"
                         />
                       </div>
                       <div>
-                        <label htmlFor="credit-note-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Starting Number</label>
+                        <label htmlFor="credit-note-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Starting Number</label>
                         <input
                           id="credit-note-start-num"
                           type="number"
                           value={startingCreditNoteNumber}
                           onChange={(e) => setStartingCreditNoteNumber(e.target.value)}
                           placeholder="1"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium"
                         />
                       </div>
                     </div>
@@ -2748,25 +2748,25 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     </div>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <label htmlFor="quote-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Prefix</label>
+                        <label htmlFor="quote-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Prefix</label>
                         <input
                           id="quote-prefix"
                           type="text"
                           value={quotePrefix}
                           onChange={(e) => setQuotePrefix(e.target.value)}
                           placeholder="e.g. EST"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium uppercase"
                         />
                       </div>
                       <div>
-                        <label htmlFor="quote-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Starting Number</label>
+                        <label htmlFor="quote-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Starting Number</label>
                         <input
                           id="quote-start-num"
                           type="number"
                           value={startingQuoteNumber}
                           onChange={(e) => setStartingQuoteNumber(e.target.value)}
                           placeholder="1"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium"
                         />
                       </div>
                     </div>
@@ -2780,25 +2780,25 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     </div>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <label htmlFor="purchases-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Prefix</label>
+                        <label htmlFor="purchases-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Prefix</label>
                         <input
                           id="purchases-prefix"
                           type="text"
                           value={purchasesPrefix}
                           onChange={(e) => setPurchasesPrefix(e.target.value)}
                           placeholder="e.g. PUR"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium uppercase"
                         />
                       </div>
                       <div>
-                        <label htmlFor="purchases-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Starting Number</label>
+                        <label htmlFor="purchases-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Starting Number</label>
                         <input
                           id="purchases-start-num"
                           type="number"
                           value={startingPurchasesNumber}
                           onChange={(e) => setStartingPurchasesNumber(e.target.value)}
                           placeholder="1"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium"
                         />
                       </div>
                     </div>
@@ -2812,25 +2812,25 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     </div>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <label htmlFor="po-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Prefix</label>
+                        <label htmlFor="po-prefix" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Prefix</label>
                         <input
                           id="po-prefix"
                           type="text"
                           value={purchaseOrderPrefix}
                           onChange={(e) => setPurchaseOrderPrefix(e.target.value)}
                           placeholder="e.g. PO"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium uppercase"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium uppercase"
                         />
                       </div>
                       <div>
-                        <label htmlFor="po-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Starting Number</label>
+                        <label htmlFor="po-start-num" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Starting Number</label>
                         <input
                           id="po-start-num"
                           type="number"
                           value={startingPurchaseOrderNumber}
                           onChange={(e) => setStartingPurchaseOrderNumber(e.target.value)}
                           placeholder="1"
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium"
                         />
                       </div>
                     </div>
@@ -2840,49 +2840,49 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               </div>
 
               {/* Card 2: Permissions & Features */}
-              <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
-                <div className="bg-slate-100 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-800 dark:text-[#e2e8f0]">
+              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
+                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
                   Permissions & Features
                 </div>
                 <div className="p-6 space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <label htmlFor="billing-posted-edit" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Posted Invoice Edit</label>
+                      <label htmlFor="billing-posted-edit" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Posted Invoice Edit</label>
                       <select 
                         id="billing-posted-edit"
                         value={postedInvoiceEdit}
                         onChange={(e) => setPostedInvoiceEdit(e.target.value as any)}
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium cursor-pointer"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium cursor-pointer"
                       >
-                        <option value="Enabled" className="bg-white dark:bg-zinc-900 text-slate-805 dark:text-white">Enabled</option>
-                        <option value="Disabled" className="bg-white dark:bg-zinc-900 text-slate-805 dark:text-white">Disabled</option>
+                        <option value="Enabled" className="bg-white dark:bg-[#111a36] text-slate-805 dark:text-white">Enabled</option>
+                        <option value="Disabled" className="bg-white dark:bg-[#111a36] text-slate-805 dark:text-white">Disabled</option>
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="billing-rate-edit" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Material Rate Edit</label>
+                      <label htmlFor="billing-rate-edit" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Material Rate Edit</label>
                       <select 
                         id="billing-rate-edit"
                         value={materialRateEdit}
                         onChange={(e) => setMaterialRateEdit(e.target.value as any)}
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium cursor-pointer"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium cursor-pointer"
                       >
-                        <option value="Enabled" className="bg-white dark:bg-zinc-900 text-slate-805 dark:text-white">Enabled</option>
-                        <option value="Disabled" className="bg-white dark:bg-zinc-900 text-slate-805 dark:text-white">Disabled</option>
+                        <option value="Enabled" className="bg-white dark:bg-[#111a36] text-slate-805 dark:text-white">Enabled</option>
+                        <option value="Disabled" className="bg-white dark:bg-[#111a36] text-slate-805 dark:text-white">Disabled</option>
                       </select>
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <label htmlFor="billing-categ-edit" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Material Categorization</label>
+                      <label htmlFor="billing-categ-edit" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Material Categorization</label>
                       <select 
                         id="billing-categ-edit"
                         value={materialCategorization}
                         onChange={(e) => setMaterialCategorization(e.target.value as any)}
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium cursor-pointer"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium cursor-pointer"
                       >
-                        <option value="Optional" className="bg-white dark:bg-zinc-900 text-slate-805 dark:text-white">Optional</option>
-                        <option value="Required" className="bg-white dark:bg-zinc-900 text-slate-805 dark:text-white">Required</option>
+                        <option value="Optional" className="bg-white dark:bg-[#111a36] text-slate-805 dark:text-white">Optional</option>
+                        <option value="Required" className="bg-white dark:bg-[#111a36] text-slate-805 dark:text-white">Required</option>
                       </select>
                     </div>
                   </div>
@@ -2890,32 +2890,32 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               </div>
 
               {/* Card 3: Default Text & Terms */}
-              <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
-                <div className="bg-slate-100 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-800 dark:text-[#e2e8f0]">
+              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
+                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
                   Default Text & Terms
                 </div>
                 <div className="p-6 space-y-6">
                   <div>
-                    <label htmlFor="billing-notes" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Default Notes</label>
+                    <label htmlFor="billing-notes" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Default Notes</label>
                     <textarea 
                       id="billing-notes"
                       value={defaultNotes || ''}
                       onChange={(e) => setDefaultNotes(e.target.value)}
                       placeholder="Thank you for your business."
                       rows={2}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 resize-none font-medium"
+                      className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] shadow-sm hover:border-slate-200 focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 resize-none font-medium"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="billing-terms" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">Default Terms & Conditions</label>
+                    <label htmlFor="billing-terms" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Default Terms & Conditions</label>
                     <textarea 
                       id="billing-terms"
                       value={defaultTerms || ''}
                       onChange={(e) => setDefaultTerms(e.target.value)}
                       placeholder="Goods once sold will not be taken back or exchanged."
                       rows={2}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 resize-none font-medium"
+                      className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] shadow-sm hover:border-slate-200 focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 resize-none font-medium"
                     />
                   </div>
                 </div>
@@ -2923,25 +2923,25 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
               {/* Lower Section (Configure Smarter & Need Assistance) */}
               <div className="grid md:grid-cols-12 gap-5 pt-2">
-                <div className="md:col-span-8 p-6 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-100/40 dark:bg-zinc-900/40 text-slate-800 dark:text-[#e2e8f0] relative overflow-hidden flex flex-col justify-center min-h-[120px]">
-                  <h4 className="text-sm font-extrabold text-sky-600 dark:text-white mb-2">Configure Smarter</h4>
-                  <p className="text-[10px] text-sky-600/90 dark:text-slate-400 max-w-[80%] leading-relaxed">
+                <div className="md:col-span-8 p-6 rounded-2xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-slate-100/40 dark:bg-[#111a36]/40 text-[#0f172a] dark:text-[#e2e8f0] relative overflow-hidden flex flex-col justify-center min-h-[120px]">
+                  <h4 className="text-sm font-extrabold text-[#0284c7] dark:text-white mb-2">Configure Smarter</h4>
+                  <p className="text-[10px] text-[#0284c7]/90 dark:text-[#94a3b8] max-w-[80%] leading-relaxed">
                     Changes made here will be reflected globally on all new generated invoices. Maintain consistency across your brand identity.
                   </p>
-                  <FileSpreadsheet className="absolute -bottom-4 -right-4 w-28 h-28 text-sky-600/10 dark:text-white/5 pointer-events-none rotate-12" />
+                  <FileSpreadsheet className="absolute -bottom-4 -right-4 w-28 h-28 text-[#0284c7]/10 dark:text-white/5 pointer-events-none rotate-12" />
                 </div>
 
-                <div className="md:col-span-4 p-6 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-[#e2e8f0] flex flex-col justify-between min-h-[120px] shadow-sm">
+                <div className="md:col-span-4 p-6 rounded-2xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-white dark:bg-[#111a36] text-[#0f172a] dark:text-[#e2e8f0] flex flex-col justify-between min-h-[120px] shadow-sm">
                   <div className="flex items-start gap-2.5">
-                    <HelpCircle className="w-5 h-5 text-sky-600 shrink-0 mt-0.5" />
+                    <HelpCircle className="w-5 h-5 text-[#0284c7] shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-white mb-1.5">Need Assistance?</h4>
-                      <p className="text-[10px] text-sky-600/80 dark:text-slate-400 leading-normal">
+                      <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-white mb-1.5">Need Assistance?</h4>
+                      <p className="text-[10px] text-[#0284c7]/80 dark:text-[#94a3b8] leading-normal">
                         Review our Billing Documentation for detailed configuration guides.
                       </p>
                     </div>
                   </div>
-                  <a href="#" className="text-[10px] font-extrabold text-sky-600 hover:text-slate-800 flex items-center gap-1 mt-3 transition-colors uppercase tracking-wider">
+                  <a href="#" className="text-[10px] font-extrabold text-[#0284c7] hover:text-[#0f172a] flex items-center gap-1 mt-3 transition-colors uppercase tracking-wider">
                     Learn More &rarr;
                   </a>
                 </div>
@@ -2952,44 +2952,44 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
           {/* TAB 4: SUBSCRIPTION */}
           {activeTab === 'subscription' && (
-            <div className="space-y-6 animate-fade-in text-slate-800 dark:text-[#e2e8f0]">
-              <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
-                <div className="bg-slate-100 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-800 dark:text-[#e2e8f0]">
+            <div className="space-y-6 animate-fade-in text-[#0f172a] dark:text-[#e2e8f0]">
+              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
+                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
                   Subscription Details
                 </div>
                 <div className="p-6 space-y-6">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="p-1 px-3 bg-slate-100 dark:bg-zinc-800 text-sky-600 dark:text-[#e2e8f0] border border-slate-200 dark:border-zinc-700 rounded-full text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                      <div className="p-1 px-3 bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#e2e8f0] border border-slate-200 dark:border-[#223269] rounded-full text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-1.5">
                         <ShieldCheck className="w-3.5 h-3.5" />
                         Premium Service Stack Enabled
                       </div>
-                      <span className="text-xs text-sky-600 dark:text-zinc-400 font-mono font-extrabold uppercase tracking-wider">{subStatus}</span>
+                      <span className="text-xs text-[#0284c7] dark:text-zinc-300 font-mono font-extrabold uppercase tracking-wider">{subStatus}</span>
                     </div>
 
                     <div className="space-y-1">
-                      <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white">{subPlanName}</h3>
-                      <p className="text-xs text-sky-600/80 dark:text-slate-400">The corporate grade cloud syncing environment. Bound strictly in military local encryptions.</p>
+                      <h3 className="text-xl sm:text-2xl font-extrabold text-[#0f172a] dark:text-white">{subPlanName}</h3>
+                      <p className="text-xs text-[#0284c7]/80 dark:text-[#94a3b8]">The corporate grade cloud syncing environment. Bound strictly in military local encryptions.</p>
                     </div>
 
-                    <div className="border-t border-slate-200 dark:border-zinc-850 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="border-t border-[#bae6fd]/30 dark:border-[#223269]/60 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <span className="block text-[9px] font-extrabold text-sky-600/60 dark:text-slate-500 uppercase tracking-widest">Active Plan Type</span>
-                        <span className="text-sm font-bold text-slate-800 dark:text-white">{subPlanType}</span>
+                        <span className="block text-[9px] font-extrabold text-[#0284c7]/60 dark:text-[#64748b] uppercase tracking-widest">Active Plan Type</span>
+                        <span className="text-sm font-bold text-[#0f172a] dark:text-white">{subPlanType}</span>
                       </div>
                       <div>
-                        <span className="block text-[9px] font-extrabold text-sky-600/60 dark:text-slate-500 uppercase tracking-widest">Authorized Token Node</span>
-                        <span className="text-sm font-medium text-sky-600 dark:text-zinc-400 font-mono tracking-wide">{subAuthorizedToken || companyCode || 'N/A'}</span>
+                        <span className="block text-[9px] font-extrabold text-[#0284c7]/60 dark:text-[#64748b] uppercase tracking-widest">Authorized Token Node</span>
+                        <span className="text-sm font-medium text-[#0284c7] dark:text-zinc-300 font-mono tracking-wide">{subAuthorizedToken || companyCode || 'N/A'}</span>
                       </div>
                       <div>
-                        <span className="block text-[9px] font-extrabold text-sky-600/60 dark:text-slate-500 uppercase tracking-widest">Expires / Renews</span>
+                        <span className="block text-[9px] font-extrabold text-[#0284c7]/60 dark:text-[#64748b] uppercase tracking-widest">Expires / Renews</span>
                         <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                           {subExpiresAt}
                         </span>
                       </div>
                       <div>
-                        <span className="block text-[9px] font-extrabold text-sky-600/60 dark:text-slate-500 uppercase tracking-widest">Local Node Syncing State</span>
-                        <span className="text-xs font-medium text-slate-800 dark:text-slate-400 flex items-center gap-1.5">
+                        <span className="block text-[9px] font-extrabold text-[#0284c7]/60 dark:text-[#64748b] uppercase tracking-widest">Local Node Syncing State</span>
+                        <span className="text-xs font-medium text-[#0f172a] dark:text-[#94a3b8] flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
                           Authenticated
                         </span>
@@ -2999,15 +2999,15 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 </div>
               </div>
 
-              <div className="p-4 bg-slate-50 dark:bg-zinc-955/30 rounded-2xl border border-slate-200 dark:border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="p-4 bg-[#f4f9ff] dark:bg-zinc-955/30 rounded-2xl border border-[#bae6fd]/50 dark:border-[#223269]/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="space-y-0.5">
-                  <h4 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider">Multi-User Collaboration & Audit System</h4>
-                  <p className="text-[10px] text-sky-600/80 dark:text-slate-400">Authorize secure cryptographic access keys to branch office ledgers instantly.</p>
+                  <h4 className="text-xs font-bold text-[#0f172a] dark:text-white uppercase tracking-wider">Multi-User Collaboration & Audit System</h4>
+                  <p className="text-[10px] text-[#0284c7]/80 dark:text-[#94a3b8]">Authorize secure cryptographic access keys to branch office ledgers instantly.</p>
                 </div>
                 <button 
                   type="button"
                   onClick={() => setNotification({ message: 'Branch key sharing token successfully synchronized locally! Check console ledger key.', type: 'info', title: 'Branch Key Request' })}
-                  className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-[10px] uppercase font-extrabold tracking-widest rounded-xl transition-all cursor-pointer flex items-center gap-1.5 self-stretch sm:self-auto justify-center"
+                  className="px-4 py-2 bg-[#0284c7] hover:bg-[#e0f2fe]0 text-white text-[10px] uppercase font-extrabold tracking-widest rounded-xl transition-all cursor-pointer flex items-center gap-1.5 self-stretch sm:self-auto justify-center"
                 >
                   <KeyRound className="w-3.5 h-3.5 text-white" />
                   Request Key
@@ -3018,18 +3018,18 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
           {/* TAB 5: TAX CONFIG */}
           {activeTab === 'tax' && (
-            <div className="space-y-6 animate-fade-in text-slate-800 dark:text-[#e2e8f0]">
-              <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
-                <div className="bg-slate-100 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-850 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-800 dark:text-[#e2e8f0]">
+            <div className="space-y-6 animate-fade-in text-[#0f172a] dark:text-[#e2e8f0]">
+              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
+                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
                   Tax Configuration
                 </div>
                 <div className="p-6 space-y-6">
                   
                   {/* Country Detection */}
-                  <div className="p-4 bg-slate-50 dark:bg-zinc-955/30 rounded-2xl border border-slate-200 dark:border-zinc-800 flex items-center justify-between">
+                  <div className="p-4 bg-[#f4f9ff] dark:bg-zinc-955/30 rounded-2xl border border-[#bae6fd]/50 dark:border-[#223269]/50 flex items-center justify-between">
                     <div>
-                      <span className="block text-[10px] font-extrabold text-sky-600/60 dark:text-zinc-500 uppercase tracking-widest leading-none mb-1">Company Operating Country</span>
-                      <span className="text-sm font-extrabold text-slate-800 dark:text-white">{country || 'Not Selected (Please select in Profile tab)'}</span>
+                      <span className="block text-[10px] font-extrabold text-[#0284c7]/60 dark:text-zinc-400 uppercase tracking-widest leading-none mb-1">Company Operating Country</span>
+                      <span className="text-sm font-extrabold text-[#0f172a] dark:text-white">{country || 'Not Selected (Please select in Profile tab)'}</span>
                     </div>
                     <span className="text-xl">
                       {country && country.toLowerCase() === 'india' ? '🇮🇳' : '🌐'}
@@ -3039,19 +3039,19 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   {country && country.toLowerCase() === 'india' ? (
                     // INDIA GST TAX ENGINE CONFIG
                     <div className="space-y-5">
-                      <div className="p-4 bg-slate-100/40 dark:bg-zinc-900/40 border border-slate-200 dark:border-zinc-800 rounded-2xl space-y-2">
+                      <div className="p-4 bg-slate-100/40 dark:bg-[#111a36]/40 border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl space-y-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-sky-600 font-bold">ℹ️</span>
-                          <span className="text-[10px] font-extrabold text-sky-600 uppercase tracking-wider">GST Tax Split Mechanism Active</span>
+                          <span className="text-[#0284c7] font-bold">ℹ️</span>
+                          <span className="text-[10px] font-extrabold text-[#0284c7] uppercase tracking-wider">GST Tax Split Mechanism Active</span>
                         </div>
-                        <p className="text-[10px] text-sky-600/90 dark:text-slate-300 leading-relaxed font-medium">
+                        <p className="text-[10px] text-[#0284c7]/90 dark:text-slate-300 leading-relaxed font-medium">
                           For invoices generated within India, taxes are dynamically split based on the state comparison:
                           <br />• <strong>Intrastate (Same State)</strong>: The configured tax will split 50/50 into <strong>CGST</strong> and <strong>SGST</strong>.
                           <br />• <strong>Interstate (Different State)</strong>: The full tax rate is applied as <strong>IGST</strong>.
                         </p>
                       </div>
                       <div className="max-w-md">
-                        <label htmlFor="tax-rate-india" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">
+                        <label htmlFor="tax-rate-india" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">
                           Default GST Rate (%)
                         </label>
                         <select
@@ -3062,7 +3062,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                             setCustomTaxPercentage(rateVal);
                             setDefaultTaxRate(rateVal);
                           }}
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm font-medium"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] shadow-sm font-medium"
                         >
                           <option value={0}>0% (Nil/Exempt): Unprocessed food, healthcare or education services</option>
                           <option value={5}>5% (Merit Rate): Packaged food, daily essentials</option>
@@ -3074,14 +3074,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                         </select>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4 max-w-md pt-2 border-t border-slate-200 dark:border-zinc-800">
-                        <div className="p-3 bg-slate-50 dark:bg-zinc-955/30 border border-slate-200 dark:border-zinc-800 rounded-xl">
-                          <span className="block text-[9px] uppercase font-bold text-sky-600/60 dark:text-zinc-500">CGST + SGST Split</span>
-                          <span className="text-xs font-bold text-slate-800 dark:text-white">{(customTaxPercentage / 2).toFixed(1)}% + {(customTaxPercentage / 2).toFixed(1)}%</span>
+                      <div className="grid grid-cols-2 gap-4 max-w-md pt-2 border-t border-[#bae6fd]/50 dark:border-[#223269]/50">
+                        <div className="p-3 bg-[#f4f9ff] dark:bg-zinc-955/30 border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-xl">
+                          <span className="block text-[9px] uppercase font-bold text-[#0284c7]/60 dark:text-zinc-400">CGST + SGST Split</span>
+                          <span className="text-xs font-bold text-[#0f172a] dark:text-white">{(customTaxPercentage / 2).toFixed(1)}% + {(customTaxPercentage / 2).toFixed(1)}%</span>
                         </div>
-                        <div className="p-3 bg-slate-50 dark:bg-zinc-955/30 border border-slate-200 dark:border-zinc-800 rounded-xl">
-                          <span className="block text-[9px] uppercase font-bold text-sky-600/60 dark:text-zinc-500">IGST Rate</span>
-                          <span className="text-xs font-bold text-slate-800 dark:text-white">{customTaxPercentage}%</span>
+                        <div className="p-3 bg-[#f4f9ff] dark:bg-zinc-955/30 border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-xl">
+                          <span className="block text-[9px] uppercase font-bold text-[#0284c7]/60 dark:text-zinc-400">IGST Rate</span>
+                          <span className="text-xs font-bold text-[#0f172a] dark:text-white">{customTaxPercentage}%</span>
                         </div>
                       </div>
                     </div>
@@ -3091,7 +3091,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                       <div className="space-y-4">
                         <div className="grid sm:grid-cols-12 gap-4 items-end">
                           <div className="sm:col-span-6">
-                            <label htmlFor="custom-tax-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">
+                            <label htmlFor="custom-tax-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">
                               Custom Tax Label / Name
                             </label>
                             <input
@@ -3103,12 +3103,12 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                                 setCustomTaxCols([e.target.value]);
                               }}
                               placeholder="e.g. VAT, Sales Tax, GST"
-                              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                              className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium"
                             />
                           </div>
 
                           <div className="sm:col-span-5">
-                            <label htmlFor="custom-tax-rate" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">
+                            <label htmlFor="custom-tax-rate" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">
                               Tax Percentage Rate (%)
                             </label>
                             <input
@@ -3124,7 +3124,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                                 setDefaultTaxRate(val);
                               }}
                               placeholder="0"
-                              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-mono font-medium"
+                              className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] shadow-sm hover:border-slate-200 focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-mono font-medium"
                             />
                           </div>
                           
@@ -3137,7 +3137,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                         {additionalTaxes.map((tax, index) => (
                           <div key={tax.id} className="grid sm:grid-cols-12 gap-4 items-end animate-fade-in">
                             <div className="sm:col-span-6">
-                              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">
+                              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">
                                 Additional Tax {index + 1} Name
                               </label>
                               <input
@@ -3147,12 +3147,12 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                                   setAdditionalTaxes(additionalTaxes.map((t) => t.id === tax.id ? { ...t, name: e.target.value } : t));
                                 }}
                                 placeholder="e.g. Local Cess, Service Levy"
-                                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-medium"
+                                className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium"
                               />
                             </div>
 
                             <div className="sm:col-span-5">
-                              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-400 mb-1.5">
+                              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">
                                 Tax Percentage Rate (%)
                               </label>
                               <input
@@ -3166,7 +3166,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                                   setAdditionalTaxes(additionalTaxes.map((t) => t.id === tax.id ? { ...t, rate: val } : t));
                                 }}
                                 placeholder="0"
-                                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-905 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm hover:border-slate-200 focus:ring-4 focus:ring-sky-500/10 transition-all duration-300 font-mono font-medium"
+                                className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] shadow-sm hover:border-slate-200 focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-mono font-medium"
                               />
                             </div>
 
@@ -3195,16 +3195,16 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                             onClick={() => {
                               setAdditionalTaxes([...additionalTaxes, { id: `tax_${Date.now()}`, name: '', rate: 0 }]);
                             }}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-zinc-950 text-sky-600 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm"
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-[#0b1329] text-[#0284c7] border border-[#bae6fd]/50 dark:border-[#223269]/50 hover:bg-[#f4f9ff] font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm"
                           >
-                            <Plus className="w-4 h-4 text-sky-600" />
+                            <Plus className="w-4 h-4 text-[#0284c7]" />
                             <span>Add Another Tax</span>
                           </button>
                         </div>
                       </div>
 
-                      <div className="p-4 bg-slate-100/40 dark:bg-zinc-900/40 border border-slate-200 dark:border-zinc-800 rounded-2xl">
-                        <p className="text-[10px] text-sky-600/90 dark:text-emerald-305 leading-relaxed font-medium">
+                      <div className="p-4 bg-slate-100/40 dark:bg-[#111a36]/40 border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl">
+                        <p className="text-[10px] text-[#0284c7]/90 dark:text-emerald-305 leading-relaxed font-medium">
                           Custom tax profile is active. On newly created bills, item pricing will automatically pre-fill with <strong>{customTaxName || 'Tax'}</strong> at <strong>{customTaxPercentage}%</strong>.
                         </p>
                       </div>
@@ -3225,14 +3225,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   type="button"
                   onClick={onClose}
                   disabled={isSaving}
-                  className="px-5 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider text-sky-600 hover:text-slate-800 transition-all cursor-pointer hover:bg-slate-100 disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider text-[#0284c7] hover:text-[#0f172a] transition-all cursor-pointer hover:bg-[#e0f2fe] disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer disabled:opacity-50"
+                  className="px-6 py-2.5 bg-[#0284c7] hover:bg-[#e0f2fe]0 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer disabled:opacity-50"
                 >
                   <Check className="w-4.5 h-4.5" />
                   {isSaving ? 'Saving...' : 'Save Settings'}
@@ -3244,7 +3244,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   <button
                     type="button"
                     onClick={() => handleTabChange('banking')}
-                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                    className="px-6 py-2.5 bg-[#0284c7] hover:bg-[#e0f2fe]0 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
                   >
                     <span>Next: Banking Details</span>
                     <ArrowRight className="w-4 h-4" />
@@ -3254,7 +3254,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   <button
                     type="button"
                     onClick={() => handleTabChange('billing')}
-                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                    className="px-6 py-2.5 bg-[#0284c7] hover:bg-[#e0f2fe]0 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
                   >
                     <span>Next: Billing Config</span>
                     <ArrowRight className="w-4 h-4" />
@@ -3264,7 +3264,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   <button
                     type="button"
                     onClick={() => handleTabChange('tax')}
-                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                    className="px-6 py-2.5 bg-[#0284c7] hover:bg-[#e0f2fe]0 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
                   >
                     <span>Next: Tax Config</span>
                     <ArrowRight className="w-4 h-4" />
@@ -3274,7 +3274,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   <button
                     type="button"
                     onClick={() => handleTabChange('subscription')}
-                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
+                    className="px-6 py-2.5 bg-[#0284c7] hover:bg-[#e0f2fe]0 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer"
                   >
                     <span>Next: Subscription Details</span>
                     <ArrowRight className="w-4 h-4" />
@@ -3284,7 +3284,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer disabled:opacity-50"
+                    className="px-6 py-2.5 bg-[#0284c7] hover:bg-[#e0f2fe]0 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-sky-900/20 cursor-pointer disabled:opacity-50"
                   >
                     <Check className="w-4.5 h-4.5" />
                     <span>{isSaving ? 'Saving...' : 'Save & Finish Onboarding'}</span>
@@ -3306,14 +3306,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               <button
                 type="button"
                 onClick={() => setLogoToCrop(null)}
-                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-605 dark:hover:text-white cursor-pointer transition-all"
+                className="p-1 rounded-full hover:bg-[#e0f2fe] dark:hover:bg-slate-800 text-[#94a3b8] hover:text-slate-605 dark:hover:text-white cursor-pointer transition-all"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Canvas Body */}
-            <div className="p-6 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-955/50">
+            <div className="p-6 flex flex-col items-center justify-center bg-[#f4f9ff] dark:bg-slate-955/50">
               <canvas
                 ref={cropCanvasRef}
                 width={300}
@@ -3327,14 +3327,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 onTouchEnd={handleLogoPanEnd}
                 className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-[#090d16] cursor-move shadow-inner"
               />
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-medium">Drag on the box above to pan/reposition the logo.</p>
+              <p className="text-[10px] text-[#94a3b8] dark:text-[#64748b] mt-2 font-medium">Drag on the box above to pan/reposition the logo.</p>
             </div>
 
             {/* Controls */}
              <div className="p-5 space-y-4">
                {/* Zoom Slider */}
                <div className="space-y-1.5">
-                 <div className="flex justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                 <div className="flex justify-between text-[10px] font-bold text-[#64748b] dark:text-[#94a3b8] uppercase tracking-wide">
                    <span>Zoom / Scale</span>
                    <span className="font-mono text-slate-700 dark:text-slate-350">{Math.round(cropZoom * 100)}%</span>
                  </div>
@@ -3351,14 +3351,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
  
                {/* Ratio Selection */}
                <div className="space-y-1.5">
-                 <span className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Display Ratio Aspect</span>
+                 <span className="block text-[10px] font-bold text-[#64748b] dark:text-[#94a3b8] uppercase tracking-wide">Display Ratio Aspect</span>
                  <div className="grid grid-cols-3 gap-2">
                    {(['1:1', '3:1', 'free'] as const).map((r) => (
                      <button
                        key={r}
                        type="button"
                        onClick={() => setCropRatio(r)}
-                       className={`py-2 text-[10px] font-bold uppercase rounded-lg border transition-all cursor-pointer ${cropRatio === r ? 'bg-sky-600 border-sky-600 text-white shadow-sm' : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850 bg-white dark:bg-slate-900'}`}
+                       className={`py-2 text-[10px] font-bold uppercase rounded-lg border transition-all cursor-pointer ${cropRatio === r ? 'bg-[#0284c7] border-[#0284c7] text-white shadow-sm' : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-[#f4f9ff] dark:hover:bg-slate-850 bg-white dark:bg-slate-900'}`}
                      >
                        {r === '1:1' ? 'Square' : r === '3:1' ? 'Landscape' : 'Original'}
                      </button>
@@ -3368,18 +3368,18 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
              </div>
 
             {/* Footer Buttons */}
-            <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2 bg-slate-50/50 dark:bg-slate-955/20">
+            <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2 bg-[#f4f9ff]/50 dark:bg-slate-955/20">
               <button
                 type="button"
                 onClick={() => setLogoToCrop(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#64748b] hover:text-slate-700 dark:hover:text-slate-300 transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleApplyLogoCrop}
-                className="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                className="px-5 py-2 bg-[#0284c7] hover:bg-[#e0f2fe]0 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
               >
                 <Check className="w-4 h-4" />
                 Apply Crop
@@ -3391,7 +3391,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
       {notification && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-[320px] rounded-2xl border border-slate-200 bg-slate-50 dark:bg-zinc-900 p-6 shadow-xl animate-scale-in text-center flex flex-col items-center">
+          <div className="w-full max-w-[320px] rounded-2xl border border-slate-200 bg-[#f4f9ff] dark:bg-[#111a36] p-6 shadow-xl animate-scale-in text-center flex flex-col items-center">
             <div className="mb-4">
               {notification.type === 'success' ? (
                 <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center text-emerald-500 border border-emerald-200 dark:border-emerald-800">
@@ -3402,17 +3402,17 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   <AlertCircle className="w-6 h-6 stroke-[2]" />
                 </div>
               ) : (
-                <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-sky-600 border border-slate-200 dark:border-zinc-700">
+                <div className="w-12 h-12 rounded-full bg-[#e0f2fe] dark:bg-[#1b264f] flex items-center justify-center text-[#0284c7] border border-slate-200 dark:border-[#223269]">
                   <HelpCircle className="w-6 h-6 stroke-[2]" />
                 </div>
               )}
             </div>
             
             <div className="space-y-1 mb-5">
-              <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 dark:text-white">
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-white">
                 {notification.title || (notification.type === 'success' ? 'Success' : notification.type === 'error' ? 'Error' : 'Notification')}
               </h3>
-              <p className="text-xs text-sky-600/90 dark:text-zinc-400 font-medium font-sans">
+              <p className="text-xs text-[#0284c7]/90 dark:text-zinc-300 font-medium font-sans">
                 {notification.message}
               </p>
             </div>
@@ -3426,7 +3426,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   onClose();
                 }
               }}
-              className="px-8 py-2 bg-sky-600 hover:bg-sky-500 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white font-extrabold text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 shadow-sm cursor-pointer hover:shadow"
+              className="px-8 py-2 bg-[#0284c7] hover:bg-[#e0f2fe]0 dark:bg-[#1b264f] dark:hover:bg-zinc-700 text-white font-extrabold text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 shadow-sm cursor-pointer hover:shadow"
             >
               OK
             </button>
@@ -3435,16 +3435,16 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       )}
       {showLogoOptions && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-[320px] rounded-2xl border border-slate-200 bg-slate-50 dark:bg-zinc-900 p-6 shadow-xl animate-scale-in text-center flex flex-col items-center">
+          <div className="w-full max-w-[320px] rounded-2xl border border-slate-200 bg-[#f4f9ff] dark:bg-[#111a36] p-6 shadow-xl animate-scale-in text-center flex flex-col items-center">
             
             <div className="flex justify-between w-full items-center mb-4">
-              <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-800 dark:text-white">
+              <h3 className="text-xs font-extrabold uppercase tracking-widest text-[#0f172a] dark:text-white">
                 Edit Logo Options
               </h3>
               <button 
                 type="button" 
                 onClick={() => setShowLogoOptions(false)}
-                className="p-1 rounded-full text-sky-600 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+                className="p-1 rounded-full text-[#0284c7] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#e0f2fe] dark:hover:bg-zinc-800 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -3457,7 +3457,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   setShowLogoOptions(false);
                   triggerLogoUpload();
                 }}
-                className="w-full py-3 px-4 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-750 text-sky-600 dark:text-[#e2e8f0] font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 px-4 bg-white dark:bg-[#1b264f] border border-slate-200 dark:border-[#223269] hover:bg-[#f4f9ff] dark:hover:bg-zinc-750 text-[#0284c7] dark:text-[#e2e8f0] font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Upload className="w-4 h-4" />
                 Add New Logo
@@ -3469,7 +3469,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   setShowLogoOptions(false);
                   setLogoToCrop(logoUrl);
                 }}
-                className="w-full py-3 px-4 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 px-4 bg-[#0284c7] hover:bg-[#e0f2fe]0 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <PencilIcon className="w-4 h-4 text-white" />
                 Edit Existing Logo
@@ -3484,25 +3484,25 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           onClick={() => setShowLogoPreview(false)}
         >
           <div 
-            className="bg-slate-50 dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-850 p-5 shadow-xl animate-scale-in w-full max-w-[280px] flex flex-col space-y-3 text-center"
+            className="bg-[#f4f9ff] dark:bg-[#111a36] rounded-2xl border border-slate-200 dark:border-[#223269]/60 p-5 shadow-xl animate-scale-in w-full max-w-[280px] flex flex-col space-y-3 text-center"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Elegant Header Line */}
-            <div className="flex justify-between items-center w-full pb-1.5 border-b border-slate-200/40 dark:border-zinc-800">
-              <span className="text-[9px] font-extrabold uppercase tracking-widest text-sky-600">
+            <div className="flex justify-between items-center w-full pb-1.5 border-b border-slate-200/40 dark:border-[#223269]/50">
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#0284c7]">
                 Logo Preview
               </span>
               <button 
                 type="button" 
                 onClick={() => setShowLogoPreview(false)}
-                className="p-1 rounded-full text-sky-600/75 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                className="p-1 rounded-full text-[#0284c7]/75 hover:text-[#0f172a] dark:hover:text-white hover:bg-[#e0f2fe] dark:hover:bg-zinc-800 transition-all cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
 
             {/* Premium Showcase Image Box */}
-            <div className="bg-white dark:bg-zinc-800 rounded-xl border border-slate-200/50 dark:border-zinc-750 shadow-inner flex items-center justify-center aspect-square w-full p-0 overflow-hidden relative">
+            <div className="bg-white dark:bg-[#1b264f] rounded-xl border border-slate-200/50 dark:border-zinc-750 shadow-inner flex items-center justify-center aspect-square w-full p-0 overflow-hidden relative">
               {logoUrl ? (
                 <img 
                   src={logoUrl} 
@@ -3511,7 +3511,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   className="w-full h-full object-contain transition-transform duration-300 hover:scale-102"
                 />
               ) : (
-                <span className="text-sky-600/50 text-[10px] font-extrabold uppercase tracking-wider">No Logo</span>
+                <span className="text-[#0284c7]/50 text-[10px] font-extrabold uppercase tracking-wider">No Logo</span>
               )}
             </div>
           </div>
@@ -3528,14 +3528,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               <button
                 type="button"
                 onClick={() => setSigToCrop(null)}
-                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-605 dark:hover:text-white cursor-pointer transition-all"
+                className="p-1 rounded-full hover:bg-[#e0f2fe] dark:hover:bg-slate-800 text-[#94a3b8] hover:text-slate-605 dark:hover:text-white cursor-pointer transition-all"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Canvas Body */}
-            <div className="p-6 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-955/50">
+            <div className="p-6 flex flex-col items-center justify-center bg-[#f4f9ff] dark:bg-slate-955/50">
               <canvas
                 ref={sigCropCanvasRef}
                 width={300}
@@ -3549,14 +3549,14 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 onTouchEnd={handleSigPanEnd}
                 className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-[#090d16] cursor-move shadow-inner"
               />
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-medium">Drag on the box above to pan/reposition the signature.</p>
+              <p className="text-[10px] text-[#94a3b8] dark:text-[#64748b] mt-2 font-medium">Drag on the box above to pan/reposition the signature.</p>
             </div>
 
             {/* Controls */}
             <div className="p-5 space-y-4">
               {/* Zoom Slider */}
               <div className="space-y-1.5">
-                <div className="flex justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                <div className="flex justify-between text-[10px] font-bold text-[#64748b] dark:text-[#94a3b8] uppercase tracking-wide">
                   <span>Zoom / Scale</span>
                   <span className="font-mono text-slate-700 dark:text-slate-350">{Math.round(sigCropZoom * 100)}%</span>
                 </div>
@@ -3573,19 +3573,19 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
               {/* Rotation */}
               <div className="space-y-1.5">
-                <span className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Rotate Image</span>
+                <span className="block text-[10px] font-bold text-[#64748b] dark:text-[#94a3b8] uppercase tracking-wide">Rotate Image</span>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setSigCropRotation((prev) => (prev + 90) % 360)}
-                    className="flex-1 py-2 text-[10px] font-bold uppercase rounded-lg border border-slate-200 dark:border-zinc-800 text-sky-600 dark:text-[#e2e8f0] bg-white dark:bg-zinc-950 hover:bg-slate-50 dark:hover:bg-zinc-850 cursor-pointer flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2 text-[10px] font-bold uppercase rounded-lg border border-[#bae6fd]/50 dark:border-[#223269]/50 text-[#0284c7] dark:text-[#e2e8f0] bg-white dark:bg-[#0b1329] hover:bg-[#f4f9ff] dark:hover:bg-zinc-850 cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     <span>🔄 Rotate 90° CW</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setSigCropRotation((prev) => (prev - 90 + 360) % 360)}
-                    className="flex-1 py-2 text-[10px] font-bold uppercase rounded-lg border border-slate-200 dark:border-zinc-800 text-sky-600 dark:text-[#e2e8f0] bg-white dark:bg-zinc-950 hover:bg-slate-50 dark:hover:bg-zinc-850 cursor-pointer flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2 text-[10px] font-bold uppercase rounded-lg border border-[#bae6fd]/50 dark:border-[#223269]/50 text-[#0284c7] dark:text-[#e2e8f0] bg-white dark:bg-[#0b1329] hover:bg-[#f4f9ff] dark:hover:bg-zinc-850 cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     <span>🔄 Rotate 90° CCW</span>
                   </button>
@@ -3594,18 +3594,18 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
             </div>
 
             {/* Footer Buttons */}
-            <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2 bg-slate-50/50 dark:bg-slate-955/20">
+            <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2 bg-[#f4f9ff]/50 dark:bg-slate-955/20">
               <button
                 type="button"
                 onClick={() => setSigToCrop(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#64748b] hover:text-slate-700 dark:hover:text-slate-300 transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleApplySigCrop}
-                className="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                className="px-5 py-2 bg-[#0284c7] hover:bg-[#e0f2fe]0 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
               >
                 <Check className="w-4 h-4" />
                 Apply Crop

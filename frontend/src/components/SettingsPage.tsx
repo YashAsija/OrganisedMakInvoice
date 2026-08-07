@@ -20,7 +20,7 @@ interface SettingsPageProps {
 type SettingsSection = 'appearance' | 'notifications' | 'security' | 'data' | 'account';
 
 const Row = ({ label, description, control }: { label: string; description?: string; control: React.ReactNode }) => (
-  <div className="flex items-center justify-between gap-4 py-3.5 border-b border-[#e2e8f0]/30 dark:border-zinc-800 last:border-0">
+  <div className="flex items-center justify-between gap-4 py-3.5 border-b border-[#bae6fd]/20 dark:border-[#223269]/30 last:border-0">
     <div className="min-w-0 flex-1">
       <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 block">{label}</span>
       {description && <span className="text-[10px] text-[#64748b]/75 dark:text-zinc-500 mt-0.5 block leading-normal">{description}</span>}
@@ -34,7 +34,7 @@ const Toggle = ({ checked, onChange, onToggle }: { checked: boolean; onChange: (
     type="button"
     onClick={() => { onChange(); onToggle?.(); }}
     className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer flex-shrink-0 ${
-      checked ? 'bg-[#64748b]' : 'bg-[#e2e8f0] dark:bg-zinc-700'
+      checked ? 'bg-[#0284c7]' : 'bg-[#bae6fd]/50 dark:bg-[#223269]'
     }`}
   >
     <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
@@ -74,27 +74,30 @@ export default function SettingsPage({
     { id: 'account', label: 'Account', icon: <LogOut className="w-4 h-4" /> },
   ];
 
-
-
-
-
   return (
     <div className="space-y-6 animate-in fade-in duration-200 w-full">
+
+      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-base font-black text-[#0f172a] dark:text-white uppercase tracking-tight">App Settings</h1>
+          <h1 className="text-base font-black uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: "'Fraunces', serif" }}>
+            <span className="bg-gradient-to-r from-[#0284c7] via-[#2563eb] to-[#38bdf8] bg-clip-text text-transparent">App Settings</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] shrink-0" />
+          </h1>
           <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">Customize your workspace preferences</p>
         </div>
         {savedMsg && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-[10px] font-bold text-emerald-600 dark:text-emerald-400 animate-in fade-in duration-200">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#e0f2fe] dark:bg-[#1b264f] border border-[#bae6fd] dark:border-[#223269] rounded-xl text-[10px] font-bold text-[#0284c7] dark:text-[#38bdf8] animate-in fade-in duration-200">
             <Check className="w-3 h-3" /> Saved
           </div>
         )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
         {/* Sidebar navigation */}
-        <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-xs p-3 h-fit">
+        <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xs p-3 h-fit">
+          <p className="text-[9px] font-black uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8] px-3 mb-2">Settings</p>
           <nav className="space-y-0.5">
             {sections.map(sec => (
               <button
@@ -102,8 +105,8 @@ export default function SettingsPage({
                 onClick={() => setActiveSection(sec.id)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-left transition-all cursor-pointer ${
                   activeSection === sec.id
-                    ? 'bg-[#EADFCF] dark:bg-zinc-800 text-[#0f172a] dark:text-white border-r-2 border-[#64748b]'
-                    : 'text-[#64748b]/80 dark:text-zinc-400 hover:bg-[#f8fafc]/60 dark:hover:bg-zinc-800/40 hover:text-[#0f172a] dark:hover:text-white'
+                    ? 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border-r-2 border-[#0284c7] dark:border-[#38bdf8]'
+                    : 'text-[#64748b]/80 dark:text-zinc-400 hover:bg-[#f4f9ff] dark:hover:bg-[#1b264f]/50 hover:text-[#0284c7] dark:hover:text-[#38bdf8]'
                 }`}
               >
                 {sec.icon}
@@ -114,22 +117,23 @@ export default function SettingsPage({
         </div>
 
         {/* Content panel */}
-        <div className="lg:col-span-3 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-xs p-6 relative overflow-hidden">
-          <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#e2e8f0] via-[#C6A87D] to-[#64748b]" />
+        <div className="lg:col-span-3 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xs p-6 relative overflow-hidden">
+          {/* Brand accent top bar */}
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#bae6fd] via-[#0284c7] to-[#2563eb]" />
 
           {/* APPEARANCE */}
           {activeSection === 'appearance' && (
             <div className="space-y-1">
-              <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-widest mb-5">Appearance</h2>
+              <h2 className="text-xs font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-widest mb-5" style={{ fontFamily: "'Fraunces', serif" }}>Appearance</h2>
               <Row
                 label="Theme Mode"
                 description="Switch between light and dark workspace appearance"
                 control={
                   <button
                     onClick={() => { toggleTheme(); showSaved(); }}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#e2e8f0] dark:border-zinc-700 bg-[#FCFAF7] dark:bg-zinc-950 text-xs font-bold text-[#0f172a] dark:text-zinc-200 hover:border-[#64748b] transition-colors cursor-pointer"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#bae6fd] dark:border-[#223269] bg-[#f4f9ff] dark:bg-[#0b1329] text-xs font-bold text-[#0284c7] dark:text-[#38bdf8] hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] transition-colors cursor-pointer"
                   >
-                    {theme === 'light' ? <><Moon className="w-3.5 h-3.5 text-[#64748b]" /> Dark Mode</> : <><Sun className="w-3.5 h-3.5 text-amber-500" /> Light Mode</>}
+                    {theme === 'light' ? <><Moon className="w-3.5 h-3.5" /> Dark Mode</> : <><Sun className="w-3.5 h-3.5 text-amber-400" /> Light Mode</>}
                   </button>
                 }
               />
@@ -142,7 +146,7 @@ export default function SettingsPage({
                 label="Invoice Font"
                 description="Font applied to your generated invoice documents"
                 control={
-                  <span className="px-2.5 py-1 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-lg text-[10px] font-mono font-bold text-[#64748b]">
+                  <span className="px-2.5 py-1 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-lg text-[10px] font-mono font-bold text-[#0284c7] dark:text-[#38bdf8]">
                     {profile.invoiceFont?.toUpperCase() || 'INTER'}
                   </span>
                 }
@@ -151,7 +155,7 @@ export default function SettingsPage({
                 label="Invoice Layout Template"
                 description="Design preset for your printable invoice sheets"
                 control={
-                  <span className="px-2.5 py-1 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-lg text-[10px] font-mono font-bold text-[#64748b] capitalize">
+                  <span className="px-2.5 py-1 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-lg text-[10px] font-mono font-bold text-[#0284c7] dark:text-[#38bdf8] capitalize">
                     {profile.invoiceLayout || 'Modern'}
                   </span>
                 }
@@ -160,7 +164,7 @@ export default function SettingsPage({
                 label="Currency Display"
                 description="Primary currency used across invoices and reports"
                 control={
-                  <span className="px-2.5 py-1 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-lg text-[10px] font-mono font-bold text-[#64748b]">
+                  <span className="px-2.5 py-1 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-lg text-[10px] font-mono font-bold text-[#0284c7] dark:text-[#38bdf8]">
                     {profile.currency || 'INR'}{profile.currencySymbol ? ` (${profile.currencySymbol})` : ''}
                   </span>
                 }
@@ -171,7 +175,7 @@ export default function SettingsPage({
           {/* NOTIFICATIONS */}
           {activeSection === 'notifications' && (
             <div className="space-y-1">
-              <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-widest mb-5">Notifications</h2>
+              <h2 className="text-xs font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-widest mb-5" style={{ fontFamily: "'Fraunces', serif" }}>Notifications</h2>
               <Row
                 label="Invoice Activity Alerts"
                 description="Get notified on invoice creation, edit, and deletion events"
@@ -187,11 +191,11 @@ export default function SettingsPage({
                 description="Notifications on successful or failed cloud synchronization"
                 control={<Toggle checked={notifCloud} onChange={() => setNotifCloud(v => !v)} onToggle={showSaved} />}
               />
-              <div className="mt-6 p-4 bg-[#FCFAF7] dark:bg-zinc-950 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800">
-                <span className="text-[9px] uppercase font-extrabold text-[#64748b] block mb-2">Notification Channels</span>
+              <div className="mt-6 p-4 bg-[#f4f9ff] dark:bg-[#0b1329]/60 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40">
+                <span className="text-[9px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8] block mb-2">Notification Channels</span>
                 <div className="flex gap-2 flex-wrap">
                   {['In-App', 'Browser Push', 'Email Digest'].map(ch => (
-                    <span key={ch} className="px-2.5 py-1 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-lg text-[10px] font-bold text-[#0f172a] dark:text-zinc-300">
+                    <span key={ch} className="px-2.5 py-1 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-lg text-[10px] font-bold text-[#0f172a] dark:text-zinc-300">
                       {ch}
                     </span>
                   ))}
@@ -203,7 +207,7 @@ export default function SettingsPage({
           {/* SECURITY */}
           {activeSection === 'security' && (
             <div className="space-y-1">
-              <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-widest mb-5">Security</h2>
+              <h2 className="text-xs font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-widest mb-5" style={{ fontFamily: "'Fraunces', serif" }}>Security</h2>
               <Row
                 label="PIN Passcode Lock"
                 description="Require a 4-digit PIN each time the app is opened or refreshed"
@@ -213,7 +217,7 @@ export default function SettingsPage({
                     className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
                       isPinLockEnabled
                         ? 'bg-rose-500 hover:bg-rose-600 text-white'
-                        : 'bg-[#EADFCF] hover:bg-[#e2e8f0] text-[#0f172a]'
+                        : 'bg-[#e0f2fe] dark:bg-[#1b264f] hover:bg-[#bae6fd] dark:hover:bg-[#223269] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269]'
                     }`}
                   >
                     {isPinLockEnabled ? 'Disable' : 'Enable'}
@@ -225,11 +229,11 @@ export default function SettingsPage({
                 description="Automatically save invoice drafts while editing to prevent data loss"
                 control={<Toggle checked={autoSave} onChange={() => setAutoSave(v => !v)} onToggle={showSaved} />}
               />
-              <div className="mt-6 p-4 bg-[#FCFAF7] dark:bg-zinc-950 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800 space-y-3">
-                <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">Active Session</span>
+              <div className="mt-6 p-4 bg-[#f4f9ff] dark:bg-[#0b1329]/60 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40 space-y-3">
+                <span className="text-[9px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8] block">Active Session</span>
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-[#f8fafc] dark:bg-zinc-800 flex items-center justify-center">
-                    <Monitor className="w-4 h-4 text-[#64748b]" />
+                  <div className="w-8 h-8 rounded-xl bg-[#e0f2fe] dark:bg-[#1b264f] border border-[#bae6fd]/60 dark:border-[#223269]/60 flex items-center justify-center">
+                    <Monitor className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8]" />
                   </div>
                   <div>
                     <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 block">Web Browser</span>
@@ -244,7 +248,7 @@ export default function SettingsPage({
           {/* DATA */}
           {activeSection === 'data' && (
             <div className="space-y-1">
-              <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-widest mb-5">Data & Storage</h2>
+              <h2 className="text-xs font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-widest mb-5" style={{ fontFamily: "'Fraunces', serif" }}>Data & Storage</h2>
               <Row
                 label="Local Database"
                 description="Your invoices and settings stored in browser local storage"
@@ -257,30 +261,30 @@ export default function SettingsPage({
               />
               <div className="mt-4 space-y-2">
                 <button
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/40 dark:border-zinc-800 rounded-xl hover:border-[#64748b]/40 transition-colors cursor-pointer group"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border border-[#bae6fd]/40 dark:border-[#223269]/40 rounded-xl hover:border-[#0284c7]/50 dark:hover:border-[#38bdf8]/30 hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f]/40 transition-colors cursor-pointer group"
                   onClick={showSaved}
                 >
                   <div className="flex items-center gap-3">
-                    <Download className="w-4 h-4 text-[#64748b]" />
+                    <Download className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8]" />
                     <div className="text-left">
                       <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 block">Export All Data</span>
                       <span className="text-[9.5px] text-[#64748b]/70 dark:text-zinc-500">Download invoices, clients and settings as JSON</span>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-[#64748b]/50 group-hover:text-[#64748b] transition-colors" />
+                  <ChevronRight className="w-4 h-4 text-[#0284c7]/40 dark:text-[#38bdf8]/40 group-hover:text-[#0284c7] dark:group-hover:text-[#38bdf8] transition-colors" />
                 </button>
                 <button
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/40 dark:border-zinc-800 rounded-xl hover:border-[#64748b]/40 transition-colors cursor-pointer group"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border border-[#bae6fd]/40 dark:border-[#223269]/40 rounded-xl hover:border-[#0284c7]/50 dark:hover:border-[#38bdf8]/30 hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f]/40 transition-colors cursor-pointer group"
                   onClick={showSaved}
                 >
                   <div className="flex items-center gap-3">
-                    <RefreshCw className="w-4 h-4 text-[#64748b]" />
+                    <RefreshCw className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8]" />
                     <div className="text-left">
                       <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 block">Force Cloud Sync</span>
                       <span className="text-[9.5px] text-[#64748b]/70 dark:text-zinc-500">Push all local changes to cloud immediately</span>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-[#64748b]/50 group-hover:text-[#64748b] transition-colors" />
+                  <ChevronRight className="w-4 h-4 text-[#0284c7]/40 dark:text-[#38bdf8]/40 group-hover:text-[#0284c7] dark:group-hover:text-[#38bdf8] transition-colors" />
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
@@ -308,7 +312,7 @@ export default function SettingsPage({
                     </button>
                     <button
                       onClick={() => setShowDeleteConfirm(false)}
-                      className="px-4 py-2 bg-white dark:bg-zinc-900 border border-rose-200 dark:border-rose-800 text-rose-600 text-[10px] font-black uppercase rounded-xl cursor-pointer transition-colors hover:bg-rose-50"
+                      className="px-4 py-2 bg-white dark:bg-[#111a36] border border-rose-200 dark:border-rose-800 text-rose-600 text-[10px] font-black uppercase rounded-xl cursor-pointer transition-colors hover:bg-rose-50"
                     >
                       Cancel
                     </button>
@@ -321,17 +325,17 @@ export default function SettingsPage({
           {/* ACCOUNT */}
           {activeSection === 'account' && (
             <div className="space-y-1">
-              <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-widest mb-5">Account</h2>
-              <div className="p-4 bg-[#FCFAF7] dark:bg-zinc-950 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800 mb-4">
+              <h2 className="text-xs font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-widest mb-5" style={{ fontFamily: "'Fraunces', serif" }}>Account</h2>
+              <div className="p-4 bg-[#f4f9ff] dark:bg-[#0b1329]/60 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40 mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#0f172a] text-white flex items-center justify-center font-black text-sm flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#0284c7] dark:bg-[#0369a1] text-white flex items-center justify-center font-black text-sm flex-shrink-0 shadow-md shadow-[#0284c7]/20">
                     {profile.name ? profile.name.charAt(0).toUpperCase() : 'M'}
                   </div>
                   <div>
                     <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 block">{profile.name || 'MakInvoice User'}</span>
                     <span className="text-[10px] text-[#64748b]/75 dark:text-zinc-500 font-mono">{profile.email || 'Local account'}</span>
                   </div>
-                  <span className="ml-auto text-[9px] font-bold text-emerald-500 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/30 rounded-full border border-emerald-200 dark:border-emerald-800">
+                  <span className="ml-auto text-[9px] font-bold text-[#0284c7] dark:text-[#38bdf8] px-2 py-0.5 bg-[#e0f2fe] dark:bg-[#1b264f] rounded-full border border-[#bae6fd] dark:border-[#223269]">
                     {profile.email ? 'Cloud' : 'Local'}
                   </span>
                 </div>
@@ -339,14 +343,14 @@ export default function SettingsPage({
               <Row
                 label="App Version"
                 description="Current installed version of MakInvoices"
-                control={<span className="text-[10px] font-mono font-bold text-[#64748b]">v1.2.0</span>}
+                control={<span className="text-[10px] font-mono font-bold text-[#0284c7] dark:text-[#38bdf8]">v1.2.0</span>}
               />
               <Row
                 label="Platform"
                 description="Application environment"
-                control={<span className="text-[10px] font-mono font-bold text-[#64748b]">Web Browser</span>}
+                control={<span className="text-[10px] font-mono font-bold text-[#0284c7] dark:text-[#38bdf8]">Web Browser</span>}
               />
-              <div className="mt-6 pt-4 border-t border-[#e2e8f0]/30 dark:border-zinc-800">
+              <div className="mt-6 pt-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/30">
                 <button
                   onClick={onLogout}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800 rounded-xl text-xs font-black text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-950/40 transition-colors cursor-pointer uppercase tracking-wider"

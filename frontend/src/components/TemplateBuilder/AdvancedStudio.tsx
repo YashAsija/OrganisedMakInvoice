@@ -197,7 +197,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
   const currentStep = STEPS[currentStepIndex];
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-[calc(100dvh-120px)] lg:h-[calc(100vh-120px)] bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200 w-full relative">
+    <div className="flex flex-col lg:flex-row min-h-[calc(100dvh-120px)] lg:h-[calc(100vh-120px)] bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200 w-full relative">
       
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
@@ -205,21 +205,21 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
       )}
 
       {/* Sidebar Navigation */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 shrink-0 bg-white dark:bg-zinc-900 border-r border-[#e2e8f0]/40 dark:border-zinc-800 flex-col h-full overflow-y-auto custom-scrollbar transition-transform duration-300 lg:relative lg:translate-x-0 lg:flex ${isMobileMenuOpen ? 'translate-x-0 flex' : '-translate-x-full flex'}`}>
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 shrink-0 bg-white dark:bg-[#111a36] border-r border-[#bae6fd]/40 dark:border-[#223269]/40 flex-col h-full overflow-y-auto custom-scrollbar transition-transform duration-300 lg:relative lg:translate-x-0 lg:flex ${isMobileMenuOpen ? 'translate-x-0 flex' : '-translate-x-full flex'}`}>
         
         {/* Sidebar Header */}
-        <div className="p-4 border-b border-[#e2e8f0]/30 dark:border-zinc-800 bg-[#FCFAF7] dark:bg-zinc-900 sticky top-0 z-10 flex items-center justify-between">
+        <div className="p-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 bg-[#f4f9ff] dark:bg-[#0b1329] sticky top-0 z-10 flex items-center justify-between">
           <div>
-            <h2 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
-              <span className="bg-gradient-to-r from-amber-600 via-[#64748b] to-rose-500 bg-clip-text text-transparent dark:from-amber-400 dark:via-white dark:to-rose-400">Advanced Studio</span>
+            <h2 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5" style={{ fontFamily: "'Fraunces', serif" }}>
+              <span className="bg-gradient-to-r from-[#0284c7] via-[#2563eb] to-[#38bdf8] bg-clip-text text-transparent">Advanced Studio</span>
             </h2>
             <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-500 mt-0.5">Fine Layout Customizer</p>
           </div>
           <div className="flex gap-1.5">
-            <button onClick={undo} disabled={!canUndo} className={`p-1.5 rounded-lg border transition-all ${canUndo ? 'border-[#e2e8f0] dark:border-zinc-700 text-[#0f172a] dark:text-zinc-300 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 cursor-pointer' : 'border-zinc-150 dark:border-zinc-850 text-zinc-300 dark:text-zinc-700 cursor-not-allowed'}`} title="Undo">
+            <button onClick={undo} disabled={!canUndo} className={`p-1.5 rounded-lg border transition-all ${canUndo ? 'border-[#bae6fd] dark:border-[#223269] text-[#0284c7] dark:text-[#38bdf8] hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] cursor-pointer' : 'border-zinc-150 dark:border-zinc-850 text-zinc-300 dark:text-zinc-700 cursor-not-allowed'}`} title="Undo">
               <Undo2 className="w-3.5 h-3.5" />
             </button>
-            <button onClick={redo} disabled={!canRedo} className={`p-1.5 rounded-lg border transition-all ${canRedo ? 'border-[#e2e8f0] dark:border-zinc-700 text-[#0f172a] dark:text-zinc-300 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 cursor-pointer' : 'border-zinc-150 dark:border-zinc-850 text-zinc-300 dark:text-zinc-700 cursor-not-allowed'}`} title="Redo">
+            <button onClick={redo} disabled={!canRedo} className={`p-1.5 rounded-lg border transition-all ${canRedo ? 'border-[#bae6fd] dark:border-[#223269] text-[#0284c7] dark:text-[#38bdf8] hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] cursor-pointer' : 'border-zinc-150 dark:border-zinc-850 text-zinc-300 dark:text-zinc-700 cursor-not-allowed'}`} title="Redo">
               <Redo2 className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -235,11 +235,11 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
             'Advanced Design': ['design', 'canvas']
           }).map(([groupName, stepIds]) => {
             const groupColors: Record<string, string> = {
-              'General & Layout': 'text-amber-500 bg-amber-50 dark:bg-amber-950/20 border-r-amber-500',
+              'General & Layout': 'text-[#0284c7] bg-[#f4f9ff] dark:bg-[#1b264f]/40 border-r-[#0284c7]',
               'Data Sections': 'text-sky-500 bg-sky-50 dark:bg-sky-950/20 border-r-sky-500',
-              'Financials': 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 border-r-emerald-500',
+              'Financials': 'text-emerald-500 bg-[#f0fdf4] dark:bg-emerald-950/20 border-r-emerald-500',
               'Footer': 'text-rose-500 bg-rose-50 dark:bg-rose-950/20 border-r-rose-500',
-              'Advanced Design': 'text-violet-500 bg-violet-50 dark:bg-violet-950/20 border-r-violet-500'
+              'Advanced Design': 'text-violet-500 bg-[#f5f3ff] dark:bg-violet-950/20 border-r-violet-500'
             };
             return (
               <div key={groupName}>
@@ -258,14 +258,14 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
                         onClick={() => { setCurrentStepIndex(idx); setIsMobileMenuOpen(false); }}
                         className={`group w-full text-left px-4 py-1.5 text-[11px] font-bold flex items-center gap-3 transition-all cursor-pointer ${
                           isActive 
-                            ? `bg-[#FCFAF7] dark:bg-zinc-950/60 text-[#0f172a] dark:text-white border-r-4 ${groupColors[groupName]?.split(' ').find(c => c.startsWith('border-r-')) || 'border-r-[#64748b]'}` 
-                            : 'text-[#64748b] hover:bg-[#FCFAF7]/30 hover:text-[#0f172a] dark:hover:text-zinc-200'
+                            ? `bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0284c7] dark:text-[#38bdf8] border-r-4 ${groupColors[groupName]?.split(' ').find(c => c.startsWith('border-r-')) || 'border-r-[#0284c7]'}` 
+                            : 'text-[#64748b] hover:bg-[#f4f9ff]/30 hover:text-[#0284c7] dark:hover:text-zinc-200'
                         }`}
                       >
                         <div className={`w-6 h-6 rounded-lg flex items-center justify-center border transition-all ${
                           isActive 
                             ? `${groupColors[groupName]?.split(' ').filter(c => !c.startsWith('border-r-')).join(' ')} border-transparent shadow-2xs` 
-                            : 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-800 text-[#64748b]/60 group-hover:bg-[#FCFAF7] dark:group-hover:bg-zinc-800'
+                            : 'bg-white dark:bg-[#111a36] border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#64748b]/60 group-hover:bg-[#f4f9ff] dark:group-hover:bg-zinc-800'
                         }`}>
                           <Icon className="w-3.5 h-3.5" />
                         </div>
@@ -280,16 +280,16 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-[#e2e8f0]/30 dark:border-zinc-800 bg-[#FCFAF7]/50 dark:bg-zinc-950/20 sticky bottom-0 z-10 space-y-2">
+        <div className="p-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 bg-[#f4f9ff] dark:bg-[#0b1329]/40 sticky bottom-0 z-10 space-y-2">
           <button 
             onClick={() => onSave(template)} 
-            className="w-full py-2 bg-[#0f172a] hover:bg-[#5C5043] text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+            className="w-full py-2 bg-[#0284c7] dark:bg-[#38bdf8] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
           >
             <CheckCircle className="w-3.5 h-3.5" /> Save Template
           </button>
           <button 
             onClick={onCancel} 
-            className="w-full py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 text-[#0f172a] dark:text-zinc-300 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-[#FCFAF7] transition-colors cursor-pointer"
+            className="w-full py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#0284c7] dark:text-[#38bdf8] rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-[#e0f2fe]/45 transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -297,17 +297,17 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FCFAF7]/10 dark:bg-zinc-950/10">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#f4f9ff]/10 dark:bg-zinc-955/10">
         
         {/* Topbar header */}
-        <div className="h-14 border-b border-[#e2e8f0]/40 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md flex items-center justify-between px-4 md:px-6 shrink-0 z-10">
+        <div className="h-14 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 bg-white/60 dark:bg-[#111a36]/60 backdrop-blur-md flex items-center justify-between px-4 md:px-6 shrink-0 z-10">
           <div className="flex items-center gap-3">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 -ml-2 text-[#64748b] hover:bg-[#FCFAF7] rounded-lg cursor-pointer">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 -ml-2 text-[#64748b] hover:bg-[#f4f9ff] rounded-lg cursor-pointer">
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="font-black text-[#0f172a] dark:text-white uppercase tracking-wider text-xs md:text-sm flex items-center gap-2">
+            <h1 className="font-black text-[#0f172a] dark:text-white uppercase tracking-wider text-xs md:text-sm flex items-center gap-2" style={{ fontFamily: "'Fraunces', serif" }}>
               {currentStep.title}
-              <span className="hidden sm:inline-block text-[9px] font-black text-[#64748b] bg-[#f8fafc] dark:bg-zinc-800 px-2 py-0.5 rounded-full">
+              <span className="hidden sm:inline-block text-[9px] font-black text-[#0284c7] dark:text-[#38bdf8] bg-[#f4f9ff] dark:bg-[#1b264f] px-2 py-0.5 rounded-full border border-[#bae6fd]/60 dark:border-[#223269]/60">
                 Step {currentStepIndex + 1} of {STEPS.length}
               </span>
             </h1>
@@ -317,14 +317,14 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
             <button 
               onClick={() => setCurrentStepIndex(Math.max(0, currentStepIndex - 1))}
               disabled={currentStepIndex === 0}
-              className={`p-1.5 rounded-lg border flex items-center justify-center transition-colors ${currentStepIndex === 0 ? 'border-zinc-100 dark:border-zinc-850 text-zinc-300 dark:text-zinc-700 cursor-not-allowed' : 'border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] hover:bg-[#FCFAF7] cursor-pointer'}`}
+              className={`p-1.5 rounded-lg border flex items-center justify-center transition-colors ${currentStepIndex === 0 ? 'border-zinc-100 dark:border-zinc-850 text-zinc-300 dark:text-zinc-700 cursor-not-allowed' : 'border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#64748b] hover:bg-[#f4f9ff] cursor-pointer'}`}
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button 
               onClick={() => setCurrentStepIndex(Math.min(STEPS.length - 1, currentStepIndex + 1))}
               disabled={currentStepIndex === STEPS.length - 1}
-              className={`p-1.5 rounded-lg border flex items-center justify-center transition-colors ${currentStepIndex === STEPS.length - 1 ? 'border-zinc-100 dark:border-zinc-850 text-zinc-300 dark:text-zinc-700 cursor-not-allowed' : 'border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] hover:bg-[#FCFAF7] cursor-pointer'}`}
+              className={`p-1.5 rounded-lg border flex items-center justify-center transition-colors ${currentStepIndex === STEPS.length - 1 ? 'border-zinc-100 dark:border-zinc-850 text-zinc-300 dark:text-zinc-700 cursor-not-allowed' : 'border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#64748b] hover:bg-[#f4f9ff] cursor-pointer'}`}
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -335,12 +335,12 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           
           {/* Controls Panel */}
-          <div className="w-full md:max-w-sm shrink-0 border-b md:border-b-0 md:border-r border-[#e2e8f0]/40 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 overflow-y-auto p-5 custom-scrollbar h-[45vh] md:h-full">
+          <div className="w-full md:max-w-sm shrink-0 border-b md:border-b-0 md:border-r border-[#bae6fd]/40 dark:border-[#223269]/40 bg-white/95 dark:bg-[#111a36]/95 overflow-y-auto p-5 custom-scrollbar h-[45vh] md:h-full">
             {currentStep.id === 'start' && (
               <div className="space-y-4">
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-wider text-[#64748b] mb-1.5 block">Template Name</label>
-                  <input type="text" value={template.name} onChange={e => updateTemplate({...template, name: e.target.value})} className="w-full p-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none focus:border-[#64748b]" />
+                  <input type="text" value={template.name} onChange={e => updateTemplate({...template, name: e.target.value})} className="w-full p-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7]" />
                 </div>
 
                 <div>
@@ -378,7 +378,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
                           } 
                         });
                       }}
-                      className="w-full p-2.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b] cursor-pointer"
+                      className="w-full p-2.5 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#0284c7] cursor-pointer"
                     >
                       <option value="Invoice">Invoice (Tax Invoice)</option>
                       <option value="Credit Note">Credit Note</option>
@@ -394,7 +394,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
 
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-wider text-[#64748b] mb-1.5 block">Description</label>
-                  <textarea value={template.description || ''} onChange={e => updateTemplate({...template, description: e.target.value})} className="w-full p-2.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white h-24 focus:outline-none focus:border-[#64748b] resize-none" />
+                  <textarea value={template.description || ''} onChange={e => updateTemplate({...template, description: e.target.value})} className="w-full p-2.5 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs text-[#0f172a] dark:text-white h-24 focus:outline-none focus:border-[#0284c7] resize-none" />
                 </div>
               </div>
             )}
@@ -417,7 +417,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
           </div>
 
           {/* Right Live Preview Canvas */}
-          <div className="flex-1 relative flex flex-col h-full min-h-[70vw] md:min-h-0 overflow-hidden bg-[#FCFAF7]/40 dark:bg-zinc-950/20">
+          <div className="flex-1 relative flex flex-col h-full min-h-[70vw] md:min-h-0 overflow-hidden bg-[#f4f9ff]/40 dark:bg-[#0b1329]/20">
             <div 
               ref={previewContainerRef} 
               onMouseDown={handleMouseDown} 
@@ -446,14 +446,14 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
             </div>
 
             {/* Zoom Controls */}
-            <div className="absolute bottom-4 right-4 flex items-center bg-white dark:bg-zinc-900 shadow-md rounded-xl border border-[#e2e8f0]/60 dark:border-zinc-800 overflow-hidden z-[60]">
-              <button onClick={() => setPreviewScale(s => Math.max(0.3, s - 0.1))} className="p-2 hover:bg-[#FCFAF7] dark:hover:bg-zinc-800 text-[#64748b] transition-colors cursor-pointer">
+            <div className="absolute bottom-4 right-4 flex items-center bg-white dark:bg-[#111a36] shadow-md rounded-xl border border-[#bae6fd]/60 dark:border-[#223269]/60 overflow-hidden z-[60]">
+              <button onClick={() => setPreviewScale(s => Math.max(0.3, s - 0.1))} className="p-2 hover:bg-[#f4f9ff] dark:hover:bg-[#1b264f] text-[#64748b] dark:text-[#38bdf8] transition-colors cursor-pointer">
                 <ZoomOut className="w-3.5 h-3.5" />
               </button>
-              <div className="px-3 py-1.5 text-[10px] font-black text-[#0f172a] dark:text-zinc-300 border-x border-[#e2e8f0]/40 dark:border-zinc-800 min-w-[50px] text-center font-mono">
+              <div className="px-3 py-1.5 text-[10px] font-black text-[#0f172a] dark:text-zinc-350 border-x border-[#bae6fd]/40 dark:border-[#223269]/40 min-w-[50px] text-center font-mono">
                 {Math.round(previewScale * 100)}%
               </div>
-              <button onClick={() => setPreviewScale(s => Math.min(2, s + 0.1))} className="p-2 hover:bg-[#FCFAF7] dark:hover:bg-zinc-800 text-[#64748b] transition-colors cursor-pointer">
+              <button onClick={() => setPreviewScale(s => Math.min(2, s + 0.1))} className="p-2 hover:bg-[#f4f9ff] dark:hover:bg-[#1b264f] text-[#64748b] dark:text-[#38bdf8] transition-colors cursor-pointer">
                 <ZoomIn className="w-3.5 h-3.5" />
               </button>
             </div>

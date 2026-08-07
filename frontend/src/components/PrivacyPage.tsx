@@ -1,18 +1,15 @@
-import React, { useState } from 'react';
-import { Mail, Phone, Globe, Check, ArrowRight } from 'lucide-react';
+import React from 'react';
+import { Shield, Eye, Lock, FileSpreadsheet, RefreshCw, AlertCircle, Share2, Trash2 } from 'lucide-react';
 
-interface ContactPageProps {
+interface PrivacyPageProps {
   theme: 'light' | 'dark';
   onNavigate: (path: string) => void;
   onGoogleLogin: () => void;
 }
 
-export default function ContactPage({ theme, onNavigate, onGoogleLogin }: ContactPageProps) {
-  const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
-  const [contactSubmitted, setContactSubmitted] = useState(false);
-  const [contactLoading, setContactLoading] = useState(false);
+export default function PrivacyPage({ theme, onNavigate, onGoogleLogin }: PrivacyPageProps) {
 
-  // Determine dynamic variables based on theme
+  // Dynamic color variables based on the theme
   const variables = theme === 'dark' ? `
     :root {
       --ink-deep: #0b1329;
@@ -70,7 +67,7 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
     .logo-container { display: flex; align-items: center; gap: 10px; cursor: pointer; }
     .navlinks { display: flex; gap: 34px; font-size: 0.92rem; color: var(--text-dark-bg-dim); }
     .navlinks button { background: none; border: none; font-size: inherit; color: inherit; cursor: pointer; transition: color .2s; font-weight: bold; font-family: 'IBM Plex Sans', sans-serif; }
-    .navlinks button:hover, .navlinks button.active { color: var(--stamp-red); }
+    .navlinks button:hover { color: var(--stamp-red); }
     .nav-actions { display: flex; align-items: center; gap: 10px; }
     .nav-login {
       font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; background: transparent; color: var(--stamp-red);
@@ -88,92 +85,44 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
     @media (max-width: 820px) { .navlinks { display: none; } }
     @media (max-width: 480px) { .nav-login { display: none; } }
 
-    /* ---------- MAIN CONTACT SECTION ---------- */
-    .contact-hero { padding: 80px 0; position: relative; }
-    .contact-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 56px; align-items: start; }
-    @media (max-width: 900px) { .contact-grid { grid-template-columns: 1fr; gap: 40px; } }
-
+    /* ---------- PRIVACY HEADER ---------- */
+    .priv-hero { padding: 90px 0 60px; text-align: center; }
     .eyebrow {
       font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
-      color: var(--stamp-red); display: flex; align-items: center; gap: 10px; margin-bottom: 22px; font-weight: bold;
+      color: var(--stamp-red); display: inline-flex; align-items: center; gap: 10px; margin-bottom: 22px; font-weight: bold;
     }
-    .eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--stamp-red); }
-
-    h1.contact-h1 {
-      font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(2.2rem, 4vw, 3.4rem);
-      line-height: 1.1; margin: 0 0 18px; letter-spacing: -0.02em; color: var(--text-dark-bg);
+    .eyebrow::before, .eyebrow::after { content: ""; width: 22px; height: 1px; background: var(--stamp-red); }
+    
+    h1.priv-h1 {
+      font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(2.4rem, 5vw, 3.8rem);
+      line-height: 1.1; margin: 0 auto 20px; letter-spacing: -0.02em; color: var(--text-dark-bg); max-width: 800px;
     }
-    .contact-sub { font-size: 1.05rem; color: var(--text-dark-bg-dim); max-width: 500px; margin: 0 0 34px; line-height: 1.6; }
+    .priv-sub { font-size: 1.1rem; color: var(--text-dark-bg-dim); max-width: 620px; margin: 0 auto; line-height: 1.6; }
 
-    /* Left Info Cards */
-    .info-list { display: flex; flex-direction: column; gap: 24px; }
-    .info-item { display: flex; gap: 18px; align-items: flex-start; }
-    .info-icon {
+    /* ---------- PRIVACY SECTIONS ---------- */
+    .priv-sections { display: flex; flex-direction: column; gap: 40px; margin-top: 48px; }
+    
+    .priv-card {
+      background: var(--ink-panel); border: 1px solid var(--paper-line);
+      border-radius: 16px; padding: 40px;
+      box-shadow: ${theme === 'dark' ? '0 10px 30px rgba(0,0,0,0.3)' : '0 10px 30px rgba(2,132,199,0.02)'};
+    }
+    @media (max-width: 480px) { .priv-card { padding: 24px; } }
+
+    .priv-card-head { display: flex; gap: 18px; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--paper-line); padding-bottom: 18px; }
+    .priv-icon-wrap {
       width: 44px; height: 44px; border-radius: 12px;
       background: var(--ink-panel-2); border: 1px solid var(--paper-line);
       display: flex; align-items: center; justify-content: center;
       color: var(--stamp-red); flex-shrink: 0;
     }
-    .info-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; font-weight: 700; color: var(--text-dark-bg); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-    .info-val { font-size: 0.92rem; color: var(--text-dark-bg-dim); line-height: 1.5; font-weight: bold; }
-    .info-val a { color: var(--stamp-red); text-decoration: none; transition: opacity 0.2s; }
-    .info-val a:hover { opacity: 0.8; }
-
-    /* Form Card */
-    .contact-card {
-      background: var(--ink-panel); border: 1px solid var(--paper-line);
-      border-radius: 16px; padding: 32px;
-      box-shadow: ${theme === 'dark' ? '0 15px 45px rgba(0,0,0,0.5)' : '0 15px 45px rgba(2,132,199,0.04)'};
-    }
-    @media (max-width: 480px) { .contact-card { padding: 20px; } }
-
-    .form-group { margin-bottom: 20px; }
-    .form-label {
-      display: block; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
-      font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-      color: var(--text-dark-bg-dim); margin-bottom: 8px;
-    }
-    .form-input {
-      width: 100%; padding: 12px 16px; border-radius: 10px;
-      border: 1.5px solid var(--paper-line); background: var(--paper-dim);
-      color: var(--text-dark-bg); font-family: 'IBM Plex Sans', sans-serif;
-      font-size: 0.88rem; outline: none; transition: border 0.2s, box-shadow 0.2s;
-    }
-    .form-input:focus {
-      border-color: var(--stamp-red);
-      box-shadow: 0 0 0 3px ${theme === 'dark' ? 'rgba(56,189,248,0.15)' : 'rgba(2,132,199,0.12)'};
-    }
-    .form-textarea { resize: none; min-height: 120px; }
-
-    .btn-submit {
-      width: 100%; padding: 14px; background: var(--stamp-red);
-      border: 1px solid var(--stamp-red-dark); color: #ffffff;
-      border-radius: 10px; font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.88rem; font-weight: 700; letter-spacing: 0.04em;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      gap: 10px; transition: all 0.2s;
-      box-shadow: 0 4px 12px rgba(2,132,199,0.15);
-    }
-    .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(2,132,199,0.3); background: var(--stamp-red-dark); }
-    .btn-submit:disabled { background: var(--text-dark-bg-dim); border-color: var(--text-dark-bg-dim); cursor: not-allowed; transform: none; box-shadow: none; }
-
-    /* Success Block */
-    .success-block { text-align: center; padding: 40px 0; }
-    .success-icon {
-      width: 52px; height: 52px; border-radius: 50%;
-      background: rgba(22,163,74,0.1); color: #16a34a;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 18px; font-size: 1.5rem;
-    }
-    .success-title { font-family: 'Fraunces', serif; font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--text-dark-bg); }
-    .success-desc { font-size: 0.92rem; color: var(--text-dark-bg-dim); margin-bottom: 24px; line-height: 1.5; }
+    .priv-card-head h2 { font-family: 'Fraunces', serif; font-size: 1.5rem; margin: 0; color: var(--text-dark-bg); font-weight: 600; }
     
-    .btn-reset {
-      font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; background: transparent;
-      color: var(--stamp-red); border: 1.5px solid var(--stamp-red);
-      padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: bold;
-    }
-    .btn-reset:hover { background: var(--stamp-red); color: #ffffff; }
+    .priv-card-body h3 { font-family: 'IBM Plex Sans', sans-serif; font-size: 1.05rem; margin: 24px 0 10px; color: var(--text-dark-bg); font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+    .priv-card-body h3:first-child { margin-top: 0; }
+    .priv-card-body p { font-size: 0.94rem; color: var(--text-dark-bg-dim); line-height: 1.65; margin: 0 0 16px; }
+    .priv-card-body ul { list-style-type: square; padding-left: 20px; color: var(--text-dark-bg-dim); font-size: 0.92rem; line-height: 1.65; margin-bottom: 16px; }
+    .priv-card-body li { margin-bottom: 8px; }
 
     /* ---------- FOOTER ---------- */
     .site-footer { background: var(--ink-panel); border-top: 1px solid var(--paper-line); padding: 64px 0 0; font-family: 'IBM Plex Sans', sans-serif; }
@@ -261,14 +210,14 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
     <div className="min-h-dvh w-full max-w-full overflow-x-hidden transition-colors duration-250 select-none text-left" style={{ background: 'var(--ink-deep)', color: 'var(--text-dark-bg)', fontFamily: 'var(--font-body)' }}>
       <style dangerouslySetInnerHTML={{ __html: css }} />
 
-      {/* Embedded topnav matching the homepage exactly */}
+      {/* Embedded Topnav Navigation Header */}
       <nav className="topnav">
         <div className="topnav-inner">
-          {/* Brand Logo Container */}
+          {/* Logo container */}
           <div className="logo-container group" onClick={() => onNavigate('/')}>
-            <img src="/logo.svg" alt="MakInvoices Logo" className="w-10 h-10 object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300 shrink-0" />
+            <img src="/logo.svg" alt="MakInvoices Logo" className="w-10 h-10 object-contain drop-shadow-md shrink-0" />
             <div>
-              <span className="text-base font-black tracking-tight text-slate-805 dark:text-white block leading-none">
+              <span className="text-base font-black tracking-tight text-slate-805 block leading-none" style={{ color: theme === 'dark' ? '#fff' : '#0f172a' }}>
                 Mak<span style={{ color: '#0ea5e9' }}>Invoices</span>
               </span>
               <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-500 block tracking-wider uppercase mt-1">Advanced Ledger Hub</span>
@@ -280,7 +229,7 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
             <button type="button" onClick={() => onNavigate('/pricing')}>Pricing</button>
             <button type="button" onClick={() => onNavigate('/#compare')}>Compare</button>
             <button type="button" onClick={() => onNavigate('/#faq-section')}>FAQ</button>
-            <button type="button" className="active" onClick={() => onNavigate('/contact')}>Contact</button>
+            <button type="button" onClick={() => onNavigate('/contact')}>Contact</button>
           </div>
           <div className="nav-actions">
             <button type="button" className="nav-login" onClick={() => onNavigate('/login')}>Log in</button>
@@ -289,136 +238,98 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
         </div>
       </nav>
 
-      {/* ---------- HERO & CONTENT ---------- */}
-      <section className="contact-hero">
-        <div className="wrap contact-grid">
-          <div>
-            <div className="eyebrow">Contact Us</div>
-            <h1 className="contact-h1">Let's talk about your billing system.</h1>
-            <p className="contact-sub">Have questions about integrations, security configurations, custom layouts, or business plans? Reach our support team anytime.</p>
-            
-            <div className="info-list">
-              <div className="info-item">
-                <div className="info-icon">
-                  <Mail style={{ width: 18, height: 18 }} />
-                </div>
-                <div>
-                  <div className="info-title">Email Address</div>
-                  <div className="info-val"><a href="mailto:support@makinvoices.com">support@makinvoices.com</a></div>
-                </div>
-              </div>
+      {/* ---------- HERO ---------- */}
+      <section className="priv-hero">
+        <div className="wrap">
+          <div className="eyebrow">Privacy &amp; Data Safeguards</div>
+          <h1 className="priv-h1">Privacy Policy</h1>
+          <p className="priv-sub">Learn how we collect, store, isolate, process, and encrypt your business profiles, ledger records, and customer directories.</p>
+        </div>
+      </section>
 
-              <div className="info-item">
-                <div className="info-icon">
-                  <Phone style={{ width: 18, height: 18 }} />
-                </div>
-                <div>
-                  <div className="info-title">Phone Support</div>
-                  <div className="info-val">+1 (800) 555-MAKI</div>
-                </div>
-              </div>
+      {/* ---------- CONTENT SECTIONS ---------- */}
+      <section style={{ paddingBottom: '80px' }}>
+        <div className="wrap priv-sections">
+          
+          <div className="priv-card">
+            <div className="priv-card-head">
+              <div className="priv-icon-wrap"><Eye style={{ width: 20, height: 20 }} /></div>
+              <h2>1. Information We Collect</h2>
+            </div>
+            <div className="priv-card-body">
+              <h3>1.1 User and Business Profiles</h3>
+              <p>When creating a MakInvoices account, we collect registration details including your name, email address, password hash, telephone contact, state/region, and company registration values. This info is required to format compliant document structures.</p>
+              
+              <h3>1.2 Transaction Ledger Inputs</h3>
+              <p>We process data you upload, draft, or sync onto the system, including client profiles (tax identifiers, address details), item registers (HSN codes, pricing, stock levels), and billing logs. All items are housed securely in isolated databases with strict access checks.</p>
 
-              <div className="info-item">
-                <div className="info-icon">
-                  <Globe style={{ width: 18, height: 18 }} />
-                </div>
-                <div>
-                  <div className="info-title">Support Hours</div>
-                  <div className="info-val">24/7 Global Response Desk</div>
-                </div>
-              </div>
+              <h3>1.3 Technical Logs &amp; Cookies</h3>
+              <p>We collect device telemetry, IP addresses, session duration logs, browser attributes, and security credentials (e.g. salted PIN flags). We utilize browser localStorage and IndexedDB configurations to preserve active sessions and enable offline synchronization features.</p>
             </div>
           </div>
 
-          <div className="contact-card">
-            {contactSubmitted ? (
-              <div className="success-block">
-                <div className="success-icon">
-                  <Check style={{ width: 24, height: 24 }} />
-                </div>
-                <h3 className="success-title">Message Sent!</h3>
-                <p className="success-desc">Thank you for reaching out. A ticket has been created and our support team will respond to your registered email shortly.</p>
-                <button type="button" onClick={() => setContactSubmitted(false)} className="btn-reset">Send Another Message</button>
-              </div>
-            ) : (
-              <form 
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  setContactLoading(true);
-                  try {
-                    const res = await fetch('/api/tickets', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        category: 'other',
-                        priority: 'medium',
-                        subject: `Contact Form Inquiry from ${contactForm.name}`,
-                        message: `From: ${contactForm.name} <${contactForm.email}>\n\n${contactForm.message}`,
-                      }),
-                    });
-                    if (!res.ok) {
-                      const err = await res.json().catch(() => ({}));
-                      throw new Error(err?.detail || 'Failed to send message');
-                    }
-                    setContactSubmitted(true);
-                    setContactForm({ name: '', email: '', message: '' });
-                  } catch (err) {
-                    console.error('Contact form submission failed', err);
-                    alert('Failed to send your message. Please try again.');
-                  } finally {
-                    setContactLoading(false);
-                  }
-                }}
-              >
-                <div className="form-group">
-                  <label className="form-label">Your Name</label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={contactForm.name}
-                    onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                    placeholder="e.g. John Doe" 
-                    className="form-input" 
-                  />
-                </div>
+          <div className="priv-card">
+            <div className="priv-card-head">
+              <div className="priv-icon-wrap"><Lock style={{ width: 20, height: 20 }} /></div>
+              <h2>2. How We Use and Safeguard Your Data</h2>
+            </div>
+            <div className="priv-card-body">
+              <h3>2.1 Purpose of Data Processing</h3>
+              <p>We process your inputs strictly to operate, maintain, and audit your dashboard services, run automatic tax splits, format vector PDFs, manage billing cycles, and provide RAG customer support chats.</p>
+              
+              <h3>2.2 AES-256 Ledger Security</h3>
+              <p>All database records are protected with bank-grade AES-256 encryption at rest. In-transit streams are wrapped in TLS 1.3 encryption. Biometric verification credentials and salted security PINs are processed locally and are never stored in raw text on our cloud servers.</p>
 
-                <div className="form-group">
-                  <label className="form-label">Email Address</label>
-                  <input 
-                    type="email" 
-                    required 
-                    value={contactForm.email}
-                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                    placeholder="you@company.com" 
-                    className="form-input" 
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Your Message</label>
-                  <textarea 
-                    required 
-                    value={contactForm.message}
-                    onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                    placeholder="Describe how we can help your business..." 
-                    className="form-input form-textarea"
-                    rows={4}
-                  />
-                </div>
-
-                <button type="submit" disabled={contactLoading} className="btn-submit">
-                  {contactLoading ? (
-                    <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
-                  ) : (
-                    <>
-                      <span>Send Support Request</span>
-                      <ArrowRight style={{ width: 14, height: 14 }} />
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
+              <h3>2.3 Strict Multi-Tenant Isolation</h3>
+              <p>Database layers enforce strict row-level security (RLS) policies. No user or third party can read, alter, or fetch transaction lists belonging to another account.</p>
+            </div>
           </div>
+
+          <div className="priv-card">
+            <div className="priv-card-head">
+              <div className="priv-icon-wrap"><Share2 style={{ width: 20, height: 20 }} /></div>
+              <h2>3. Data Sharing &amp; Sub-Processors</h2>
+            </div>
+            <div className="priv-card-body">
+              <h3>3.1 Third-Party Sub-Processors</h3>
+              <p>We do not rent, trade, sell, or distribute your customer directories or ledger transactions to data brokers or advertising networks. We share details solely with secure, DPA-bound sub-processors, including:</p>
+              <ul>
+                <li>Cloud database and storage providers (to host ledger schemas).</li>
+                <li>Email transit servers (to dispatch invoice receipts).</li>
+                <li>Payment gateways (Stripe/Razorpay to process plan renewals).</li>
+              </ul>
+              
+              <h3>3.2 Legal Disclosures</h3>
+              <p>We may disclose user metadata only if required under subpoena, judicial court orders, or regional tax compliance audits under applicable regulatory laws.</p>
+            </div>
+          </div>
+
+          <div className="priv-card">
+            <div className="priv-card-head">
+              <div className="priv-icon-wrap"><Trash2 style={{ width: 20, height: 20 }} /></div>
+              <h2>4. Your Regulatory Rights (GDPR &amp; DPDP)</h2>
+            </div>
+            <div className="priv-card-body">
+              <p>Under international privacy regulations (GDPR, CCPA, and India's Digital Personal Data Protection Act), users are granted key data rights:</p>
+              <ul>
+                <li><strong>Right to Access:</strong> Export full ledger transaction rows in CSV, PDF, or JSON formats at any time.</li>
+                <li><strong>Right to Rectification:</strong> Edit customer directories, HSN codes, and business profiles directly from the settings tabs.</li>
+                <li><strong>Right to Deletion (Forgotten):</strong> Request account termination. Deletion requests permanently shred backup registers and credentials within 30 days.</li>
+                <li><strong>Right to Data Portability:</strong> Fetch full backup files of catalog items and vendor tables.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="priv-card">
+            <div className="priv-card-head">
+              <div className="priv-icon-wrap"><RefreshCw style={{ width: 20, height: 20 }} /></div>
+              <h2>5. Policy Updates and Contact</h2>
+            </div>
+            <div className="priv-card-body">
+              <p>We update our privacy standards as we scale our infrastructure. Substantial changes are highlighted via system banner logs or email notices. For legal queries or DPO assistance, reach us at <a href="mailto:privacy@makinvoices.com" style={{ color: 'var(--stamp-red)', textDecoration: 'none' }}>privacy@makinvoices.com</a>.</p>
+            </div>
+          </div>
+
         </div>
       </section>
 

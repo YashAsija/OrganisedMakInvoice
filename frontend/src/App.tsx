@@ -46,6 +46,9 @@ import Homepage from './components/Homepage';
 import PricingPage from './components/PricingPage';
 import GuidePage from './components/GuidePage';
 import ContactPage from './components/ContactPage';
+import SecurityPage from './components/SecurityPage';
+import TermsPage from './components/TermsPage';
+import PrivacyPage from './components/PrivacyPage';
 // Path to Sidebar Tab Mapping Definitions
 const tabToPath: Record<string, string> = {
   dashboard: '/dashboard',
@@ -149,7 +152,7 @@ export default function App() {
   const [publicPath, setPublicPath] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
-      return ['/pricing', '/guide', '/contact', '/features', '/faq'].includes(path) ? path : '/';
+      return ['/pricing', '/guide', '/contact', '/security', '/terms', '/privacy', '/features', '/faq'].includes(path) ? path : '/';
     }
     return '/';
   });
@@ -271,7 +274,7 @@ export default function App() {
             }
           }
         } else {
-          setPublicPath(['/pricing', '/guide', '/contact'].includes(path) ? path : '/');
+          setPublicPath(['/pricing', '/guide', '/contact', '/security', '/terms', '/privacy'].includes(path) ? path : '/');
         }
       };
       window.addEventListener('popstate', handlePopState);
@@ -2061,6 +2064,36 @@ export default function App() {
         />
       );
     }
+    if (publicPath === '/terms') {
+      return (
+        <TermsPage
+          theme={theme}
+          onNavigate={handlePublicNavigate}
+          onGoogleLogin={handleLogin}
+        />
+      );
+    }
+
+    if (publicPath === '/privacy') {
+      return (
+        <PrivacyPage
+          theme={theme}
+          onNavigate={handlePublicNavigate}
+          onGoogleLogin={handleLogin}
+        />
+      );
+    }
+
+    if (publicPath === '/security') {
+      return (
+        <SecurityPage
+          theme={theme}
+          onNavigate={handlePublicNavigate}
+          onGoogleLogin={handleLogin}
+        />
+      );
+    }
+
     if (publicPath === '/contact') {
       return (
         <ContactPage

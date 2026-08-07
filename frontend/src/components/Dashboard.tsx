@@ -207,7 +207,7 @@ export default function Dashboard({
 
   const getNotifCategory = (notif: any): 'billing' | 'system' | 'alerts' => {
     const t = (notif.title || '').toLowerCase();
-    // Alerts first — type always wins over content keywords
+    // Alerts first â€” type always wins over content keywords
     if (
       notif.type === 'error' || notif.type === 'warning' ||
       t.includes('error') || t.includes('failed') || t.includes('validation') ||
@@ -753,32 +753,32 @@ export default function Dashboard({
       const isActive = activeTab === tab;
       return `w-full px-3 py-2 rounded-xl text-left text-xs font-bold transition-all duration-300 flex items-center justify-between cursor-pointer group ${
         isActive
-          ? 'bg-white text-[#4A3C2F] dark:bg-zinc-900/90 dark:text-white shadow-[0_2px_12px_rgba(136,118,92,0.06)] border border-[#e2e8f0]/60 dark:border-zinc-800/80 font-black relative overflow-hidden'
-          : 'text-[#0f172a] hover:text-[#4A3C2F] dark:text-zinc-300 hover:bg-white/50 dark:hover:bg-zinc-800/40 border border-transparent'
+          ? 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] shadow-[0_2px_12px_rgba(2,132,199,0.1)] border border-[#bae6fd] dark:border-[#223269] font-black relative overflow-hidden'
+          : 'text-[#0f172a] hover:text-[#0284c7] dark:text-zinc-300 dark:hover:text-[#38bdf8] hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f]/40 border border-transparent'
       }`;
     };
 
     const iconWrapper = (isActive: boolean, colorClass: string) => 
       `flex items-center justify-center w-7 h-7 rounded-lg transition-colors ${
         isActive 
-          ? `${colorClass} shadow-sm ring-1 ring-black/5 dark:ring-white/5` 
-          : 'bg-transparent text-[#0f172a] group-hover:bg-white/80 dark:group-hover:bg-zinc-800 group-hover:text-[#4A3C2F]'
+          ? `${colorClass} shadow-sm ring-1 ring-[#bae6fd]/50 dark:ring-[#223269]/50` 
+          : 'bg-transparent text-[#475569] group-hover:bg-[#e0f2fe]/60 dark:group-hover:bg-[#1b264f]/60 group-hover:text-[#0284c7] dark:group-hover:text-[#38bdf8]'
       }`;
 
     const smallNavItemClass = (tab: string) => {
       const isActive = activeTab === tab;
       return `w-full px-2 py-1.5 rounded-lg text-left text-[11px] font-bold transition-all duration-300 flex items-center justify-between cursor-pointer group ${
         isActive
-          ? 'bg-white text-[#4A3C2F] dark:bg-zinc-900/90 dark:text-white shadow-[0_2px_8px_rgba(136,118,92,0.05)] border border-[#e2e8f0]/50 dark:border-zinc-800/60 font-black relative overflow-hidden'
-          : 'text-[#0f172a] hover:text-[#4A3C2F] dark:text-zinc-300 hover:bg-white/40 dark:hover:bg-zinc-800/30 border border-transparent'
+          ? 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] shadow-[0_2px_8px_rgba(2,132,199,0.08)] border border-[#bae6fd] dark:border-[#223269] font-black relative overflow-hidden'
+          : 'text-[#0f172a] hover:text-[#0284c7] dark:text-zinc-300 dark:hover:text-[#38bdf8] hover:bg-[#e0f2fe]/40 dark:hover:bg-[#1b264f]/30 border border-transparent'
       }`;
     };
 
     const smallIconWrapper = (isActive: boolean, colorClass: string) => 
       `flex items-center justify-center w-6 h-6 rounded-md transition-colors ${
         isActive 
-          ? `${colorClass} shadow-xs ring-1 ring-black/5 dark:ring-white/5` 
-          : 'bg-transparent text-[#0f172a] group-hover:bg-white/80 dark:group-hover:bg-zinc-800 group-hover:text-[#4A3C2F]'
+          ? `${colorClass} shadow-xs ring-1 ring-[#bae6fd]/50 dark:ring-[#223269]/50` 
+          : 'bg-transparent text-[#475569] group-hover:bg-[#e0f2fe]/60 dark:group-hover:bg-[#1b264f]/60 group-hover:text-[#0284c7] dark:group-hover:text-[#38bdf8]'
       }`;
     return (
       <div className="flex flex-col h-full text-sans select-none overflow-hidden">
@@ -792,7 +792,7 @@ export default function Dashboard({
                 onOpenInvoiceEditor(null);
                 if (isMobileView) setIsMobileDrawerOpen(false);
               }}
-              className="group relative w-full flex items-center justify-start gap-3 px-2 py-2 bg-[#059669] hover:bg-[#047857] text-white rounded-[14px] font-bold text-[13px] shadow-[0_4px_12px_rgba(5,150,105,0.25)] hover:shadow-[0_6px_16px_rgba(5,150,105,0.4)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] transition-all duration-200 border border-[#047857]/50"
+              className="group relative w-full flex items-center justify-start gap-3 px-2 py-2 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-[14px] font-bold text-[13px] shadow-[0_4px_12px_rgba(2,132,199,0.25)] hover:shadow-[0_6px_16px_rgba(2,132,199,0.4)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] transition-all duration-200 border border-[#0369a1]/50"
             >
               <div className="w-8 h-8 rounded-[10px] bg-white/20 flex items-center justify-center shrink-0 group-hover:bg-white/30 group-hover:scale-105 transition-all duration-300 shadow-sm">
                 <Zap className="w-4 h-4 fill-white drop-shadow-sm" />
@@ -803,7 +803,7 @@ export default function Dashboard({
 
           {/* SETTINGS MENU */}
           <div className="space-y-1">
-            <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1">Financial Hub</span>
+            <span className="text-[9px] uppercase font-extrabold tracking-widest block px-2 pb-1" style={{fontFamily: "'IBM Plex Mono', monospace", color: 'var(--nav-eyebrow-color, #0284c7)', opacity: 0.7}}>Financial Hub</span>
             
             <button onClick={() => handleTabClick('dashboard')} className={navItemClass('dashboard')}>
               <div className="flex items-center gap-2.5">
@@ -828,7 +828,7 @@ export default function Dashboard({
                   <span>Sales Ledger</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'invoices' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'invoices' ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269]'}`}>
                     {invoices.filter(i => i.status !== 'draft').length}
                   </span>
                   <ChevronDown className={`w-3.5 h-3.5 text-[#64748b]/70 transition-transform duration-200 ${isSalesLedgerExpanded ? 'rotate-180' : ''}`} />
@@ -839,10 +839,10 @@ export default function Dashboard({
               {isSalesLedgerExpanded && (
                 <div className="pl-6 space-y-0.5 pt-0.5">
                   {[
-                    { id: 'invoice', label: 'Tax Invoices', count: documentTypeCounts.invoice, activeBg: 'bg-emerald-600 dark:bg-emerald-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-emerald-600 dark:hover:text-emerald-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
-                    { id: 'proforma', label: 'Proforma Invoice', count: documentTypeCounts.proforma, activeBg: 'bg-sky-600 dark:bg-sky-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-sky-600 dark:hover:text-sky-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
-                    { id: 'credit_note', label: 'Credit Note', count: documentTypeCounts.credit_note, activeBg: 'bg-violet-600 dark:bg-violet-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-violet-600 dark:hover:text-violet-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
-                    { id: 'quote', label: 'Quote / Estimate', count: documentTypeCounts.quote, activeBg: 'bg-teal-600 dark:bg-teal-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-teal-600 dark:hover:text-teal-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' }
+                    { id: 'invoice', label: 'Tax Invoices', count: documentTypeCounts.invoice, activeBg: 'bg-[#0284c7] dark:bg-[#0284c7] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0284c7] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' },
+                    { id: 'proforma', label: 'Proforma Invoice', count: documentTypeCounts.proforma, activeBg: 'bg-[#0369a1] dark:bg-[#0369a1] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0369a1] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' },
+                    { id: 'credit_note', label: 'Credit Note', count: documentTypeCounts.credit_note, activeBg: 'bg-[#0284c7] dark:bg-[#0284c7] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0284c7] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' },
+                    { id: 'quote', label: 'Quote / Estimate', count: documentTypeCounts.quote, activeBg: 'bg-[#0369a1] dark:bg-[#0369a1] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0369a1] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' }
                   ].map(sub => {
                     const isSubActive = activeTab === 'invoices' && ledgerSection === sub.id;
                     return (
@@ -864,7 +864,7 @@ export default function Dashboard({
                         className={`w-full px-3 py-2 rounded-xl text-left text-[11px] font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
                           isSubActive
                             ? sub.activeBg
-                            : `text-slate-700 dark:text-zinc-300 ${sub.color} hover:bg-slate-100/70 dark:hover:bg-zinc-800/60`
+                            : `text-[#0f172a] dark:text-zinc-300 ${sub.color} hover:bg-[#e0f2fe]/60 dark:hover:bg-[#1b264f]/50`
                         }`}
                       >
                         <span className="truncate">{sub.label}</span>
@@ -894,7 +894,7 @@ export default function Dashboard({
                   <span>Purchases Ledger</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'purchases' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'purchases' ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269]'}`}>
                     {(documentTypeCounts.purchases || 0) + (documentTypeCounts.purchase_order || 0) + (documentTypeCounts.purchase_debit_note || 0)}
                   </span>
                   <ChevronDown className={`w-3.5 h-3.5 text-[#64748b]/70 transition-transform duration-200 ${isPurchasesLedgerExpanded ? 'rotate-180' : ''}`} />
@@ -905,9 +905,9 @@ export default function Dashboard({
               {isPurchasesLedgerExpanded && (
                 <div className="pl-6 space-y-0.5 pt-0.5">
                   {[
-                    { id: 'purchases', label: 'Purchases', count: documentTypeCounts.purchases || 0, activeBg: 'bg-blue-600 dark:bg-blue-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-blue-600 dark:hover:text-blue-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
-                    { id: 'purchase_order', label: 'Purchase Order', count: documentTypeCounts.purchase_order || 0, activeBg: 'bg-amber-600 dark:bg-amber-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-amber-600 dark:hover:text-amber-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' },
-                    { id: 'purchase_debit_note', label: 'Debit Note', count: documentTypeCounts.purchase_debit_note || 0, activeBg: 'bg-indigo-600 dark:bg-indigo-600 text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-indigo-600 dark:hover:text-indigo-400', activeBadge: 'bg-white/20 text-white', badge: 'bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' }
+                    { id: 'purchases', label: 'Purchases', count: documentTypeCounts.purchases || 0, activeBg: 'bg-[#0284c7] dark:bg-[#0284c7] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0284c7] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' },
+                    { id: 'purchase_order', label: 'Purchase Order', count: documentTypeCounts.purchase_order || 0, activeBg: 'bg-[#0369a1] dark:bg-[#0369a1] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0369a1] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' },
+                    { id: 'purchase_debit_note', label: 'Debit Note', count: documentTypeCounts.purchase_debit_note || 0, activeBg: 'bg-[#0284c7] dark:bg-[#0284c7] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0284c7] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' }
                   ].map(sub => {
                     const isSubActive = activeTab === 'purchases' && purchaseLedgerSection === sub.id;
                     return (
@@ -928,7 +928,7 @@ export default function Dashboard({
                         className={`w-full px-3 py-2 rounded-xl text-left text-[11px] font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
                           isSubActive
                             ? sub.activeBg
-                            : `text-slate-700 dark:text-zinc-300 ${sub.color} hover:bg-slate-100/70 dark:hover:bg-zinc-800/60`
+                            : `text-[#0f172a] dark:text-zinc-300 ${sub.color} hover:bg-[#e0f2fe]/60 dark:hover:bg-[#1b264f]/50`
                         }`}
                       >
                         <span className="truncate">{sub.label}</span>
@@ -972,7 +972,7 @@ export default function Dashboard({
 
           {/* TOOLS & CUSTOMIZATION */}
           <div className="space-y-1">
-            <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1 mt-2">Tools & Design</span>
+            <span className="text-[9px] uppercase font-extrabold tracking-widest block px-2 pb-1 mt-2" style={{fontFamily: "'IBM Plex Mono', monospace", color: '#0284c7', opacity: 0.7}}>Tools & Design</span>
 
             <button onClick={() => handleTabClick('invoice_templates')} className={navItemClass('invoice_templates')}>
               <div className="flex items-center gap-2.5">
@@ -991,7 +991,7 @@ export default function Dashboard({
 
           {/* MASTER REGISTRY */}
           <div className="space-y-1">
-            <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#64748b]/50 dark:text-zinc-500 block px-2 pb-1 mt-2">Master Registry</span>
+            <span className="text-[9px] uppercase font-extrabold tracking-widest block px-2 pb-1 mt-2" style={{fontFamily: "'IBM Plex Mono', monospace", color: '#0284c7', opacity: 0.7}}>Master Registry</span>
 
             <button onClick={() => handleTabClick('master_vendor')} className={navItemClass('master_vendor')}>
               <div className="flex items-center gap-2.5">
@@ -1064,7 +1064,7 @@ export default function Dashboard({
           {/* PREMIUM HIGHLIGHTED UPGRADE BUTTON */}
           <button
             onClick={() => handleTabClick('subscription')}
-            className="w-full mt-1.5 px-3 py-2 rounded-lg text-left text-[11px] font-black text-white bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 active:scale-98 transition-all duration-300 flex items-center justify-between cursor-pointer group shadow-[0_3px_10px_rgba(245,158,11,0.25)] hover:shadow-[0_5px_15px_rgba(245,158,11,0.35)] border border-amber-400/30"
+            className="w-full mt-1.5 px-3 py-2 rounded-lg text-left text-[11px] font-black text-white bg-gradient-to-r from-[#0284c7] via-[#2563eb] to-[#38bdf8] hover:from-[#0369a1] hover:via-[#1d4ed8] hover:to-[#0284c7] active:scale-98 transition-all duration-300 flex items-center justify-between cursor-pointer group shadow-[0_3px_10px_rgba(2,132,199,0.25)] hover:shadow-[0_5px_15px_rgba(2,132,199,0.35)] border border-[#bae6fd]/30"
           >
             <div className="flex items-center gap-2">
               <div className="flex items-center justify-center w-6 h-6 rounded-md bg-white/20 text-white shadow-sm ring-1 ring-white/10 group-hover:scale-110 transition-transform">
@@ -1072,7 +1072,7 @@ export default function Dashboard({
               </div>
               <span className="tracking-wide uppercase">Upgrade Plan</span>
             </div>
-            <span className="text-[8.5px] px-1.5 py-0.5 bg-white text-orange-600 rounded-md uppercase font-black tracking-wider animate-pulse shadow-sm">
+            <span className="text-[8.5px] px-1.5 py-0.5 bg-white text-[#0284c7] rounded-md uppercase font-black tracking-wider animate-pulse shadow-sm">
               {subscriptionTier === 'free' ? 'PRO' : subscriptionTier === 'basic' ? 'PRO' : subscriptionTier === 'pro' ? 'UNLTD' : 'MAX'}
             </span>
           </button>
@@ -1313,7 +1313,7 @@ export default function Dashboard({
         return null;
     }
 
-    // Per-tab accent palette — subtle, professional, not gimmicky
+    // Per-tab accent palette â€” subtle, professional, not gimmicky
     const tabAccent: Record<string, {
       topBar: string;
       iconBg: string;
@@ -1330,91 +1330,91 @@ export default function Dashboard({
       avatarIconDark: string;
     }> = {
       master_vendor: {
+        topBar:        'bg-[#0284c7]',
+        iconBg:        'bg-[#0284c7]',
+        iconBgDark:    'dark:bg-[#0369a1]',
+        iconColor:     'text-white',
+        iconColorDark: 'dark:text-white',
+        badgeBg:       'bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f] dark:border-[#223269]',
+        badgeText:     'text-[#0284c7] dark:text-[#38bdf8]',
+        theadBg:       'bg-[#f4f9ff] dark:bg-[#0b1329]',
+        theadBgDark:   '',
+        avatarBg:      'bg-[#e0f2fe] border-[#bae6fd]',
+        avatarBgDark:  'dark:bg-[#1b264f] dark:border-[#223269]',
+        avatarIcon:    'text-[#0284c7]',
+        avatarIconDark:'dark:text-[#38bdf8]',
+      },
+      master_actual_vendor: {
+        topBar:        'bg-sky-500',
+        iconBg:        'bg-sky-600',
+        iconBgDark:    'dark:bg-sky-700',
+        iconColor:     'text-white',
+        iconColorDark: 'dark:text-white',
+        badgeBg:       'bg-sky-50 border-sky-200 dark:bg-sky-950/40 dark:border-sky-900/40',
+        badgeText:     'text-sky-600 dark:text-sky-400',
+        theadBg:       'bg-sky-50/60 dark:bg-sky-950/20',
+        theadBgDark:   '',
+        avatarBg:      'bg-sky-50 border-sky-200/70',
+        avatarBgDark:  'dark:bg-sky-950/30 dark:border-sky-900/40',
+        avatarIcon:    'text-[#0284c7]',
+        avatarIconDark:'dark:text-sky-400',
+      },
+      master_transport: {
         topBar:        'bg-indigo-500',
         iconBg:        'bg-indigo-600',
         iconBgDark:    'dark:bg-indigo-700',
-        iconColor:     'text-indigo-50',
-        iconColorDark: 'dark:text-indigo-100',
-        badgeBg:       'bg-indigo-50 border-indigo-100 dark:bg-indigo-950/40 dark:border-indigo-900/40',
+        iconColor:     'text-white',
+        iconColorDark: 'dark:text-white',
+        badgeBg:       'bg-indigo-50 border-indigo-200 dark:bg-indigo-950/40 dark:border-indigo-900/40',
         badgeText:     'text-indigo-600 dark:text-indigo-400',
-        theadBg:       'bg-indigo-50/40 dark:bg-indigo-950/20',
+        theadBg:       'bg-indigo-50/60 dark:bg-indigo-950/20',
         theadBgDark:   '',
-        avatarBg:      'bg-indigo-50 border-indigo-100/70',
+        avatarBg:      'bg-indigo-50 border-indigo-200/70',
         avatarBgDark:  'dark:bg-indigo-950/30 dark:border-indigo-900/40',
         avatarIcon:    'text-indigo-500',
         avatarIconDark:'dark:text-indigo-400',
       },
-      master_actual_vendor: {
-        topBar:        'bg-blue-500',
-        iconBg:        'bg-blue-600',
-        iconBgDark:    'dark:bg-blue-700',
-        iconColor:     'text-blue-50',
-        iconColorDark: 'dark:text-blue-100',
-        badgeBg:       'bg-blue-50 border-blue-100 dark:bg-blue-950/40 dark:border-blue-900/40',
-        badgeText:     'text-blue-600 dark:text-blue-400',
-        theadBg:       'bg-blue-50/40 dark:bg-blue-950/20',
+      master_hsn: {
+        topBar:        'bg-[#2563eb]',
+        iconBg:        'bg-[#2563eb]',
+        iconBgDark:    'dark:bg-[#1d4ed8]',
+        iconColor:     'text-white',
+        iconColorDark: 'dark:text-white',
+        badgeBg:       'bg-blue-50 border-blue-200 dark:bg-blue-950/40 dark:border-blue-900/40',
+        badgeText:     'text-[#2563eb] dark:text-blue-400',
+        theadBg:       'bg-blue-50/60 dark:bg-blue-950/20',
         theadBgDark:   '',
-        avatarBg:      'bg-blue-50 border-blue-100/70',
+        avatarBg:      'bg-blue-50 border-blue-200/70',
         avatarBgDark:  'dark:bg-blue-950/30 dark:border-blue-900/40',
-        avatarIcon:    'text-blue-500',
+        avatarIcon:    'text-[#2563eb]',
         avatarIconDark:'dark:text-blue-400',
       },
-      master_transport: {
-        topBar:        'bg-teal-500',
-        iconBg:        'bg-teal-600',
-        iconBgDark:    'dark:bg-teal-700',
-        iconColor:     'text-teal-50',
-        iconColorDark: 'dark:text-teal-100',
-        badgeBg:       'bg-teal-50 border-teal-100 dark:bg-teal-950/40 dark:border-teal-900/40',
-        badgeText:     'text-teal-600 dark:text-teal-400',
-        theadBg:       'bg-teal-50/40 dark:bg-teal-950/20',
-        theadBgDark:   '',
-        avatarBg:      'bg-teal-50 border-teal-100/70',
-        avatarBgDark:  'dark:bg-teal-950/30 dark:border-teal-900/40',
-        avatarIcon:    'text-teal-500',
-        avatarIconDark:'dark:text-teal-400',
-      },
-      master_hsn: {
-        topBar:        'bg-amber-400',
-        iconBg:        'bg-amber-500',
-        iconBgDark:    'dark:bg-amber-600',
-        iconColor:     'text-amber-50',
-        iconColorDark: 'dark:text-amber-100',
-        badgeBg:       'bg-amber-50 border-amber-100 dark:bg-amber-950/40 dark:border-amber-900/40',
-        badgeText:     'text-amber-600 dark:text-amber-400',
-        theadBg:       'bg-amber-50/40 dark:bg-amber-950/20',
-        theadBgDark:   '',
-        avatarBg:      'bg-amber-50 border-amber-100/70',
-        avatarBgDark:  'dark:bg-amber-950/30 dark:border-amber-900/40',
-        avatarIcon:    'text-amber-500',
-        avatarIconDark:'dark:text-amber-400',
-      },
       catalog_material: {
-        topBar:        'bg-rose-400',
-        iconBg:        'bg-rose-500',
-        iconBgDark:    'dark:bg-rose-600',
-        iconColor:     'text-rose-50',
-        iconColorDark: 'dark:text-rose-100',
-        badgeBg:       'bg-rose-50 border-rose-100 dark:bg-rose-950/40 dark:border-rose-900/40',
-        badgeText:     'text-rose-600 dark:text-rose-400',
-        theadBg:       'bg-rose-50/40 dark:bg-rose-950/20',
+        topBar:        'bg-cyan-500',
+        iconBg:        'bg-cyan-600',
+        iconBgDark:    'dark:bg-cyan-700',
+        iconColor:     'text-white',
+        iconColorDark: 'dark:text-white',
+        badgeBg:       'bg-cyan-50 border-cyan-200 dark:bg-cyan-950/40 dark:border-cyan-900/40',
+        badgeText:     'text-cyan-600 dark:text-cyan-400',
+        theadBg:       'bg-cyan-50/60 dark:bg-cyan-950/20',
         theadBgDark:   '',
-        avatarBg:      'bg-rose-50 border-rose-100/70',
-        avatarBgDark:  'dark:bg-rose-950/30 dark:border-rose-900/40',
-        avatarIcon:    'text-rose-500',
-        avatarIconDark:'dark:text-rose-400',
+        avatarBg:      'bg-cyan-50 border-cyan-200/70',
+        avatarBgDark:  'dark:bg-cyan-950/30 dark:border-cyan-900/40',
+        avatarIcon:    'text-cyan-600',
+        avatarIconDark:'dark:text-cyan-400',
       },
       catalog_category: {
-        topBar:        'bg-violet-400',
-        iconBg:        'bg-violet-500',
+        topBar:        'bg-violet-500',
+        iconBg:        'bg-violet-600',
         iconBgDark:    'dark:bg-violet-700',
-        iconColor:     'text-violet-50',
-        iconColorDark: 'dark:text-violet-100',
-        badgeBg:       'bg-violet-50 border-violet-100 dark:bg-violet-950/40 dark:border-violet-900/40',
+        iconColor:     'text-white',
+        iconColorDark: 'dark:text-white',
+        badgeBg:       'bg-violet-50 border-violet-200 dark:bg-violet-950/40 dark:border-violet-900/40',
         badgeText:     'text-violet-600 dark:text-violet-400',
-        theadBg:       'bg-violet-50/40 dark:bg-violet-950/20',
+        theadBg:       'bg-violet-50/60 dark:bg-violet-950/20',
         theadBgDark:   '',
-        avatarBg:      'bg-violet-50 border-violet-100/70',
+        avatarBg:      'bg-violet-50 border-violet-200/70',
         avatarBgDark:  'dark:bg-violet-950/30 dark:border-violet-900/40',
         avatarIcon:    'text-violet-500',
         avatarIconDark:'dark:text-violet-400',
@@ -1435,8 +1435,8 @@ export default function Dashboard({
     return (
       <div className="space-y-5 text-sans animate-in fade-in duration-205">
 
-        {/* ── Header Banner ── */}
-        <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 6px rgba(110,96,80,0.07)' }}>
+        {/* â”€â”€ Header Banner â”€â”€ */}
+        <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 8px rgba(2,132,199,0.06)' }}>
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-4 sm:p-5 md:p-6">
             {/* Left: Icon + title + description */}
             <div className="flex items-start gap-4">
@@ -1445,10 +1445,10 @@ export default function Dashboard({
               </div>
               <div>
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <h2 className="text-lg md:text-xl font-black text-[#3D2C1E] dark:text-white uppercase tracking-tight leading-none">
+                  <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white uppercase tracking-tight leading-none" style={{ fontFamily: "'Fraunces', serif" }}>
                     {title}
                   </h2>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${accent ? `${accent.badgeBg} ${accent.badgeText}` : 'bg-[#F0E8DC] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 border-[#e2e8f0]/70 dark:border-zinc-700'}`}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${accent ? `${accent.badgeBg} ${accent.badgeText}` : 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border-[#bae6fd]/70 dark:border-[#223269]'}`}>
                     {list.length} {list.length === 1 ? 'Record' : 'Records'}
                   </span>
                 </div>
@@ -1512,9 +1512,9 @@ export default function Dashboard({
                         catalog_material: 'Material Catalog',
                         catalog_category: 'Product Category'
                       };
-                      emitNotification('Template Downloaded', `${tabLabelDl[activeTab] || 'Registry'} CSV template saved — "${filename}".`, 'success');
+                      emitNotification('Template Downloaded', `${tabLabelDl[activeTab] || 'Registry'} CSV template saved â€” "${filename}".`, 'success');
                     }}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-[#F0E8DC] hover:bg-[#E8DDD0] dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[#0f172a] dark:text-zinc-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer border border-[#e2e8f0]/70 dark:border-zinc-700 hover:-translate-y-px active:scale-[0.98]"
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer border border-[#bae6fd] dark:border-[#223269] hover:-translate-y-px active:scale-[0.98]"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download Template</span>
@@ -1568,7 +1568,7 @@ export default function Dashboard({
                       };
                       input.click();
                     }}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-[#F0E8DC] hover:bg-[#E8DDD0] dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[#0f172a] dark:text-zinc-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer border border-[#e2e8f0]/70 dark:border-zinc-700 hover:-translate-y-px active:scale-[0.98]"
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer border border-[#bae6fd] dark:border-[#223269] hover:-translate-y-px active:scale-[0.98]"
                   >
                     <Upload className="w-3.5 h-3.5" />
                     <span>Bulk Upload</span>
@@ -1576,14 +1576,13 @@ export default function Dashboard({
                 </>
               )}
 
-              {/* Add Registry Record — always visible */}
+              {/* Add Registry Record â€” always visible */}
               <button
                 onClick={() => {
                   setEditingMasterItem({ id: 'm_item_' + Date.now() });
                   setIsMasterModalOpen(true);
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 bg-[#3D2C1E] hover:bg-[#5C5043] dark:bg-[#0f172a] dark:hover:bg-[#5C5043] text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer hover:-translate-y-px active:scale-[0.98]"
-                style={{ boxShadow: '0 3px 10px rgba(61,44,30,0.30)' }}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#0284c7] dark:bg-[#38bdf8] border border-[#0369a1] dark:border-[#0284c7] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer hover:-translate-y-px active:scale-[0.98]"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Registry Record</span>
@@ -1592,7 +1591,7 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* ── Search Bar ── */}
+        {/* â”€â”€ Search Bar â”€â”€ */}
         <div className="relative">
           <Search className="w-4 h-4 text-[#64748b]/60 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
@@ -1600,17 +1599,17 @@ export default function Dashboard({
             placeholder={`Search through ${list.length} ${list.length === 1 ? 'directory' : 'directories'} live...`}
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setClientPage(0); }}
-            className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/90 dark:border-zinc-800 rounded-2xl text-sm text-[#0f172a] dark:text-zinc-200 placeholder-[#64748b]/45 focus:outline-none focus:border-[#64748b] dark:focus:border-zinc-600 transition-all"
-            style={{ boxShadow: '0 1px 4px rgba(110,96,80,0.06), inset 0 1px 3px rgba(110,96,80,0.04)' }}
+            className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269] rounded-2xl text-sm text-[#0f172a] dark:text-zinc-200 placeholder-[#64748b]/45 focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all"
+            style={{ boxShadow: '0 1px 4px rgba(2,132,199,0.06), inset 0 1px 3px rgba(2,132,199,0.04)' }}
           />
         </div>
 
-        {/* ── Table Card ── */}
-        <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 6px rgba(110,96,80,0.07)' }}>
+        {/* â”€â”€ Table Card â”€â”€ */}
+        <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-hidden shadow-xs">
           {filteredList.length === 0 ? (
             <div className="py-16 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-[#F0E8DC] dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
-                <Database className="w-5 h-5 text-[#C6A87D] animate-pulse" />
+              <div className="w-12 h-12 rounded-2xl bg-[#e0f2fe] dark:bg-[#1b264f] flex items-center justify-center mx-auto mb-3">
+                <Database className="w-5 h-5 text-[#0284c7] dark:text-[#38bdf8] animate-pulse" />
               </div>
               <p className="text-xs font-semibold text-[#64748b]/85 dark:text-zinc-500">No synchronized registry records matching search query</p>
             </div>
@@ -1621,7 +1620,7 @@ export default function Dashboard({
                 <table className="w-full text-left border-collapse">
                   {/* Table Head */}
                   <thead>
-                    <tr className={`border-b border-[#e2e8f0]/70 dark:border-zinc-800 ${accent ? `${accent.theadBg}` : 'bg-[#FDFAF7] dark:bg-zinc-950/60'}`}>
+                    <tr className={`border-b border-[#bae6fd]/30 dark:border-[#223269]/30 ${accent ? `${accent.theadBg}` : 'bg-[#f4f9ff] dark:bg-[#0b1329]'}`}>
                       {columns.map((col, idx) => (
                         <th key={idx} className="px-4 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#64748b]/75 dark:text-zinc-500 whitespace-nowrap">
                           {col.header}
@@ -1634,11 +1633,11 @@ export default function Dashboard({
                   </thead>
 
                   {/* Table Body */}
-                  <tbody className="divide-y divide-[#e2e8f0]/50 dark:divide-zinc-800/60">
+                  <tbody className="divide-y divide-[#bae6fd]/20 dark:divide-[#223269]/20">
                     {pagedList.map((item, rowIdx) => (
                       <tr
                         key={item.id}
-                        className="group hover:bg-[#FDFAF5]/80 dark:hover:bg-zinc-800/40 transition-colors duration-100"
+                        className="group hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 transition-colors duration-100"
                       >
                         {columns.map((col, idx2) => {
                           const cellVal = item[col.key];
@@ -1648,15 +1647,15 @@ export default function Dashboard({
                             <td key={idx2} className="px-4 py-3.5">
                               {isFirstCol ? (
                                 <div className="flex items-center gap-3">
-                                  {/* Avatar — per-tab accent color */}
-                                  <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#F0E8DC] border-[#e2e8f0]/60 dark:bg-zinc-800 dark:border-zinc-700'}`}>
+                                  {/* Avatar â€” per-tab accent color */}
+                                  <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f] dark:border-[#223269]'}`}>
                                     {(activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') && <User className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                                     {activeTab === 'master_transport' && <Truck className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                                     {activeTab === 'master_hsn' && <FileSpreadsheet className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                                     {activeTab === 'catalog_material' && <Wrench className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                                     {activeTab === 'catalog_category' && <Tag className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                                   </div>
-                                  <span className="text-xs font-extrabold uppercase tracking-tight text-[#3D2C1E] dark:text-white">
+                                  <span className="text-xs font-extrabold uppercase tracking-tight text-[#0f172a] dark:text-white">
                                     {String(cellVal || '')}
                                   </span>
                                 </div>
@@ -1670,15 +1669,15 @@ export default function Dashboard({
                                 </span>
                               ) : col.key === 'email' ? (
                                 <span className="text-[11px] text-sky-600 dark:text-sky-400 font-medium font-mono lowercase">
-                                  {cellVal || '—'}
+                                  {cellVal || 'â€”'}
                                 </span>
                               ) : col.key === 'phone' ? (
                                 <span className="text-[11px] text-[#64748b]/90 dark:text-zinc-400 font-mono">
-                                  {cellVal || '—'}
+                                  {cellVal || 'â€”'}
                                 </span>
                               ) : (
                                 <span className="text-[11px] text-[#0f172a] dark:text-zinc-300 font-medium">
-                                  {String(cellVal || '—')}
+                                  {String(cellVal || 'â€”')}
                                 </span>
                               )}
                             </td>
@@ -1690,7 +1689,7 @@ export default function Dashboard({
                           <div className="flex justify-end items-center gap-0.5">
                             <button
                               onClick={() => { setEditingMasterItem(item); setIsMasterModalOpen(true); }}
-                              className="p-2 text-[#64748b]/70 hover:text-[#0f172a] dark:text-zinc-500 dark:hover:text-zinc-200 hover:bg-[#F0E8DC] dark:hover:bg-zinc-800 rounded-lg transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                              className="p-2 text-[#64748b]/70 hover:text-[#0284c7] dark:text-zinc-500 dark:hover:text-[#38bdf8] hover:bg-[#e0f2fe]/50 dark:hover:bg-zinc-800 rounded-lg transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                               aria-label="Edit record"
                             >
                               <PenTool className="w-3.5 h-3.5" />
@@ -1711,13 +1710,13 @@ export default function Dashboard({
               </div>
 
               {/* Mobile Card View */}
-              <div className="md:hidden flex flex-col divide-y divide-[#e2e8f0]/50 dark:divide-zinc-800/60">
+              <div className="md:hidden flex flex-col divide-y divide-[#bae6fd]/20 dark:divide-zinc-800/60">
                 {pagedList.map((item, rowIdx) => (
                   <div key={item.id} className="p-4 flex flex-col gap-3">
                     <div className="flex justify-between items-start gap-2">
                       <div className="flex items-start gap-3">
                         {/* Avatar */}
-                        <div className={`w-9 h-9 mt-0.5 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#F0E8DC] border-[#e2e8f0]/60 dark:bg-zinc-800 dark:border-zinc-700'}`}>
+                        <div className={`w-9 h-9 mt-0.5 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f] dark:border-[#223269]'}`}>
                           {(activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') && <User className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                           {activeTab === 'master_transport' && <Truck className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                           {activeTab === 'master_hsn' && <FileSpreadsheet className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
@@ -1725,7 +1724,7 @@ export default function Dashboard({
                           {activeTab === 'catalog_category' && <Tag className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <span className="text-sm font-black uppercase tracking-tight text-[#3D2C1E] dark:text-white block truncate">
+                          <span className="text-sm font-black uppercase tracking-tight text-[#0f172a] dark:text-white block truncate">
                             {String(item[columns[0].key] || '')}
                           </span>
                           <span className="text-[10px] text-[#64748b]/70 font-bold uppercase tracking-wider block mt-0.5">
@@ -1738,7 +1737,7 @@ export default function Dashboard({
                       <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => { setEditingMasterItem(item); setIsMasterModalOpen(true); }}
-                          className="p-2 text-[#64748b]/70 hover:text-[#0f172a] dark:text-zinc-500 dark:hover:text-zinc-200 bg-[#F0E8DC]/50 hover:bg-[#F0E8DC] dark:bg-zinc-800/50 dark:hover:bg-zinc-800 rounded-lg transition-all"
+                          className="p-2 text-[#64748b]/70 hover:text-[#0284c7] dark:text-zinc-500 dark:hover:text-[#38bdf8] bg-[#e0f2fe]/40 hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] rounded-lg transition-all"
                         >
                           <PenTool className="w-3.5 h-3.5" />
                         </button>
@@ -1753,7 +1752,7 @@ export default function Dashboard({
 
                     {/* Remaining Columns */}
                     {columns.length > 1 && (
-                      <div className="grid grid-cols-1 gap-2.5 mt-2 bg-[#FCFAF7] dark:bg-zinc-950/40 border border-[#e2e8f0]/40 dark:border-zinc-800 p-3 rounded-xl">
+                      <div className="grid grid-cols-1 gap-2.5 mt-2 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border border-[#bae6fd]/40 dark:border-[#223269]/40 p-3 rounded-xl">
                         {columns.slice(1).map((col, idx2) => {
                           const cellVal = item[col.key];
                           return (
@@ -1770,14 +1769,14 @@ export default function Dashboard({
                                   </span>
                                 ) : col.key === 'email' ? (
                                   <span className="text-sky-600 dark:text-sky-400 font-medium font-mono lowercase break-all">
-                                    {cellVal || '—'}
+                                    {cellVal || 'â€”'}
                                   </span>
                                 ) : col.key === 'phone' ? (
                                   <span className="text-[#64748b]/90 dark:text-zinc-400 font-mono">
-                                    {cellVal || '—'}
+                                    {cellVal || 'â€”'}
                                   </span>
                                 ) : (
-                                  <span>{String(cellVal || '—')}</span>
+                                  <span>{String(cellVal || 'â€”')}</span>
                                 )}
                               </span>
                             </div>
@@ -1790,26 +1789,26 @@ export default function Dashboard({
               </div>
 
               {/* Pagination Strip */}
-              <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-[#e2e8f0]/40 dark:border-zinc-800 bg-[#FDFAF7]/60 dark:bg-zinc-950/30">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 bg-[#f4f9ff] dark:bg-[#0b1329]/40">
                 <span className="text-[10px] text-[#64748b]/75 dark:text-zinc-500 font-medium">
-                  Showing {Math.min(safePage * CLIENT_PAGE_SIZE + 1, filteredList.length)}–{Math.min((safePage + 1) * CLIENT_PAGE_SIZE, filteredList.length)} of {filteredList.length} {activeTab === 'master_vendor' ? 'client' : activeTab === 'master_actual_vendor' ? 'vendor' : activeTab === 'master_transport' ? 'transport' : 'registry'} records
+                  Showing {Math.min(safePage * CLIENT_PAGE_SIZE + 1, filteredList.length)}â€“{Math.min((safePage + 1) * CLIENT_PAGE_SIZE, filteredList.length)} of {filteredList.length} {activeTab === 'master_vendor' ? 'client' : activeTab === 'master_actual_vendor' ? 'vendor' : activeTab === 'master_transport' ? 'transport' : 'registry'} records
                 </span>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => setClientPage(p => Math.max(0, p - 1))}
                     disabled={safePage === 0}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:bg-[#F0E8DC] dark:hover:bg-zinc-800 disabled:opacity-35 disabled:cursor-not-allowed transition-all cursor-pointer text-xs"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#0284c7] dark:text-[#38bdf8] hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] disabled:opacity-35 disabled:cursor-not-allowed transition-all cursor-pointer text-xs"
                     aria-label="Previous page"
                   >
-                    ‹
+                    â€¹
                   </button>
                   <button
                     onClick={() => setClientPage(p => Math.min(totalPages - 1, p + 1))}
                     disabled={safePage >= totalPages - 1}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:bg-[#F0E8DC] dark:hover:bg-zinc-800 disabled:opacity-35 disabled:cursor-not-allowed transition-all cursor-pointer text-xs"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#0284c7] dark:text-[#38bdf8] hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] disabled:opacity-35 disabled:cursor-not-allowed transition-all cursor-pointer text-xs"
                     aria-label="Next page"
                   >
-                    ›
+                    â€º
                   </button>
                 </div>
               </div>
@@ -1818,15 +1817,15 @@ export default function Dashboard({
         </div>
 
 
-        {/* ── Master Registry Form Modal ── */}
+        {/* â”€â”€ Master Registry Form Modal â”€â”€ */}
         {isMasterModalOpen && editingMasterItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/45 backdrop-blur-3xs">
-            <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-3xl flex flex-col max-h-[90vh] shadow-2xl animate-in zoom-in-95 duration-150">
-              <div className="flex justify-between items-center p-4 sm:p-5 pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
-                <h3 className="text-xs font-extrabold text-slate-800 dark:text-white uppercase tracking-tight">Record Editor</h3>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
+            <div className="w-full max-w-sm bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-3xl flex flex-col max-h-[90vh] shadow-2xl animate-in zoom-in-95 duration-150">
+              <div className="flex justify-between items-center p-4 sm:p-5 pb-3 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 shrink-0 bg-[#f4f9ff] dark:bg-[#0b1329]/50">
+                <h3 className="text-xs font-extrabold text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Record Editor</h3>
                 <button
                   onClick={() => { setIsMasterModalOpen(false); setEditingMasterItem(null); }}
-                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 rounded-full transition-colors cursor-pointer"
+                  className="p-1.5 hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#64748b] hover:text-[#0284c7] dark:hover:text-[#38bdf8] rounded-full transition-colors cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -1839,12 +1838,12 @@ export default function Dashboard({
                 >
                   {fields.map((f, idx3) => (
                     <div key={idx3}>
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">{f.label}</label>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#64748b] dark:text-zinc-400 mb-1.5">{f.label}</label>
                       {f.type === 'select' ? (
                         <select
                           value={editingMasterItem[f.key] || ''}
                           onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: e.target.value })}
-                          className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none"
+                          className="w-full px-3.5 py-2 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
                           required
                         >
                           <option value="">Select type</option>
@@ -1857,7 +1856,7 @@ export default function Dashboard({
                           type={f.type}
                           value={editingMasterItem[f.key] || ''}
                           onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: f.type === 'number' ? parseFloat(e.target.value) : e.target.value })}
-                          className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none"
+                          className="w-full px-3.5 py-2 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
                           required
                         />
                       )}
@@ -1867,13 +1866,13 @@ export default function Dashboard({
                     <button
                       type="button"
                       onClick={() => { setIsMasterModalOpen(false); setEditingMasterItem(null); }}
-                      className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-500 rounded-lg text-[9px] font-bold cursor-pointer transition-colors"
+                      className="px-3 py-1.5 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] rounded-lg text-[9px] font-bold cursor-pointer transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-1.5 bg-[#0f172a] hover:bg-[#5C5043] text-white rounded-lg text-[9px] font-bold cursor-pointer transition-all shadow-md shadow-[#0f172a]/20"
+                      className="px-4 py-1.5 bg-[#0284c7] dark:bg-[#38bdf8] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] rounded-lg text-[9px] font-bold cursor-pointer transition-all shadow-md shadow-[#0284c7]/20"
                     >
                       Commit Record
                     </button>
@@ -2398,7 +2397,7 @@ export default function Dashboard({
     if (activeTab === 'purchases') {
       return invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === purchaseLedgerSection);
     }
-    // Exclude drafts from ledger listings — drafts belong exclusively to the Drafts page
+    // Exclude drafts from ledger listings â€” drafts belong exclusively to the Drafts page
     return invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === ledgerSection);
   }, [invoices, ledgerSection, purchaseLedgerSection, activeTab]);
 
@@ -2632,13 +2631,13 @@ export default function Dashboard({
   function getCurrencySymbol(code: string): string {
     switch (code) {
       case 'USD': return '$';
-      case 'EUR': return '€';
-      case 'GBP': return '£';
-      case 'JPY': return '¥';
-      case 'INR': return '₹';
+      case 'EUR': return 'â‚¬';
+      case 'GBP': return 'Â£';
+      case 'JPY': return 'Â¥';
+      case 'INR': return 'â‚¹';
       case 'AUD': return 'A$';
       case 'CAD': return 'C$';
-      default: return '₹'; // Default INR
+      default: return 'â‚¹'; // Default INR
     }
   }
 
@@ -2823,7 +2822,7 @@ export default function Dashboard({
     // Export PDF then open WhatsApp with a download note
     await exportInvoicePDFAsync(inv, profile);
     setTimeout(() => {
-      const sym = profile.currency === 'INR' ? '₹' : (profile.currency === 'USD' ? '$' : profile.currency + ' ');
+      const sym = profile.currency === 'INR' ? 'â‚¹' : (profile.currency === 'USD' ? '$' : profile.currency + ' ');
       const message = `Hi ${inv.clientName || 'Client'}, please find your Invoice ${inv.invoiceNumber} from ${profile.name || 'us'} for ${sym}${inv.grandTotal.toFixed(2)} (Due: ${inv.dueDate}). The PDF has been downloaded to your device. Thank you!`;
       const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');
@@ -2834,7 +2833,7 @@ export default function Dashboard({
     // Export PDF then open email client
     await exportInvoicePDFAsync(inv, profile);
     setTimeout(() => {
-      const sym = profile.currency === 'INR' ? '₹' : (profile.currency === 'USD' ? '$' : profile.currency + ' ');
+      const sym = profile.currency === 'INR' ? 'â‚¹' : (profile.currency === 'USD' ? '$' : profile.currency + ' ');
       const subject = `Invoice ${inv.invoiceNumber} from ${profile.name}`;
       const body = `Hi ${inv.clientName},\n\nPlease find attached Invoice ${inv.invoiceNumber} for ${sym}${inv.grandTotal.toFixed(2)}.\n\nInvoice Summary:\n- Invoice No: ${inv.invoiceNumber}\n- Amount Due: ${sym}${inv.grandTotal.toFixed(2)}\n- Issue Date: ${inv.date}\n- Due Date: ${inv.dueDate}\n\nThe PDF invoice has been downloaded. Please attach it to your reply or payment confirmation.\n\nThank you for your business.\n\nWarm regards,\n${profile.name}${profile.phone ? '\nTel: ' + profile.phone : ''}${profile.email ? '\nEmail: ' + profile.email : ''}`;
       const mailto = `mailto:${inv.clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -3007,37 +3006,37 @@ export default function Dashboard({
   const totalReportedExpenses = reportedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
   return (
-    <div className="h-dvh w-full max-w-full overflow-hidden bg-[#FCFAF7] dark:bg-zinc-950 text-slate-800 dark:text-slate-100 transition-colors duration-200 text-sans">
+    <div className="h-dvh w-full max-w-full overflow-hidden bg-[#f4f9ff] dark:bg-[#0b1329] text-slate-800 dark:text-slate-100 transition-colors duration-200" style={{fontFamily: "'IBM Plex Sans', sans-serif"}}>
       
       {/* Dynamic Main App Bar Header */}
-      <header className="sticky top-0 z-30 w-full bg-white dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-xs transition-all duration-200">
+      <header className="sticky top-0 z-30 w-full bg-[#f4f9ff]/95 dark:bg-[#0b1329]/95 backdrop-blur-sm border-b border-[#bae6fd]/70 dark:border-[#223269] px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-[0_1px_12px_rgba(2,132,199,0.06)] transition-all duration-200">
         {/* Left Side: Logo + Mobile Menu Trigger + Breadcrumb */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => window.location.href = '/'}>
             <img src="/logo.svg" alt="MakInvoices Logo" className="w-10 h-10 object-contain drop-shadow-sm shrink-0" />
             <div className="hidden lg:block">
-              <span className="text-xl font-black tracking-tight text-slate-800 dark:text-white block leading-none">
-                Mak<span className="text-sky-400">Invoices</span>
+              <span className="text-xl font-black tracking-tight text-[#0f172a] dark:text-white block leading-none" style={{fontFamily: "'IBM Plex Sans', sans-serif"}}>
+                Mak<span className="text-[#0ea5e9]">Invoices</span>
               </span>
             </div>
           </div>
-          <div className="w-px h-6 bg-slate-200 dark:bg-zinc-800 hidden sm:block"></div>
+          <div className="w-px h-6 bg-[#bae6fd] dark:bg-[#223269] hidden sm:block"></div>
           <button
             onClick={() => setIsMobileDrawerOpen(true)}
             aria-label="Toggle structural sidebar menu drawer"
-            className="md:hidden p-2 -ml-2 text-slate-500 hover:text-slate-800 dark:text-white/70 dark:hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-slate-100 dark:hover:bg-white/10"
+            className="md:hidden p-2 -ml-2 text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0369a1] dark:hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f]"
           >
             <Menu className="w-5 h-5" />
           </button>
 
           <div className="hidden sm:flex items-center gap-3.5">
-            <div className="w-[32px] h-[32px] rounded-full bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold text-[13px] shadow-sm">
+            <div className="w-[32px] h-[32px] rounded-full bg-[#e0f2fe] dark:bg-[#1b264f] border border-[#bae6fd] dark:border-[#223269] text-[#0284c7] dark:text-[#38bdf8] flex items-center justify-center font-bold text-[13px] shadow-sm">
               {profile.name ? profile.name.charAt(0).toUpperCase() : 'M'}
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-[16px] font-bold text-slate-800 dark:text-white tracking-wide">{profile.name || 'MAKINVOICE'}</span>
-              <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-zinc-700"></div>
-              <span className="text-[14px] text-slate-500 dark:text-zinc-400 font-medium tracking-wide">{getNavbarBreadcrumbs(activeTab)}</span>
+              <span className="text-[15px] font-bold text-[#0f172a] dark:text-white tracking-wide" style={{fontFamily: "'IBM Plex Mono', monospace"}}>{profile.name || 'MAKINVOICE'}</span>
+              <div className="w-1 h-1 rounded-full bg-[#bae6fd] dark:bg-[#223269]"></div>
+              <span className="text-[13px] text-[#0284c7] dark:text-[#38bdf8] font-medium tracking-wide" style={{fontFamily: "'IBM Plex Mono', monospace"}}>{getNavbarBreadcrumbs(activeTab)}</span>
             </div>
           </div>
         </div>
@@ -3052,7 +3051,7 @@ export default function Dashboard({
           <div className="relative" id="notifications-dropdown-container">
             <button 
               onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-              className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 hover:text-slate-800 dark:text-white/70 dark:hover:text-white transition-colors cursor-pointer border border-transparent dark:hover:border-white/10"
+              className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#475569] dark:text-[#94a3b8] hover:text-[#0284c7] dark:hover:text-[#38bdf8] transition-colors cursor-pointer border border-transparent dark:hover:border-[#223269]"
             >
               <Bell className="w-[18px] h-[18px]" />
               {notifications.some(n => !n.read) && (
@@ -3061,13 +3060,13 @@ export default function Dashboard({
             </button>
             
             {isNotificationsOpen && (
-              <div className="absolute right-[-60px] sm:right-0 mt-3 w-[320px] sm:w-[390px] rounded-2xl bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 shadow-[0_8px_30px_rgba(136,118,92,0.12)] py-2 z-50 text-sans animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="px-4 py-2.5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
-                  <span className="font-bold text-[13px] text-slate-800 dark:text-white">Notifications</span>
+              <div className="absolute right-[-60px] sm:right-0 mt-3 w-[320px] sm:w-[390px] rounded-2xl bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269] shadow-[0_8px_30px_rgba(2,132,199,0.1)] py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="px-4 py-2.5 border-b border-[#bae6fd]/50 dark:border-[#223269] flex items-center justify-between">
+                  <span className="font-bold text-[13px] text-[#0f172a] dark:text-white" style={{fontFamily: "'IBM Plex Mono', monospace"}}>Notifications</span>
                   <div className="flex gap-2.5 items-center">
                     <button 
                       onClick={() => setNotifications(prev => prev.map(n => ({...n, read: true})))}
-                      className="text-[11px] font-bold text-sky-600 hover:text-sky-700 dark:text-sky-400 cursor-pointer transition-colors"
+                      className="text-[11px] font-bold text-[#0284c7] hover:text-[#0369a1] dark:text-[#38bdf8] cursor-pointer transition-colors"
                     >
                       Mark all read
                     </button>
@@ -3082,24 +3081,20 @@ export default function Dashboard({
                 </div>
 
                 {/* Bifurcated Section Category Tabs */}
-                <div className="px-3 py-2 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-950/60 flex items-center gap-1.5 overflow-x-auto text-[11px] font-bold select-none scrollbar-none">
+                <div className="px-3 py-2 border-b border-[#bae6fd]/50 dark:border-[#223269] bg-white dark:bg-[#111a36] flex items-center gap-1.5 overflow-x-auto text-[11px] font-bold select-none scrollbar-none">
                   <button
                     type="button"
                     onClick={() => setNotifCategoryTab('all')}
-                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap font-black ${notifCategoryTab === 'all'
-                      ? 'bg-sky-600 text-white shadow-xs'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap font-black ${notifCategoryTab === 'all' ? 'bg-[#0284c7] text-white shadow-xs' : 'bg-[#f4f9ff] text-[#0284c7] hover:bg-[#e0f2fe]/60 dark:bg-[#1b264f] dark:text-[#38bdf8] dark:hover:bg-[#1b264f]/80'}`}
                   >
-                    <span className={notifCategoryTab === 'all' ? 'text-white font-extrabold' : 'text-slate-700 dark:text-zinc-300 font-bold'}>
+                    <span className={notifCategoryTab === 'all' ? 'text-white font-extrabold' : 'text-[#0284c7] dark:text-[#38bdf8] font-bold'}>
                       All ({notifications.length})
                     </span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setNotifCategoryTab('billing')}
-                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap font-black ${notifCategoryTab === 'billing'
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40'}`}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap font-black ${notifCategoryTab === 'billing' ? 'bg-[#0284c7] text-white shadow-xs' : 'text-[#0284c7] dark:text-[#38bdf8] hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f]/40'}`}
                   >
                     <span className={notifCategoryTab === 'billing' ? 'text-white font-extrabold' : ''}>
                       Billing ({notifications.filter(n => getNotifCategory(n) === 'billing').length})
@@ -3108,9 +3103,7 @@ export default function Dashboard({
                   <button
                     type="button"
                     onClick={() => setNotifCategoryTab('system')}
-                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap font-black ${notifCategoryTab === 'system'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'}`}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap font-black ${notifCategoryTab === 'system' ? 'bg-[#0284c7] text-white shadow-xs' : 'text-[#0284c7] dark:text-[#38bdf8] hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f]/40'}`}
                   >
                     <span className={notifCategoryTab === 'system' ? 'text-white font-extrabold' : ''}>
                       System ({notifications.filter(n => getNotifCategory(n) === 'system').length})
@@ -3119,9 +3112,7 @@ export default function Dashboard({
                   <button
                     type="button"
                     onClick={() => setNotifCategoryTab('alerts')}
-                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap font-black ${notifCategoryTab === 'alerts'
-                      ? 'bg-rose-600 text-white shadow-xs'
-                      : 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'}`}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap font-black ${notifCategoryTab === 'alerts' ? 'bg-[#0284c7] text-white shadow-xs' : 'text-[#0284c7] dark:text-[#38bdf8] hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f]/40'}`}
                   >
                     <span className={notifCategoryTab === 'alerts' ? 'text-white font-extrabold' : ''}>
                       Alerts ({notifications.filter(n => getNotifCategory(n) === 'alerts').length})
@@ -3138,11 +3129,11 @@ export default function Dashboard({
                     if (displayed.length === 0) {
                       return (
                         <div className="px-4 py-10 text-center flex flex-col items-center justify-center">
-                          <div className="w-12 h-12 bg-slate-50 dark:bg-zinc-800/50 rounded-full flex items-center justify-center mb-3">
-                            <Bell className="w-5 h-5 text-slate-300 dark:text-zinc-600" />
+                          <div className="w-12 h-12 bg-[#e0f2fe] dark:bg-[#1b264f]/50 rounded-full flex items-center justify-center mb-3">
+                            <Bell className="w-5 h-5 text-[#0284c7] dark:text-[#38bdf8]" />
                           </div>
-                          <p className="text-[13px] text-slate-500 dark:text-zinc-400 font-medium">You're all caught up!</p>
-                          <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">No notifications in this section.</p>
+                          <p className="text-[13px] text-[#0f172a] dark:text-zinc-300 font-medium">You're all caught up!</p>
+                          <p className="text-[11px] text-[#64748b] dark:text-zinc-400 mt-1">No notifications in this section.</p>
                         </div>
                       );
                     }
@@ -3152,18 +3143,18 @@ export default function Dashboard({
                       return (
                         <div 
                           key={notif.id} 
-                          className={`px-4 py-3 border-b border-slate-50 dark:border-zinc-800/30 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors flex gap-3 cursor-pointer ${!notif.read ? 'bg-sky-50/40 dark:bg-sky-900/10' : ''}`}
+                          className={`px-4 py-3 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 hover:bg-[#f4f9ff] dark:hover:bg-[#1b264f]/50 transition-colors flex gap-3 cursor-pointer border-l-4 ${!notif.read ? 'border-l-[#0284c7] bg-[#f4f9ff]/30 dark:bg-[#1b264f]/20' : 'border-l-transparent bg-transparent'}`}
                           onClick={() => setNotifications(prev => prev.map(n => n.id === notif.id ? {...n, read: true} : n))}
                         >
                           <div className="mt-0.5 shrink-0">
                             {notif.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
                             {notif.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-500" />}
                             {notif.type === 'error' && <AlertCircle className="w-4 h-4 text-rose-500" />}
-                            {notif.type === 'info' && <Info className="w-4 h-4 text-sky-500" />}
+                            {notif.type === 'info' && <Info className="w-4 h-4 text-[#0284c7]" />}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2 mb-0.5">
-                              <p className={`text-[12.5px] truncate leading-tight ${notif.read ? 'font-semibold text-slate-600 dark:text-zinc-300' : 'font-bold text-slate-800 dark:text-white'}`}>
+                              <p className={`text-[12.5px] truncate leading-tight ${notif.read ? 'font-semibold text-slate-650 dark:text-zinc-300' : 'font-bold text-[#0f172a] dark:text-white'}`}>
                                 {notif.title}
                               </p>
                               {cat === 'billing' && (
@@ -3172,7 +3163,7 @@ export default function Dashboard({
                                 </span>
                               )}
                               {cat === 'system' && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-sky-50 dark:bg-sky-950/70 text-sky-600 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800/60 shrink-0">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-[#e0f2fe] dark:bg-[#1b264f]/70 text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd]/60 dark:border-[#223269]/60 shrink-0">
                                   System
                                 </span>
                               )}
@@ -3185,7 +3176,7 @@ export default function Dashboard({
                             <p className="text-[11.5px] text-slate-500 dark:text-zinc-400 line-clamp-2 leading-snug">
                               {notif.message}
                             </p>
-                            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1 font-medium flex items-center gap-1.5">
+                            <p className="text-[10px] text-[#64748b] dark:text-zinc-400 mt-1 font-medium flex items-center gap-1.5">
                               {new Date(notif.timestamp).toLocaleString(undefined, {
                                 month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
                               })}
@@ -3203,21 +3194,21 @@ export default function Dashboard({
             )}
           </div>
           
-          <div className="w-px h-6 bg-slate-200 dark:bg-zinc-800 hidden sm:block"></div>
+          <div className="w-px h-6 bg-[#bae6fd] dark:bg-[#223269] hidden sm:block"></div>
 
           <div className="relative" id="profile-dropdown-container">
             <button 
               onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-              className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 border border-transparent transition-all cursor-pointer group"
+              className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] border border-transparent hover:border-[#bae6fd] dark:hover:border-[#223269] transition-all cursor-pointer group"
             >
-              <div className="w-[32px] h-[32px] rounded-full bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[12px] font-bold shadow-sm">
+              <div className="w-[32px] h-[32px] rounded-full bg-[#e0f2fe] dark:bg-[#1b264f] border border-[#bae6fd] dark:border-[#223269] text-[#0284c7] dark:text-[#38bdf8] flex items-center justify-center text-[12px] font-bold shadow-sm">
                 {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'MK'}
               </div>
-              <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:text-white/50 dark:group-hover:text-white/90 hidden sm:block transition-colors" />
+              <ChevronDown className="w-4 h-4 text-[#0284c7]/60 group-hover:text-[#0284c7] dark:text-[#38bdf8]/50 dark:group-hover:text-[#38bdf8] hidden sm:block transition-colors" />
             </button>
 
             {isProfileDropdownOpen && (
-              <div className="absolute right-0 mt-3 w-52 rounded-2xl bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 shadow-[0_8px_30px_rgba(136,118,92,0.12)] py-2 z-50 text-sans animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute right-0 mt-3 w-52 rounded-2xl bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269] shadow-[0_8px_30px_rgba(2,132,199,0.1)] py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                 <button 
                   onClick={() => {
                     setActiveTab('profile');
@@ -3269,7 +3260,7 @@ export default function Dashboard({
         </div>
       </header>
 
-      {/* ── TOP-RIGHT DYNAMIC SLIDE-IN TOAST NOTIFICATION CONTAINER ── */}
+      {/* â”€â”€ TOP-RIGHT DYNAMIC SLIDE-IN TOAST NOTIFICATION CONTAINER â”€â”€ */}
       <div id="top-right-toast-container" className="fixed top-16 sm:top-20 right-3 sm:right-6 z-[99] flex flex-col gap-2.5 max-w-sm sm:max-w-md w-[calc(100vw-24px)] pointer-events-none">
         {activeToasts.map((toast) => (
           <div
@@ -3278,8 +3269,8 @@ export default function Dashboard({
               exitingToastIds.has(toast.id) ? 'toast-exit' : 'toast-enter'
             } ${
               theme === 'dark'
-                ? 'bg-zinc-900/95 text-white border-zinc-800/90'
-                : 'bg-white/95 text-[#0f172a] border-[#e2e8f0]/90'
+                ? 'bg-[#111a36]/95 text-white border-[#223269]/80'
+                : 'bg-[#f4f9ff]/95 text-[#0f172a] border-[#bae6fd]/80'
             }`}
           >
             {/* Type Indicator Icon */}
@@ -3290,7 +3281,7 @@ export default function Dashboard({
                 </div>
               )}
               {toast.type === 'info' && (
-                <div className="w-8 h-8 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200/60 dark:border-sky-800/60 flex items-center justify-center text-sky-600 dark:text-sky-400 shadow-xs">
+                <div className="w-8 h-8 rounded-xl bg-[#e0f2fe] dark:bg-[#1b264f]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 flex items-center justify-center text-[#0284c7] dark:text-[#38bdf8] shadow-xs">
                   <Sparkles className="w-4 h-4" />
                 </div>
               )}
@@ -3325,7 +3316,7 @@ export default function Dashboard({
                     if (toast.actionTab) setActiveTab(toast.actionTab);
                     dismissToast(toast.id);
                   }}
-                  className="mt-2 text-[10px] font-extrabold uppercase tracking-wider text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 flex items-center gap-1 cursor-pointer group"
+                  className="mt-2 text-[10px] font-extrabold uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0369a1] dark:hover:text-[#bae6fd] flex items-center gap-1 cursor-pointer group"
                 >
                   <span>{toast.actionLabel}</span>
                   <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
@@ -3365,7 +3356,7 @@ export default function Dashboard({
         
         {/* DESKTOP BRANDING & CONTROL SIDEBAR - Visible only on md screens and larger */}
         <div className="hidden md:block relative shrink-0">
-          <aside className={`flex flex-col bg-white dark:bg-zinc-950 border border-[#e2e8f0]/80 dark:border-zinc-800/80 rounded-[1.75rem] shadow-[0_8px_30px_rgba(136,118,92,0.08)] h-[calc(100vh-110px)] overflow-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
+          <aside className={`flex flex-col bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/70 rounded-[1.75rem] shadow-[0_8px_30px_rgba(2,132,199,0.08)] h-[calc(100vh-110px)] overflow-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
             <div className="w-full h-full">
               {renderNavMenuContent(false)}
             </div>
@@ -3373,7 +3364,7 @@ export default function Dashboard({
           
           <button 
             onClick={() => setIsDesktopSidebarExpanded(!isDesktopSidebarExpanded)} 
-            className="absolute -right-3 top-6 z-20 w-6 h-6 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-slate-400 dark:text-slate-350 hover:text-sky-500 flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all"
+            className="absolute -right-3 top-6 z-20 w-6 h-6 rounded-full bg-white dark:bg-[#111a36] border border-[#bae6fd] dark:border-[#223269] shadow-sm text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0369a1] dark:hover:text-white flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all"
             title={isDesktopSidebarExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
           >
             <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-300 ${isDesktopSidebarExpanded ? 'rotate-180' : 'rotate-0'}`} />
@@ -3392,54 +3383,54 @@ export default function Dashboard({
           <div className="space-y-6">
             <section className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 font-sans select-none">
               {/* Total Amount Card */}
-              <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border-l-4 border-l-blue-500 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between hover:shadow-md transition-all duration-300">
+              <div className="bg-white dark:bg-[#111a36] p-3 sm:p-4 rounded-2xl border-l-4 border-l-blue-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 shadow-xs flex flex-row items-center justify-between hover:shadow-[0_4px_14px_rgba(2,132,199,0.1)] transition-all duration-300">
                 <div>
-                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Total Amount</span>
-                  <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-blue-600 dark:text-blue-450 block">
+                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#0284c7]/70 dark:text-[#38bdf8]/60 block" style={{fontFamily: "'IBM Plex Mono', monospace"}}>Total Amount</span>
+                  <span className="text-sm sm:text-base font-black mt-0.5 sm:mt-1 text-blue-600 dark:text-blue-400 block" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
                     {currencySymbol}{formatNum(activeLedgerStats.total, true)}
                   </span>
                 </div>
                 {/* Micro Sparkline */}
                 <div className="flex items-end gap-0.5 h-5 sm:h-6 shrink-0">
-                  <span className="w-1 bg-blue-100 dark:bg-zinc-800 h-2 rounded-t" />
-                  <span className="w-1 bg-blue-200 dark:bg-zinc-800 h-3 rounded-t" />
-                  <span className="w-1 bg-blue-300 dark:bg-zinc-700 h-4 rounded-t" />
-                  <span className="w-1 bg-blue-400 dark:bg-zinc-650 h-3 rounded-t" />
+                  <span className="w-1 bg-blue-100 dark:bg-[#1b264f] h-2 rounded-t" />
+                  <span className="w-1 bg-blue-200 dark:bg-[#1b264f] h-3 rounded-t" />
+                  <span className="w-1 bg-blue-300 dark:bg-[#223269] h-4 rounded-t" />
+                  <span className="w-1 bg-blue-400 dark:bg-[#223269] h-3 rounded-t" />
                   <span className="w-1 bg-blue-500 h-5 rounded-t" />
                 </div>
               </div>
 
               {/* Paid Amount Card */}
-              <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border-l-4 border-l-emerald-500 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between hover:shadow-md transition-all duration-300">
+              <div className="bg-white dark:bg-[#111a36] p-3 sm:p-4 rounded-2xl border-l-4 border-l-emerald-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 shadow-xs flex flex-row items-center justify-between hover:shadow-[0_4px_14px_rgba(2,132,199,0.1)] transition-all duration-300">
                 <div>
-                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Paid</span>
-                  <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-emerald-600 dark:text-emerald-450 block">
+                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#0284c7]/70 dark:text-[#38bdf8]/60 block" style={{fontFamily: "'IBM Plex Mono', monospace"}}>Paid</span>
+                  <span className="text-sm sm:text-base font-black mt-0.5 sm:mt-1 text-emerald-600 dark:text-emerald-400 block" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
                     {currencySymbol}{formatNum(activeLedgerStats.paid, true)}
                   </span>
                 </div>
                 {/* Micro Sparkline */}
                 <div className="flex items-end gap-0.5 h-5 sm:h-6 shrink-0">
-                  <span className="w-1 bg-emerald-100 dark:bg-zinc-800 h-4 rounded-t" />
-                  <span className="w-1 bg-emerald-200 dark:bg-zinc-800 h-2 rounded-t" />
-                  <span className="w-1 bg-emerald-300 dark:bg-zinc-700 h-3 rounded-t" />
-                  <span className="w-1 bg-emerald-400 dark:bg-zinc-650 h-5 rounded-t" />
+                  <span className="w-1 bg-emerald-100 dark:bg-[#1b264f] h-4 rounded-t" />
+                  <span className="w-1 bg-emerald-200 dark:bg-[#1b264f] h-2 rounded-t" />
+                  <span className="w-1 bg-emerald-300 dark:bg-[#223269] h-3 rounded-t" />
+                  <span className="w-1 bg-emerald-400 dark:bg-[#223269] h-5 rounded-t" />
                   <span className="w-1 bg-emerald-500 h-3 rounded-t" />
                 </div>
               </div>
 
               {/* Pending Amount Card */}
-              <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border-l-4 border-l-amber-500 border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-xs flex flex-row items-center justify-between hover:shadow-md transition-all duration-300">
+              <div className="bg-white dark:bg-[#111a36] p-3 sm:p-4 rounded-2xl border-l-4 border-l-amber-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 shadow-xs flex flex-row items-center justify-between hover:shadow-[0_4px_14px_rgba(2,132,199,0.1)] transition-all duration-300">
                 <div>
-                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Pending</span>
-                  <span className="text-sm sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-amber-600 dark:text-amber-450 block">
+                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#0284c7]/70 dark:text-[#38bdf8]/60 block" style={{fontFamily: "'IBM Plex Mono', monospace"}}>Pending</span>
+                  <span className="text-sm sm:text-base font-black mt-0.5 sm:mt-1 text-amber-600 dark:text-amber-400 block" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
                     {currencySymbol}{formatNum(activeLedgerStats.pending, true)}
                   </span>
                 </div>
                 {/* Micro Sparkline */}
                 <div className="flex items-end gap-0.5 h-5 sm:h-6 shrink-0">
-                  <span className="w-1 bg-amber-100 dark:bg-zinc-800 h-2 rounded-t" />
-                  <span className="w-1 bg-amber-200 dark:bg-zinc-800 h-3 rounded-t" />
-                  <span className="w-1 bg-amber-300 dark:bg-zinc-700 h-3 rounded-t" />
+                  <span className="w-1 bg-amber-100 dark:bg-[#1b264f] h-2 rounded-t" />
+                  <span className="w-1 bg-amber-200 dark:bg-[#1b264f] h-3 rounded-t" />
+                  <span className="w-1 bg-amber-300 dark:bg-[#223269] h-3 rounded-t" />
                   <span className="w-1 bg-amber-450 h-2 rounded-t" />
                   <span className="w-1 bg-amber-500 h-4 rounded-t" />
                 </div>
@@ -3451,12 +3442,13 @@ export default function Dashboard({
             {/* Search, Action Header and Filters */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
               <div className="flex items-center gap-2">
-                <h2 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wider">
+                <h2 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight flex items-center gap-2" style={{fontFamily: "'Fraunces', serif"}}>
+                  <span className="w-3.5 h-px bg-[#0284c7] dark:bg-[#38bdf8] inline-block" />
                   {activeTab === 'purchases'
                     ? (purchaseLedgerSection === 'purchase_order' ? 'Purchase Orders Ledger' : purchaseLedgerSection === 'purchase_debit_note' ? 'Purchase Debit Notes Ledger' : 'Purchases Ledger')
                     : (ledgerSection === 'proforma' ? 'Proforma Invoices Ledger' : ledgerSection === 'credit_note' ? 'Credit Notes Ledger' : ledgerSection === 'debit_note' ? 'Debit Notes Ledger' : ledgerSection === 'quote' ? 'Quotes & Estimates Ledger' : 'Invoices Ledger')}
                 </h2>
-                <span className="px-1.5 py-0.5 bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-zinc-400 rounded text-[9px] font-black">{filteredInvoices.length} Documents</span>
+                <span className="px-1.5 py-0.5 bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] rounded text-[9px] font-black" style={{fontFamily: "'IBM Plex Mono', monospace"}}>{filteredInvoices.length} Docs</span>
               </div>
               <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <button
@@ -3465,14 +3457,14 @@ export default function Dashboard({
                     setDraftsSection('all');
                     setActiveTab('drafts');
                   }}
-                  className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 sm:py-1.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0] dark:border-zinc-700 hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#0f172a] dark:text-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap"
+                  className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 sm:py-1.5 bg-white dark:bg-[#111a36] border border-[#bae6fd] dark:border-[#223269] hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap"
                 >
                   <FileText className="w-3.5 h-3.5" />
                   <span>Drafts</span>
                 </button>
                 <button
                   onClick={() => handleCreateDocumentForSection(activeTab === 'purchases' ? purchaseLedgerSection : ledgerSection)}
-                  className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 sm:py-1.5 bg-gradient-to-r from-[#0f172a] to-[#64748b] hover:from-[#5C5043] hover:to-[#0f172a] text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm shadow-[#64748b]/20 transition-all active:scale-95 whitespace-nowrap"
+                  className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 sm:py-1.5 bg-[#0284c7] dark:bg-[#38bdf8] border border-[#0369a1] dark:border-[#0284c7] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>
@@ -3485,7 +3477,7 @@ export default function Dashboard({
             </div>
 
             {/* Search Input, status selection, and sort by filters */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 sm:gap-3 bg-[#FCFAF7]/60 dark:bg-zinc-950/30 p-2.5 sm:p-3 rounded-2xl border border-[#e2e8f0]/40 dark:border-zinc-800">
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 sm:gap-3 bg-[#e0f2fe]/30 dark:bg-[#1b264f]/20 p-2.5 sm:p-3 rounded-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60">
               <div className="sm:col-span-6 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#64748b]/60" />
                 <input 
@@ -3493,14 +3485,14 @@ export default function Dashboard({
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search by client or invoice number..."
-                  className="w-full pl-8 pr-3 py-1.5 sm:py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 focus:border-[#64748b] dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#64748b]/45 focus:outline-none transition-colors"
+                  className="w-full pl-8 pr-3 py-1.5 sm:py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 focus:border-[#0284c7] dark:border-[#223269] rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#0284c7]/30 dark:placeholder-[#38bdf8]/30 focus:outline-none transition-colors"
                 />
               </div>
               <div className="sm:col-span-3 flex relative">
                 <select 
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as InvoiceStatus | 'all')}
-                  className="w-full pl-3 pr-7 py-1.5 sm:py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]/60 cursor-pointer transition-colors"
+                  className="w-full pl-3 pr-7 py-1.5 sm:py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269] rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#0284c7]/60 cursor-pointer transition-colors"
                 >
                   <option value="all">All Statuses</option>
                   {ledgerSection === 'credit_note' || (activeTab === 'purchases' && purchaseLedgerSection === 'purchase_debit_note') ? (
@@ -3522,7 +3514,7 @@ export default function Dashboard({
                 <select 
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full pl-3 pr-7 py-1.5 sm:py-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]/60 cursor-pointer transition-colors"
+                  className="w-full pl-3 pr-7 py-1.5 sm:py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269] rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#0284c7]/60 cursor-pointer transition-colors"
                 >
                   <option value="issue_date_desc">Issue Date (Newest)</option>
                   <option value="issue_date_asc">Issue Date (Oldest)</option>
@@ -3541,7 +3533,7 @@ export default function Dashboard({
               {/* MOBILE ONLY SMALL SCREENS CARDS VIEW */}
               <div className="space-y-1.5 sm:space-y-3 md:hidden">
                 {filteredInvoices.length > 0 && (
-                  <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-zinc-900 rounded-xl border border-[#e2e8f0]/60 dark:border-zinc-800 shadow-2xs">
+                  <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-[#111a36] rounded-xl border border-[#bae6fd]/60 dark:border-[#223269]/60 shadow-2xs">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <input
                         type="checkbox"
@@ -3562,15 +3554,15 @@ export default function Dashboard({
                 )}
 
                 {filteredInvoices.length === 0 ? (
-                  <div className="p-8 sm:p-12 bg-white dark:bg-zinc-900 text-center rounded-2xl text-[#64748b]/60 border border-[#e2e8f0]/60 dark:border-zinc-800">
-                    <FileText className="w-8 h-8 mx-auto mb-2 text-[#64748b]/40" />
-                    No invoice records matching criteria.
+                  <div className="p-8 sm:p-12 bg-white dark:bg-[#111a36] text-center rounded-2xl border border-[#bae6fd]/55 dark:border-[#223269]/60 flex flex-col items-center gap-2">
+                    <FileText className="w-8 h-8 mx-auto mb-2 text-[#0284c7]/30" />
+                    <span className="text-[13px] text-[#64748b]/70 dark:text-[#94a3b8]/70" style={{fontFamily: "'IBM Plex Mono', monospace"}}>No invoice records matching criteria.</span>
                   </div>
                 ) : (
                   filteredInvoices.map((inv) => (
                     <div
                       key={inv.id}
-                      className={`p-3.5 sm:p-4 bg-white dark:bg-zinc-900 border rounded-2xl flex gap-2.5 sm:gap-3 relative shadow-xs hover:border-[#64748b]/40 transition-all cursor-pointer group ${selectedInvoiceIds.includes(inv.id) ? 'border-amber-400 bg-amber-50/5 dark:bg-amber-950/5' : 'border-[#e2e8f0]/60 dark:border-zinc-800'}`}
+                      className={`p-3.5 sm:p-4 bg-white dark:bg-[#111a36] border rounded-2xl flex gap-2.5 sm:gap-3 relative shadow-xs hover:shadow-[0_4px_14px_rgba(2,132,199,0.08)] hover:border-[#0284c7]/30 transition-all cursor-pointer group ${selectedInvoiceIds.includes(inv.id) ? 'border-[#0284c7]/40 bg-[#e0f2fe]/20 dark:bg-[#1b264f]/30' : 'border-[#bae6fd]/60 dark:border-[#223269]/60'}`}
                       onClick={() => setActivePreviewInvoice(inv)}
                     >
                       <div className="flex items-center justify-center pl-0.5" onClick={(e) => e.stopPropagation()}>
@@ -3589,14 +3581,14 @@ export default function Dashboard({
                               {renderDocTypeBadge(inv)}
                               {inv.recurringSettings?.isRecurring && (
                                 <span className="bg-sky-50 dark:bg-sky-950/30 text-sky-600 border border-sky-200/40 text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                                  🔄 Repeat {inv.recurringSettings.interval}
+                                  ðŸ”„ Repeat {inv.recurringSettings.interval}
                                 </span>
                               )}
                             </div>
                             <h4 className="text-xs font-black text-[#0f172a] dark:text-white mt-1 uppercase truncate">{inv.clientName || 'Draft Profile'}</h4>
                             <div className="flex items-center gap-1.5 mt-0.5 text-[9px] text-[#64748b]/80 font-semibold font-mono flex-wrap">
                               <span>Dated {inv.date}</span>
-                              <span>•</span>
+                              <span>â€¢</span>
                               <span className="text-rose-500">Due {inv.dueDate}</span>
                             </div>
                           </div>
@@ -3610,7 +3602,7 @@ export default function Dashboard({
                         </div>
 
                         {/* Footer list triggers */}
-                        <div className="pt-2 border-t border-[#e2e8f0]/30 dark:border-zinc-800 flex items-center justify-between gap-2 text-[10px] text-slate-400" onClick={(e) => e.stopPropagation()}>
+                        <div className="pt-2 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 flex items-center justify-between gap-2 text-[10px] text-slate-400" onClick={(e) => e.stopPropagation()}>
                           <span className="flex items-center gap-1 text-[8px] font-mono font-bold tracking-tight text-[#64748b]/60 shrink-0">
                             <span className={`w-1.5 h-1.5 rounded-full ${inv.userId === 'local' ? 'bg-amber-400' : 'bg-sky-400'}`} />
                             {inv.userId === 'local' ? 'On-Device' : 'Cloud'}
@@ -3625,19 +3617,19 @@ export default function Dashboard({
                                   alert('Failed to generate PDF: ' + (err.message || err.toString()));
                                 }
                               }}
-                              className="px-2 py-1 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/20 text-sky-600 dark:text-sky-400 rounded-md text-[9px] font-bold flex items-center gap-0.5 border border-sky-200/50 cursor-pointer active:scale-95"
+                              className="px-2 py-1 bg-sky-50 hover:bg-sky-100 dark:bg-sky-955 text-sky-600 dark:text-sky-400 rounded-md text-[9px] font-bold flex items-center gap-0.5 border border-sky-200/50 cursor-pointer active:scale-95"
                             >
                               <FileDown className="w-3 h-3" /> PDF
                             </button>
                             <button
                               onClick={() => handleExportMSWord(inv)}
-                              className="px-2 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/20 text-blue-650 dark:text-blue-400 rounded-md text-[9px] font-bold flex items-center gap-0.5 border border-blue-200/50 cursor-pointer active:scale-95"
+                              className="px-2 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-955 text-blue-650 dark:text-blue-400 rounded-md text-[9px] font-bold flex items-center gap-0.5 border border-blue-200/50 cursor-pointer active:scale-95"
                             >
                               Word
                             </button>
                             <button
                               onClick={() => onOpenInvoiceEditor(inv)}
-                              className="text-[#64748b] hover:text-[#0f172a] p-1.5 rounded hover:bg-[#FCFAF7] dark:hover:bg-zinc-800 transition-colors cursor-pointer active:scale-95"
+                              className="text-[#0284c7]/70 hover:text-[#0284c7] p-1.5 rounded hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] transition-colors cursor-pointer active:scale-95"
                             >
                               <PenTool className="w-3.5 h-3.5" />
                             </button>
@@ -3656,9 +3648,9 @@ export default function Dashboard({
               </div>
 
               {/* DESKTOP WORKSPACE GRID TABLE VIEW */}
-              <div className="hidden md:block bg-white dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-xs">
-                <table className="min-w-full divide-y divide-[#e2e8f0]/40 dark:divide-zinc-800 text-xs">
-                  <thead className="bg-[#FCFAF7]/70 dark:bg-zinc-900 font-bold text-[#64748b]/80 dark:text-zinc-400 text-[9px] uppercase tracking-wider text-left">
+              <div className="hidden md:block bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(2,132,199,0.06)]">
+                <table className="min-w-full divide-y divide-[#bae6fd]/40 dark:divide-[#223269]/60 text-xs">
+                  <thead className="bg-[#f4f9ff] dark:bg-[#0b1329] font-bold text-[#0284c7]/80 dark:text-[#38bdf8]/70 text-[9px] uppercase tracking-wider text-left" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
                     <tr>
                       <th className="px-4 py-3.5 text-center w-10">
                         <input
@@ -3677,19 +3669,21 @@ export default function Dashboard({
                       <th className="px-4 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#e2e8f0]/30 dark:divide-zinc-800/80 bg-white dark:bg-zinc-950">
+                  <tbody className="divide-y divide-[#bae6fd]/30 dark:divide-[#223269]/40 bg-white dark:bg-[#111a36]">
                     {filteredInvoices.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-4 py-16 text-center text-[#64748b]/60 font-medium">
-                          <FileText className="w-8 h-8 mx-auto mb-2 text-[#64748b]/40" />
-                          No invoices matching selected filters.
+                        <td colSpan={7} className="px-4 py-16 text-center">
+                          <div className="flex flex-col items-center gap-3">
+                            <FileText className="w-10 h-10 text-[#0284c7]/25" />
+                            <span className="text-[#64748b]/70 dark:text-[#94a3b8]/70 font-medium" style={{fontFamily: "'IBM Plex Mono', monospace"}}>No invoices matching selected filters.</span>
+                          </div>
                         </td>
                       </tr>
                     ) : (
                       filteredInvoices.map((inv) => (
                         <tr 
                           key={inv.id} 
-                          className={`hover:bg-[#FCFAF7]/20 dark:hover:bg-zinc-900/40 cursor-pointer transition-colors ${selectedInvoiceIds.includes(inv.id) ? 'bg-[#FCFAF7]/50 dark:bg-zinc-900/30' : ''}`}
+                          className={`hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/30 cursor-pointer transition-colors ${selectedInvoiceIds.includes(inv.id) ? 'bg-[#e0f2fe]/40 dark:bg-[#1b264f]/30' : ''}`}
                           onClick={() => setActivePreviewInvoice(inv)}
                         >
                           <td className="px-4 py-3.5 text-center w-10" onClick={(e) => e.stopPropagation()}>
@@ -3702,10 +3696,10 @@ export default function Dashboard({
                           </td>
                           <td className="px-4 py-3.5">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-extrabold font-mono text-sky-600 tracking-tight">{inv.invoiceNumber}</span>
+                              <span className="font-extrabold text-[#0284c7] dark:text-[#38bdf8] tracking-tight" style={{fontFamily: "'IBM Plex Mono', monospace"}}>{inv.invoiceNumber}</span>
                               {renderDocTypeBadge(inv)}
                               {inv.recurringSettings?.isRecurring && (
-                                <span className="text-[10px]" title={`Auto Repeat ${inv.recurringSettings.interval}`}>🔄</span>
+                                <span className="text-[10px]" title={`Auto Repeat ${inv.recurringSettings.interval}`}>ðŸ”„</span>
                               )}
                             </div>
                           </td>
@@ -3713,7 +3707,7 @@ export default function Dashboard({
                             <div className="font-black text-[#0f172a] dark:text-white uppercase truncate max-w-[150px]">{inv.clientName || 'Draft Profile'}</div>
                             {inv.clientEmail && <span className="text-[9.5px] text-[#64748b]/80 block truncate max-w-[155px] font-mono mt-0.5">{inv.clientEmail}</span>}
                           </td>
-                          <td className="px-4 py-3.5 font-mono text-[10px] text-[#64748b]/80 dark:text-zinc-400">
+                          <td className="px-4 py-3.5 text-[10px] text-[#64748b]/80 dark:text-[#94a3b8] dark:text-zinc-400" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
                             <div>Issued: {inv.date}</div>
                             <div className="text-rose-500 font-bold mt-0.5">Due: {inv.dueDate}</div>
                           </td>
@@ -3751,7 +3745,7 @@ export default function Dashboard({
                               </button>
                               <button
                                 onClick={() => onOpenInvoiceEditor(inv)}
-                                className="text-[#64748b] hover:text-[#0f172a] p-1.5 rounded-lg hover:bg-[#FCFAF7] dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                                className="text-[#0284c7]/70 hover:text-[#0284c7] dark:text-[#38bdf8]/60 dark:hover:text-[#38bdf8] p-1.5 rounded-lg hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] transition-colors cursor-pointer"
                                 title="Edit Details"
                               >
                                 <PenTool className="w-3.5 h-3.5" />
@@ -3775,7 +3769,7 @@ export default function Dashboard({
 
             {/* Floating Bulk Actions Bar Overlay */}
             {selectedInvoiceIds.length > 0 && (
-              <div id="floating-bulk-actions" className="fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-50 w-[95%] sm:w-[92%] max-w-2xl bg-neutral-950/95 backdrop-blur-md border border-neutral-800 text-white p-2.5 sm:p-3.5 rounded-2xl shadow-2xl flex flex-row items-center justify-between gap-2 sm:gap-3 animate-in slide-in-from-bottom duration-200">
+              <div id="floating-bulk-actions" className="fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-50 w-[95%] sm:w-[92%] max-w-2xl bg-[#0b1329]/98 backdrop-blur-md border border-[#223269] text-white p-2.5 sm:p-3.5 rounded-2xl shadow-2xl flex flex-row items-center justify-between gap-2 sm:gap-3 animate-in slide-in-from-bottom duration-200">
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span className="w-5 h-5 bg-sky-600 rounded-full flex items-center justify-center text-[10px] font-extrabold">{selectedInvoiceIds.length}</span>
                   <span className="text-[10px] sm:text-[11px] font-medium text-slate-200">Selected</span>
@@ -3947,7 +3941,7 @@ export default function Dashboard({
                 </button>
               </div>
 
-              {/* Bifurcated Section Tabs Bar — Ultra Clean Responsive Design */}
+              {/* Bifurcated Section Tabs Bar â€” Ultra Clean Responsive Design */}
               <div className="w-full">
                 {/* Mobile Grid Layout */}
                 <div className="grid grid-cols-3 sm:hidden gap-1.5 p-1.5 bg-[#f8fafc] dark:bg-zinc-900/90 rounded-2xl border border-[#e2e8f0]/80 dark:border-zinc-800">
@@ -4080,24 +4074,24 @@ export default function Dashboard({
         {activeTab === 'clients' && (
           <div className="space-y-5 text-sans">
             
-            {/* ── Page Header ── */}
-            <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 6px rgba(110,96,80,0.07)' }}>
+            {/* ─── Page Header ─── */}
+            <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(2,132,199,0.06)' }}>
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-4 sm:p-5 md:p-6">
                 {/* Left: Icon + title + description */}
                 <div className="flex items-start gap-4">
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-rose-500 dark:bg-rose-600" style={{ boxShadow: '0 3px 10px rgba(0,0,0,0.18)' }}>
-                    <Users2 className="w-5 h-5 text-rose-50 dark:text-rose-100" />
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-[#0284c7] dark:bg-[#38bdf8]" style={{ boxShadow: '0 2px 8px rgba(2,132,199,0.3)' }}>
+                    <Users2 className="w-5 h-5 text-white dark:text-[#0b1329]" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2.5 flex-wrap">
-                      <h2 className="text-lg md:text-xl font-black text-[#3D2C1E] dark:text-white uppercase tracking-tight leading-none">
+                      <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white uppercase tracking-tight leading-none" style={{ fontFamily: "'Fraunces', serif" }}>
                         Billed Clients Ledger Book
                       </h2>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-rose-50 border-rose-100 dark:bg-rose-950/40 dark:border-rose-900/40 text-rose-600 dark:text-rose-400">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f]/40 dark:border-[#223269]/40 text-[#0284c7] dark:text-[#38bdf8]">
                         {billedClientsFiltered.length} {billedClientsFiltered.length === 1 ? 'Record' : 'Records'}
                       </span>
                     </div>
-                    <p className="mt-1.5 text-xs text-[#64748b]/75 dark:text-zinc-500 max-w-md leading-relaxed">
+                    <p className="mt-1.5 text-xs text-[#64748b]/70 dark:text-[#94a3b8]/70 max-w-md leading-relaxed">
                       Manage client profiles for rapid auto-filling during billing creation (Sales Ledger only)
                     </p>
                   </div>
@@ -4108,18 +4102,18 @@ export default function Dashboard({
             {/* Clients grid list */}
             {billedClientsFiltered.length === 0 ? (
               <div 
-                className="bg-white dark:bg-zinc-900 rounded-2xl border border-[#e2e8f0]/50 dark:border-zinc-800/80 p-12 text-center relative overflow-hidden"
-                style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.06)' }}
+                className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl p-12 text-center relative overflow-hidden"
+                style={{ boxShadow: '0 1px 3px rgba(2,132,199,0.06)' }}
               >
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e2e8f0]/50 to-transparent" />
-                <Notebook className="w-10 h-10 mx-auto mb-3 text-[#C6A87D]/70" />
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#bae6fd]/60 to-transparent" />
+                <Notebook className="w-10 h-10 mx-auto mb-3 text-[#0284c7]/40" />
                 <h3 className="text-xs font-bold text-[#0f172a] dark:text-zinc-300 uppercase tracking-wider">Your Billed Clients Ledger is Empty</h3>
                 <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
                   Add profiles to automatically inject contacts, GSTIN numbers, and addresses instantly on invoice templates.
                 </p>
                 <button
                   onClick={() => handleOpenClientEditor(null)}
-                  className="mt-4 px-3.5 py-1.5 border border-[#0f172a] hover:bg-[#0f172a] text-[#0f172a] hover:text-white dark:text-zinc-300 dark:border-zinc-700 dark:hover:bg-zinc-800 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer"
+                  className="mt-4 px-3.5 py-1.5 border border-[#0284c7] hover:bg-[#0284c7] text-[#0284c7] hover:text-white dark:text-[#38bdf8] dark:border-[#223269] dark:hover:bg-[#0284c7] rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer"
                 >
                   Create First Profile
                 </button>
@@ -4129,11 +4123,11 @@ export default function Dashboard({
                 {billedClientsFiltered.map(c => (
                   <div
                     key={c.id}
-                    className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800/80 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-rose-500 active:border-rose-600 dark:hover:border-rose-500 dark:active:border-rose-600 hover:-translate-y-1 group flex flex-col justify-between cursor-pointer"
+                    className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800/80 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-blue-500 active:border-blue-600 dark:hover:border-blue-500 dark:active:border-blue-600 hover:-translate-y-1 group flex flex-col justify-between cursor-pointer"
                     style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.06)' }}
                   >
                     {/* card top line decoration */}
-                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-rose-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
                     <div>
                       {/* Name & Company header */}
@@ -4173,7 +4167,7 @@ export default function Dashboard({
                       <div className="mt-4 space-y-3.5 pt-3.5 border-t border-[#e2e8f0]/35 dark:border-zinc-800/60">
                         {/* Email */}
                         <div className="flex items-start gap-2 text-[10px] text-[#64748b]/80 dark:text-zinc-400">
-                          <Mail className="w-3.5 h-3.5 text-[#C6A87D] shrink-0 mt-0.5" />
+                          <Mail className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
                           <div className="min-w-0">
                             <span className="text-[8px] font-black uppercase tracking-wider text-[#64748b]/50 block">Email Address</span>
                             <span className="truncate block font-semibold text-[#0f172a] dark:text-zinc-200 mt-0.5">{c.email || 'N/A'}</span>
@@ -4182,7 +4176,7 @@ export default function Dashboard({
 
                         {/* Phone */}
                         <div className="flex items-start gap-2 text-[10px] text-[#64748b]/80 dark:text-zinc-400">
-                          <Smartphone className="w-3.5 h-3.5 text-[#C6A87D] shrink-0 mt-0.5" />
+                          <Smartphone className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
                           <div>
                             <span className="text-[8px] font-black uppercase tracking-wider text-[#64748b]/50 block">Contact Number</span>
                             <span className="block font-semibold text-[#0f172a] dark:text-zinc-200 mt-0.5">{c.phone || 'N/A'}</span>
@@ -4191,7 +4185,7 @@ export default function Dashboard({
 
                         {/* Address */}
                         <div className="flex items-start gap-2 text-[10px] text-[#64748b]/80 dark:text-zinc-400">
-                          <MapPin className="w-3.5 h-3.5 text-[#C6A87D] shrink-0 mt-0.5" />
+                          <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
                           <div className="min-w-0">
                             <span className="text-[8px] font-black uppercase tracking-wider text-[#64748b]/50 block">Billing Address</span>
                             <span className="block font-semibold text-[#0f172a] dark:text-zinc-200 mt-0.5 line-clamp-2 leading-relaxed">{c.address || 'No billing address registered'}</span>
@@ -4210,24 +4204,24 @@ export default function Dashboard({
         {activeTab === 'purchasers' && (
           <div className="space-y-5 text-sans">
             
-            {/* ── Page Header ── */}
-            <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/80 dark:border-zinc-800 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 6px rgba(110,96,80,0.07)' }}>
+            {/* ─── Page Header ─── */}
+            <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(2,132,199,0.06)' }}>
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-4 sm:p-5 md:p-6">
                 {/* Left: Icon + title + description */}
                 <div className="flex items-start gap-4">
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-blue-500 dark:bg-blue-600" style={{ boxShadow: '0 3px 10px rgba(0,0,0,0.18)' }}>
-                    <Users2 className="w-5 h-5 text-blue-50 dark:text-blue-100" />
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-[#0284c7] dark:bg-[#38bdf8]" style={{ boxShadow: '0 2px 8px rgba(2,132,199,0.3)' }}>
+                    <Users2 className="w-5 h-5 text-white dark:text-[#0b1329]" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2.5 flex-wrap">
-                      <h2 className="text-lg md:text-xl font-black text-[#1e293b] dark:text-white uppercase tracking-tight leading-none font-sans">
+                      <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white uppercase tracking-tight leading-none" style={{ fontFamily: "'Fraunces', serif" }}>
                         Billed Vendors Directory
                       </h2>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-blue-50 border-blue-100 dark:bg-blue-950/40 dark:border-blue-900/40 text-blue-600 dark:text-blue-400">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f]/40 dark:border-[#223269]/40 text-[#0284c7] dark:text-[#38bdf8]">
                         {purchasersFiltered.length} {purchasersFiltered.length === 1 ? 'Record' : 'Records'}
                       </span>
                     </div>
-                    <p className="mt-1.5 text-xs text-[#64748b]/75 dark:text-zinc-500 max-w-md leading-relaxed">
+                    <p className="mt-1.5 text-xs text-[#64748b]/70 dark:text-[#94a3b8]/70 max-w-md leading-relaxed">
                       Manage vendor and supplier profiles captured from your purchases ledger bills, POs, and debit notes
                     </p>
                   </div>
@@ -4238,18 +4232,18 @@ export default function Dashboard({
             {/* Billed Vendors grid list */}
             {purchasersFiltered.length === 0 ? (
               <div 
-                className="bg-white dark:bg-zinc-900 rounded-2xl border border-[#e2e8f0]/50 dark:border-zinc-800/80 p-12 text-center relative overflow-hidden"
-                style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.06)' }}
+                className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl p-12 text-center relative overflow-hidden"
+                style={{ boxShadow: '0 1px 3px rgba(2,132,199,0.06)' }}
               >
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e2e8f0]/50 to-transparent" />
-                <Notebook className="w-10 h-10 mx-auto mb-3 text-blue-400/70" />
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#bae6fd]/60 to-transparent" />
+                <Notebook className="w-10 h-10 mx-auto mb-3 text-[#0284c7]/40" />
                 <h3 className="text-xs font-bold text-[#0f172a] dark:text-zinc-300 uppercase tracking-wider">Your Billed Vendors Directory is Empty</h3>
                 <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
                   Add profiles manually or create Purchase Bills, POs, and Debit Notes to automatically populate vendors here.
                 </p>
                 <button
                   onClick={() => handleOpenClientEditor(null)}
-                  className="mt-4 px-3.5 py-1.5 border border-blue-600 hover:bg-blue-600 text-blue-600 hover:text-white dark:text-zinc-300 dark:border-zinc-700 dark:hover:bg-zinc-800 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer"
+                  className="mt-4 px-3.5 py-1.5 border border-[#0284c7] hover:bg-[#0284c7] text-[#0284c7] hover:text-white dark:text-[#38bdf8] dark:border-[#223269] dark:hover:bg-[#0284c7] rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer"
                 >
                   Create First Vendor
                 </button>
@@ -4275,7 +4269,7 @@ export default function Dashboard({
                               className="text-[9px] bg-[#FCFAF7] dark:bg-zinc-950 text-[#64748b] dark:text-zinc-300 border border-[#e2e8f0]/50 dark:border-zinc-800 font-extrabold px-2 py-0.5 rounded-md inline-block uppercase tracking-wider"
                               style={{ boxShadow: '0 1px 2px rgba(110,96,80,0.04)' }}
                             >
-                              🏢 {c.companyName}
+                              ðŸ¢ {c.companyName}
                             </span>
                           )}
                         </div>
@@ -4336,35 +4330,33 @@ export default function Dashboard({
           </div>
         )}
 
-        {/* ------------------ TAB 3: REPORTS & TAX ROUTE ------------------ */}
+           {/* ------------------ TAB 3: REPORTS & TAX ROUTE ------------------ */}
         {activeTab === 'reports' && (
           <div className="space-y-5">
 
-            {/* ── Page Header ── */}
+            {/* â”€â”€ Page Header â”€â”€ */}
             <div
-              className="relative overflow-hidden bg-white dark:bg-zinc-900 rounded-2xl"
-              style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.10), 0 4px 16px rgba(110,96,80,0.08), inset 0 1px 0 rgba(255,255,255,0.9)' }}
+              className="relative overflow-hidden bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl"
+              style={{ boxShadow: '0 1px 3px rgba(2,132,199,0.06)' }}
             >
-              {/* top-edge highlight gives the 'raised panel' feel */}
-              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e2e8f0] to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-br from-[#F9F5F0]/80 via-white/30 to-transparent dark:from-zinc-800/20 pointer-events-none" />
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#bae6fd]/60 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[#f4f9ff]/80 via-white/30 to-transparent dark:from-[#1b264f]/20 pointer-events-none" />
               <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-5 sm:px-6 py-4 sm:py-5">
                 <div className="flex items-center gap-4">
                   <div
-                    className="w-11 h-11 rounded-xl bg-[#0f172a] flex items-center justify-center shrink-0"
-                    style={{ boxShadow: '0 2px 8px rgba(110,96,80,0.35), inset 0 1px 0 rgba(255,255,255,0.15)' }}
+                    className="w-11 h-11 rounded-xl bg-[#0284c7] dark:bg-[#38bdf8] flex items-center justify-center shrink-0"
+                    style={{ boxShadow: '0 2px 8px rgba(2,132,199,0.3), inset 0 1px 0 rgba(255,255,255,0.15)' }}
                   >
-                    <FileText className="w-5 h-5 text-[#e2e8f0]" />
+                    <FileText className="w-5 h-5 text-white dark:text-[#0b1329]" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-black text-[#0f172a] dark:text-white tracking-tight">Accounting Summary</h2>
+                    <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Accounting Summary</h2>
                     <span className="text-[11px] text-[#64748b]/70 dark:text-zinc-400 mt-0.5 block">Generate customised tax &amp; income expense ledger reports</span>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsExpenseLoggerOpen(true)}
-                  className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-[#0f172a] hover:bg-[#5C5043] hover:translate-y-[-1px] active:translate-y-0 active:scale-[0.98] text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer"
-                  style={{ boxShadow: '0 2px 6px rgba(110,96,80,0.30), 0 1px 2px rgba(110,96,80,0.20)' }}
+                  className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-[#0284c7] dark:bg-[#38bdf8] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] hover:translate-y-[-1px] active:translate-y-0 active:scale-[0.98] text-white dark:text-[#0b1329] rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Log Expense</span>
@@ -4372,29 +4364,27 @@ export default function Dashboard({
               </div>
             </div>
 
-            {/* ── Ledger & Invoice Report (unified card) ── */}
+            {/* â”€â”€ Ledger & Invoice Report (unified card) â”€â”€ */}
             <section
-              className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden relative"
-              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.09), 0 4px 14px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.85)' }}
+              className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-hidden relative"
+              style={{ boxShadow: '0 1px 3px rgba(2,132,199,0.06)' }}
             >
-              {/* top highlight */}
-              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e2e8f0]/80 to-transparent" />
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#bae6fd]/60 to-transparent" />
 
               {/* Card header */}
-              <div className="flex flex-wrap items-start sm:items-center justify-between gap-3 px-5 sm:px-6 py-3.5 border-b border-[#e2e8f0]/40 dark:border-zinc-800" style={{ background: 'linear-gradient(to right, var(--color-slate-50), var(--color-slate-100))' }}>
+              <div className="flex flex-wrap items-start sm:items-center justify-between gap-3 px-5 sm:px-6 py-3.5 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 bg-[#f4f9ff] dark:bg-[#0b1329]/60">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-1.5 h-4 rounded-full" style={{ background: 'linear-gradient(to bottom, var(--color-sky-600), var(--color-sky-700))' }} />
+                  <div className="w-1.5 h-4 rounded-full bg-[#0284c7] dark:bg-[#38bdf8]" />
                   <div>
                     <span className="text-[10px] font-black uppercase tracking-widest text-[#0f172a] dark:text-zinc-300 block">Ledger &amp; Invoice Report</span>
                     <span className="text-[9px] text-[#64748b]/60 dark:text-zinc-500 block mt-0.5">Filter records and download compiled reports or individual invoices</span>
                   </div>
                 </div>
                 <div
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/40 border border-sky-200/60 dark:border-sky-800/40 shrink-0"
-                  style={{ boxShadow: 'inset 0 1px 2px rgba(2,132,199,0.06)' }}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#e0f2fe] dark:bg-[#1b264f] border border-[#bae6fd]/60 dark:border-[#223269]/40 shrink-0"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-                  <span className="text-[10px] font-mono font-bold text-sky-600 dark:text-sky-400">{reportedInvoices.length} matched</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] animate-pulse" />
+                  <span className="text-[10px] font-mono font-bold text-[#0284c7] dark:text-[#38bdf8]">{reportedInvoices.length} matched</span>
                 </div>
               </div>
 
@@ -4404,7 +4394,7 @@ export default function Dashboard({
                 {/* Start Date */}
                 <div className="space-y-1.5 flex-1 min-w-[140px]">
                   <label htmlFor="rep-start" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80">
-                    <span className="w-1 h-1 rounded-full bg-[#C6A87D] inline-block" />
+                    <span className="w-1 h-1 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] inline-block" />
                     Start Date
                   </label>
                   <input
@@ -4412,15 +4402,14 @@ export default function Dashboard({
                     type="date"
                     value={reportStartDate}
                     onChange={(e) => setReportStartDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0] hover:border-[#C6A87D] focus:border-[#0f172a] dark:border-zinc-700 dark:focus:border-zinc-500 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none transition-colors duration-150"
-                    style={{ boxShadow: 'inset 0 1px 3px rgba(110,96,80,0.08)' }}
+                    className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 hover:border-[#0284c7] focus:border-[#0284c7] dark:border-[#223269] dark:focus:border-[#38bdf8] rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none transition-colors duration-150"
                   />
                 </div>
 
                 {/* End Date */}
                 <div className="space-y-1.5 flex-1 min-w-[140px]">
                   <label htmlFor="rep-end" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80">
-                    <span className="w-1 h-1 rounded-full bg-[#C6A87D] inline-block" />
+                    <span className="w-1 h-1 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] inline-block" />
                     End Date
                   </label>
                   <input
@@ -4428,23 +4417,21 @@ export default function Dashboard({
                     type="date"
                     value={reportEndDate}
                     onChange={(e) => setReportEndDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0] hover:border-[#C6A87D] focus:border-[#0f172a] dark:border-zinc-700 dark:focus:border-zinc-500 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none transition-colors duration-150"
-                    style={{ boxShadow: 'inset 0 1px 3px rgba(110,96,80,0.08)' }}
+                    className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 hover:border-[#0284c7] focus:border-[#0284c7] dark:border-[#223269] dark:focus:border-[#38bdf8] rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none transition-colors duration-150"
                   />
                 </div>
 
                 {/* Client Account */}
                 <div className="space-y-1.5 flex-1 min-w-[160px]">
                   <label htmlFor="rep-client" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80">
-                    <span className="w-1 h-1 rounded-full bg-[#C6A87D] inline-block" />
+                    <span className="w-1 h-1 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] inline-block" />
                     Client Account
                   </label>
                   <select
                     id="rep-client"
                     value={reportClientFilter}
                     onChange={(e) => setReportClientFilter(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0] hover:border-[#C6A87D] focus:border-[#0f172a] dark:border-zinc-700 dark:focus:border-zinc-500 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:outline-none transition-colors duration-150 cursor-pointer"
-                    style={{ boxShadow: 'inset 0 1px 3px rgba(110,96,80,0.08)' }}
+                    className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 hover:border-[#0284c7] focus:border-[#0284c7] dark:border-[#223269] dark:focus:border-[#38bdf8] rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:outline-none transition-colors duration-150 cursor-pointer"
                   >
                     <option value="all">All Clients</option>
                     {Array.from(new Set(invoices.map(it => it.clientName))).filter(Boolean).map(clName => (
@@ -4454,7 +4441,7 @@ export default function Dashboard({
                 </div>
 
                 {/* Vertical divider */}
-                <div className="hidden lg:block w-px self-stretch bg-gradient-to-b from-transparent via-[#e2e8f0]/60 to-transparent mx-1" />
+                <div className="hidden lg:block w-px self-stretch bg-gradient-to-b from-transparent via-[#bae6fd]/40 to-transparent mx-1" />
 
                 {/* Quick chips */}
                 <div className="space-y-1.5 shrink-0">
@@ -4483,8 +4470,7 @@ export default function Dashboard({
                               setReportEndDate(end);
                             }
                           }}
-                          className="px-3 py-2 rounded-xl text-[11px] font-bold transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.97] cursor-pointer bg-[#FCFAF7] hover:bg-[#f8fafc] text-[#0f172a] dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:text-zinc-300"
-                          style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.12), inset 0 1px 0 rgba(255,255,255,0.8)' }}
+                          className="px-3 py-2 rounded-xl text-[11px] font-bold transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.97] cursor-pointer bg-[#f4f9ff] hover:bg-[#e0f2fe] text-[#0284c7] border border-[#bae6fd] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] dark:text-[#38bdf8] dark:border-[#223269]"
                         >
                           {opt.label}
                         </button>
@@ -4494,7 +4480,7 @@ export default function Dashboard({
                 </div>
 
                 {/* Vertical divider */}
-                <div className="hidden lg:block w-px self-stretch bg-gradient-to-b from-transparent via-[#e2e8f0]/60 to-transparent mx-1" />
+                <div className="hidden lg:block w-px self-stretch bg-gradient-to-b from-transparent via-[#bae6fd]/40 to-transparent mx-1" />
 
                 {/* Download buttons */}
                 <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
@@ -4506,7 +4492,7 @@ export default function Dashboard({
                       exportCollectiveReportPDF(reportedInvoices, profile, rangeLabel);
                     }}
                     className="group relative px-4 py-2.5 rounded-xl text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.98] cursor-pointer overflow-hidden whitespace-nowrap"
-                    style={{ background: 'linear-gradient(135deg, var(--color-slate-705) 0%, var(--color-slate-350) 100%)', boxShadow: '0 2px 8px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.10)' }}
+                    style={{ background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)' }}
                   >
                     <span className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-150" />
                     <FileText className="w-3.5 h-3.5 shrink-0" />
@@ -4522,7 +4508,7 @@ export default function Dashboard({
                       });
                     }}
                     className="group relative px-4 py-2.5 rounded-xl text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.98] cursor-pointer overflow-hidden whitespace-nowrap"
-                    style={{ background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)', boxShadow: '0 2px 8px rgba(5,150,105,0.26), inset 0 1px 0 rgba(255,255,255,0.12)' }}
+                    style={{ background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)' }}
                   >
                     <span className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-150" />
                     <Download className="w-3.5 h-3.5 shrink-0" />
@@ -4535,9 +4521,9 @@ export default function Dashboard({
 
             <div className="mt-8 mb-4 flex flex-wrap items-center justify-between gap-3 px-2">
               <div className="flex items-center gap-2.5">
-                <div className="w-1.5 h-4 rounded-full" style={{ background: 'linear-gradient(to bottom, var(--color-sky-600), var(--color-sky-700))' }} />
+                <div className="w-1.5 h-4 rounded-full bg-[#0284c7] dark:bg-[#38bdf8]" />
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[#0f172a] dark:text-zinc-300 block">Income &amp; Expense Analytics</span>
+                  <span className="text-[11px] font-black uppercase tracking-widest text-[#0f172a] dark:text-zinc-300 block" style={{ fontFamily: "'Fraunces', serif" }}>Income &amp; Expense Analytics</span>
                   <span className="text-[9px] text-[#64748b]/60 dark:text-zinc-500 block mt-0.5">Overview of cash flow, liabilities, and profitability based on current ledger</span>
                 </div>
               </div>
@@ -4546,10 +4532,10 @@ export default function Dashboard({
             {/* Income and Expense Analytics report */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
               {/* Gross Profit Card */}
-              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-emerald-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
+              <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-emerald-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
                 <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-2">
                   <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-[#ECFDF5] text-[#10B981] border border-[#A7F3D0] flex items-center justify-center font-black text-xs sm:text-sm">
-                    ₹
+                    â‚¹
                   </div>
                   <span className="text-[8px] sm:text-[9px] font-black text-[#10B981] bg-[#ECFDF5] border border-[#A7F3D0] px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider">
                     Cleared
@@ -4572,7 +4558,7 @@ export default function Dashboard({
               </div>
 
               {/* Business Expenses Card */}
-              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-rose-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
+              <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-rose-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
                 <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-2">
                   <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-[#FEF2F2] text-[#EF4444] border border-[#FEE2E2] flex items-center justify-center">
                     <MinusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -4598,7 +4584,7 @@ export default function Dashboard({
               </div>
 
               {/* Pending Receivables Card */}
-              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-amber-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
+              <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-amber-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
                 <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-2">
                   <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-[#FFFBEB] text-[#F59E0B] border border-[#FEF3C7] flex items-center justify-center">
                     <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -4624,7 +4610,7 @@ export default function Dashboard({
               </div>
 
               {/* Tax Calculations Card */}
-              <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-sky-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
+              <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-sky-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
                 <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-2">
                   <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-[#F0F9FF] text-[#0284C7] border border-[#BAE6FD] flex items-center justify-center">
                     <Percent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -4811,10 +4797,10 @@ export default function Dashboard({
 
                   {/* Shared range filter pills */}
                   <div
-                    className="bg-white dark:bg-zinc-900 rounded-2xl px-5 py-4 flex items-center gap-3 flex-wrap"
-                    style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.09), 0 4px 14px rgba(110,96,80,0.07), inset 0 1px 0 rgba(255,255,255,0.85)' }}
+                    className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl px-5 py-4 flex items-center gap-3 flex-wrap relative"
+                    style={{ boxShadow: '0 1px 3px rgba(2,132,199,0.06)' }}
                   >
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e2e8f0]/80 to-transparent" />
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#bae6fd]/60 to-transparent" />
                     <span className="text-[9px] font-black uppercase tracking-widest text-[#64748b]/60 dark:text-zinc-500 shrink-0">Trend Period</span>
                     <div className="flex flex-wrap gap-2">
                       {RANGE_OPTS.map(opt => {
@@ -4827,14 +4813,11 @@ export default function Dashboard({
                             className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all duration-150 cursor-pointer ${
                               isActive
                                 ? 'text-white'
-                                : 'bg-[#FCFAF7] hover:bg-[#f8fafc] text-[#0f172a] dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:text-zinc-300 hover:translate-y-[-1px]'
+                                : 'bg-[#f4f9ff] hover:bg-[#e0f2fe] text-[#0284c7] border border-[#bae6fd] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] dark:text-[#38bdf8] dark:border-[#223269] hover:translate-y-[-1px]'
                             }`}
                             style={isActive ? {
-                              background: 'linear-gradient(135deg, #0f172a 0%, #64748b 100%)',
-                              boxShadow: '0 2px 6px rgba(110,96,80,0.30), inset 0 1px 0 rgba(255,255,255,0.12)'
-                            } : {
-                              boxShadow: '0 1px 3px rgba(110,96,80,0.12), inset 0 1px 0 rgba(255,255,255,0.8)'
-                            }}
+                              background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                            } : undefined}
                           >
                             {opt.label}
                           </button>
@@ -4844,280 +4827,280 @@ export default function Dashboard({
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* CHART 1: Gross Profit vs Tax Liabilities */}
-                  <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 p-5 rounded-2xl shadow-xs text-sans">
-                    <div className="flex flex-wrap justify-between items-start sm:items-center gap-2 mb-4">
-                      <div>
-                        <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Gross Profit & Taxes</h3>
-                        <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5 font-medium">Comparative analysis of income vs tax liabilities</span>
+                    {/* CHART 1: Gross Profit vs Tax Liabilities */}
+                    <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 p-5 rounded-2xl shadow-xs text-sans">
+                      <div className="flex flex-wrap justify-between items-start sm:items-center gap-2 mb-4">
+                        <div>
+                          <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Gross Profit & Taxes</h3>
+                          <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5 font-medium">Comparative analysis of income vs tax liabilities</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-0.5 bg-[#0284c7] dark:bg-[#38bdf8]" /> PROFIT
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-0.5 border-t border-dashed border-[#2563eb] dark:border-[#60a5fa]" /> TAX
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-2.5 h-0.5 bg-[#0f172a]" /> PROFIT
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-2.5 h-0.5 border-t border-dashed border-[#0284C7]" /> TAX
-                        </span>
+
+                      <div className="w-full overflow-x-auto select-none mt-2">
+                        <svg className="w-full min-w-[400px]" viewBox={`0 0 ${chartWidth} ${chartHeight}`} fill="none">
+                          {/* Grid Lines */}
+                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+                            const y = paddingY + ratio * usableHeight;
+                            const labelValue = Math.round(maxVal1 - (ratio * maxVal1));
+                            return (
+                              <g key={`grid-c1-${idx}`}>
+                                <line x1={paddingX} y1={y} x2={chartWidth - paddingX} y2={y} stroke={theme === 'dark' ? '#223269' : '#bae6fd'} strokeWidth="0.5" strokeOpacity="0.4" />
+                                <text x={paddingX - 10} y={y + 3} textAnchor="end" className="text-[8px] font-mono fill-[#64748b]/70">
+                                  {labelValue >= 1000 ? `${(labelValue / 1000).toFixed(0)}k` : labelValue}
+                                </text>
+                              </g>
+                            );
+                          })}
+
+                          {/* Vertical guide line */}
+                          {hoveredReportsChartIndex1 !== null && pointsIncome1[hoveredReportsChartIndex1] && (
+                            <line 
+                              x1={pointsIncome1[hoveredReportsChartIndex1].x} 
+                              y1={paddingY} 
+                              x2={pointsIncome1[hoveredReportsChartIndex1].x} 
+                              y2={chartHeight - paddingY} 
+                              stroke={theme === 'dark' ? '#38bdf8' : '#0284c7'} 
+                              strokeWidth="1" 
+                              strokeDasharray="2 2"
+                              className="opacity-75"
+                            />
+                          )}
+
+                          {/* Line paths */}
+                          <path d={pathIncome1} fill="none" stroke={theme === 'dark' ? '#38bdf8' : '#0284c7'} strokeWidth="2.5" strokeLinecap="round" />
+                          <path d={pathTax1} fill="none" stroke={theme === 'dark' ? '#60a5fa' : '#2563eb'} strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
+
+                          {/* Dots */}
+                          {pointsIncome1.map((pts, i) => (
+                            <circle 
+                              key={`gp-dot-${i}`} 
+                              cx={pts.x} 
+                              cy={pts.y} 
+                              r={hoveredReportsChartIndex1 === i ? "4.5" : "3"} 
+                              fill={theme === 'dark' ? '#38bdf8' : '#0284c7'} 
+                              stroke="#fff" 
+                              strokeWidth={hoveredReportsChartIndex1 === i ? "1.5" : "1"} 
+                            />
+                          ))}
+                          {pointsTax1.map((pts, i) => (
+                            <circle 
+                              key={`tx-dot-${i}`} 
+                              cx={pts.x} 
+                              cy={pts.y} 
+                              r={hoveredReportsChartIndex1 === i ? "4.5" : "3"} 
+                              fill={theme === 'dark' ? '#60a5fa' : '#2563eb'} 
+                              stroke="#fff" 
+                              strokeWidth={hoveredReportsChartIndex1 === i ? "1.5" : "1"} 
+                            />
+                          ))}
+
+                          {/* Labels */}
+                          {records.map((r, i) => {
+                            const x = paddingX + (i / (records.length - 1)) * usableWidth;
+                            const isHovered = hoveredReportsChartIndex1 === i;
+                            return (
+                              <text 
+                                key={`lbl-c1-${i}`} 
+                                x={x} 
+                                y={chartHeight - 4} 
+                                textAnchor="middle" 
+                                className={`text-[9px] font-mono transition-all ${isHovered ? 'font-black fill-[#0284c7] dark:fill-[#38bdf8]' : 'font-bold fill-[#64748b]/80'}`}
+                              >
+                                {r.label}
+                              </text>
+                            );
+                          })}
+
+                          {/* Hover Zones */}
+                          {records.map((_, i) => {
+                            const colWidth = usableWidth / (records.length - 1);
+                            const x = paddingX + i * colWidth - colWidth / 2;
+                            return (
+                              <rect
+                                key={`hz-c1-${i}`}
+                                x={i === 0 ? paddingX : x}
+                                y={paddingY}
+                                width={i === 0 || i === records.length - 1 ? colWidth / 2 : colWidth}
+                                height={usableHeight}
+                                fill="transparent"
+                                className="cursor-pointer"
+                                onMouseEnter={() => setHoveredReportsChartIndex1(i)}
+                                onMouseLeave={() => setHoveredReportsChartIndex1(null)}
+                                onTouchStart={() => setHoveredReportsChartIndex1(i)}
+                                onClick={() => setHoveredReportsChartIndex1(i)}
+                              />
+                            );
+                          })}
+
+                          {/* Tooltip */}
+                          {hoveredReportsChartIndex1 !== null && records[hoveredReportsChartIndex1] && (() => {
+                            const rec = records[hoveredReportsChartIndex1];
+                            const pt = pointsIncome1[hoveredReportsChartIndex1] || { x: 250, y: 80 };
+                            const tooltipWidth = 115;
+                            const tooltipHeight = 44;
+                            let tooltipX = pt.x - tooltipWidth / 2;
+                            if (tooltipX < paddingX) tooltipX = paddingX;
+                            if (tooltipX + tooltipWidth > chartWidth - paddingX) tooltipX = chartWidth - paddingX - tooltipWidth;
+                            const tooltipY = Math.max(paddingY - 5, pt.y - tooltipHeight - 8);
+
+                            return (
+                              <g transform={`translate(${tooltipX}, ${tooltipY})`} className="pointer-events-none filter drop-shadow-[0_2px_4px_rgba(2,132,199,0.12)]">
+                                <rect width={tooltipWidth} height={tooltipHeight} rx="6" fill="#111a36" stroke={theme === 'dark' ? '#223269' : '#bae6fd'} strokeWidth="0.5" />
+                                <text x="8" y="12" fill="#e0f2fe" className="text-[8px] font-black uppercase tracking-wider font-mono">{rec.label}</text>
+                                <text x="8" y="24" fill="#10B981" className="text-[8px] font-bold font-mono">Profit: {currencySymbol}{formatNum(rec.income)}</text>
+                                <text x="8" y="34" fill="#38BDF8" className="text-[8px] font-bold font-mono">Tax: {currencySymbol}{formatNum(rec.tax)}</text>
+                              </g>
+                            );
+                          })()}
+                        </svg>
                       </div>
                     </div>
 
-                    <div className="w-full overflow-x-auto select-none mt-2">
-                      <svg className="w-full min-w-[400px]" viewBox={`0 0 ${chartWidth} ${chartHeight}`} fill="none">
-                        {/* Grid Lines */}
-                        {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
-                          const y = paddingY + ratio * usableHeight;
-                          const labelValue = Math.round(maxVal1 - (ratio * maxVal1));
-                          return (
-                            <g key={`grid-c1-${idx}`}>
-                              <line x1={paddingX} y1={y} x2={chartWidth - paddingX} y2={y} stroke="#e2e8f0" strokeWidth="0.5" strokeOpacity="0.4" />
-                              <text x={paddingX - 10} y={y + 3} textAnchor="end" className="text-[8px] font-mono fill-[#64748b]/70">
-                                {labelValue >= 1000 ? `${(labelValue / 1000).toFixed(0)}k` : labelValue}
-                              </text>
-                            </g>
-                          );
-                        })}
+                    {/* CHART 2: Earnings vs Expenses */}
+                    <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 p-5 rounded-2xl shadow-xs text-sans">
+                      <div className="flex flex-wrap justify-between items-start sm:items-center gap-2 mb-4">
+                        <div>
+                          <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Earnings & Expenses</h3>
+                          <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5 font-medium">Comparative analysis of business revenues vs expenses</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-0.5 bg-[#0284c7] dark:bg-[#38bdf8]" /> EARNED
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-0.5 border-t border-dashed border-[#EF4444]" /> SPENT
+                          </span>
+                        </div>
+                      </div>
 
-                        {/* Vertical guide line */}
-                        {hoveredReportsChartIndex1 !== null && pointsIncome1[hoveredReportsChartIndex1] && (
-                          <line 
-                            x1={pointsIncome1[hoveredReportsChartIndex1].x} 
-                            y1={paddingY} 
-                            x2={pointsIncome1[hoveredReportsChartIndex1].x} 
-                            y2={chartHeight - paddingY} 
-                            stroke="#C6A87D" 
-                            strokeWidth="1" 
-                            strokeDasharray="2 2"
-                            className="opacity-75"
-                          />
-                        )}
+                      <div className="w-full overflow-x-auto select-none mt-2">
+                        <svg className="w-full min-w-[400px]" viewBox={`0 0 ${chartWidth} ${chartHeight}`} fill="none">
+                          {/* Grid Lines */}
+                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+                            const y = paddingY + ratio * usableHeight;
+                            const labelValue = Math.round(maxVal2 - (ratio * maxVal2));
+                            return (
+                              <g key={`grid-c2-${idx}`}>
+                                <line x1={paddingX} y1={y} x2={chartWidth - paddingX} y2={y} stroke={theme === 'dark' ? '#223269' : '#bae6fd'} strokeWidth="0.5" strokeOpacity="0.4" />
+                                <text x={paddingX - 10} y={y + 3} textAnchor="end" className="text-[8px] font-mono fill-[#64748b]/70">
+                                  {labelValue >= 1000 ? `${(labelValue / 1000).toFixed(0)}k` : labelValue}
+                                </text>
+                              </g>
+                            );
+                          })}
 
-                        {/* Line paths */}
-                        <path d={pathIncome1} fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
-                        <path d={pathTax1} fill="none" stroke="#0284C7" strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
-
-                        {/* Dots */}
-                        {pointsIncome1.map((pts, i) => (
-                          <circle 
-                            key={`gp-dot-${i}`} 
-                            cx={pts.x} 
-                            cy={pts.y} 
-                            r={hoveredReportsChartIndex1 === i ? "4.5" : "3"} 
-                            fill="#0f172a" 
-                            stroke="#fff" 
-                            strokeWidth={hoveredReportsChartIndex1 === i ? "1.5" : "1"} 
-                          />
-                        ))}
-                        {pointsTax1.map((pts, i) => (
-                          <circle 
-                            key={`tx-dot-${i}`} 
-                            cx={pts.x} 
-                            cy={pts.y} 
-                            r={hoveredReportsChartIndex1 === i ? "4.5" : "3"} 
-                            fill="#0284C7" 
-                            stroke="#fff" 
-                            strokeWidth={hoveredReportsChartIndex1 === i ? "1.5" : "1"} 
-                          />
-                        ))}
-
-                        {/* Labels */}
-                        {records.map((r, i) => {
-                          const x = paddingX + (i / (records.length - 1)) * usableWidth;
-                          const isHovered = hoveredReportsChartIndex1 === i;
-                          return (
-                            <text 
-                              key={`lbl-c1-${i}`} 
-                              x={x} 
-                              y={chartHeight - 4} 
-                              textAnchor="middle" 
-                              className={`text-[9px] font-mono transition-all ${isHovered ? 'font-black fill-[#0f172a]' : 'font-bold fill-[#64748b]/80'}`}
-                            >
-                              {r.label}
-                            </text>
-                          );
-                        })}
-
-                        {/* Hover Zones */}
-                        {records.map((_, i) => {
-                          const colWidth = usableWidth / (records.length - 1);
-                          const x = paddingX + i * colWidth - colWidth / 2;
-                          return (
-                            <rect
-                              key={`hz-c1-${i}`}
-                              x={i === 0 ? paddingX : x}
-                              y={paddingY}
-                              width={i === 0 || i === records.length - 1 ? colWidth / 2 : colWidth}
-                              height={usableHeight}
-                              fill="transparent"
-                              className="cursor-pointer"
-                              onMouseEnter={() => setHoveredReportsChartIndex1(i)}
-                              onMouseLeave={() => setHoveredReportsChartIndex1(null)}
-                              onTouchStart={() => setHoveredReportsChartIndex1(i)}
-                              onClick={() => setHoveredReportsChartIndex1(i)}
+                          {/* Vertical guide line */}
+                          {hoveredReportsChartIndex2 !== null && pointsIncome2[hoveredReportsChartIndex2] && (
+                            <line 
+                              x1={pointsIncome2[hoveredReportsChartIndex2].x} 
+                              y1={paddingY} 
+                              x2={pointsIncome2[hoveredReportsChartIndex2].x} 
+                              y2={chartHeight - paddingY} 
+                              stroke={theme === 'dark' ? '#38bdf8' : '#0284c7'} 
+                              strokeWidth="1" 
+                              strokeDasharray="2 2"
+                              className="opacity-75"
                             />
-                          );
-                        })}
+                          )}
 
-                        {/* Tooltip */}
-                        {hoveredReportsChartIndex1 !== null && records[hoveredReportsChartIndex1] && (() => {
-                          const rec = records[hoveredReportsChartIndex1];
-                          const pt = pointsIncome1[hoveredReportsChartIndex1] || { x: 250, y: 80 };
-                          const tooltipWidth = 115;
-                          const tooltipHeight = 44;
-                          let tooltipX = pt.x - tooltipWidth / 2;
-                          if (tooltipX < paddingX) tooltipX = paddingX;
-                          if (tooltipX + tooltipWidth > chartWidth - paddingX) tooltipX = chartWidth - paddingX - tooltipWidth;
-                          const tooltipY = Math.max(paddingY - 5, pt.y - tooltipHeight - 8);
+                          {/* Line paths */}
+                          <path d={pathIncome2} fill="none" stroke={theme === 'dark' ? '#38bdf8' : '#0284c7'} strokeWidth="2.5" strokeLinecap="round" />
+                          <path d={pathExpense2} fill="none" stroke="#EF4444" strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
 
-                          return (
-                            <g transform={`translate(${tooltipX}, ${tooltipY})`} className="pointer-events-none filter drop-shadow-[0_2px_4px_rgba(110,96,80,0.12)]">
-                              <rect width={tooltipWidth} height={tooltipHeight} rx="6" fill="rgba(35, 32, 29, 0.95)" stroke="#e2e8f0" strokeWidth="0.5" />
-                              <text x="8" y="12" fill="#e2e8f0" className="text-[8px] font-black uppercase tracking-wider font-mono">{rec.label}</text>
-                              <text x="8" y="24" fill="#10B981" className="text-[8px] font-bold font-mono">Profit: {currencySymbol}{formatNum(rec.income)}</text>
-                              <text x="8" y="34" fill="#38BDF8" className="text-[8px] font-bold font-mono">Tax: {currencySymbol}{formatNum(rec.tax)}</text>
-                            </g>
-                          );
-                        })()}
-                      </svg>
+                          {/* Dots */}
+                          {pointsIncome2.map((pts, i) => (
+                            <circle 
+                              key={`earn-dot-${i}`} 
+                              cx={pts.x} 
+                              cy={pts.y} 
+                              r={hoveredReportsChartIndex2 === i ? "4.5" : "3"} 
+                              fill={theme === 'dark' ? '#38bdf8' : '#0284c7'} 
+                              stroke="#fff" 
+                              strokeWidth={hoveredReportsChartIndex2 === i ? "1.5" : "1"} 
+                            />
+                          ))}
+                          {pointsExpense2.map((pts, i) => (
+                            <circle 
+                              key={`exp-dot-c2-${i}`} 
+                              cx={pts.x} 
+                              cy={pts.y} 
+                              r={hoveredReportsChartIndex2 === i ? "4.5" : "3"} 
+                              fill="#EF4444" 
+                              stroke="#fff" 
+                              strokeWidth={hoveredReportsChartIndex2 === i ? "1.5" : "1"} 
+                            />
+                          ))}
+
+                          {/* Labels */}
+                          {records.map((r, i) => {
+                            const x = paddingX + (i / (records.length - 1)) * usableWidth;
+                            const isHovered = hoveredReportsChartIndex2 === i;
+                            return (
+                              <text 
+                                key={`lbl-c2-${i}`} 
+                                x={x} 
+                                y={chartHeight - 4} 
+                                textAnchor="middle" 
+                                className={`text-[9px] font-mono transition-all ${isHovered ? 'font-black fill-[#0284c7] dark:fill-[#38bdf8]' : 'font-bold fill-[#64748b]/80'}`}
+                              >
+                                {r.label}
+                              </text>
+                            );
+                          })}
+
+                          {/* Hover Zones */}
+                          {records.map((_, i) => {
+                            const colWidth = usableWidth / (records.length - 1);
+                            const x = paddingX + i * colWidth - colWidth / 2;
+                            return (
+                              <rect
+                                key={`hz-c2-${i}`}
+                                x={i === 0 ? paddingX : x}
+                                y={paddingY}
+                                width={i === 0 || i === records.length - 1 ? colWidth / 2 : colWidth}
+                                height={usableHeight}
+                                fill="transparent"
+                                className="cursor-pointer"
+                                onMouseEnter={() => setHoveredReportsChartIndex2(i)}
+                                onMouseLeave={() => setHoveredReportsChartIndex2(null)}
+                                onTouchStart={() => setHoveredReportsChartIndex2(i)}
+                                onClick={() => setHoveredReportsChartIndex2(i)}
+                              />
+                            );
+                          })}
+
+                          {/* Tooltip */}
+                          {hoveredReportsChartIndex2 !== null && records[hoveredReportsChartIndex2] && (() => {
+                            const rec = records[hoveredReportsChartIndex2];
+                            const pt = pointsIncome2[hoveredReportsChartIndex2] || { x: 250, y: 80 };
+                            const tooltipWidth = 115;
+                            const tooltipHeight = 44;
+                            let tooltipX = pt.x - tooltipWidth / 2;
+                            if (tooltipX < paddingX) tooltipX = paddingX;
+                            if (tooltipX + tooltipWidth > chartWidth - paddingX) tooltipX = chartWidth - paddingX - tooltipWidth;
+                            const tooltipY = Math.max(paddingY - 5, pt.y - tooltipHeight - 8);
+
+                            return (
+                              <g transform={`translate(${tooltipX}, ${tooltipY})`} className="pointer-events-none filter drop-shadow-[0_2px_4px_rgba(2,132,199,0.12)]">
+                                <rect width={tooltipWidth} height={tooltipHeight} rx="6" fill="#111a36" stroke={theme === 'dark' ? '#223269' : '#bae6fd'} strokeWidth="0.5" />
+                                <text x="8" y="12" fill="#e0f2fe" className="text-[8px] font-black uppercase tracking-wider font-mono">{rec.label}</text>
+                                <text x="8" y="24" fill="#10B981" className="text-[8px] font-bold font-mono">Earned: {currencySymbol}{formatNum(rec.income)}</text>
+                                <text x="8" y="34" fill="#EF4444" className="text-[8px] font-bold font-mono">Spent: {currencySymbol}{formatNum(rec.expense)}</text>
+                              </g>
+                            );
+                          })()}
+                        </svg>
+                      </div>
                     </div>
                   </div>
-
-                  {/* CHART 2: Earnings vs Expenses */}
-                  <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 p-5 rounded-2xl shadow-xs text-sans">
-                    <div className="flex flex-wrap justify-between items-start sm:items-center gap-2 mb-4">
-                      <div>
-                        <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Earnings & Expenses</h3>
-                        <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5 font-medium">Comparative analysis of business revenues vs expenses</span>
-                      </div>
-                      <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-2.5 h-0.5 bg-[#0f172a]" /> EARNED
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-2.5 h-0.5 border-t border-dashed border-[#EF4444]" /> SPENT
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="w-full overflow-x-auto select-none mt-2">
-                      <svg className="w-full min-w-[400px]" viewBox={`0 0 ${chartWidth} ${chartHeight}`} fill="none">
-                        {/* Grid Lines */}
-                        {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
-                          const y = paddingY + ratio * usableHeight;
-                          const labelValue = Math.round(maxVal2 - (ratio * maxVal2));
-                          return (
-                            <g key={`grid-c2-${idx}`}>
-                              <line x1={paddingX} y1={y} x2={chartWidth - paddingX} y2={y} stroke="#e2e8f0" strokeWidth="0.5" strokeOpacity="0.4" />
-                              <text x={paddingX - 10} y={y + 3} textAnchor="end" className="text-[8px] font-mono fill-[#64748b]/70">
-                                {labelValue >= 1000 ? `${(labelValue / 1000).toFixed(0)}k` : labelValue}
-                              </text>
-                            </g>
-                          );
-                        })}
-
-                        {/* Vertical guide line */}
-                        {hoveredReportsChartIndex2 !== null && pointsIncome2[hoveredReportsChartIndex2] && (
-                          <line 
-                            x1={pointsIncome2[hoveredReportsChartIndex2].x} 
-                            y1={paddingY} 
-                            x2={pointsIncome2[hoveredReportsChartIndex2].x} 
-                            y2={chartHeight - paddingY} 
-                            stroke="#C6A87D" 
-                            strokeWidth="1" 
-                            strokeDasharray="2 2"
-                            className="opacity-75"
-                          />
-                        )}
-
-                        {/* Line paths */}
-                        <path d={pathIncome2} fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
-                        <path d={pathExpense2} fill="none" stroke="#EF4444" strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
-
-                        {/* Dots */}
-                        {pointsIncome2.map((pts, i) => (
-                          <circle 
-                            key={`earn-dot-${i}`} 
-                            cx={pts.x} 
-                            cy={pts.y} 
-                            r={hoveredReportsChartIndex2 === i ? "4.5" : "3"} 
-                            fill="#0f172a" 
-                            stroke="#fff" 
-                            strokeWidth={hoveredReportsChartIndex2 === i ? "1.5" : "1"} 
-                          />
-                        ))}
-                        {pointsExpense2.map((pts, i) => (
-                          <circle 
-                            key={`exp-dot-c2-${i}`} 
-                            cx={pts.x} 
-                            cy={pts.y} 
-                            r={hoveredReportsChartIndex2 === i ? "4.5" : "3"} 
-                            fill="#EF4444" 
-                            stroke="#fff" 
-                            strokeWidth={hoveredReportsChartIndex2 === i ? "1.5" : "1"} 
-                          />
-                        ))}
-
-                        {/* Labels */}
-                        {records.map((r, i) => {
-                          const x = paddingX + (i / (records.length - 1)) * usableWidth;
-                          const isHovered = hoveredReportsChartIndex2 === i;
-                          return (
-                            <text 
-                              key={`lbl-c2-${i}`} 
-                              x={x} 
-                              y={chartHeight - 4} 
-                              textAnchor="middle" 
-                              className={`text-[9px] font-mono transition-all ${isHovered ? 'font-black fill-[#0f172a]' : 'font-bold fill-[#64748b]/80'}`}
-                            >
-                              {r.label}
-                            </text>
-                          );
-                        })}
-
-                        {/* Hover Zones */}
-                        {records.map((_, i) => {
-                          const colWidth = usableWidth / (records.length - 1);
-                          const x = paddingX + i * colWidth - colWidth / 2;
-                          return (
-                            <rect
-                              key={`hz-c2-${i}`}
-                              x={i === 0 ? paddingX : x}
-                              y={paddingY}
-                              width={i === 0 || i === records.length - 1 ? colWidth / 2 : colWidth}
-                              height={usableHeight}
-                              fill="transparent"
-                              className="cursor-pointer"
-                              onMouseEnter={() => setHoveredReportsChartIndex2(i)}
-                              onMouseLeave={() => setHoveredReportsChartIndex2(null)}
-                              onTouchStart={() => setHoveredReportsChartIndex2(i)}
-                              onClick={() => setHoveredReportsChartIndex2(i)}
-                            />
-                          );
-                        })}
-
-                        {/* Tooltip */}
-                        {hoveredReportsChartIndex2 !== null && records[hoveredReportsChartIndex2] && (() => {
-                          const rec = records[hoveredReportsChartIndex2];
-                          const pt = pointsIncome2[hoveredReportsChartIndex2] || { x: 250, y: 80 };
-                          const tooltipWidth = 115;
-                          const tooltipHeight = 44;
-                          let tooltipX = pt.x - tooltipWidth / 2;
-                          if (tooltipX < paddingX) tooltipX = paddingX;
-                          if (tooltipX + tooltipWidth > chartWidth - paddingX) tooltipX = chartWidth - paddingX - tooltipWidth;
-                          const tooltipY = Math.max(paddingY - 5, pt.y - tooltipHeight - 8);
-
-                          return (
-                            <g transform={`translate(${tooltipX}, ${tooltipY})`} className="pointer-events-none filter drop-shadow-[0_2px_4px_rgba(110,96,80,0.12)]">
-                              <rect width={tooltipWidth} height={tooltipHeight} rx="6" fill="rgba(35, 32, 29, 0.95)" stroke="#e2e8f0" strokeWidth="0.5" />
-                              <text x="8" y="12" fill="#e2e8f0" className="text-[8px] font-black uppercase tracking-wider font-mono">{rec.label}</text>
-                              <text x="8" y="24" fill="#10B981" className="text-[8px] font-bold font-mono">Earned: {currencySymbol}{formatNum(rec.income)}</text>
-                              <text x="8" y="34" fill="#EF4444" className="text-[8px] font-bold font-mono">Spent: {currencySymbol}{formatNum(rec.expense)}</text>
-                            </g>
-                          );
-                        })()}
-                      </svg>
-                    </div>
-                  </div>
-                </div>
                 </div>
               );
             })()}
@@ -5128,8 +5111,8 @@ export default function Dashboard({
               const isProfitable = netCash >= 0;
               return (
                 <div 
-                  className="relative overflow-hidden bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs"
-                  style={{ boxShadow: '0 1px 3px rgba(110,96,80,0.06)' }}
+                  className="relative overflow-hidden bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-5 shadow-xs"
+                  style={{ boxShadow: '0 1px 3px rgba(2,132,199,0.06)' }}
                 >
                   {/* Color top border decoration */}
                   <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${isProfitable ? 'from-emerald-400 via-teal-500 to-emerald-400' : 'from-rose-400 via-pink-500 to-rose-400'}`} />
@@ -5165,8 +5148,8 @@ export default function Dashboard({
             {/* Side-by-side Tables Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* List of outstanding invoices with due dates */}
-              <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
-                <div className="flex justify-between items-center pb-4 border-b border-[#e2e8f0]/45 dark:border-zinc-800">
+              <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs">
+                <div className="flex justify-between items-center pb-4 border-b border-[#bae6fd]/30 dark:border-zinc-800">
                   <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Receivables Aging & Pending Bills</h3>
                   <span className="text-[10px] font-mono font-black text-rose-500 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-lg border border-rose-200/50 dark:border-rose-900/30">
                     {reportedInvoices.filter(i => i.status === 'pending').length} Pending
@@ -5180,7 +5163,7 @@ export default function Dashboard({
                   ) : (
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className="text-[10px] font-black uppercase text-[#64748b]/60 tracking-wider border-b border-[#e2e8f0]/30">
+                        <tr className="text-[10px] font-black uppercase text-[#64748b]/60 tracking-wider border-b border-[#bae6fd]/30">
                           <th className="py-2.5 font-black">INV ID</th>
                           <th className="py-2.5 font-black">CLIENT NAME</th>
                           <th className="py-2.5 font-black">DUE DATE</th>
@@ -5191,7 +5174,7 @@ export default function Dashboard({
                       </thead>
                       <tbody>
                         {reportedInvoices.filter(i => i.status === 'pending').slice(0, 3).map(inv => (
-                          <tr key={inv.id} className="border-b border-[#e2e8f0]/20 hover:bg-[#FAF8F5]/50 dark:hover:bg-zinc-850/40">
+                          <tr key={inv.id} className="border-b border-[#bae6fd]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20">
                             <td className="py-3 font-extrabold text-[#0f172a] dark:text-white">{inv.invoiceNumber}</td>
                             <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[150px]">{inv.clientName}</td>
                             <td className="py-3 font-medium text-rose-500 font-sans">Due: {inv.dueDate || inv.date}</td>
@@ -5215,7 +5198,7 @@ export default function Dashboard({
                     </table>
                   )}
                   {reportedInvoices.filter(i => i.status === 'pending').length > 3 && (
-                    <div className="mt-3 pt-3 border-t border-[#e2e8f0]/30 dark:border-zinc-800 text-center">
+                    <div className="mt-3 pt-3 border-t border-[#bae6fd]/30 dark:border-zinc-800 text-center">
                       <button 
                         onClick={() => setActiveTab('invoices')} 
                         className="text-[9px] font-black uppercase tracking-wider text-rose-500 hover:text-rose-600 transition-colors"
@@ -5228,8 +5211,8 @@ export default function Dashboard({
               </div>
 
               {/* Business Expenses Ledger logged */}
-              <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
-                <div className="flex justify-between items-center pb-4 border-b border-[#e2e8f0]/45 dark:border-zinc-800">
+              <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs">
+                <div className="flex justify-between items-center pb-4 border-b border-[#bae6fd]/30 dark:border-zinc-800">
                   <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Logged Expenditure Ledgers</h3>
                   <span className="text-[10px] font-mono font-black text-rose-500 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-lg border border-rose-200/50 dark:border-rose-900/30">
                     {reportedExpenses.length} Expenses
@@ -5243,7 +5226,7 @@ export default function Dashboard({
                   ) : (
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className="text-[10px] font-black uppercase text-[#64748b]/60 tracking-wider border-b border-[#e2e8f0]/30">
+                        <tr className="text-[10px] font-black uppercase text-[#64748b]/60 tracking-wider border-b border-[#bae6fd]/30">
                           <th className="py-2.5 font-black">CATEGORY</th>
                           <th className="py-2.5 font-black">DESCRIPTION</th>
                           <th className="py-2.5 font-black">CHARGED DATE</th>
@@ -5253,7 +5236,7 @@ export default function Dashboard({
                       </thead>
                       <tbody>
                         {(showAllExpenses ? reportedExpenses : reportedExpenses.slice(0, 3)).map(exp => (
-                          <tr key={exp.id} className="border-b border-[#e2e8f0]/20 hover:bg-[#FAF8F5]/50 dark:hover:bg-zinc-850/40 group">
+                          <tr key={exp.id} className="border-b border-[#bae6fd]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 group">
                             <td className="py-3 font-extrabold text-[#0f172a] dark:text-white uppercase tracking-tight font-mono text-[10px]">{exp.category}</td>
                             <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[200px]">{exp.description || 'General category expenditure'}</td>
                             <td className="py-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans">{exp.date}</td>
@@ -5273,7 +5256,7 @@ export default function Dashboard({
                     </table>
                   )}
                   {!showAllExpenses && reportedExpenses.length > 3 && (
-                    <div className="mt-3 pt-3 border-t border-[#e2e8f0]/30 dark:border-zinc-800 text-center">
+                    <div className="mt-3 pt-3 border-t border-[#bae6fd]/30 dark:border-zinc-800 text-center">
                       <button 
                         onClick={() => setShowAllExpenses(true)} 
                         className="text-[9px] font-black uppercase tracking-wider text-rose-500 hover:text-rose-600 transition-colors"
@@ -5283,7 +5266,7 @@ export default function Dashboard({
                     </div>
                   )}
                   {showAllExpenses && reportedExpenses.length > 3 && (
-                    <div className="mt-3 pt-3 border-t border-[#e2e8f0]/30 dark:border-zinc-800 text-center">
+                    <div className="mt-3 pt-3 border-t border-[#bae6fd]/30 dark:border-zinc-800 text-center">
                       <button 
                         onClick={() => setShowAllExpenses(false)} 
                         className="text-[9px] font-black uppercase tracking-wider text-[#64748b] hover:text-[#0f172a] transition-colors"
@@ -5400,106 +5383,106 @@ export default function Dashboard({
               {/* KPI Cards Row */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
                 {/* Settled Earnings */}
-                <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-emerald-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-emerald-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
                   <div className="flex justify-between items-start">
                     <div className="w-8.5 h-8.5 rounded-full bg-[#ECFDF5] text-[#10B981] border border-[#A7F3D0] flex items-center justify-center font-black text-sm">
-                      ₹
+                      â‚¹
                     </div>
-                    <span className="text-[10px] font-black text-[#10B981] bg-[#ECFDF5] border border-[#A7F3D0] px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-black text-[#10B981] bg-[#ECFDF5] border border-[#A7F3D0] px-2 py-0.5 rounded-full font-mono">
                       {earningsPct}
                     </span>
                   </div>
                   <div className="mt-3">
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Settled Earnings</span>
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 dark:text-[#94a3b8]/80 block">Settled Earnings</span>
                     <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
                       {currencySymbol}{formatNum(totalBilled)}
                     </span>
                   </div>
                   {/* Sparkline bars */}
                   <div className="flex items-end gap-1 h-6 self-start mt-2">
-                    <div className="w-1 bg-emerald-200 rounded-t-sm h-2" />
-                    <div className="w-1 bg-emerald-300 rounded-t-sm h-3" />
-                    <div className="w-1 bg-emerald-400 rounded-t-sm h-5" />
-                    <div className="w-1 bg-emerald-300 rounded-t-sm h-3" />
-                    <div className="w-1 bg-emerald-500 rounded-t-sm h-6" />
+                    <div className="w-1 bg-emerald-200 dark:bg-emerald-800 rounded-t-sm h-2" />
+                    <div className="w-1 bg-emerald-300 dark:bg-emerald-700 rounded-t-sm h-3" />
+                    <div className="w-1 bg-emerald-400 dark:bg-emerald-600 rounded-t-sm h-5" />
+                    <div className="w-1 bg-emerald-300 dark:bg-emerald-700 rounded-t-sm h-3" />
+                    <div className="w-1 bg-emerald-500 dark:bg-emerald-500 rounded-t-sm h-6" />
                   </div>
                 </div>
 
                 {/* Pending Receivables */}
-                <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-amber-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-amber-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
                   <div className="flex justify-between items-start">
                     <div className="w-8.5 h-8.5 rounded-full bg-[#FFFBEB] text-[#F59E0B] border border-[#FEF3C7] flex items-center justify-center">
                       <CheckSquare className="w-4 h-4" />
                     </div>
-                    <span className="text-[10px] font-black text-[#F59E0B] bg-[#FFFBEB] border border-[#FEF3C7] px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-black text-[#F59E0B] bg-[#FFFBEB] border border-[#FEF3C7] px-2 py-0.5 rounded-full font-mono">
                       {receivablesPct}
                     </span>
                   </div>
                   <div className="mt-3">
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Pending Receivables</span>
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 dark:text-[#94a3b8]/80 block">Pending Receivables</span>
                     <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
                       {currencySymbol}{formatNum(totalOutstanding)}
                     </span>
                   </div>
                   {/* Sparkline bars */}
                   <div className="flex items-end gap-1 h-6 self-start mt-2">
-                    <div className="w-1 bg-amber-200 rounded-t-sm h-4" />
-                    <div className="w-1 bg-amber-300 rounded-t-sm h-2" />
-                    <div className="w-1 bg-amber-400 rounded-t-sm h-5" />
-                    <div className="w-1 bg-amber-500 rounded-t-sm h-6" />
-                    <div className="w-1 bg-amber-300 rounded-t-sm h-3" />
+                    <div className="w-1 bg-amber-200 dark:bg-amber-800 rounded-t-sm h-4" />
+                    <div className="w-1 bg-amber-300 dark:bg-amber-700 rounded-t-sm h-2" />
+                    <div className="w-1 bg-amber-400 dark:bg-amber-600 rounded-t-sm h-5" />
+                    <div className="w-1 bg-amber-500 dark:bg-amber-500 rounded-t-sm h-6" />
+                    <div className="w-1 bg-amber-300 dark:bg-amber-700 rounded-t-sm h-3" />
                   </div>
                 </div>
 
                 {/* Operating Expenses */}
-                <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-rose-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-rose-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
                   <div className="flex justify-between items-start">
                     <div className="w-8.5 h-8.5 rounded-full bg-[#FEF2F2] text-[#EF4444] border border-[#FEE2E2] flex items-center justify-center">
                       <MinusCircle className="w-4 h-4" />
                     </div>
-                    <span className="text-[10px] font-black text-[#EF4444] bg-[#FEF2F2] border border-[#FEE2E2] px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-black text-[#EF4444] bg-[#FEF2F2] border border-[#FEE2E2] px-2 py-0.5 rounded-full font-mono">
                       {expensesPct}
                     </span>
                   </div>
                   <div className="mt-3">
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Operating Expenses</span>
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 dark:text-[#94a3b8]/80 block">Operating Expenses</span>
                     <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
                       {currencySymbol}{formatNum(totalReportedExpenses)}
                     </span>
                   </div>
                   {/* Sparkline bars */}
                   <div className="flex items-end gap-1 h-6 self-start mt-2">
-                    <div className="w-1 bg-rose-500 rounded-t-sm h-6" />
-                    <div className="w-1 bg-rose-300 rounded-t-sm h-3" />
-                    <div className="w-1 bg-rose-400 rounded-t-sm h-5" />
-                    <div className="w-1 bg-rose-200 rounded-t-sm h-2" />
-                    <div className="w-1 bg-rose-400 rounded-t-sm h-4" />
+                    <div className="w-1 bg-rose-500 dark:bg-rose-500 rounded-t-sm h-6" />
+                    <div className="w-1 bg-rose-300 dark:bg-rose-700 rounded-t-sm h-3" />
+                    <div className="w-1 bg-rose-400 dark:bg-rose-600 rounded-t-sm h-5" />
+                    <div className="w-1 bg-rose-200 dark:bg-rose-800 rounded-t-sm h-2" />
+                    <div className="w-1 bg-rose-400 dark:bg-rose-600 rounded-t-sm h-4" />
                   </div>
                 </div>
 
                 {/* Tax Liabilities */}
-                <div className="bg-white dark:bg-zinc-900 border-l-4 border-l-sky-400 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-sky-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
                   <div className="flex justify-between items-start">
                     <div className="w-8.5 h-8.5 rounded-full bg-[#F0F9FF] text-[#0284C7] border border-[#BAE6FD] flex items-center justify-center">
                       <Percent className="w-4 h-4" />
                     </div>
-                    <span className="text-[10px] font-black text-[#0284C7] bg-[#F0F9FF] border border-[#BAE6FD] px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-black text-[#0284C7] bg-[#F0F9FF] border border-[#BAE6FD] px-2 py-0.5 rounded-full font-mono">
                       {taxPct}
                     </span>
                   </div>
                   <div className="mt-3">
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block">Tax Liabilities</span>
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 dark:text-[#94a3b8]/80 block">Tax Liabilities</span>
                     <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
                       {currencySymbol}{formatNum(totalTax)}
                     </span>
                   </div>
                   {/* Sparkline bars */}
                   <div className="flex items-end gap-1 h-6 self-start mt-2">
-                    <div className="w-1 bg-sky-200 rounded-t-sm h-3" />
-                    <div className="w-1 bg-sky-300 rounded-t-sm h-5" />
-                    <div className="w-1 bg-sky-400 rounded-t-sm h-2" />
-                    <div className="w-1 bg-sky-500 rounded-t-sm h-6" />
-                    <div className="w-1 bg-sky-300 rounded-t-sm h-4" />
+                    <div className="w-1 bg-sky-200 dark:bg-sky-800 rounded-t-sm h-3" />
+                    <div className="w-1 bg-sky-300 dark:bg-sky-700 rounded-t-sm h-5" />
+                    <div className="w-1 bg-sky-400 dark:bg-sky-600 rounded-t-sm h-2" />
+                    <div className="w-1 bg-sky-500 dark:bg-sky-500 rounded-t-sm h-6" />
+                    <div className="w-1 bg-sky-300 dark:bg-sky-700 rounded-t-sm h-4" />
                   </div>
                 </div>
               </div>
@@ -5507,10 +5490,10 @@ export default function Dashboard({
               {/* Chart & Donut Middle Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-[1.72fr_1.28fr] gap-6">
                 {/* Revenue Intelligence Line Chart */}
-                <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
-                  <div className="flex justify-between items-start pb-4 border-b border-[#e2e8f0]/30 dark:border-zinc-800 flex-wrap gap-2">
+                <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                  <div className="flex justify-between items-start pb-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex-wrap gap-2">
                     <div>
-                      <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Revenue Intelligence</h3>
+                      <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Revenue Intelligence</h3>
                       <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5">Comparative analysis of earnings vs unpaid receivables</span>
                       {/* Interval dropdown selector */}
                       <div className="mt-2 w-fit">
@@ -5520,8 +5503,8 @@ export default function Dashboard({
                             setDashboardChartRange(e.target.value as any);
                             setHoveredDashboardChartIndex(null);
                           }}
-                          className="px-3.5 py-1.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0] hover:border-[#C6A87D] focus:border-[#0f172a] dark:border-zinc-700 dark:focus:border-zinc-500 rounded-lg text-[10px] font-black uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 focus:outline-none cursor-pointer transition-colors duration-150"
-                          style={{ boxShadow: 'inset 0 1px 3px rgba(110,96,80,0.08)' }}
+                          className="px-3.5 py-1.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd] hover:border-[#0284c7] dark:border-[#223269] dark:hover:border-[#38bdf8] focus:border-[#0f172a] dark:focus:border-zinc-500 rounded-lg text-[10px] font-black uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 focus:outline-none cursor-pointer transition-colors duration-150"
+                          style={{ boxShadow: 'inset 0 1px 3px rgba(2,132,199,0.08)' }}
                         >
                           <option value="7d">7 Days</option>
                           <option value="1m">Monthly</option>
@@ -5532,12 +5515,12 @@ export default function Dashboard({
                         </select>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400 mt-1">
+                    <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400 mt-1 font-mono">
                       <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-0.5 bg-[#0f172a]" /> EARNINGS
+                        <span className="w-2.5 h-0.5" style={{ backgroundColor: theme === 'dark' ? '#38bdf8' : '#0284c7' }} /> EARNINGS
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-0.5 border-t border-dashed border-[#C6A87D]" /> RECEIVABLES
+                        <span className="w-2.5 h-0.5 border-t border-dashed" style={{ borderColor: theme === 'dark' ? '#60a5fa' : '#2563eb' }} /> RECEIVABLES
                       </span>
                     </div>
                   </div>
@@ -5550,8 +5533,8 @@ export default function Dashboard({
                         const labelValue = Math.round(maxVal - (ratio * maxVal));
                         return (
                           <g key={`grid-${i}`}>
-                            <line x1={paddingX} y1={y} x2={chartWidth - paddingX} y2={y} stroke="#e2e8f0" strokeWidth="0.5" strokeOpacity="0.4" />
-                            <text x={paddingX - 10} y={y + 3} textAnchor="end" className="text-[8px] font-mono fill-[#64748b]/70">
+                            <line x1={paddingX} y1={y} x2={chartWidth - paddingX} y2={y} stroke={theme === 'dark' ? '#223269' : '#bae6fd'} strokeWidth="0.5" strokeOpacity="0.4" />
+                            <text x={paddingX - 10} y={y + 3} textAnchor="end" className="text-[8px] font-mono fill-[#64748b]/70 dark:fill-zinc-400">
                               {labelValue >= 1000 ? `${(labelValue / 1000).toFixed(0)}k` : labelValue}
                             </text>
                           </g>
@@ -5565,7 +5548,7 @@ export default function Dashboard({
                           y1={paddingY} 
                           x2={pointsEarnings[hoveredDashboardChartIndex].x} 
                           y2={chartHeight - paddingY} 
-                          stroke="#C6A87D" 
+                          stroke={theme === 'dark' ? '#60a5fa' : '#2563eb'} 
                           strokeWidth="1" 
                           strokeDasharray="2 2"
                           className="opacity-75"
@@ -5573,8 +5556,8 @@ export default function Dashboard({
                       )}
 
                       {/* Line paths */}
-                      <path d={pathEarnings} fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
-                      <path d={pathReceivables} fill="none" stroke="#C6A87D" strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
+                      <path d={pathEarnings} fill="none" stroke={theme === 'dark' ? '#38bdf8' : '#0284c7'} strokeWidth="2.5" strokeLinecap="round" />
+                      <path d={pathReceivables} fill="none" stroke={theme === 'dark' ? '#60a5fa' : '#2563eb'} strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
 
                       {/* Dot indicators */}
                       {pointsEarnings.map((pts, i) => (
@@ -5583,7 +5566,7 @@ export default function Dashboard({
                           cx={pts.x} 
                           cy={pts.y} 
                           r={hoveredDashboardChartIndex === i ? "4.5" : "3"} 
-                          fill="#0f172a" 
+                          fill={theme === 'dark' ? '#38bdf8' : '#0284c7'} 
                           stroke="#fff" 
                           strokeWidth={hoveredDashboardChartIndex === i ? "1.5" : "1"} 
                           className="transition-all"
@@ -5595,7 +5578,7 @@ export default function Dashboard({
                           cx={pts.x} 
                           cy={pts.y} 
                           r={hoveredDashboardChartIndex === i ? "4.5" : "3"} 
-                          fill="#C6A87D" 
+                          fill={theme === 'dark' ? '#60a5fa' : '#2563eb'} 
                           stroke="#fff" 
                           strokeWidth={hoveredDashboardChartIndex === i ? "1.5" : "1"} 
                           className="transition-all"
@@ -5612,7 +5595,7 @@ export default function Dashboard({
                             x={x} 
                             y={chartHeight - 4} 
                             textAnchor="middle" 
-                            className={`text-[9px] font-mono transition-all ${isHovered ? 'font-black fill-[#0f172a]' : 'font-bold fill-[#64748b]/80'}`}
+                            className={`text-[9px] font-mono transition-all ${isHovered ? 'font-black fill-[#0284c7] dark:fill-[#38bdf8]' : 'font-bold fill-[#64748b]/80 dark:fill-zinc-400'}`}
                           >
                             {r.label}
                           </text>
@@ -5625,17 +5608,17 @@ export default function Dashboard({
                         const x = paddingX + i * colWidth - colWidth / 2;
                         return (
                           <rect
-                            key={`hover-zone-${i}`}
-                            x={i === 0 ? paddingX : x}
-                            y={paddingY}
-                            width={i === 0 || i === records.length - 1 ? colWidth / 2 : colWidth}
-                            height={usableHeight}
-                            fill="transparent"
-                            className="cursor-pointer"
-                            onMouseEnter={() => setHoveredDashboardChartIndex(i)}
-                            onMouseLeave={() => setHoveredDashboardChartIndex(null)}
-                            onTouchStart={() => setHoveredDashboardChartIndex(i)}
-                            onClick={() => setHoveredDashboardChartIndex(i)}
+                              key={`hover-zone-${i}`}
+                              x={i === 0 ? paddingX : x}
+                              y={paddingY}
+                              width={i === 0 || i === records.length - 1 ? colWidth / 2 : colWidth}
+                              height={usableHeight}
+                              fill="transparent"
+                              className="cursor-pointer"
+                              onMouseEnter={() => setHoveredDashboardChartIndex(i)}
+                              onMouseLeave={() => setHoveredDashboardChartIndex(null)}
+                              onTouchStart={() => setHoveredDashboardChartIndex(i)}
+                              onClick={() => setHoveredDashboardChartIndex(i)}
                           />
                         );
                       })}
@@ -5652,13 +5635,13 @@ export default function Dashboard({
                         const tooltipY = Math.max(paddingY - 5, pt.y - tooltipHeight - 8);
 
                         return (
-                          <g transform={`translate(${tooltipX}, ${tooltipY})`} className="pointer-events-none filter drop-shadow-[0_2px_4px_rgba(110,96,80,0.12)]">
+                          <g transform={`translate(${tooltipX}, ${tooltipY})`} className="pointer-events-none filter drop-shadow-[0_2px_4px_rgba(2,132,199,0.12)]">
                             <rect 
                               width={tooltipWidth} 
                               height={tooltipHeight} 
                               rx="6" 
-                              fill="rgba(35, 32, 29, 0.95)" 
-                              stroke="#e2e8f0"
+                              fill="rgba(11, 19, 41, 0.95)" 
+                              stroke={theme === 'dark' ? '#223269' : '#bae6fd'}
                               strokeWidth="0.5"
                             />
                             <text x="8" y="12" fill="#e2e8f0" className="text-[8px] font-black uppercase tracking-wider font-mono">{rec.label}</text>
@@ -5676,9 +5659,9 @@ export default function Dashboard({
                 </div>
 
                 {/* Donut Chart: Revenue Segments */}
-                <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
                   <div>
-                    <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Revenue Segments</h3>
+                    <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Revenue Segments</h3>
                   </div>
 
                   {(() => {
@@ -5695,30 +5678,30 @@ export default function Dashboard({
                         <div className="flex flex-col items-center justify-center py-4 relative">
                           <svg className="w-36 h-36" viewBox="0 0 200 200">
                             {/* Base track */}
-                            <circle cx="100" cy="100" r="70" fill="none" stroke="#F1EDE6" strokeWidth="18" />
+                            <circle cx="100" cy="100" r="70" fill="none" stroke={theme === 'dark' ? '#1b264f' : '#e0f2fe'} strokeWidth="18" />
                             
-                            {/* Earnings — emerald */}
+                            {/* Earnings â€” emerald */}
                             <circle 
                               cx="100" cy="100" r="70" fill="none" stroke="#10B981" strokeWidth="18" 
                               strokeDasharray={`${earnDash} ${c}`} strokeDashoffset="0" 
                               strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
                             />
                             
-                            {/* Receivables — amber */}
+                            {/* Receivables â€” amber */}
                             <circle 
                               cx="100" cy="100" r="70" fill="none" stroke="#F59E0B" strokeWidth="18" 
                               strokeDasharray={`${recvDash} ${c}`} strokeDashoffset={`-${earnDash}`} 
                               strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
                             />
 
-                            {/* Expenses — rose */}
+                            {/* Expenses â€” rose */}
                             <circle 
                               cx="100" cy="100" r="70" fill="none" stroke="#F43F5E" strokeWidth="18" 
                               strokeDasharray={`${expDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash}`} 
                               strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
                             />
 
-                            {/* Taxes — sky */}
+                            {/* Taxes â€” sky */}
                             <circle 
                               cx="100" cy="100" r="70" fill="none" stroke="#38BDF8" strokeWidth="18" 
                               strokeDasharray={`${taxDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash + expDash}`} 
@@ -5726,10 +5709,10 @@ export default function Dashboard({
                             />
 
                             {/* Total inside circle */}
-                            <text x="100" y="98" textAnchor="middle" className="text-[13px] font-black fill-[#0f172a] dark:fill-white">
+                            <text x="100" y="98" textAnchor="middle" className="text-[13px] font-black" fill={theme === 'dark' ? '#f8fafc' : '#0f172a'}>
                               {currencySymbol}{(segTotal >= 1000 ? (segTotal / 1000).toFixed(1) + 'k' : (segTotal === 1 ? '0' : segTotal))}
                             </text>
-                            <text x="100" y="116" textAnchor="middle" className="text-[9px] font-black uppercase tracking-wider fill-[#64748b]/80">
+                            <text x="100" y="116" textAnchor="middle" className="text-[9px] font-black uppercase tracking-wider" fill={theme === 'dark' ? '#94a3b8' : '#475569'}>
                               TOTAL
                             </text>
                           </svg>
@@ -5741,25 +5724,25 @@ export default function Dashboard({
                             <span className="flex items-center gap-1.5 whitespace-nowrap">
                               <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" /> Earnings
                             </span>
-                            <span className="font-extrabold text-[#0f172a] dark:text-white">{Math.round((totalBilled / segTotal) * 100)}%</span>
+                            <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((totalBilled / segTotal) * 100)}%</span>
                           </div>
                           <div className="flex items-center justify-between gap-1.5">
                             <span className="flex items-center gap-1.5 whitespace-nowrap">
                               <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" /> Receivables
                             </span>
-                            <span className="font-extrabold text-[#0f172a] dark:text-white">{Math.round((totalOutstanding / segTotal) * 100)}%</span>
+                            <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((totalOutstanding / segTotal) * 100)}%</span>
                           </div>
-                          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-[#e2e8f0]/40 dark:border-zinc-800">
+                          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-[#bae6fd]/40 dark:border-[#223269]/40">
                             <span className="flex items-center gap-1.5 whitespace-nowrap">
                               <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" /> Expenses
                             </span>
-                            <span className="font-extrabold text-[#0f172a] dark:text-white">{Math.round((totalExpensesVal / segTotal) * 100)}%</span>
+                            <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((totalExpensesVal / segTotal) * 100)}%</span>
                           </div>
-                          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-[#e2e8f0]/40 dark:border-zinc-800">
+                          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-[#bae6fd]/40 dark:border-[#223269]/40">
                             <span className="flex items-center gap-1.5 whitespace-nowrap">
                               <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" /> Taxes
                             </span>
-                            <span className="font-extrabold text-[#0f172a] dark:text-white">{Math.round((totalTax / segTotal) * 100)}%</span>
+                            <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((totalTax / segTotal) * 100)}%</span>
                           </div>
                         </div>
                       </>
@@ -5771,14 +5754,14 @@ export default function Dashboard({
               {/* Bottom Records Table & Compliance Protocol Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-[1.72fr_1.28fr] gap-6">
                 {/* Recent Billing Table */}
-                <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
-                  <div className="flex justify-between items-center pb-4 border-b border-[#e2e8f0]/45 dark:border-zinc-800">
-                    <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Recent Billing Records</h3>
+                <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                  <div className="flex justify-between items-center pb-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
+                    <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Recent Billing Records</h3>
                     <button 
                       onClick={() => setActiveTab('invoices')}
-                      className="text-[10px] font-black text-[#64748b] hover:text-[#0f172a] uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                      className="text-[10px] font-black text-[#0284c7] dark:text-[#38bdf8] hover:opacity-80 uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-opacity"
                     >
-                      View All Records →
+                      View All Records â†’
                     </button>
                   </div>
 
@@ -5790,7 +5773,7 @@ export default function Dashboard({
                     ) : (
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
-                          <tr className="text-[10px] font-black uppercase text-[#64748b]/60 tracking-wider border-b border-[#e2e8f0]/30">
+                          <tr className="text-[10px] font-black uppercase text-[#64748b]/60 dark:text-zinc-400 tracking-wider border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
                             <th className="py-2.5 font-black">INV ID</th>
                             <th className="py-2.5 font-black">CLIENT NAME</th>
                             <th className="py-2.5 font-black">DUE DATE</th>
@@ -5801,8 +5784,8 @@ export default function Dashboard({
                         </thead>
                         <tbody>
                           {invoices.slice(0, 3).map(inv => (
-                            <tr key={inv.id} className="border-b border-[#e2e8f0]/20 hover:bg-[#FAF8F5]/50 dark:hover:bg-zinc-850/40">
-                              <td className="py-3 font-extrabold text-[#0f172a] dark:text-white">{inv.invoiceNumber}</td>
+                            <tr key={inv.id} className="border-b border-[#bae6fd]/20 dark:border-[#223269]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 transition-colors">
+                              <td className="py-3 font-extrabold text-[#0f172a] dark:text-white font-mono">{inv.invoiceNumber}</td>
                               <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[120px]">{inv.clientName}</td>
                               <td className="py-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans">{inv.dueDate || inv.date}</td>
                               <td className="py-3 font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{formatNum(inv.grandTotal)}</td>
@@ -5814,7 +5797,7 @@ export default function Dashboard({
                               <td className="py-3 text-right">
                                 <button 
                                   onClick={() => setActivePreviewInvoice(inv)}
-                                  className="text-[#64748b] hover:text-[#0f172a] p-1 cursor-pointer"
+                                  className="text-[#64748b] hover:text-[#0f172a] dark:hover:text-white p-1 cursor-pointer"
                                 >
                                   <MoreVertical className="w-4 h-4" />
                                 </button>
@@ -5828,25 +5811,25 @@ export default function Dashboard({
                 </div>
 
                 {/* Dark Card: Billing Protocol */}
-                <div className="bg-[#23201D] text-[#FAF8F5] rounded-2xl p-6 shadow-md flex flex-col justify-between h-full min-h-[250px]">
+                <div className="bg-gradient-to-br from-[#111a36] to-[#0b1329] text-[#f8fafc] border border-[#223269]/60 shadow-[0_4px_20px_rgba(0,0,0,0.25)] rounded-2xl p-6 flex flex-col justify-between h-full min-h-[250px]">
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#EADFCF]">
-                      <Info className="w-4.5 h-4.5 text-[#C6A87D]" />
+                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#60a5fa]" style={{ fontFamily: "'Fraunces', serif" }}>
+                      <Info className="w-4.5 h-4.5 text-[#38bdf8]" />
                       <span>Billing Protocol</span>
                     </div>
                     
                     <div className="space-y-3 pt-2">
                       <div className="flex items-start gap-2.5 text-xs">
                         <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400 shrink-0 mt-0.5" />
-                        <span className="font-semibold text-[#EADFCF]/90">Ensure GSTR-1 compliance before EOM.</span>
+                        <span className="font-semibold text-zinc-300">Ensure GSTR-1 compliance before EOM.</span>
                       </div>
                       <div className="flex items-start gap-2.5 text-xs">
                         <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400 shrink-0 mt-0.5" />
-                        <span className="font-semibold text-[#EADFCF]/90">Validate HSN codes for industrial goods.</span>
+                        <span className="font-semibold text-zinc-300">Validate HSN codes for industrial goods.</span>
                       </div>
                       <div className="flex items-start gap-2.5 text-xs">
                         <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400 shrink-0 mt-0.5" />
-                        <span className="font-semibold text-[#EADFCF]/90">Maintain Net-30 payment intervals.</span>
+                        <span className="font-semibold text-zinc-300">Maintain Net-30 payment intervals.</span>
                       </div>
                     </div>
                   </div>
@@ -5854,7 +5837,7 @@ export default function Dashboard({
                   <div className="mt-6">
                     <button 
                       onClick={() => setActiveTab('learn')}
-                      className="w-full py-2.5 bg-[#2E2A27] border border-[#524A44] hover:bg-[#3E3834] text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer"
+                      className="w-full py-2.5 bg-[#0284c7] dark:bg-[#38bdf8] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer hover:shadow-[0_4px_12px_rgba(2,132,199,0.15)]"
                     >
                       View Compliance Docs
                     </button>
@@ -5871,9 +5854,9 @@ export default function Dashboard({
 
             {/* Page Header */}
             <div>
-              <h1 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
-                <span className="bg-gradient-to-r from-[#0f172a] to-[#64748b] bg-clip-text text-transparent dark:from-white dark:to-[#e2e8f0]">User Guide</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <h1 className="text-base font-black uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: "'Fraunces', serif" }}>
+                <span className="bg-gradient-to-r from-[#0284c7] via-[#2563eb] to-[#38bdf8] bg-clip-text text-transparent">User Guide</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] shrink-0" />
               </h1>
               <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">App usage documentation, billing policies, and company invoicing standards</p>
             </div>
@@ -5882,14 +5865,14 @@ export default function Dashboard({
             {/* Asymmetric Bento Grid Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-              {/* Bento Card 1: Part A (App Walkthrough) — Spans 2 Columns */}
-              <div id="learn-section-0" className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden flex flex-col justify-between">
+              {/* Bento Card 1: Part A (App Walkthrough) â€” Spans 2 Columns */}
+              <div id="learn-section-0" className="lg:col-span-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xs overflow-hidden flex flex-col justify-between">
                 <div className="relative">
-                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-400 via-sky-400 to-amber-500" />
-                  <div className="p-5 border-b border-[#e2e8f0]/30 dark:border-zinc-800 flex flex-wrap justify-between items-center gap-2 bg-[#FCFAF7]/20">
+                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#bae6fd] via-[#0284c7] to-[#2563eb]" />
+                  <div className="p-5 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex flex-wrap justify-between items-center gap-2 bg-[#f4f9ff]/50 dark:bg-[#0b1329]/40">
                     <div className="flex items-center gap-2.5">
-                      <span className="px-2 py-0.5 bg-emerald-500 text-white text-[8px] font-black uppercase tracking-widest rounded">Part A</span>
-                      <h2 className="text-[11px] font-black text-[#0f172a] dark:text-white uppercase tracking-wide">Structural Walkthrough</h2>
+                      <span className="px-2 py-0.5 bg-[#0284c7] text-white text-[8px] font-black uppercase tracking-widest rounded">Part A</span>
+                      <h2 className="text-[11px] font-black text-[#0f172a] dark:text-white uppercase tracking-wide" style={{ fontFamily: "'Fraunces', serif" }}>Structural Walkthrough</h2>
                     </div>
                     <span className="text-[9px] text-[#64748b] font-black uppercase tracking-wider">6 Modules</span>
                   </div>
@@ -5897,16 +5880,16 @@ export default function Dashboard({
 
                 <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 flex-1">
                   {[
-                    { step: '01', title: 'Set Up Company Profile', desc: 'Go to System Settings → Company Info. Input your business logo, GSTIN, PAN, bank accounts, and signature stamp. This data auto-populates all generated documents.' },
+                    { step: '01', title: 'Set Up Company Profile', desc: 'Go to System Settings â†’ Company Info. Input your business logo, GSTIN, PAN, bank accounts, and signature stamp. This data auto-populates all generated documents.' },
                     { step: '02', title: 'Populate Master Registries', desc: 'Open the Master Registry section. Save recurring records for Client Database, Vendor Database, HSN Registry, Transport Database, Material Catalog, and Product Categories.' },
-                    { step: '03', title: 'Design Invoice Templates', desc: 'Go to Tools & Design → Invoice Template. Use Advanced Studio and Quick Builder to toggle layouts (Modern, Classic, Minimal, Bold) and customize color palettes.' },
+                    { step: '03', title: 'Design Invoice Templates', desc: 'Go to Tools & Design â†’ Invoice Template. Use Advanced Studio and Quick Builder to toggle layouts (Modern, Classic, Minimal, Bold) and customize color palettes.' },
                     { step: '04', title: 'Manage Financial Ledgers', desc: 'Access Sales Ledger to issue Tax Invoices, Quotes, and Credit Notes. Access Purchases Ledger to record bills and POs. CGST/SGST/IGST tax splits calculate automatically.' },
-                    { step: '05', title: 'Review Reports & Exports', desc: 'Review total revenue and expenses in the main Billing Dashboard. Visit Financial Hub → Accounting Summary to export ledger databases directly to Excel.' },
-                    { step: '06', title: 'Configure Security PIN Lock', desc: 'Go to System Settings → App Preferences. Enable a secure 4-Digit PIN to encrypt your localIndexedDB storage sandbox and sync safely with Supabase.' },
+                    { step: '05', title: 'Review Reports & Exports', desc: 'Review total revenue and expenses in the main Billing Dashboard. Visit Financial Hub â†’ Accounting Summary to export ledger databases directly to Excel.' },
+                    { step: '06', title: 'Configure Security PIN Lock', desc: 'Go to System Settings â†’ App Preferences. Enable a secure 4-Digit PIN to encrypt your localIndexedDB storage sandbox and sync safely with Supabase.' },
                   ].map((item, idx) => {
-                    const stepColors = ['bg-emerald-500', 'bg-sky-500', 'bg-amber-500', 'bg-violet-500', 'bg-rose-500', 'bg-teal-500'];
+                    const stepColors = ['bg-[#0284c7]', 'bg-sky-500', 'bg-blue-500', 'bg-[#2563eb]', 'bg-indigo-500', 'bg-violet-500'];
                     return (
-                      <div key={item.step} className="flex gap-3.5 p-4 bg-[#FCFAF7]/40 dark:bg-zinc-950/40 border border-[#e2e8f0]/30 dark:border-zinc-800 rounded-xl hover:border-[#64748b]/30 hover:bg-[#FCFAF7]/80 transition-all duration-200 group">
+                      <div key={item.step} className="flex gap-3.5 p-4 bg-[#f4f9ff]/30 dark:bg-[#0b1329]/20 border border-[#bae6fd]/30 dark:border-[#223269]/30 rounded-xl hover:border-[#0284c7]/40 hover:bg-[#e0f2fe]/20 transition-all duration-200 group">
                         <div className={`flex-shrink-0 w-7 h-7 rounded-lg ${stepColors[idx]} text-white flex items-center justify-center font-black text-[10px] shadow-2xs`}>
                           {item.step}
                         </div>
@@ -5920,14 +5903,14 @@ export default function Dashboard({
                 </div>
               </div>
 
-              {/* Bento Card 2: Quick Tips & Protocol Checklist — Spans 1 Column */}
-              <div id="learn-section-4" className="bg-[#FCFAF7] dark:bg-zinc-900/50 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between relative overflow-hidden">
-                <div className="absolute top-0 inset-x-0 h-1 bg-[#64748b]" />
+              {/* Bento Card 2: Quick Tips & Protocol Checklist â€” Spans 1 Column */}
+              <div id="learn-section-4" className="bg-[#f4f9ff]/30 dark:bg-[#111a36]/50 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-5 shadow-xs flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-1 bg-[#0284c7]" />
                 
                 <div className="space-y-5">
-                  <div className="flex items-center justify-between border-b border-[#e2e8f0]/40 dark:border-zinc-800 pb-3">
-                    <span className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-wider">Quick Utilities</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  <div className="flex items-center justify-between border-b border-[#bae6fd]/30 dark:border-[#223269]/30 pb-3">
+                    <span className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-wider" style={{ fontFamily: "'Fraunces', serif" }}>Quick Utilities</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] dark:bg-[#38bdf8]" />
                   </div>
 
                   {[
@@ -5935,26 +5918,26 @@ export default function Dashboard({
                     { title: 'Sidebar Toggle', tip: 'Click the collapse button to lock labels and gain workspace size.' },
                     { title: 'Tax Auditing', tip: 'Always cross-verify client GSTIN formats before printing tax summaries.' }
                   ].map((tip, idx) => (
-                    <div key={tip.title} className="space-y-1 bg-white dark:bg-zinc-950 p-3 rounded-xl border border-[#e2e8f0]/30 dark:border-zinc-800 hover:border-[#64748b]/35 transition-colors">
+                    <div key={tip.title} className="space-y-1 bg-white dark:bg-[#111a36] p-3 rounded-xl border border-[#bae6fd]/30 dark:border-[#223269]/30 hover:border-[#0284c7]/35 transition-colors">
                       <span className="text-[10.5px] font-black text-[#0f172a] dark:text-zinc-200 uppercase tracking-wide block">{tip.title}</span>
-                      <p className="text-[10.5px] text-[#64748b]/85 dark:text-zinc-550 leading-relaxed font-medium">{tip.tip}</p>
+                      <p className="text-[10.5px] text-[#64748b]/85 dark:text-zinc-400 leading-relaxed font-medium">{tip.tip}</p>
                     </div>
                   ))}
                 </div>
 
-                <div className="mt-5 pt-3 border-t border-[#e2e8f0]/40 dark:border-zinc-800 text-[10px] text-[#64748b]/75 font-semibold leading-relaxed">
+                <div className="mt-5 pt-3 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 text-[10px] text-[#64748b]/75 font-semibold leading-relaxed">
                   Refer to local jurisdiction rules for official GST formatting regulations.
                 </div>
               </div>
 
-              {/* Bento Card 3: Part B (Company Policies) — Spans 3 Columns */}
-              <div id="learn-section-2" className="lg:col-span-3 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden">
+              {/* Bento Card 3: Part B (Company Policies) â€” Spans 3 Columns */}
+              <div id="learn-section-2" className="lg:col-span-3 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xs overflow-hidden">
                 <div className="relative">
-                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-violet-400 via-rose-400 to-[#64748b]" />
-                  <div className="p-5 border-b border-[#e2e8f0]/30 dark:border-zinc-800 flex flex-wrap justify-between items-center gap-2 bg-[#FCFAF7]/20">
+                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#bae6fd] via-[#0284c7] to-[#2563eb]" />
+                  <div className="p-5 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex flex-wrap justify-between items-center gap-2 bg-[#f4f9ff]/50 dark:bg-[#0b1329]/40">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 bg-[#64748b] text-white text-[8px] font-black uppercase tracking-widest rounded">Part B</span>
-                      <h2 className="text-[11px] font-black text-[#0f172a] dark:text-white uppercase tracking-wide">Corporate Billing Regulations & Terms</h2>
+                      <span className="px-2 py-0.5 bg-[#0284c7] text-white text-[8px] font-black uppercase tracking-widest rounded">Part B</span>
+                      <h2 className="text-[11px] font-black text-[#0f172a] dark:text-white uppercase tracking-wide" style={{ fontFamily: "'Fraunces', serif" }}>Corporate Billing Regulations & Terms</h2>
                     </div>
                     <span className="text-[9px] text-[#64748b] font-black uppercase tracking-wider">5 Standards</span>
                   </div>
@@ -5962,22 +5945,22 @@ export default function Dashboard({
 
                 <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {[
-                    { title: 'Payment Terms — Net-15', body: 'All published invoices operate under Net-15 intervals. Completed transactions must be processed via our approved corporate banking or dynamic QR codes within 15 calendar days from billing date.' },
+                    { title: 'Payment Terms â€” Net-15', body: 'All published invoices operate under Net-15 intervals. Completed transactions must be processed via our approved corporate banking or dynamic QR codes within 15 calendar days from billing date.' },
                     { title: 'Late Payment Penalties', body: 'Overdue invoices past the Net-15 window are subject to calculated interest fees governed by standard company guidelines. Notifications will be dispatched prior to calculation.' },
                     { title: 'Tax & GST Compliance', body: 'Taxes are processed based on regional boundaries. Same-state operations apply CGST + SGST; interstate supplies apply IGST. Place of Supply is determined from active registry.' },
                     { title: 'Disputes & Revisions', body: 'Discrepancy claims must be submitted to accounting within 7 business days from receipt. Past this window, invoice figures are considered finalized and accepted.' },
                     { title: 'Confidentiality of Financials', body: 'Billing metrics, client registry ledgers, and company tax data are protected by database row-level security policies and are never shared with external agencies.' }
                   ].map((policy, idx) => {
-                    const borderColors = ['border-emerald-400', 'border-rose-400', 'border-sky-400', 'border-amber-400', 'border-violet-400'];
-                    const dotColors = ['bg-emerald-400', 'bg-rose-400', 'bg-sky-400', 'bg-amber-400', 'bg-violet-400'];
+                    const borderColors = ['border-[#0284c7]', 'border-sky-500', 'border-blue-500', 'border-[#2563eb]', 'border-indigo-500'];
+                    const dotColors = ['bg-[#0284c7]', 'bg-sky-500', 'bg-blue-500', 'bg-[#2563eb]', 'bg-indigo-500'];
                     return (
-                      <div key={policy.title} className={`flex gap-3.5 p-4 border-l-2 border-[#e2e8f0] dark:border-zinc-700 hover:${borderColors[idx]} hover:bg-[#FCFAF7]/40 dark:hover:bg-zinc-950/40 rounded-r-xl transition-all group`}>
+                      <div key={policy.title} className={`flex gap-3.5 p-4 border-l-2 border-[#bae6fd]/40 dark:border-[#223269]/45 hover:${borderColors[idx]} hover:bg-[#f4f9ff]/45 dark:hover:bg-[#0b1329]/45 rounded-r-xl transition-all group`}>
                         <div className={`flex-shrink-0 w-5.5 h-5.5 rounded-full ${dotColors[idx]} text-white flex items-center justify-center font-black text-[9px] shadow-2xs`}>
                           {idx + 1}
                         </div>
                         <div className="min-w-0">
                           <span className="text-[10.5px] font-black text-[#0f172a] dark:text-zinc-200 uppercase tracking-wide block mb-1">{policy.title}</span>
-                          <p className="text-[10.5px] text-[#64748b]/80 dark:text-zinc-550 leading-relaxed font-medium">{policy.body}</p>
+                          <p className="text-[10.5px] text-[#64748b]/80 dark:text-zinc-400 leading-relaxed font-medium">{policy.body}</p>
                         </div>
                       </div>
                     );
@@ -5986,9 +5969,9 @@ export default function Dashboard({
               </div>
 
             </div>
-            <div className="flex items-start gap-3 px-4 py-3.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/40 dark:border-zinc-800 rounded-xl text-[10.5px] text-[#64748b]/80 dark:text-zinc-500">
-              <Info className="w-4 h-4 text-[#64748b] flex-shrink-0 mt-0.5 hidden sm:block" />
-              <span>This documentation applies to MakInvoices v1.2. For technical support, open the <strong className="text-[#0f172a] dark:text-zinc-300">Help & Support</strong> page from the profile menu. Policies are subject to periodic updates — last revised July 2025.</span>
+            <div className="flex items-start gap-3 px-4 py-3.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-[10.5px] text-[#64748b]/80 dark:text-zinc-400">
+              <Info className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8] flex-shrink-0 mt-0.5 hidden sm:block" />
+              <span>This documentation applies to MakInvoices v1.2. For technical support, open the <strong className="text-[#0f172a] dark:text-zinc-300">Help & Support</strong> page from the profile menu. Policies are subject to periodic updates â€” last revised July 2025.</span>
             </div>
 
           </div>
@@ -5997,16 +5980,26 @@ export default function Dashboard({
         {/* ------------------ TAB 6: BRAND NEW 'profile' BRAND VIEW ------------------ */}
         {activeTab === 'profile' && (
           <div className="space-y-6 text-sans animate-in fade-in duration-200 w-full">
-            {/* 2-Column Bento Grid */}
+
+            {/* Page Header */}
+            <div>
+              <h1 className="text-base font-black uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: "'Fraunces', serif" }}>
+                <span className="bg-gradient-to-r from-[#0284c7] via-[#2563eb] to-[#38bdf8] bg-clip-text text-transparent">Company Profile</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] shrink-0" />
+              </h1>
+              <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">Brand identity, billing settings, and business credentials</p>
+            </div>
+
+            {/* Row 1: 2-Column Bento Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
               {/* Left Column: Creator Identity card */}
-              <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 p-6 sm:p-8 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
-                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#e2e8f0] via-[#C6A87D] to-[#64748b]" />
+              <div className="lg:col-span-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 p-6 sm:p-8 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#bae6fd] via-[#0284c7] to-[#2563eb]" />
                 
                 <div>
                   <div className="flex items-center gap-5 mb-6">
-                    <div className="w-16 h-16 rounded-2xl bg-[#f8fafc] dark:bg-zinc-800 text-[#64748b] dark:text-[#EADFCF] flex items-center justify-center shadow-sm border border-[#e2e8f0]/80 dark:border-zinc-700 overflow-hidden flex-shrink-0">
+                    <div className="w-16 h-16 rounded-2xl bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] flex items-center justify-center shadow-sm border border-[#bae6fd]/60 dark:border-[#223269]/60 overflow-hidden flex-shrink-0">
                       {profile.logoUrl ? (
                         <img src={profile.logoUrl} referrerPolicy="no-referrer" alt={profile.name} className="w-full h-full object-cover" />
                       ) : (
@@ -6014,90 +6007,87 @@ export default function Dashboard({
                       )}
                     </div>
                     <div>
-                      <h2 className="text-base font-black text-[#0f172a] dark:text-white uppercase tracking-tight">{profile.name || 'My Invoice Studio'}</h2>
-                      <span className="text-[10px] text-[#64748b] font-mono block mt-0.5">{profile.email || 'No email established'}</span>
+                      <h2 className="text-base font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>{profile.name || 'My Invoice Studio'}</h2>
+                      <span className="text-[10px] text-[#0284c7] dark:text-[#38bdf8] font-mono block mt-0.5">{profile.email || 'No email established'}</span>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
-                      <span className="text-[9px] uppercase font-extrabold text-[#64748b]/75 dark:text-zinc-500 block">LLC Brand Registry</span>
+                    <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/60 p-4 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40">
+                      <span className="text-[9px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8] block">LLC Brand Registry</span>
                       <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 mt-1 block truncate">{profile.name || 'Sole Proprietorship'}</span>
                     </div>
-                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
-                      <span className="text-[9px] uppercase font-extrabold text-[#64748b]/75 dark:text-zinc-500 block">Tax Registry (GSTIN)</span>
+                    <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/60 p-4 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40">
+                      <span className="text-[9px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8] block">Tax Registry (GSTIN)</span>
                       <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 mt-1 block truncate font-mono">{profile.taxId || 'Not Configured'}</span>
                     </div>
-                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
-                      <span className="text-[9px] uppercase font-extrabold text-[#64748b]/75 dark:text-zinc-500 block">Primary currency</span>
+                    <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/60 p-4 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40">
+                      <span className="text-[9px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8] block">Primary Currency</span>
                       <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 mt-1 block">
                         {(() => {
-                          // Derive currency code from currencySymbol stored in profile, or fall back to profile.currency
-                          const sym = profile.currencySymbol || currencySymbol || '₹';
-                          // Map symbol → code for display
+                          const sym = profile.currencySymbol || currencySymbol || 'â‚¹';
                           const symToCode: Record<string, string> = {
-                            '₹': 'INR', '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY',
+                            'â‚¹': 'INR', '$': 'USD', 'â‚¬': 'EUR', 'Â£': 'GBP', 'Â¥': 'JPY',
                             'C$': 'CAD', 'A$': 'AUD', 'Fr': 'CHF', 'HK$': 'HKD', 'S$': 'SGD',
-                            'NZ$': 'NZD', '₩': 'KRW', 'R$': 'BRL', '₽': 'RUB', 'R': 'ZAR',
-                            '₺': 'TRY', 'kr': 'SEK', 'zł': 'PLN', '฿': 'THB', 'Rp': 'IDR',
-                            'RM': 'MYR', '₱': 'PHP', '₫': 'VND', '₦': 'NGN', '₪': 'ILS',
-                            'Kč': 'CZK', 'Ft': 'HUF', '₴': 'UAH', '₾': 'GEL', '₸': 'KZT',
-                            'NT$': 'TWD', '₵': 'GHS', 'KSh': 'KES', '₼': 'AZN',
+                            'NZ$': 'NZD', 'â‚©': 'KRW', 'R$': 'BRL', 'â‚½': 'RUB', 'R': 'ZAR',
+                            'â‚º': 'TRY', 'kr': 'SEK', 'zÅ‚': 'PLN', 'à¸¿': 'THB', 'Rp': 'IDR',
+                            'RM': 'MYR', 'â‚±': 'PHP', 'â‚«': 'VND', 'â‚¦': 'NGN', 'â‚ª': 'ILS',
+                            'KÄ': 'CZK', 'Ft': 'HUF', 'â‚´': 'UAH', 'â‚¾': 'GEL', 'â‚¸': 'KZT',
+                            'NT$': 'TWD', 'â‚µ': 'GHS', 'KSh': 'KES', 'â‚¼': 'AZN',
                           };
-                          // Use profile.currency if it looks correct (matches the symbol)
                           const derivedCode = symToCode[sym] || profile.currency || 'INR';
                           return `${derivedCode} (${sym})`;
                         })()}
                       </span>
                     </div>
-                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
-                      <span className="text-[9px] uppercase font-extrabold text-[#64748b]/75 dark:text-zinc-500 block">Mobile Number</span>
+                    <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/60 p-4 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40">
+                      <span className="text-[9px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8] block">Mobile Number</span>
                       <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 mt-1 block truncate">{profile.mobile || profile.phone || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-[#e2e8f0]/30 dark:border-zinc-800 flex items-center justify-between">
+                <div className="mt-8 pt-6 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 flex items-center justify-between">
                   <div className="text-left">
-                    <span className="text-[10px] uppercase font-extrabold text-[#64748b]/75 dark:text-zinc-500 block">Creator Settings</span>
+                    <span className="text-[10px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8] block">Creator Settings</span>
                     <p className="text-[10px] text-[#0f172a]/80 dark:text-zinc-400 mt-0.5 font-medium leading-normal">Customize your brand names, billing information, signature sketchpad, and bank details.</p>
                   </div>
                   <button
                     onClick={onOpenProfile}
-                    className="px-5 py-2.5 bg-[#88765C] hover:bg-[#5C5043] text-[#FCFAF7] text-[10.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs hover:shadow-sm flex-shrink-0"
+                    className="px-5 py-2.5 bg-[#0284c7] dark:bg-[#38bdf8] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] text-[10.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-sm hover:shadow-md shadow-[#0284c7]/20 flex-shrink-0"
                   >
-                    <PenTool className="w-3.5 h-3.5 text-white/80" />
+                    <PenTool className="w-3.5 h-3.5" />
                     <span>Customize Details</span>
                   </button>
                 </div>
               </div>
 
               {/* Right Column: Security and Session details */}
-              <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
-                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#C6A87D] to-[#64748b]" />
+              <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#0284c7] to-[#2563eb]" />
                 
                 <div>
-                  <h3 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-widest mb-4">Access Control & PIN</h3>
+                  <h3 className="text-xs font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-widest mb-4" style={{ fontFamily: "'Fraunces', serif" }}>Access Control & PIN</h3>
                   
-                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80 mb-4">
-                    <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">PIN Passcode Lock</span>
+                  <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/60 p-4 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40 mb-4">
+                    <span className="text-[9px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8] block">PIN Passcode Lock</span>
                     <p className="text-[10px] text-[#0f172a]/85 dark:text-zinc-400 mt-1 leading-normal font-medium">Requires a secure 4-digit PIN code on app refresh to prevent unauthorized local database access.</p>
                     
                     <button
                       type="button"
                       onClick={() => onToggleSecurity('pin')}
-                      className={`mt-4 w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-3xs ${
+                      className={`mt-4 w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
                         isPinLockEnabled 
                           ? 'bg-rose-500 hover:bg-rose-600 text-white' 
-                          : 'bg-[#EADFCF] hover:bg-[#e2e8f0] text-[#0f172a]'
+                          : 'bg-[#e0f2fe] dark:bg-[#1b264f] hover:bg-[#bae6fd] dark:hover:bg-[#223269] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269]'
                       }`}
                     >
                       {isPinLockEnabled ? 'Disable PIN Lock' : 'Enable PIN Lock'}
                     </button>
                   </div>
 
-                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
-                    <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">Database Status</span>
+                  <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/60 p-4 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40">
+                    <span className="text-[9px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8] block">Database Status</span>
                     <div className="mt-2 space-y-1.5">
                       <div className="flex justify-between items-center text-[10px]">
                         <span className="text-[#0f172a] dark:text-zinc-400 font-medium">Local Ledger</span>
@@ -6111,7 +6101,7 @@ export default function Dashboard({
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-[#e2e8f0]/30 dark:border-zinc-800 text-[9.5px] text-[#64748b]/80 dark:text-zinc-450 text-center font-mono">
+                <div className="mt-6 pt-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 text-[9.5px] text-[#0284c7]/60 dark:text-[#38bdf8]/40 text-center font-mono">
                   Invoice Studio Pro v1.2.0
                 </div>
               </div>
@@ -6121,16 +6111,16 @@ export default function Dashboard({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
               {/* Bank Settlement & Signature Details */}
-              <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
-                <div className="absolute top-0 inset-x-0 h-1.5 bg-[#C6A87D]" />
+              <div className="lg:col-span-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#bae6fd] via-[#0284c7] to-[#2563eb]" />
                 
                 <div>
-                  <h3 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-widest mb-4">Bank Settlement & Signature</h3>
+                  <h3 className="text-xs font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-widest mb-4" style={{ fontFamily: "'Fraunces', serif" }}>Bank Settlement & Signature</h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Bank Details */}
-                    <div className="space-y-3 bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
-                      <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">Direct Transfer Account</span>
+                    <div className="space-y-3 bg-[#f4f9ff] dark:bg-[#0b1329]/60 p-4 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40">
+                      <span className="text-[9px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8] block">Direct Transfer Account</span>
                       
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between">
@@ -6153,51 +6143,51 @@ export default function Dashboard({
                     </div>
 
                     {/* Signature Preview */}
-                    <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80 flex flex-col justify-between min-h-[140px]">
+                    <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/60 p-4 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40 flex flex-col justify-between min-h-[140px]">
                       <div>
-                        <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">Authorized Signature</span>
+                        <span className="text-[9px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8] block">Authorized Signature</span>
                         <p className="text-[10px] text-[#0f172a]/80 dark:text-zinc-400 mt-1 leading-normal font-medium">Applied automatically to newly generated billing sheets.</p>
                       </div>
                       
-                      <div className="mt-3 flex items-center justify-center bg-white dark:bg-zinc-900 border border-[#e2e8f0]/30 dark:border-zinc-800 rounded-lg p-2 h-16 relative overflow-hidden">
+                      <div className="mt-3 flex items-center justify-center bg-white dark:bg-[#111a36] border border-[#bae6fd]/30 dark:border-[#223269]/30 rounded-lg p-2 h-16 relative overflow-hidden">
                         {profile.signature ? (
                           <img src={profile.signature.startsWith('data:') ? profile.signature : `${profile.signature}${profile.signature.includes('?') ? '&' : '?'}t=${Date.now()}`} alt="Signature Preview" className="max-h-full max-w-full object-contain" />
                         ) : (
-                          <span className="text-[10px] text-[#64748b]/50 uppercase tracking-wider font-bold">No Signature Configured</span>
+                          <span className="text-[10px] text-[#0284c7]/40 dark:text-[#38bdf8]/30 uppercase tracking-wider font-bold">No Signature Configured</span>
                         )}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-[#e2e8f0]/30 dark:border-zinc-800 flex justify-between items-center text-[10px]">
+                <div className="mt-4 pt-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 flex justify-between items-center text-[10px]">
                   <span className="text-[#64748b]/80">Legal Entity Status</span>
-                  <span className="font-bold text-[#0f172a] dark:text-zinc-200">{profile.pan ? `PAN: ${profile.pan}` : 'PAN Not Registered'}</span>
+                  <span className="font-bold text-[#0284c7] dark:text-[#38bdf8]">{profile.pan ? `PAN: ${profile.pan}` : 'PAN Not Registered'}</span>
                 </div>
               </div>
 
               {/* Physical Location details */}
-              <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
-                <div className="absolute top-0 inset-x-0 h-1.5 bg-[#64748b]" />
+              <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 p-6 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#2563eb] to-[#38bdf8]" />
                 
                 <div>
-                  <h3 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-widest mb-4">Location & Presets</h3>
+                  <h3 className="text-xs font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-widest mb-4" style={{ fontFamily: "'Fraunces', serif" }}>Location & Presets</h3>
                   
-                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80 mb-4">
-                    <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">Registered Address</span>
+                  <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/60 p-4 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40 mb-4">
+                    <span className="text-[9px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8] block">Registered Address</span>
                     <p className="text-xs text-[#0f172a] dark:text-zinc-300 font-medium leading-relaxed mt-2 whitespace-pre-line">
                       {profile.address || 'No registered business address set.'}
                     </p>
                     {profile.state && (
-                      <div className="mt-2 pt-2 border-t border-[#e2e8f0]/20 dark:border-zinc-800 flex justify-between text-[10px]">
+                      <div className="mt-2 pt-2 border-t border-[#bae6fd]/20 dark:border-[#223269]/20 flex justify-between text-[10px]">
                         <span className="text-[#64748b]/80">State / Region</span>
                         <span className="font-bold text-[#0f172a] dark:text-zinc-200">{profile.state} ({profile.stateCode || 'N/A'})</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="bg-[#FCFAF7] dark:bg-zinc-950 p-4 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800/80">
-                    <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">Billing Preferences</span>
+                  <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/60 p-4 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40">
+                    <span className="text-[9px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8] block">Billing Preferences</span>
                     <div className="mt-2 space-y-1.5 text-xs">
                       <div className="flex justify-between">
                         <span className="text-[#64748b]/80">Invoice Prefix</span>
@@ -6211,9 +6201,9 @@ export default function Dashboard({
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-[#e2e8f0]/30 dark:border-zinc-800 text-[10px] flex justify-between">
+                <div className="mt-6 pt-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 text-[10px] flex justify-between">
                   <span className="text-[#64748b]/80">Website</span>
-                  <a href={profile.website ? (profile.website.startsWith('http') ? profile.website : `https://${profile.website}`) : '#'} target="_blank" rel="noreferrer" className="font-bold text-[#64748b] hover:underline truncate max-w-[150px]">
+                  <a href={profile.website ? (profile.website.startsWith('http') ? profile.website : `https://${profile.website}`) : '#'} target="_blank" rel="noreferrer" className="font-bold text-[#0284c7] dark:text-[#38bdf8] hover:underline truncate max-w-[150px]">
                     {profile.website || 'Not Configured'}
                   </a>
                 </div>
@@ -6277,12 +6267,12 @@ export default function Dashboard({
           className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
         />
         {/* Menu Drawer panel */}
-        <div className={`absolute top-0 left-0 w-72 max-w-[85vw] bg-white dark:bg-slate-900 h-full p-5 shadow-2xl flex flex-col z-10 border-r border-slate-100 dark:border-slate-850 overflow-y-auto transform transition-transform duration-300 ease-in-out ${isMobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/60">
-            <h3 className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest">Menu</h3>
+        <div className={`absolute top-0 left-0 w-72 max-w-[85vw] bg-white dark:bg-[#111a36] h-full p-5 shadow-2xl flex flex-col z-10 border-r border-[#bae6fd]/50 dark:border-[#223269] overflow-y-auto transform transition-transform duration-300 ease-in-out ${isMobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="flex justify-between items-center mb-6 pb-4 border-b border-[#bae6fd]/50 dark:border-[#223269]">
+            <h3 className="text-xs font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-widest" style={{fontFamily: "'IBM Plex Mono', monospace"}}>Menu</h3>
             <button
               onClick={() => setIsMobileDrawerOpen(false)}
-              className="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 transition-colors cursor-pointer touch-action-manipulation active:scale-95"
+              className="w-10 h-10 rounded-xl hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] flex items-center justify-center text-[#0284c7] dark:text-[#38bdf8] transition-colors cursor-pointer touch-action-manipulation active:scale-95"
               aria-label="Close menu drawer"
             >
               <X className="w-5 h-5" />
@@ -6364,7 +6354,7 @@ export default function Dashboard({
                           template={resolvedTemplate}
                           invoiceData={activePreviewInvoice}
                           businessProfile={profile}
-                          currencySymbol={profile.currencySymbol || (profile.currency === 'INR' ? '₹' : (profile.currency === 'USD' ? '$' : (profile.currency || '₹')))}
+                          currencySymbol={profile.currencySymbol || (profile.currency === 'INR' ? 'â‚¹' : (profile.currency === 'USD' ? '$' : (profile.currency || 'â‚¹')))}
                           isInteractive={false}
                         />
                       </div>

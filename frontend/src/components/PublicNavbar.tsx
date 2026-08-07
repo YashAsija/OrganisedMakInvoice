@@ -58,7 +58,7 @@ export default function PublicNavbar({ theme, onNavigate, activePath }: PublicNa
           <div className="flex items-center gap-2 cursor-pointer select-none group" onClick={() => onNavigate('/')}>
             <img src="/logo.svg" alt="MakInvoices Logo" className="w-10 h-10 object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300 shrink-0" />
             <div>
-              <span className="text-base font-black tracking-tight text-slate-805 block leading-none">
+              <span className="text-base font-black tracking-tight text-slate-805 dark:text-white block leading-none">
                 Mak<span className="text-sky-500">Invoices</span>
               </span>
               <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-500 block tracking-wider uppercase mt-1">Advanced Ledger Hub</span>
@@ -151,7 +151,7 @@ export default function PublicNavbar({ theme, onNavigate, activePath }: PublicNa
           {/* Logo Brand */}
           <div className="flex items-center gap-1.5 cursor-pointer select-none" onClick={() => onNavigate('/')}>
             <img src="/logo.svg" alt="MakInvoices Logo" className="w-8 h-8 object-contain drop-shadow-sm shrink-0" />
-            <span className="text-sm font-black tracking-tight text-slate-805">
+            <span className="text-sm font-black tracking-tight text-slate-805 dark:text-white">
               Mak<span className="text-sky-500">Invoices</span>
             </span>
           </div>

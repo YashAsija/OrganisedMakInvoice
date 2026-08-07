@@ -309,10 +309,10 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
           transition: border 0.18s, box-shadow 0.18s;
         }
         .auth-input:focus {
-          border-color: #0284c7;
-          box-shadow: 0 0 0 3px rgba(2,132,199,0.12);
+          border-color: ${theme === 'dark' ? '#38bdf8' : '#0284c7'};
+          box-shadow: 0 0 0 3px ${theme === 'dark' ? 'rgba(56,189,248,0.15)' : 'rgba(2,132,199,0.12)'};
         }
-        .auth-input::placeholder { color: ${theme === 'dark' ? '#94a3b8' : '#94a3b8'}; }
+        .auth-input::placeholder { color: ${theme === 'dark' ? '#64748b' : '#94a3b8'}; }
         .auth-label {
           display: block;
           font-family: 'IBM Plex Mono', monospace;
@@ -320,15 +320,15 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.08em;
-          color: ${theme === 'dark' ? '#64748b' : '#64748b'};
+          color: ${theme === 'dark' ? '#94a3b8' : '#475569'};
           margin-bottom: 6px;
         }
         .auth-btn-primary {
           width: 100%;
           padding: 13px 20px;
-          background: #0284c7;
-          border: 1px solid #0369a1;
-          color: #ffffff;
+          background: ${theme === 'dark' ? '#38bdf8' : '#0284c7'};
+          border: 1px solid ${theme === 'dark' ? '#38bdf8' : '#0369a1'};
+          color: ${theme === 'dark' ? '#0b1329' : '#ffffff'};
           border-radius: 10px;
           font-family: 'IBM Plex Mono', monospace;
           font-size: 0.82rem;
@@ -340,9 +340,9 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
           justify-content: center;
           gap: 8px;
           transition: all 0.2s;
-          box-shadow: 0 4px 14px rgba(2,132,199,0.2);
+          box-shadow: ${theme === 'dark' ? '0 4px 14px rgba(56,189,248,0.2)' : '0 4px 14px rgba(2,132,199,0.2)'};
         }
-        .auth-btn-primary:hover { background: #0369a1; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(2,132,199,0.3); }
+        .auth-btn-primary:hover { background: ${theme === 'dark' ? '#7dd3fc' : '#0369a1'}; transform: translateY(-1px); box-shadow: ${theme === 'dark' ? '0 8px 24px rgba(56,189,248,0.3)' : '0 8px 24px rgba(2,132,199,0.3)'}; }
         .auth-btn-primary:disabled { background: #94a3b8; border-color: #94a3b8; transform: none; box-shadow: none; cursor: not-allowed; }
         .auth-method-btn {
           flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -351,18 +351,18 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
           border: 1.5px solid; cursor: pointer; transition: all 0.18s;
         }
         .auth-method-btn.active {
-          border-color: #0284c7;
-          background: ${theme === 'dark' ? 'rgba(2,132,199,0.12)' : '#e0f2fe'};
-          color: #0284c7;
+          border-color: ${theme === 'dark' ? '#38bdf8' : '#0284c7'};
+          background: ${theme === 'dark' ? 'rgba(56,189,248,0.12)' : '#e0f2fe'};
+          color: ${theme === 'dark' ? '#38bdf8' : '#0284c7'};
         }
         .auth-method-btn.inactive {
           border-color: ${theme === 'dark' ? '#223269' : '#bae6fd'};
           background: transparent;
-          color: ${theme === 'dark' ? '#64748b' : '#64748b'};
+          color: ${theme === 'dark' ? '#94a3b8' : '#64748b'};
         }
         .auth-method-btn.inactive:hover {
-          border-color: #0284c7;
-          color: #0284c7;
+          border-color: ${theme === 'dark' ? '#38bdf8' : '#0284c7'};
+          color: ${theme === 'dark' ? '#38bdf8' : '#0284c7'};
         }
         .auth-tab-active {
           background: ${theme === 'dark' ? '#1b264f' : '#0284c7'};
@@ -377,9 +377,9 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
 
       {/* ====== LEFT: MARKETING PANEL ====== */}
       <div className="hidden md:flex md:w-[44%] flex-col justify-between relative overflow-hidden" style={{
-        background: theme === 'dark' ? '#0b1329' : '#0f172a',
+        background: theme === 'dark' ? 'linear-gradient(135deg, #0b1329 0%, #111a36 100%)' : 'linear-gradient(135deg, #f4f9ff 0%, #e0f2fe 100%)',
         padding: '52px 56px',
-        borderRight: `1px solid ${theme === 'dark' ? '#223269' : '#1e3a5f'}`
+        borderRight: `1px solid ${theme === 'dark' ? '#223269' : '#bae6fd'}`
       }}>
         {/* Background glow elements */}
         <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: 440, height: 440, background: 'rgba(2,132,199,0.06)', borderRadius: '50%', filter: 'blur(120px)', pointerEvents: 'none' }} />
@@ -395,39 +395,39 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
         >
           <img src="/logo.svg" alt="MakInvoices Logo" style={{ width: 44, height: 44, objectFit: 'contain' }} />
           <div>
-            <span style={{ fontFamily: "'Fraunces', serif", fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', display: 'block', lineHeight: 1 }}>
-              Mak<span style={{ color: '#38bdf8' }}>Invoices</span>
+            <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: '1.25rem', fontWeight: 900, color: theme === 'dark' ? '#f8fafc' : '#0f172a', display: 'block', lineHeight: 1, tracking: '-0.02em' }}>
+              Mak<span style={{ color: '#0ea5e9' }}>Invoices</span>
             </span>
-            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.6rem', fontWeight: 700, color: '#475569', letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block', marginTop: 4 }}>Advanced Ledger Hub</span>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.6rem', fontWeight: 700, color: theme === 'dark' ? '#64748b' : '#475569', letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block', marginTop: 4 }}>Advanced Ledger Hub</span>
           </div>
         </div>
 
         {/* Marketing copy */}
         <div className="z-10" style={{ maxWidth: 360, margin: 'auto 0' }}>
-          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.7rem', fontWeight: 700, color: '#38bdf8', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 20 }}>
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.7rem', fontWeight: 700, color: theme === 'dark' ? '#38bdf8' : '#0284c7', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 20 }}>
             AI-Powered Billing
           </div>
-          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(1.8rem, 2.6vw, 2.5rem)', fontWeight: 500, color: '#f8fafc', lineHeight: 1.1, letterSpacing: '-0.02em', marginBottom: 18 }}>
-            Billing software that <em style={{ fontStyle: 'italic', color: '#38bdf8' }}>thinks</em> with you.
+          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(1.8rem, 2.6vw, 2.5rem)', fontWeight: 500, color: theme === 'dark' ? '#f8fafc' : '#0f172a', lineHeight: 1.1, letterSpacing: '-0.02em', marginBottom: 18 }}>
+            Billing software that <em style={{ fontStyle: 'italic', color: theme === 'dark' ? '#38bdf8' : '#0284c7' }}>thinks</em> with you.
           </h1>
-          <p style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: 1.65, marginBottom: 32 }}>
+          <p style={{ fontSize: '0.9rem', color: theme === 'dark' ? '#94a3b8' : '#475569', lineHeight: 1.65, marginBottom: 32 }}>
             Build editable, interactive invoices layer by layer. Let AI draft line items. Manage invoices, quotations, purchase orders, and ledgers from one dashboard.
           </p>
 
           {/* Mini feature list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, borderTop: '1px solid #1e3a5f', paddingTop: 28 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, borderTop: `1px solid ${theme === 'dark' ? '#223269' : '#bae6fd'}`, paddingTop: 28 }}>
             {([
               { icon: <Zap style={{ width: 15, height: 15 }} />, title: 'Gemini Smart Billing', desc: 'Natural language invoice drafting in seconds.' },
               { icon: <BarChart2 style={{ width: 15, height: 15 }} />, title: 'Sales & Purchase Ledgers', desc: 'Full transaction history with multi-column filters.' },
               { icon: <Lock style={{ width: 15, height: 15 }} />, title: 'Bank-Grade Security', desc: '256-bit encrypted data via Supabase.' }
             ] as { icon: React.ReactNode; title: string; desc: string }[]).map((f, i) => (
               <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(2,132,199,0.1)', border: '1px solid rgba(2,132,199,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8', flexShrink: 0 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: theme === 'dark' ? 'rgba(2,132,199,0.1)' : '#ffffff', border: theme === 'dark' ? '1px solid rgba(2,132,199,0.15)' : '1.5px solid #bae6fd', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme === 'dark' ? '#38bdf8' : '#0284c7', flexShrink: 0 }}>
                   {f.icon}
                 </div>
                 <div>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.7rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{f.title}</div>
-                  <div style={{ fontSize: '0.78rem', color: '#475569', lineHeight: 1.45 }}>{f.desc}</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.7rem', fontWeight: 700, color: theme === 'dark' ? '#e2e8f0' : '#1e293b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{f.title}</div>
+                  <div style={{ fontSize: '0.78rem', color: theme === 'dark' ? '#64748b' : '#475569', lineHeight: 1.45 }}>{f.desc}</div>
                 </div>
               </div>
             ))}
@@ -435,15 +435,15 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
         </div>
 
         {/* Decorative mini invoice card */}
-        <div className="z-10" style={{ background: 'rgba(17,26,54,0.8)', border: '1px solid #223269', borderRadius: 10, padding: '14px 18px', fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.68rem', color: '#64748b', backdropFilter: 'blur(8px)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: '#94a3b8' }}>
-            <span>INV-0148</span><span style={{ color: '#38bdf8', fontWeight: 700 }}>SENT</span>
+        <div className="z-10" style={{ background: theme === 'dark' ? 'rgba(17,26,54,0.8)' : 'rgba(255,255,255,0.85)', border: `1px solid ${theme === 'dark' ? '#223269' : '#bae6fd'}`, borderRadius: 10, padding: '14px 18px', fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.68rem', color: theme === 'dark' ? '#64748b' : '#475569', backdropFilter: 'blur(8px)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: theme === 'dark' ? '#94a3b8' : '#1e293b' }}>
+            <span>INV-0148</span><span style={{ color: theme === 'dark' ? '#38bdf8' : '#0284c7', fontWeight: 700 }}>SENT</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #223269', paddingBottom: 8, marginBottom: 8 }}>
-            <span>Design Services</span><span style={{ color: '#f8fafc' }}>$180.00</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px dashed ${theme === 'dark' ? '#223269' : '#bae6fd'}`, paddingBottom: 8, marginBottom: 8 }}>
+            <span>Design Services</span><span style={{ color: theme === 'dark' ? '#f8fafc' : '#0f172a' }}>$180.00</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Total Due</span><span style={{ color: '#38bdf8', fontWeight: 700 }}>$215.28</span>
+            <span>Total Due</span><span style={{ color: theme === 'dark' ? '#38bdf8' : '#0284c7', fontWeight: 700 }}>$215.28</span>
           </div>
         </div>
       </div>
@@ -451,7 +451,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
       {/* ====== RIGHT: AUTH FORM PANEL ====== */}
       <div className="flex-1 flex flex-col justify-center items-center relative" style={{
         padding: 'clamp(28px, 5vw, 80px) clamp(20px, 4vw, 64px)',
-        background: theme === 'dark' ? '#111a36' : '#ffffff'
+        background: theme === 'dark' ? '#111a36' : '#f4f9ff'
       }}>
         {/* Subtle background glow (mobile) */}
         <div className="md:hidden" style={{ position: 'absolute', top: '15%', right: '5%', width: 280, height: 280, background: 'rgba(2,132,199,0.04)', borderRadius: '50%', filter: 'blur(90px)', pointerEvents: 'none' }} />
@@ -461,9 +461,9 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
           type="button"
           onClick={() => window.location.href = '/'}
           className="hidden md:flex"
-          style={{ position: 'absolute', top: 32, left: 32, alignItems: 'center', gap: 6, fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', zIndex: 10, transition: 'color 0.2s' }}
-          onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = '#0284c7'}
-          onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = '#64748b'}
+          style={{ position: 'absolute', top: 32, left: 32, alignItems: 'center', gap: 6, fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: theme === 'dark' ? '#94a3b8' : '#64748b', background: 'none', border: 'none', cursor: 'pointer', zIndex: 10, transition: 'color 0.2s' }}
+          onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = theme === 'dark' ? '#38bdf8' : '#0284c7'}
+          onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = theme === 'dark' ? '#94a3b8' : '#64748b'}
         >
           <ArrowLeft style={{ width: 13, height: 13 }} /> Return home
         </button>
@@ -471,28 +471,28 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
         {/* Mobile logo */}
         <div className="md:hidden flex items-center gap-2 mb-8 cursor-pointer z-10" onClick={() => window.location.href = '/'}>
           <img src="/logo.svg" alt="MakInvoices Logo" style={{ width: 34, height: 34, objectFit: 'contain' }} />
-          <span style={{ fontFamily: "'Fraunces', serif", fontSize: '1.1rem', fontWeight: 700, color: theme === 'dark' ? '#f8fafc' : '#0f172a' }}>
-            Mak<span style={{ color: '#0284c7' }}>Invoices</span>
+          <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: '1.1rem', fontWeight: 900, color: theme === 'dark' ? '#f8fafc' : '#0f172a' }}>
+            Mak<span style={{ color: '#0ea5e9' }}>Invoices</span>
           </span>
         </div>
 
         {/* FORM CARD */}
         <div className="w-full z-10" style={{ maxWidth: 400 }}>
           {/* Eyebrow */}
-          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.68rem', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 18, height: 1, background: '#0284c7', display: 'inline-block' }} />
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.68rem', fontWeight: 700, color: theme === 'dark' ? '#38bdf8' : '#0284c7', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 18, height: 1, background: theme === 'dark' ? '#38bdf8' : '#0284c7', display: 'inline-block' }} />
             {authMode === 'signup' ? 'Create Your Free Account' : authMode === 'forgot-password' ? 'Password Recovery' : 'Welcome Back'}
           </div>
           <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(1.5rem, 2.4vw, 2rem)', fontWeight: 500, color: theme === 'dark' ? '#f8fafc' : '#0f172a', lineHeight: 1.15, letterSpacing: '-0.01em', marginBottom: 6 }}>
             {authMode === 'signup' ? 'Start billing smarter.' : authMode === 'forgot-password' ? 'Reset your password.' : 'Log into your workspace.'}
           </h2>
-          <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: 28 }}>
+          <p style={{ fontSize: '0.85rem', color: theme === 'dark' ? '#94a3b8' : '#64748b', marginBottom: 28 }}>
             {authMode === 'signup' ? 'No credit card required. Free to get started.' : authMode === 'forgot-password' ? 'Enter your email to receive a reset link.' : 'Pick up right where you left off.'}
           </p>
 
           {/* Main card */}
           <div style={{
-            background: theme === 'dark' ? '#1b264f' : '#f8fafc',
+            background: theme === 'dark' ? '#1b264f' : '#ffffff',
             border: `1.5px solid ${theme === 'dark' ? '#223269' : '#bae6fd'}`,
             borderRadius: 16,
             padding: '26px 24px',
@@ -503,18 +503,18 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
             {authMode === 'forgot-password' ? (
               <div style={{ display: 'flex', background: theme === 'dark' ? '#111a36' : '#e0f2fe', borderRadius: 10, padding: 4, marginBottom: 22 }}>
                 <button type="button" onClick={() => { setAuthMode('login'); setOtpSent(false); setSuccessMsg(''); }}
-                  style={{ flex: 1, padding: '9px', borderRadius: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', border: 'none', background: '#0284c7', color: '#ffffff', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  style={{ flex: 1, padding: '9px', borderRadius: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', border: 'none', background: theme === 'dark' ? '#38bdf8' : '#0284c7', color: theme === 'dark' ? '#0b1329' : '#ffffff', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                   <ArrowLeft style={{ width: 12, height: 12 }} /> Back to Login
                 </button>
               </div>
             ) : (
               <div style={{ display: 'flex', background: theme === 'dark' ? '#111a36' : '#e0f2fe', borderRadius: 10, padding: 4, marginBottom: 22 }}>
                 <button type="button" onClick={() => { setAuthMode('signup'); setOtpSent(false); setSuccessMsg(''); }}
-                  style={{ flex: 1, padding: '9px', borderRadius: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', border: 'none', transition: 'all 0.2s', background: authMode === 'signup' ? '#0284c7' : 'transparent', color: authMode === 'signup' ? '#ffffff' : (theme === 'dark' ? '#64748b' : '#0284c7') }}>
+                  style={{ flex: 1, padding: '9px', borderRadius: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', border: 'none', transition: 'all 0.2s', background: authMode === 'signup' ? (theme === 'dark' ? '#38bdf8' : '#0284c7') : 'transparent', color: authMode === 'signup' ? (theme === 'dark' ? '#0b1329' : '#ffffff') : (theme === 'dark' ? '#94a3b8' : '#0284c7') }}>
                   Sign Up
                 </button>
                 <button type="button" onClick={() => { setAuthMode('login'); setOtpSent(false); setSuccessMsg(''); }}
-                  style={{ flex: 1, padding: '9px', borderRadius: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', border: 'none', transition: 'all 0.2s', background: authMode === 'login' ? '#0284c7' : 'transparent', color: authMode === 'login' ? '#ffffff' : (theme === 'dark' ? '#64748b' : '#0284c7') }}>
+                  style={{ flex: 1, padding: '9px', borderRadius: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', border: 'none', transition: 'all 0.2s', background: authMode === 'login' ? (theme === 'dark' ? '#38bdf8' : '#0284c7') : 'transparent', color: authMode === 'login' ? (theme === 'dark' ? '#0b1329' : '#ffffff') : (theme === 'dark' ? '#94a3b8' : '#0284c7') }}>
                   Log In
                 </button>
               </div>
@@ -685,11 +685,11 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
           </div>
 
           {/* Footer hint */}
-          <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.78rem', color: '#64748b', fontFamily: "'IBM Plex Mono', monospace" }}>
+          <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.78rem', color: theme === 'dark' ? '#94a3b8' : '#64748b', fontFamily: "'IBM Plex Mono', monospace" }}>
             {authMode === 'signup' ? 'Already have an account? ' : 'New to MakInvoices? '}
             <button type="button"
               onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setOtpSent(false); setSuccessMsg(''); setFormErrors({}); }}
-              style={{ color: '#0284c7', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit' }}>
+              style={{ color: theme === 'dark' ? '#38bdf8' : '#0284c7', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit' }}>
               {authMode === 'signup' ? (
                 <>
                   Log in

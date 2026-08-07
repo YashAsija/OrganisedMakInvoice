@@ -540,7 +540,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Support
           </button>
           
-          <span className="text-[10px] font-black uppercase tracking-widest text-[#64748b]/75 dark:text-zinc-500">
+          <span className="text-[10px] font-black uppercase tracking-widest text-[#64748b]/75 dark:text-zinc-300">
             Progress: {progressPercent}% ({activeGuideStep} / 5)
           </span>
         </div>
@@ -548,13 +548,13 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
         {/* Title */}
         <div>
           <h1 className="text-base font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Interactive Onboarding Guide</h1>
-          <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">Follow this interactive wizard to configure your workspace and start billing</p>
+          <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-300 mt-0.5">Follow this interactive wizard to configure your workspace and start billing</p>
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full h-1.5 bg-[#e2e8f0] dark:bg-zinc-800 rounded-full overflow-hidden">
+        <div className="w-full h-1.5 bg-[#bae6fd]/40 dark:bg-[#223269]/40 rounded-full overflow-hidden">
           <div 
-            className="h-full bg-gradient-to-r from-amber-400 via-[#C6A87D] to-[#64748b] transition-all duration-300 rounded-full" 
+            className="h-full bg-gradient-to-r from-[#bae6fd] via-[#0284c7] to-[#2563eb] transition-all duration-300 rounded-full" 
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -571,24 +571,24 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                     onClick={() => setActiveGuideStep(s.step)}
                     className={`p-2.5 md:p-3 text-center md:text-left text-xs font-bold rounded-full md:rounded-2xl transition-all flex items-center justify-center md:justify-start gap-2.5 cursor-pointer border shrink-0 w-9 h-9 md:w-full md:h-auto ${
                       isActive 
-                        ? 'bg-[#0f172a] dark:bg-zinc-800 text-white border-transparent font-extrabold shadow-sm scale-102'
-                        : 'bg-white dark:bg-zinc-900 border-[#e2e8f0]/60 dark:border-zinc-800 text-slate-650 dark:text-zinc-400 hover:bg-[#FCFAF7] dark:hover:bg-zinc-850'
+                        ? 'bg-[#0284c7] dark:bg-[#0284c7] text-white border-transparent font-extrabold shadow-sm scale-102'
+                        : 'bg-white dark:bg-[#111a36] border-[#bae6fd]/50 dark:border-[#223269]/50 text-[#64748b] dark:text-zinc-300 hover:bg-[#f4f9ff] dark:hover:bg-[#1b264f]/50'
                     }`}
                   >
                     <span className={`w-5 h-5 md:w-6 md:h-6 rounded-full md:rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 ${
                       isActive 
-                        ? 'bg-white/20 md:bg-white/20 text-white' 
-                        : 'bg-slate-100 dark:bg-zinc-950 text-slate-500'
+                        ? 'bg-white/25 text-white' 
+                        : 'bg-[#e0f2fe] dark:bg-[#0b1329] text-[#0284c7] dark:text-[#38bdf8]'
                     }`}>
                       {s.step}
                     </span>
                     <div className="hidden md:block min-w-0">
                       <span className="block truncate font-black text-[10.5px] uppercase tracking-wider">{s.title.split(' ')[0]}</span>
-                      <span className="hidden md:block text-[9px] text-slate-400 font-medium truncate mt-0.5">{s.badge}</span>
+                      <span className="hidden md:block text-[9px] text-[#64748b] dark:text-zinc-300 font-medium truncate mt-0.5">{s.badge}</span>
                     </div>
                   </button>
                   {idx < stepsData.length - 1 && (
-                    <div className="h-0.5 w-4 bg-[#e2e8f0] dark:bg-zinc-800 shrink-0 self-center md:hidden" />
+                    <div className="h-0.5 w-4 bg-[#bae6fd]/40 dark:bg-[#223269]/40 shrink-0 self-center md:hidden" />
                   )}
                 </React.Fragment>
               );
@@ -596,8 +596,8 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
           </div>
 
           {/* Right Column: Step Details Panel */}
-          <div className="md:col-span-8 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-3xl p-6 shadow-xs space-y-5 relative overflow-hidden min-h-[300px] flex flex-col justify-between">
-            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-400 via-[#C6A87D] to-[#64748b]" />
+          <div className="md:col-span-8 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-3xl p-6 shadow-xs space-y-5 relative overflow-hidden min-h-[300px] flex flex-col justify-between">
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#bae6fd] via-[#0284c7] to-[#2563eb]" />
             
             <div className="space-y-4">
               <div className="flex justify-between items-start gap-4">
@@ -609,12 +609,12 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                     {currentStepData.title}
                   </h2>
                 </div>
-                <span className="text-[8.5px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-350 shrink-0">
+                <span className="text-[8.5px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] shrink-0">
                   {currentStepData.badge}
                 </span>
               </div>
 
-              <p className="text-[11.5px] text-[#64748b] dark:text-zinc-400 leading-relaxed">
+              <p className="text-[11.5px] text-[#64748b] dark:text-zinc-300 leading-relaxed">
                 {currentStepData.desc}
               </p>
 
@@ -628,7 +628,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                         onNavigateTab(act.tabId);
                         emitNotification('Navigating', `Opening ${act.label}...`, 'info');
                       }}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#0f172a] hover:bg-[#5C5043] dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm hover:scale-102"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#0284c7] hover:bg-[#0369a1] text-white text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm hover:shadow-md shadow-[#0284c7]/20 hover:scale-102"
                     >
                       {act.icon}
                       <span>{act.label}</span>
@@ -640,11 +640,11 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
             </div>
 
             {/* Wizard Footer Nav */}
-            <div className="flex items-center justify-between pt-5 border-t border-[#e2e8f0]/40 dark:border-zinc-800 mt-auto">
+            <div className="flex items-center justify-between pt-5 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 mt-auto">
               <button
                 onClick={() => setActiveGuideStep(p => Math.max(1, p - 1))}
                 disabled={activeGuideStep === 1}
-                className="px-3.5 py-2 text-[10.5px] font-black uppercase tracking-wider border border-[#e2e8f0] dark:border-zinc-750 text-slate-650 dark:text-zinc-350 hover:bg-[#FCFAF7] dark:hover:bg-zinc-850 rounded-xl transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                className="px-3.5 py-2 text-[10.5px] font-black uppercase tracking-wider border border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#0284c7] dark:text-[#38bdf8] hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f]/50 rounded-xl transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
@@ -660,7 +660,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                     emitNotification('Guide Completed', 'Workspace configured successfully! Start billing now.', 'success');
                   }
                 }}
-                className="px-4 py-2 text-[10.5px] font-black uppercase tracking-wider bg-[#0f172a] hover:bg-[#5C5043] dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-xl transition-all cursor-pointer hover:scale-102"
+                className="px-4 py-2 text-[10.5px] font-black uppercase tracking-wider bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl transition-all cursor-pointer hover:scale-102"
               >
                 {activeGuideStep === 5 ? 'Finish & Start Billing' : 'Next Step'}
               </button>
@@ -688,7 +688,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
         
         <div>
           <h1 className="text-base font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Video Tutorials</h1>
-          <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">Step-by-step video guides showing you how to maximize your MakInvoices features</p>
+          <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-300 mt-0.5">Step-by-step video guides showing you how to maximize your MakInvoices features</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -721,11 +721,11 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
             <div
               key={vid.title}
               onClick={() => setPlayingVideo(vid.title)}
-              className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-xs hover:border-[#64748b]/40 cursor-pointer group transition-colors"
+              className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-hidden shadow-xs hover:border-[#0284c7]/50 cursor-pointer group transition-colors"
             >
               {/* Simulated Thumbnail */}
-              <div className="h-36 bg-gradient-to-br from-[#FDFAF7] to-[#f1f5f9] dark:from-zinc-950 dark:to-zinc-900 flex items-center justify-center relative border-b border-[#e2e8f0]/40 dark:border-zinc-800">
-                <div className="w-10 h-10 rounded-full bg-[#0f172a] text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+              <div className="h-36 bg-gradient-to-br from-[#e0f2fe]/40 to-[#f4f9ff] dark:from-[#0b1329] dark:to-[#1b264f] flex items-center justify-center relative border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
+                <div className="w-10 h-10 rounded-full bg-[#0284c7] text-white flex items-center justify-center shadow-md shadow-[#0284c7]/30 group-hover:scale-110 transition-transform">
                   <Play className="w-4 h-4 fill-white ml-0.5" />
                 </div>
                 <span className="absolute bottom-2 right-2 text-[8.5px] font-black bg-black/60 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wider">
@@ -733,9 +733,9 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                 </span>
               </div>
               <div className="p-4">
-                <span className="text-[8px] font-black uppercase tracking-widest text-[#64748b]/80 dark:text-zinc-500 block mb-1">{vid.tag}</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-[#64748b]/80 dark:text-zinc-300 block mb-1">{vid.tag}</span>
                 <h3 className="text-xs font-black uppercase tracking-tight text-[#0f172a] dark:text-white leading-snug">{vid.title}</h3>
-                <p className="text-[10px] text-[#64748b] dark:text-zinc-400 mt-1.5 leading-relaxed">{vid.desc}</p>
+                <p className="text-[10px] text-[#64748b] dark:text-zinc-300 mt-1.5 leading-relaxed">{vid.desc}</p>
               </div>
             </div>
           ))}
@@ -744,12 +744,12 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
         {/* Video Player Modal */}
         {playingVideo && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-              <div className="p-4 flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50">
+            <div className="bg-[#0b1329] border border-[#223269]/60 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="p-4 flex items-center justify-between border-b border-[#223269]/40 bg-[#111a36]/80">
                 <span className="text-[10px] font-black text-white uppercase tracking-widest">Tutorial: {playingVideo}</span>
                 <button
                   onClick={() => setPlayingVideo(null)}
-                  className="w-7 h-7 rounded-full bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                  className="w-7 h-7 rounded-full bg-[#1b264f] text-[#38bdf8] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                 >
                   ✕
                 </button>
@@ -765,7 +765,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-4 flex flex-col gap-2">
                   {/* Scrub Bar */}
                   <div className="h-1 bg-zinc-700 rounded-full overflow-hidden w-full cursor-pointer">
-                    <div className="w-1/3 h-full bg-sky-500" />
+                    <div className="w-1/3 h-full bg-[#0284c7]" />
                   </div>
                   <div className="flex items-center justify-between text-[9px] text-zinc-400 uppercase tracking-widest font-black pt-1">
                     <span>01:15 / 04:30</span>
@@ -805,7 +805,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
         {/* Header */}
         <div>
           <h1 className="text-base font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Privacy & Security Center</h1>
-          <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">Learn how MakInvoices protects, encrypts, and handles your billing data</p>
+          <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-300 mt-0.5">Learn how MakInvoices protects, encrypts, and handles your billing data</p>
         </div>
 
         {/* Two-Column Grid Layout */}
@@ -813,21 +813,21 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
           {/* Left Column: Integrity Widget & Sticky Summary checklist */}
           <div className="md:col-span-4 space-y-4">
             {/* Dynamic Security Health Widget */}
-            <div className="bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/40 dark:border-zinc-850 rounded-3xl p-5 shadow-xs space-y-4">
+            <div className="bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#e2e8f0]/40 dark:border-[#223269]/50 rounded-3xl p-5 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-[#0f172a] dark:text-white">Security Shield</h4>
-                <div className="flex items-center gap-1.5 bg-white dark:bg-zinc-900 px-2.5 py-1 rounded-xl border border-slate-100 dark:border-zinc-800">
+                <div className="flex items-center gap-1.5 bg-white dark:bg-[#111a36] px-2.5 py-1 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/50">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                  <span className="text-[8px] font-black uppercase tracking-wider text-slate-700 dark:text-zinc-300">Secured</span>
+                  <span className="text-[8px] font-black uppercase tracking-wider text-[#0f172a] dark:text-zinc-300">Secured</span>
                 </div>
               </div>
-              <p className="text-[10.5px] text-[#64748b] dark:text-zinc-450 leading-relaxed">
+              <p className="text-[10.5px] text-[#64748b] dark:text-zinc-300 leading-relaxed">
                 Your data is stored in your browser local IndexedDB database, sandboxed under active origin-isolation and secure SSL.
               </p>
             </div>
 
             {/* Quick Guarantees checklist */}
-            <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-3xl p-5 shadow-xs space-y-3">
+            <div className="bg-white dark:bg-[#111a36] border border-[#e2e8f0]/60 dark:border-[#223269]/50 rounded-3xl p-5 shadow-xs space-y-3">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-[#0f172a] dark:text-white">Our Guarantees</h4>
               <div className="space-y-2">
                 {[
@@ -837,7 +837,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                   'Complies with SAIF Standards',
                   'End-to-End Encryption Keys'
                 ].map(item => (
-                  <div key={item} className="flex items-center gap-2 text-[10.5px] text-[#64748b] dark:text-zinc-400 font-bold">
+                  <div key={item} className="flex items-center gap-2 text-[10.5px] text-[#64748b] dark:text-zinc-300 font-bold">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                     <span>{item}</span>
                   </div>
@@ -846,15 +846,15 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
             </div>
 
             {/* Interactive Security Scanner Widget */}
-            <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-3xl p-5 shadow-xs space-y-4">
+            <div className="bg-white dark:bg-[#111a36] border border-[#e2e8f0]/60 dark:border-[#223269]/50 rounded-3xl p-5 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-[#0f172a] dark:text-white">Security Integrity Check</h4>
-                <Shield className="w-4 h-4 text-sky-500" />
+                <Shield className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8]" />
               </div>
               
               {scanState === 'idle' && (
                 <div className="space-y-3">
-                  <p className="text-[10px] text-[#64748b] dark:text-zinc-450 leading-relaxed">
+                  <p className="text-[10px] text-[#64748b] dark:text-zinc-300 leading-relaxed">
                     Verify local database configurations, connection protocols, and active security keys.
                   </p>
                   <button
@@ -876,7 +876,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                         }
                       }, 150);
                     }}
-                    className="w-full py-2 bg-[#0f172a] hover:bg-[#5C5043] dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-xs text-center"
+                    className="w-full py-2 bg-[#0284c7] hover:bg-[#0369a1] text-white text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-xs text-center"
                   >
                     Run Diagnostics Check
                   </button>
@@ -889,23 +889,23 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                     <span>Scanning local database...</span>
                     <span>{scanProgress}%</span>
                   </div>
-                  <div className="w-full h-1.5 bg-slate-100 dark:bg-zinc-950 rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-[#bae6fd]/30 dark:bg-[#223269]/30 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-sky-400 to-indigo-500 transition-all duration-150" 
+                      className="h-full bg-gradient-to-r from-[#bae6fd] via-[#0284c7] to-[#2563eb] transition-all duration-150" 
                       style={{ width: `${scanProgress}%` }}
                     />
                   </div>
                   <div className="space-y-1.5 text-[9px] font-bold text-[#64748b]">
                     <div className="flex items-center gap-1.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${scanProgress >= 20 ? 'bg-emerald-500' : 'bg-slate-300 animate-pulse'}`} />
+                      <span className={`w-1.5 h-1.5 rounded-full ${scanProgress >= 20 ? 'bg-emerald-500' : 'bg-[#bae6fd]/40 dark:bg-[#223269]/40 animate-pulse'}`} />
                       <span>IndexedDB isolation rules</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${scanProgress >= 50 ? 'bg-emerald-500' : 'bg-slate-300 animate-pulse'}`} />
+                      <span className={`w-1.5 h-1.5 rounded-full ${scanProgress >= 50 ? 'bg-emerald-500' : 'bg-[#bae6fd]/40 dark:bg-[#223269]/40 animate-pulse'}`} />
                       <span>SSL handshake & origin headers</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${scanProgress >= 80 ? 'bg-emerald-500' : 'bg-slate-300 animate-pulse'}`} />
+                      <span className={`w-1.5 h-1.5 rounded-full ${scanProgress >= 80 ? 'bg-emerald-500' : 'bg-[#bae6fd]/40 dark:bg-[#223269]/40 animate-pulse'}`} />
                       <span>Supabase RLS token scopes</span>
                     </div>
                   </div>
@@ -918,12 +918,12 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                     <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-450">Verified: Secure</span>
                   </div>
-                  <p className="text-[9.5px] text-slate-550 dark:text-zinc-550 leading-relaxed">
+                  <p className="text-[9.5px] text-[#64748b] dark:text-zinc-300 leading-relaxed">
                     Diagnostics successfully validated. Sandbox encryption keys are isolation-separated and cloud sync filters are active.
                   </p>
                   <button
                     onClick={() => setScanState('idle')}
-                    className="w-full py-1.5 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-850 text-slate-650 dark:text-zinc-400 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer text-center"
+                    className="w-full py-1.5 border border-[#bae6fd]/50 dark:border-[#223269]/50 hover:bg-[#e0f2fe]/40 dark:hover:bg-[#1b264f]/40 text-[#0284c7] dark:text-[#38bdf8] text-[9px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer text-center"
                   >
                     Reset Check
                   </button>
@@ -938,7 +938,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 { 
-                  icon: <Shield className="w-5 h-5 text-sky-500" />, 
+                  icon: <Shield className="w-5 h-5 text-[#0284c7]" />, 
                   title: 'Sandbox Storage', 
                   desc: 'All billing drafts, ledger entries, and clients are saved in your local browser sandbox, isolated from external access.' 
                 },
@@ -953,44 +953,44 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                   desc: 'All cloud backups undergo strict Row-Level Security checks, guaranteeing only matching authenticated user profiles can load records.' 
                 }
               ].map(card => (
-                <div key={card.title} className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-3xl p-4 shadow-xs hover:border-[#64748b]/30 transition-all group">
-                  <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-zinc-950 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
+                <div key={card.title} className="bg-white dark:bg-[#111a36] border border-[#e2e8f0]/60 dark:border-[#223269]/50 rounded-3xl p-4 shadow-xs hover:border-[#0284c7]/30 dark:hover:border-[#38bdf8]/20 transition-all group">
+                  <div className="w-8 h-8 rounded-xl bg-[#e0f2fe] dark:bg-[#1b264f] flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
                     {card.icon}
                   </div>
                   <h3 className="text-[11px] font-black uppercase tracking-tight text-[#0f172a] dark:text-white leading-snug">{card.title}</h3>
-                  <p className="text-[9.5px] text-[#64748b] dark:text-zinc-450 mt-1 leading-normal">{card.desc}</p>
+                  <p className="text-[9.5px] text-[#64748b] dark:text-zinc-300 mt-1 leading-normal">{card.desc}</p>
                 </div>
               ))}
             </div>
 
             {/* Detailed Breakdown Sections */}
-            <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-3xl p-6 shadow-xs space-y-6">
+            <div className="bg-white dark:bg-[#111a36] border border-[#e2e8f0]/60 dark:border-[#223269]/50 rounded-3xl p-6 shadow-xs space-y-6">
               <section className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-3 bg-amber-400 rounded-full" />
+                  <span className="w-1.5 h-3 bg-[#0284c7] rounded-full" />
                   <h3 className="text-[10px] font-black uppercase tracking-widest text-[#0f172a] dark:text-white">1. Data Storage & Ownership</h3>
                 </div>
-                <p className="text-[11px] text-[#64748b] dark:text-zinc-400 leading-relaxed pl-3">
+                <p className="text-[11px] text-[#64748b] dark:text-zinc-300 leading-relaxed pl-3">
                   MakInvoices AI operates on a user-centric data model. All invoices, quotes, client databases, and templates remain your exclusive property. We do not inspect, aggregate, sell, or analyze your billing transactions. Data saved offline stays completely offline.
                 </p>
               </section>
 
               <section className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-3 bg-[#C6A87D] rounded-full" />
+                  <span className="w-1.5 h-3 bg-[#38bdf8] rounded-full" />
                   <h3 className="text-[10px] font-black uppercase tracking-widest text-[#0f172a] dark:text-white">2. Offline Operations & Processing</h3>
                 </div>
-                <p className="text-[11px] text-[#64748b] dark:text-zinc-400 leading-relaxed pl-3">
+                <p className="text-[11px] text-[#64748b] dark:text-zinc-300 leading-relaxed pl-3">
                   All processing happens natively inside your browser compiling Javascript components. No third-party servers intercept intermediate values or billing input data. Finalized documents are encoded locally to create PDFs or print templates.
                 </p>
               </section>
 
               <section className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-3 bg-[#64748b] rounded-full" />
+                  <span className="w-1.5 h-3 bg-[#2563eb] rounded-full" />
                   <h3 className="text-[10px] font-black uppercase tracking-widest text-[#0f172a] dark:text-white">3. Zero Telemetry Policy</h3>
                 </div>
-                <p className="text-[11px] text-[#64748b] dark:text-zinc-400 leading-relaxed pl-3">
+                <p className="text-[11px] text-[#64748b] dark:text-zinc-300 leading-relaxed pl-3">
                   We do not track keyboard input, system processes, or browser plugins. Our software runs isolated in standard sandboxed tabs with zero tracker tags, marketing analytics, or user profiling modules.
                 </p>
               </section>
@@ -1009,28 +1009,40 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
       {/* Page header */}
       <div>
         <h1 className="text-base font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Help & Support</h1>
-        <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">Find answers, contact our team, or submit a support ticket</p>
+        <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-300 mt-0.5">Find answers, contact our team, or submit a support ticket</p>
       </div>
 
       {/* Quick channels */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { icon: <Mail className="w-5 h-5" />, label: 'Email Support', value: 'support@makinvoices.com', sub: 'Response within 24h', color: 'text-sky-500', bg: 'bg-sky-50 dark:bg-sky-950/30' },
+          { icon: <Mail className="w-5 h-5" />, label: 'Email Support', value: 'support@makinvoices.com', sub: 'Response within 24h', color: 'text-[#0284c7] dark:text-[#38bdf8]', bg: 'bg-[#e0f2fe] dark:bg-[#0284c7]/30', link: 'mailto:support@makinvoices.com' },
           { icon: <MessageCircle className="w-5 h-5" />, label: 'Live Chat', value: 'Available 9am–6pm IST', sub: 'Mon–Fri on web app', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-950/30', isChat: true },
-          { icon: <FileText className="w-5 h-5" />, label: 'Documentation', value: 'docs.makinvoices.com', sub: 'Full guides & API', color: 'text-violet-500', bg: 'bg-violet-50 dark:bg-violet-950/30' },
+          { icon: <FileText className="w-5 h-5" />, label: 'Documentation', value: 'docs.makinvoices.com', sub: 'Full guides & API', color: 'text-violet-500', bg: 'bg-violet-50 dark:bg-violet-950/30', link: 'https://docs.makinvoices.com' },
         ].map(ch => (
           <div 
             key={ch.label} 
-            onClick={() => { if (ch.isChat && onChatClick) onChatClick(); }}
-            className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-4 flex items-start gap-3 shadow-xs hover:border-[#64748b]/40 transition-colors cursor-pointer group"
+            onClick={() => { 
+              if (ch.isChat && onChatClick) {
+                onChatClick(); 
+              } else if (ch.link) {
+                window.location.href = ch.link;
+              }
+            }}
+            className="bg-white dark:bg-[#111a36] border border-[#e2e8f0]/60 dark:border-[#223269]/50 rounded-2xl p-4 flex items-start gap-3 shadow-xs hover:border-[#0284c7]/40 transition-colors cursor-pointer group"
           >
             <div className={`w-9 h-9 rounded-xl ${ch.bg} flex items-center justify-center flex-shrink-0 ${ch.color}`}>
               {ch.icon}
             </div>
             <div className="min-w-0">
               <span className="text-[10px] font-black text-[#0f172a] dark:text-zinc-300 uppercase tracking-wider block">{ch.label}</span>
-              <span className="text-[11px] font-bold text-[#0f172a] dark:text-white block mt-0.5 truncate">{ch.value}</span>
-              <span className="text-[9.5px] text-[#64748b]/70 dark:text-zinc-500 block">{ch.sub}</span>
+              {ch.link ? (
+                <a href={ch.link} target={ch.link.startsWith('mailto:') ? undefined : '_blank'} rel="noreferrer" className="text-[11px] font-bold text-[#0f172a] dark:text-white block mt-0.5 truncate hover:underline">
+                  {ch.value}
+                </a>
+              ) : (
+                <span className="text-[11px] font-bold text-[#0f172a] dark:text-white block mt-0.5 truncate">{ch.value}</span>
+              )}
+              <span className="text-[9.5px] text-[#64748b]/70 dark:text-zinc-300 block">{ch.sub}</span>
             </div>
             <ExternalLink className="w-3.5 h-3.5 text-[#64748b]/40 group-hover:text-[#64748b] flex-shrink-0 ml-auto mt-1 transition-colors" />
           </div>
@@ -1041,9 +1053,9 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* FAQ */}
-        <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden">
+        <div className="bg-white dark:bg-[#111a36] border border-[#e2e8f0]/60 dark:border-[#223269]/50 rounded-2xl shadow-xs overflow-hidden">
           <div className="relative overflow-hidden">
-            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#e2e8f0] via-[#C6A87D] to-[#64748b]" />
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#bae6fd] via-[#0284c7] to-[#2563eb]" />
             <div className="p-4 pb-2">
               <h2 className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-widest">Frequently Asked Questions</h2>
               <div className="relative mt-3">
@@ -1053,7 +1065,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search questions…"
-                  className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-[#e2e8f0] dark:border-zinc-700 bg-[#FCFAF7] dark:bg-zinc-950 text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#64748b]/50 transition-colors"
+                  className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-[#e2e8f0] dark:border-[#223269] bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-colors"
                 />
               </div>
             </div>
@@ -1061,7 +1073,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
 
           <div className="px-4 pb-4 space-y-1.5 overflow-y-auto">
             {filteredFaqs.length === 0 ? (
-              <div className="py-8 text-center text-[11px] text-[#64748b]/60 dark:text-zinc-500">
+              <div className="py-8 text-center text-[11px] text-[#64748b]/60 dark:text-zinc-300">
                 <HelpCircle className="w-8 h-8 mx-auto mb-2 opacity-30" />
                 No questions match your search
               </div>
@@ -1070,19 +1082,19 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                 key={i}
                 className={`border rounded-xl overflow-hidden transition-all ${
                   openFaq === i
-                    ? 'border-[#64748b]/40 bg-[#FCFAF7] dark:bg-zinc-950'
-                    : 'border-[#e2e8f0]/40 dark:border-zinc-800 hover:border-[#64748b]/30'
+                    ? 'border-[#0284c7]/40 bg-[#e0f2fe]/30 dark:bg-[#1b264f]/30'
+                    : 'border-[#bae6fd]/40 dark:border-[#223269]/50 hover:border-[#0284c7]/30'
                 }`}
               >
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
                   className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left cursor-pointer"
                 >
-                  <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 leading-snug">{faq.q}</span>
+                  <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-300 leading-snug">{faq.q}</span>
                   <ChevronDown className={`w-3.5 h-3.5 text-[#64748b] flex-shrink-0 transition-transform ${openFaq === i ? 'rotate-180' : ''}`} />
                 </button>
                 {openFaq === i && (
-                  <div className="px-4 pb-3 text-[11px] text-[#64748b]/90 dark:text-zinc-400 leading-relaxed border-t border-[#e2e8f0]/30 dark:border-zinc-800 pt-2.5">
+                  <div className="px-4 pb-3 text-[11px] text-[#64748b]/90 dark:text-zinc-300 leading-relaxed border-t border-[#e2e8f0]/30 dark:border-[#223269]/50 pt-2.5">
                     {faq.a}
                   </div>
                 )}
@@ -1091,15 +1103,15 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
           </div>
         </div>
         {/* Support Ticket Form or Viewer */}
-        <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden flex flex-col">
+        <div className="bg-white dark:bg-[#111a36] border border-[#e2e8f0]/60 dark:border-[#223269]/50 rounded-2xl shadow-xs overflow-hidden flex flex-col">
           <div className="relative overflow-hidden shrink-0">
-            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#e2e8f0] via-[#C6A87D] to-[#64748b]" />
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#bae6fd] via-[#0284c7] to-[#2563eb]" />
             
             {ticketViewMode === 'submit' && (
               <div className="p-4 pb-2 flex justify-between items-center">
                 <div>
                   <h2 className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-widest">Submit a Support Ticket</h2>
-                  <p className="text-[10px] text-[#64748b]/70 dark:text-zinc-500 mt-0.5">Our team will respond within 1 business day</p>
+                  <p className="text-[10px] text-[#64748b]/70 dark:text-zinc-300 mt-0.5">Our team will respond within 1 business day</p>
                 </div>
                 <button
                   type="button"
@@ -1107,9 +1119,9 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                     setTicketViewMode('list');
                     fetchTickets();
                   }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 hover:border-[#64748b]/50 hover:bg-slate-50 dark:hover:bg-zinc-900 text-slate-800 dark:text-zinc-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-2xs hover:scale-102"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#e2e8f0]/60 dark:border-[#223269] hover:border-[#64748b]/50 hover:bg-[#f4f9ff] dark:hover:bg-[#1b264f]/50 text-[#64748b] dark:text-zinc-300 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-2xs hover:scale-102"
                 >
-                  <Clock className="w-3.5 h-3.5 text-amber-500" />
+                  <Clock className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8]" />
                   My Tickets
                 </button>
               </div>
@@ -1119,12 +1131,12 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
               <div className="p-4 pb-2 flex justify-between items-center">
                 <div>
                   <h2 className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-widest">My Support Tickets</h2>
-                  <p className="text-[10px] text-[#64748b]/70 dark:text-zinc-500 mt-0.5">View your raised tickets and admin responses</p>
+                  <p className="text-[10px] text-[#64748b]/70 dark:text-zinc-300 mt-0.5">View your raised tickets and admin responses</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setTicketViewMode('submit')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 hover:border-[#64748b]/50 hover:bg-slate-50 dark:hover:bg-zinc-900 text-slate-800 dark:text-zinc-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-2xs hover:scale-102"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#e2e8f0]/60 dark:border-[#223269] hover:border-[#64748b]/50 hover:bg-[#f4f9ff] dark:hover:bg-[#1b264f]/50 text-[#64748b] dark:text-zinc-300 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-2xs hover:scale-102"
                 >
                   <Send className="w-3.5 h-3.5 text-[#64748b]" />
                   New Ticket
@@ -1133,7 +1145,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
             )}
 
             {ticketViewMode === 'chat' && (
-              <div className="p-4 pb-2 flex justify-between items-center border-b border-[#e2e8f0]/30 dark:border-zinc-800">
+              <div className="p-4 pb-2 flex justify-between items-center border-b border-[#e2e8f0]/30 dark:border-[#223269]/50">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <button
                     type="button"
@@ -1143,7 +1155,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                       setSelectedTicketId(null);
                       fetchTickets();
                     }}
-                    className="w-7 h-7 rounded-full bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 text-slate-800 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-colors cursor-pointer shrink-0 hover:scale-105"
+                    className="w-7 h-7 rounded-full bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#e2e8f0]/60 dark:border-[#223269] text-[#64748b] dark:text-zinc-300 hover:bg-[#f4f9ff] dark:hover:bg-[#1b264f]/50 flex items-center justify-center transition-colors cursor-pointer shrink-0 hover:scale-105"
                   >
                     <ArrowLeft className="w-4 h-4" />
                   </button>
@@ -1151,7 +1163,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                     <h2 className="text-[11px] font-black text-[#0f172a] dark:text-white uppercase tracking-wider truncate">
                       {ticketDetails?.ticket?.subject || 'Loading Details...'}
                     </h2>
-                    <p className="text-[9px] text-[#64748b]/75 dark:text-zinc-500 mt-0.5 uppercase font-bold tracking-wider">
+                    <p className="text-[9px] text-[#64748b]/75 dark:text-zinc-300 mt-0.5 uppercase font-bold tracking-wider">
                       Category: {ticketDetails?.ticket?.category || 'General'} • Priority: {ticketDetails?.ticket?.priority || 'Medium'}
                     </p>
                   </div>
@@ -1159,7 +1171,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                 <div className="flex-shrink-0 ml-2">
                   <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
                     ticketDetails?.ticket?.status === 'Closed' || ticketDetails?.ticket?.status === 'Resolved'
-                      ? 'bg-slate-500/10 text-slate-500 dark:text-zinc-400 border-slate-500/20'
+                      ? 'bg-[#f4f9ff]/10 text-[#64748b] dark:text-zinc-300 border-[#bae6fd]/50/20'
                       : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border border-emerald-500/20'
                   }`}>
                     {ticketDetails?.ticket?.status || 'Open'}
@@ -1179,7 +1191,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                     </div>
                     <div>
                       <p className="text-sm font-black text-[#0f172a] dark:text-white">Ticket Submitted!</p>
-                      <p className="text-[11px] text-[#64748b]/70 dark:text-zinc-500 mt-1">We&apos;ll reach back at your registered email shortly.</p>
+                      <p className="text-[11px] text-[#64748b]/70 dark:text-zinc-300 mt-1">We&apos;ll reach back at your registered email shortly.</p>
                     </div>
                   </div>
                 ) : (
@@ -1195,8 +1207,8 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                             onClick={() => setTicketCategory(cat.id)}
                             className={`px-2.5 py-1 rounded-lg text-[9.5px] font-bold transition-all cursor-pointer border ${
                               ticketCategory === cat.id
-                                ? 'bg-[#0f172a] text-white border-[#0f172a]'
-                                : 'bg-[#FCFAF7] dark:bg-zinc-950 border-[#e2e8f0]/60 dark:border-zinc-700 text-[#64748b] dark:text-zinc-400 hover:border-[#64748b]/50'
+                                ? 'bg-[#0284c7] text-white border-[#0284c7]'
+                                : 'bg-[#f4f9ff] dark:bg-[#0b1329] border-[#e2e8f0]/60 dark:border-[#223269] text-[#64748b] dark:text-zinc-300 hover:border-[#64748b]/50'
                             }`}
                           >
                             {cat.label}
@@ -1214,7 +1226,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                         onChange={e => setTicketSubject(e.target.value)}
                         required
                         placeholder="Brief description of your issue"
-                        className="w-full px-3.5 py-2.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#64748b]/60 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#e2e8f0]/60 dark:border-[#223269] rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-colors"
                       />
                     </div>
 
@@ -1227,14 +1239,14 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                         required
                         rows={5}
                         placeholder="Please describe the issue in detail. Include steps to reproduce, expected behavior, and what actually happened…"
-                        className="w-full px-3.5 py-2.5 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#64748b]/60 transition-colors resize-none"
+                        className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#e2e8f0]/60 dark:border-[#223269] rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#64748b]/60 transition-colors resize-none"
                       />
                     </div>
 
                     <button
                       type="submit"
                       disabled={ticketLoading}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#0f172a] hover:bg-[#5C5043] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm disabled:opacity-60 disabled:cursor-not-allowed hover:scale-[1.01]"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm shadow-[#0284c7]/20 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-[1.01]"
                     >
                       {ticketLoading ? (
                         <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -1251,7 +1263,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
             {ticketViewMode === 'list' && (
               <div className="flex-1 flex flex-col min-h-[380px] min-w-0">
                 {/* Tickets Filter Tabs */}
-                <div className="flex gap-1.5 mb-3.5 shrink-0 border-b border-[#e2e8f0]/30 dark:border-zinc-800 pb-2.5">
+                <div className="flex gap-1.5 mb-3.5 shrink-0 border-b border-[#e2e8f0]/30 dark:border-[#223269]/50 pb-2.5">
                   {(['all', 'open', 'closed'] as const).map((filter) => {
                     const isActive = ticketFilter === filter;
                     const count = ticketsList.filter(t => {
@@ -1267,8 +1279,8 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                         onClick={() => setTicketFilter(filter)}
                         className={`px-3 py-1 text-[9.5px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${
                           isActive
-                            ? 'bg-[#0f172a] text-white border-[#0f172a] dark:bg-zinc-800 dark:border-zinc-700'
-                            : 'bg-[#FCFAF7] text-slate-600 dark:bg-zinc-950 border-[#e2e8f0]/60 dark:border-zinc-800 hover:border-[#64748b]/50 text-slate-700 dark:text-zinc-350 hover:bg-slate-50 dark:hover:bg-zinc-900'
+                            ? 'bg-[#0284c7] text-white border-[#0284c7]'
+                            : 'bg-[#f4f9ff] text-[#64748b] dark:bg-[#0b1329] border-[#e2e8f0]/60 dark:border-[#223269]/50 hover:border-[#64748b]/50 text-[#64748b] dark:text-[#38bdf8] hover:bg-[#f4f9ff] dark:hover:bg-[#1b264f]/50'
                         }`}
                       >
                         {filter} ({count})
@@ -1278,15 +1290,15 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                 </div>
 
                 {ticketsListLoading ? (
-                  <div className="flex-1 flex flex-col items-center justify-center py-12 text-slate-500">
-                    <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+                  <div className="flex-1 flex flex-col items-center justify-center py-12 text-[#64748b]">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#0284c7]" />
                     <span className="text-[10px] uppercase font-black tracking-widest mt-3">Loading tickets...</span>
                   </div>
                 ) : ticketsList.length === 0 ? (
-                  <div className="flex-1 flex flex-col items-center justify-center py-16 text-center text-slate-500">
-                    <MessageSquare className="w-12 h-12 mb-3 text-slate-300 dark:text-zinc-700 stroke-1" />
+                  <div className="flex-1 flex flex-col items-center justify-center py-16 text-center text-[#64748b]">
+                    <MessageSquare className="w-12 h-12 mb-3 text-[#0284c7]/40 dark:text-[#38bdf8]/30 stroke-1" />
                     <h3 className="text-xs font-black uppercase tracking-wider text-[#0f172a] dark:text-white">No Tickets Found</h3>
-                    <p className="text-[10.5px] text-[#64748b] dark:text-zinc-450 mt-1 max-w-[280px]">You haven't raised any support tickets yet. Click "New Ticket" to create one.</p>
+                    <p className="text-[10.5px] text-[#64748b] dark:text-zinc-300 mt-1 max-w-[280px]">You haven't raised any support tickets yet. Click "New Ticket" to create one.</p>
                   </div>
                 ) : (
                   <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
@@ -1312,25 +1324,25 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                               setTicketViewMode('chat');
                               fetchTicketDetails(t.id);
                             }}
-                            className="p-4 bg-[#FCFAF7] dark:bg-zinc-950/40 border border-[#e2e8f0]/40 dark:border-zinc-800 hover:border-[#64748b]/40 rounded-2xl cursor-pointer group transition-all duration-200 flex justify-between items-center gap-4 hover:shadow-xs hover:scale-[1.01] hover:bg-slate-50/50 dark:hover:bg-zinc-900/20"
+                            className="p-4 bg-[#f4f9ff] dark:bg-[#0b1329]/40 border border-[#e2e8f0]/40 dark:border-[#223269]/50 hover:border-[#64748b]/40 rounded-2xl cursor-pointer group transition-all duration-200 flex justify-between items-center gap-4 hover:shadow-xs hover:scale-[1.01] hover:bg-[#f4f9ff]/50 dark:hover:bg-[#1b264f]/50/20"
                           >
                             <div className="min-w-0 space-y-1.5">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-350">
+                                <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider bg-[#e0f2fe] text-[#64748b] dark:bg-[#1b264f] dark:text-[#38bdf8]">
                                   {t.category || 'Support'}
                                 </span>
                                 <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider border ${
                                   t.priority === 'urgent' || t.priority === 'high'
                                     ? 'bg-rose-500/10 text-rose-600 border-rose-500/20 dark:text-rose-400'
-                                    : 'bg-slate-500/10 text-slate-600 border-slate-500/20 dark:text-zinc-400'
+                                    : 'bg-[#f4f9ff]/10 text-[#64748b] border-[#bae6fd]/50/20 dark:text-zinc-300'
                                 }`}>
                                   {t.priority}
                                 </span>
                               </div>
-                              <h4 className="text-xs font-black uppercase tracking-tight text-[#0f172a] dark:text-white truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                              <h4 className="text-xs font-black uppercase tracking-tight text-[#0f172a] dark:text-white truncate group-hover:text-[#0284c7] dark:group-hover:text-[#38bdf8] transition-colors">
                                 {t.subject}
                               </h4>
-                              <div className="flex items-center gap-1.5 text-[9px] text-[#64748b]/80 dark:text-zinc-550 font-bold">
+                              <div className="flex items-center gap-1.5 text-[9px] text-[#64748b]/80 dark:text-zinc-300 font-bold">
                                 <Clock className="w-3 h-3 shrink-0" />
                                 <span>Opened on {dateStr}</span>
                               </div>
@@ -1339,12 +1351,12 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                             <div className="flex items-center gap-3 shrink-0">
                               <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
                                 isClosed
-                                  ? 'bg-slate-500/10 text-slate-500 dark:text-zinc-400 border-slate-500/20'
+                                  ? 'bg-[#f4f9ff]/10 text-[#64748b] dark:text-zinc-300 border-[#bae6fd]/50/20'
                                   : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border border-emerald-500/20'
                               }`}>
                                 {t.status}
                               </span>
-                              <ArrowRight className="w-4 h-4 text-slate-400 dark:text-zinc-600 group-hover:text-amber-500 transition-colors transform group-hover:translate-x-0.5" />
+                              <ArrowRight className="w-4 h-4 text-[#64748b] dark:text-zinc-300 group-hover:text-[#0284c7] dark:group-hover:text-[#38bdf8] transition-colors transform group-hover:translate-x-0.5" />
                             </div>
                           </div>
                         );
@@ -1357,8 +1369,8 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
             {ticketViewMode === 'chat' && (
               <div className="flex-1 flex flex-col min-h-[380px] justify-between">
                 {detailsLoading ? (
-                  <div className="flex-1 flex flex-col items-center justify-center py-12 text-slate-500">
-                    <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+                  <div className="flex-1 flex flex-col items-center justify-center py-12 text-[#64748b]">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#0284c7]" />
                     <span className="text-[10px] uppercase font-black tracking-widest mt-3">Loading messages...</span>
                   </div>
                 ) : (
@@ -1382,27 +1394,27 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                             <div className="flex items-center gap-1.5 mb-1 px-1">
                               {isAdmin ? (
                                 <>
-                                  <div className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center text-[8px] font-black text-white shrink-0">
+                                  <div className="w-4 h-4 rounded-full bg-[#0284c7] flex items-center justify-center text-[8px] font-black text-white shrink-0">
                                     A
                                   </div>
-                                  <span className="text-[8.5px] font-black uppercase tracking-wider text-slate-700 dark:text-zinc-350">
+                                  <span className="text-[8.5px] font-black uppercase tracking-wider text-[#64748b] dark:text-[#38bdf8]">
                                     Support Agent
                                   </span>
                                 </>
                               ) : (
-                                <span className="text-[8.5px] font-black uppercase tracking-wider text-slate-500 dark:text-zinc-500">
+                                <span className="text-[8.5px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-300">
                                   You
                                 </span>
                               )}
-                              <span className="text-[8px] text-slate-400 dark:text-zinc-600">
+                              <span className="text-[8px] text-[#64748b] dark:text-zinc-300">
                                 {timeStr}
                               </span>
                             </div>
                             
                             <div className={`p-3.5 rounded-2xl text-[11.5px] leading-relaxed break-words font-medium shadow-2xs border ${
                               isAdmin
-                                ? 'bg-white dark:bg-zinc-850 text-slate-800 dark:text-zinc-200 rounded-tl-none border-[#e2e8f0]/40 dark:border-zinc-800'
-                                : 'bg-[#0f172a] dark:bg-zinc-800 text-white rounded-tr-none border-transparent'
+                                ? 'bg-white dark:bg-[#1b264f]/60 text-[#64748b] dark:text-zinc-300 rounded-tl-none border-[#e2e8f0]/40 dark:border-[#223269]/50'
+                                : 'bg-[#0284c7] text-white rounded-tr-none border-transparent'
                             }`}>
                               {msg.message}
                             </div>
@@ -1413,7 +1425,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                     </div>
 
                     {/* Chat Input or Closed Banner */}
-                    <div className="border-t border-[#e2e8f0]/30 dark:border-zinc-800 pt-3.5 shrink-0">
+                    <div className="border-t border-[#e2e8f0]/30 dark:border-[#223269]/50 pt-3.5 shrink-0">
                       {ticketDetails?.ticket?.status === 'Closed' || ticketDetails?.ticket?.status === 'Resolved' ? (
                         <div className="p-3.5 bg-rose-500/5 dark:bg-rose-950/10 border border-rose-500/20 rounded-2xl flex items-center gap-2.5">
                           <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
@@ -1429,12 +1441,12 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                             onChange={(e) => setReplyText(e.target.value)}
                             required
                             placeholder="Type your reply here..."
-                            className="flex-1 px-3.5 py-2 text-xs bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#64748b]/60 transition-colors"
+                            className="flex-1 px-3.5 py-2 text-xs bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#e2e8f0]/60 dark:border-[#223269] rounded-xl text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-colors"
                           />
                           <button
                             type="submit"
                             disabled={replyLoading || !replyText.trim()}
-                            className="px-4 py-2 bg-[#0f172a] hover:bg-[#5C5043] dark:bg-[#0f172a] dark:hover:bg-[#5C5043] text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center shrink-0 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-102"
+                            className="px-4 py-2 bg-[#0284c7] hover:bg-[#0369a1] text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center shrink-0 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-102"
                           >
                             {replyLoading ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1456,16 +1468,16 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
       {/* Feedback + resources footer row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Feedback */}
-        <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs">
+        <div className="bg-white dark:bg-[#111a36] border border-[#e2e8f0]/60 dark:border-[#223269]/50 rounded-2xl p-5 shadow-xs">
           <h3 className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-widest mb-1">Rate Your Experience</h3>
-          <p className="text-[10px] text-[#64748b]/70 dark:text-zinc-500 mb-3">How would you rate MakInvoices overall?</p>
+          <p className="text-[10px] text-[#64748b]/70 dark:text-zinc-300 mb-3">How would you rate MakInvoices overall?</p>
           {feedbackSubmitted ? (
             <div className="flex flex-col items-center justify-center py-4 space-y-2 text-center animate-in fade-in duration-200">
               <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-500 flex items-center justify-center border border-emerald-100 dark:border-emerald-900/30">
                 <ThumbsUp className="w-5 h-5" />
               </div>
               <span className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Thank You!</span>
-              <p className="text-[10px] text-slate-500 dark:text-zinc-400 max-w-[220px]">Your feedback was submitted successfully and helps us improve MakInvoices.</p>
+              <p className="text-[10px] text-[#64748b] dark:text-zinc-300 max-w-[220px]">Your feedback was submitted successfully and helps us improve MakInvoices.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -1480,7 +1492,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                       onMouseLeave={() => setHoveredRating(null)}
                       onClick={() => setActiveRating(star)}
                       className={`transition-all duration-150 transform hover:scale-125 cursor-pointer ${
-                        isHighlighted ? 'text-amber-400' : 'text-[#e2e8f0] dark:text-zinc-700 hover:text-amber-300'
+                        isHighlighted ? 'text-amber-400' : 'text-[#bae6fd] dark:text-[#223269] hover:text-amber-300'
                       }`}
                     >
                       <Star className="w-6 h-6 fill-current" />
@@ -1505,7 +1517,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                     onChange={(e) => setFeedbackText(e.target.value)}
                     placeholder="Tell us what we can improve... (optional)"
                     rows={2}
-                    className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none text-[#0f172a] dark:text-white resize-none"
+                    className="w-full px-3 py-2 text-xs bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-xl focus:ring-2 focus:ring-[#0284c7]/15 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none text-[#0f172a] dark:text-white resize-none"
                   />
                   <button
                     type="button"
@@ -1516,7 +1528,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                       emitNotification('Feedback Submitted', 'Thank you for helping us improve MakInvoices!', 'success');
                       setFeedbackSubmitted(true);
                     }}
-                    className="w-full py-2 bg-[#0f172a] hover:bg-[#5C5043] dark:bg-[#0f172a] dark:hover:bg-[#5C5043] text-white text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-xs"
+                    className="w-full py-2 bg-[#0284c7] hover:bg-[#0369a1] text-white text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-xs shadow-[#0284c7]/20"
                   >
                     Submit Feedback
                   </button>
@@ -1527,7 +1539,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
         </div>
 
         {/* Resources */}
-        <div className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800 rounded-2xl p-5 shadow-xs">
+        <div className="bg-white dark:bg-[#111a36] border border-[#e2e8f0]/60 dark:border-[#223269]/50 rounded-2xl p-5 shadow-xs">
           <h3 className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-widest mb-3">Quick Resources</h3>
           <div className="space-y-3">
             {[
@@ -1569,14 +1581,14 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }
                 }}
-                className="w-full p-3 flex items-start gap-3 bg-[#FCFAF7] dark:bg-zinc-950 border border-[#e2e8f0]/20 dark:border-zinc-850 rounded-xl hover:border-[#64748b]/40 hover:shadow-xs transition-all text-left cursor-pointer group"
+                className="w-full p-3 flex items-start gap-3 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#e2e8f0]/20 dark:border-[#223269]/50 rounded-xl hover:border-[#0284c7]/40 hover:shadow-xs transition-all text-left cursor-pointer group"
               >
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${res.color}`}>
                   {res.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-black text-[#0f172a] dark:text-zinc-355 group-hover:text-[#64748b] dark:group-hover:text-white transition-colors block">{res.label}</span>
-                  <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-500 mt-0.5 leading-snug">{res.desc}</p>
+                  <span className="text-xs font-black text-[#0f172a] dark:text-zinc-300 group-hover:text-[#0284c7] dark:group-hover:text-[#38bdf8] transition-colors block">{res.label}</span>
+                  <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-300 mt-0.5 leading-snug">{res.desc}</p>
                 </div>
                 <ArrowRight className="w-3.5 h-3.5 text-[#64748b]/40 group-hover:text-[#64748b] transition-colors shrink-0 self-center" />
               </button>
