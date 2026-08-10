@@ -440,7 +440,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
                     flexDirection: 'column',
                   }}
                 >
-                  <LivePreview template={template} businessProfile={businessProfile} />
+                  <LivePreview template={template} businessProfile={businessProfile} forceFullHeight={true} />
                 </div>
               </div>
             </div>

@@ -216,6 +216,20 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
               Show {label}
            </label>
         ))}
+        <div className="pt-2 border-t border-slate-105 dark:border-zinc-800 space-y-2">
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-705 mb-1">
+              <input type="checkbox" checked={config.company.isCompact === true} onChange={e => {
+                 updateConfig('company', { isCompact: e.target.checked });
+              }} />
+              Make Details Compact (Reduce gaps & text size)
+           </label>
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-705 mb-1">
+              <input type="checkbox" checked={config.company.showLabels !== false} onChange={e => {
+                 updateConfig('company', { showLabels: e.target.checked });
+              }} />
+              Show Labels
+           </label>
+        </div>
       </div>
     );
   }
@@ -249,6 +263,20 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
             {['Left', 'Center', 'Right'].map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
+        <div className="pt-2 border-t border-slate-105 dark:border-zinc-800 space-y-2">
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-705 mb-1">
+              <input type="checkbox" checked={config.invoiceInfo.isCompact === true} onChange={e => {
+                 updateConfig('invoiceInfo', { isCompact: e.target.checked });
+              }} />
+              Make Details Compact (Reduce gaps & text size)
+           </label>
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-705 mb-1">
+              <input type="checkbox" checked={config.invoiceInfo.showLabels !== false} onChange={e => {
+                 updateConfig('invoiceInfo', { showLabels: e.target.checked });
+              }} />
+              Show Labels
+           </label>
+        </div>
       </div>
     );
   }
@@ -266,6 +294,20 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
               Show {field.toUpperCase()}
            </label>
         ))}
+        <div className="pt-2 border-t border-slate-105 dark:border-zinc-800 space-y-2">
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-705 mb-1">
+              <input type="checkbox" checked={config.client.isCompact === true} onChange={e => {
+                 updateConfig('client', { isCompact: e.target.checked });
+              }} />
+              Make Details Compact (Reduce gaps & text size)
+           </label>
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-705 mb-1">
+              <input type="checkbox" checked={config.client.showLabels !== false} onChange={e => {
+                 updateConfig('client', { showLabels: e.target.checked });
+              }} />
+              Show Labels
+           </label>
+        </div>
       </div>
     );
   }
@@ -283,6 +325,20 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
               Show {field.toUpperCase()}
            </label>
         ))}
+        <div className="pt-2 border-t border-slate-105 dark:border-zinc-800 space-y-2">
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-705 mb-1">
+              <input type="checkbox" checked={config.shipping.isCompact === true} onChange={e => {
+                 updateConfig('shipping', { isCompact: e.target.checked });
+              }} />
+              Make Details Compact (Reduce gaps & text size)
+           </label>
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-705 mb-1">
+              <input type="checkbox" checked={config.shipping.showLabels !== false} onChange={e => {
+                 updateConfig('shipping', { showLabels: e.target.checked });
+              }} />
+              Show Labels
+           </label>
+        </div>
       </div>
     );
   }
@@ -411,6 +467,20 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
               Show {label}
            </label>
         ))}
+        <div className="pt-2 border-t border-slate-105 dark:border-zinc-800 space-y-2">
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-705 mb-1">
+              <input type="checkbox" checked={config.transport.isCompact === true} onChange={e => {
+                 updateConfig('transport', { isCompact: e.target.checked });
+              }} />
+              Make Details Compact (Reduce gaps & text size)
+           </label>
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-705 mb-1">
+              <input type="checkbox" checked={config.transport.showLabels !== false} onChange={e => {
+                 updateConfig('transport', { showLabels: e.target.checked });
+              }} />
+              Show Labels
+           </label>
+        </div>
       </div>
     );
   }
@@ -477,29 +547,57 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
   }
 
   if (stepId === 'footer') {
+    const isFooterVisible = template.sections.footer?.visible !== false;
     return (
       <div className="space-y-4">
         <div>
            <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
-              <input type="checkbox" checked={config.footer.showPageNumbers} onChange={e => updateConfig('footer', { showPageNumbers: e.target.checked })} />
-              Show Page Numbers
+              <input 
+                type="checkbox" 
+                checked={isFooterVisible} 
+                onChange={e => {
+                  if (!updateFullTemplate) return;
+                  updateFullTemplate({
+                    ...template,
+                    sections: {
+                      ...template.sections,
+                      footer: {
+                        ...template.sections.footer,
+                        visible: e.target.checked
+                      }
+                    }
+                  });
+                }} 
+              />
+              Show Footer
            </label>
         </div>
-        <div>
-          <label className="text-xs font-bold text-slate-700 mb-1 block">Footer Message</label>
-          <input type="text" value={config.footer.message} onChange={e => updateConfig('footer', { message: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
-        </div>
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-700 block mb-1">Contact & Website Toggles</label>
-          <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
-             <input type="checkbox" checked={config.footer.showContact !== false} onChange={e => updateConfig('footer', { showContact: e.target.checked })} />
-             Show Contact (Email & Phone)
-          </label>
-          <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
-             <input type="checkbox" checked={config.footer.showWebsite !== false} onChange={e => updateConfig('footer', { showWebsite: e.target.checked })} />
-             Show Website
-          </label>
-        </div>
+        
+        {isFooterVisible && (
+          <div className="space-y-4 pt-3 border-t border-slate-100 dark:border-zinc-800">
+            <div>
+               <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
+                  <input type="checkbox" checked={config.footer.showPageNumbers} onChange={e => updateConfig('footer', { showPageNumbers: e.target.checked })} />
+                  Show Page Numbers
+               </label>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-700 mb-1 block">Footer Message</label>
+              <input type="text" value={config.footer.message} onChange={e => updateConfig('footer', { message: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 block mb-1">Contact & Website Toggles</label>
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
+                 <input type="checkbox" checked={config.footer.showContact !== false} onChange={e => updateConfig('footer', { showContact: e.target.checked })} />
+                 Show Contact (Email & Phone)
+              </label>
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
+                 <input type="checkbox" checked={config.footer.showWebsite !== false} onChange={e => updateConfig('footer', { showWebsite: e.target.checked })} />
+                 Show Website
+              </label>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

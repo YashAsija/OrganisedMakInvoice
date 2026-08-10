@@ -56,11 +56,37 @@ function InvoicePreviewContent() {
 
   // Auto-trigger print dialog when ?print=1 is in the URL
   useEffect(() => {
-    if (autoPrint && invoice && !loading) {
-      const timer = setTimeout(() => window.print(), 600);
+    if (autoPrint && invoice && !loading && profile) {
+      const triggerPrint = async () => {
+        try {
+          const pdfBlob = await exportInvoicePDFAsync(invoice, profile, 'blob', invoice.embeddedTemplate || undefined);
+          if (pdfBlob instanceof Blob) {
+            const blobUrl = URL.createObjectURL(pdfBlob);
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'fixed';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = 'none';
+            iframe.style.visibility = 'hidden';
+            iframe.onload = () => {
+              try {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+              } catch (e) {
+                window.open(blobUrl, '_blank');
+              }
+            };
+            iframe.src = blobUrl;
+            document.body.appendChild(iframe);
+          }
+        } catch (err) {
+          console.error('Auto print failed:', err);
+        }
+      };
+      const timer = setTimeout(triggerPrint, 600);
       return () => clearTimeout(timer);
     }
-  }, [autoPrint, invoice, loading]);
+  }, [autoPrint, invoice, loading, profile]);
 
   if (loading) {
     return (
@@ -107,7 +133,32 @@ function InvoicePreviewContent() {
             Download PDF
           </button>
           <button
-            onClick={() => window.print()}
+            onClick={async () => {
+              try {
+                const pdfBlob = await exportInvoicePDFAsync(invoice, (profile ?? {}) as BusinessProfile, 'blob', invoice.embeddedTemplate || undefined);
+                if (pdfBlob instanceof Blob) {
+                  const blobUrl = URL.createObjectURL(pdfBlob);
+                  const iframe = document.createElement('iframe');
+                  iframe.style.position = 'fixed';
+                  iframe.style.width = '0';
+                  iframe.style.height = '0';
+                  iframe.style.border = 'none';
+                  iframe.style.visibility = 'hidden';
+                  iframe.onload = () => {
+                    try {
+                      iframe.contentWindow?.focus();
+                      iframe.contentWindow?.print();
+                    } catch (e) {
+                      window.open(blobUrl, '_blank');
+                    }
+                  };
+                  iframe.src = blobUrl;
+                  document.body.appendChild(iframe);
+                }
+              } catch (err: any) {
+                alert('Failed to print PDF: ' + (err.message || err.toString()));
+              }
+            }}
             className="px-4 py-2 bg-slate-805 hover:bg-slate-750 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer active:scale-95"
           >
             Print Document
@@ -116,35 +167,42 @@ function InvoicePreviewContent() {
       </div>
 
       {/* Styled Printable Preview Container */}
-      <div 
-        className="bg-white shadow-xl border border-slate-205 dark:border-zinc-800 relative rounded-none md:rounded-3xl overflow-hidden"
-        style={{ 
-          width: 794 * previewScale, 
-          height: 1123 * previewScale,
-          transition: 'all 0.2s ease'
-        }}
-      >
-        <div
-          className="invoice-print-sheet absolute top-0 left-0 origin-top-left"
-          style={{
-            width: '794px',
-            minHeight: '1123px',
-            transform: `scale(${previewScale})`,
-            transformOrigin: 'top left',
-            transition: 'transform 0.2s ease',
-          }}
-        >
-          <LivePreview
-            template={invoice.embeddedTemplate || getDefaultTemplatePreset()}
-            invoiceData={invoice}
-            businessProfile={(profile ?? {}) as Partial<BusinessProfile>}
-            currencySymbol={currencySymbol}
-            isInteractive={false}
-            isPrintMode={true}
-            clients={[]}
-          />
-        </div>
-      </div>
+      {(() => {
+        const invoiceItems = invoice?.items || [];
+        const previewPagesCount = Math.max(1, 1 + Math.ceil(Math.max(0, invoiceItems.length - 8) / 7));
+        const previewHeight = 1123 * previewPagesCount + 40 * (previewPagesCount - 1);
+        return (
+          <div 
+            className="bg-white shadow-xl border border-slate-205 dark:border-zinc-800 relative rounded-none md:rounded-3xl overflow-hidden"
+            style={{ 
+              width: 794 * previewScale, 
+              height: previewHeight * previewScale,
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <div
+              className="invoice-print-sheet absolute top-0 left-0 origin-top-left"
+              style={{
+                width: '794px',
+                height: `${previewHeight}px`,
+                transform: `scale(${previewScale})`,
+                transformOrigin: 'top left',
+                transition: 'transform 0.2s ease',
+              }}
+            >
+              <LivePreview
+                template={invoice.embeddedTemplate || getDefaultTemplatePreset()}
+                invoiceData={invoice}
+                businessProfile={(profile ?? {}) as Partial<BusinessProfile>}
+                currencySymbol={currencySymbol}
+                isInteractive={false}
+                isPrintMode={true}
+                clients={[]}
+              />
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

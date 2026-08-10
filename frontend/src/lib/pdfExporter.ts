@@ -81,9 +81,9 @@ export function exportCollectiveReportPDF(
 
   // Stats cards
   const totalGrand = invoices.reduce((s, i) => s + i.grandTotal, 0);
-  const totalPaid = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + i.grandTotal, 0);
+  const totalPaid = invoices.reduce((s, i) => s + (i.status === 'paid' ? (i.paidAmount ?? i.grandTotal) : (i.paidAmount ?? 0)), 0);
   const totalTax = invoices.reduce((s, i) => s + i.taxTotal, 0);
-  const pending = totalGrand - totalPaid;
+  const pending = invoices.reduce((s, i) => s + (i.status === 'paid' ? 0 : Math.max(0, i.grandTotal - (i.paidAmount ?? 0))), 0);
 
   const cards = [
     { label: 'TOTAL BILLED', val: fmt(totalGrand, sym), bg: [240, 246, 255], fg: [37, 99, 235] },
@@ -257,7 +257,10 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
 
   // We need to resolve the taxMode and apply it properly to the invoice data
   const taxMode = resolveTaxMode(invoice, profile);
-  const tempInvoice = { ...invoice };
+  const tempInvoice = {
+    ...invoice,
+    selectedCopies: { customer: true } // Force only one copy for initial height measurement
+  };
   if (taxMode === 'cgst_sgst' || taxMode === 'igst') {
     tempInvoice.items = tempInvoice.items.map(item => {
       const customTaxes = { ...item.customTaxes };
@@ -397,11 +400,11 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
       }
     }
 
-    // Re-render with calculated chunks
+    // Re-render with calculated chunks and restore original copies selection
     root.render(
       React.createElement(LivePreview, {
         template: activeTemplate,
-        invoiceData: tempInvoice,
+        invoiceData: { ...invoice, items: tempInvoice.items },
         businessProfile: profile,
         currencySymbol: currencySymbol,
         isInteractive: false,
@@ -445,14 +448,14 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
           pdf.addPage();
         }
         const pageDataUrl = await Promise.race([
-          toPng(pages[i], { quality: 1, pixelRatio: 2, skipFonts: true, cacheBust: true }),
+          toPng(pages[i], { quality: 1, pixelRatio: 2, skipFonts: true, cacheBust: false }),
           new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 20000))
         ]);
         pdf.addImage(pageDataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
       }
     } else {
       const dataUrl = await Promise.race([
-        toPng(container, { quality: 1, pixelRatio: 2, skipFonts: true, cacheBust: true }),
+        toPng(container, { quality: 1, pixelRatio: 2, skipFonts: true, cacheBust: false }),
         new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 20000))
       ]);
       pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);

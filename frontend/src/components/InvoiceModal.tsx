@@ -15,6 +15,7 @@ import { getDocumentTypeDefaults } from '../lib/docTypeDefaults';
 
 
 interface InvoiceModalProps {
+  theme: 'light' | 'dark';
   invoice: Invoice | null; // null means create new
   presets: PresetItem[];
   clients: ClientProfile[];
@@ -72,6 +73,7 @@ const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesL
 };
 
 export default function InvoiceModal({
+  theme,
   invoice,
   presets,
   clients,
@@ -93,14 +95,15 @@ export default function InvoiceModal({
   useEffect(() => {
     if (isOpen) {
       setSavedInvoiceForPreview(null);
-      const cached = localStorage.getItem('makbills_masters_vendors');
+      const suffix = profile?.email ? `_${encodeURIComponent(profile.email)}` : '';
+      const cached = localStorage.getItem('makbills_masters_vendors' + suffix);
       if (cached) {
         try {
           setRegistryClients(JSON.parse(cached));
         } catch (e) { }
       }
     }
-  }, [isOpen]);
+  }, [isOpen, profile]);
 
   // Client details
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -120,6 +123,12 @@ export default function InvoiceModal({
   const [isFreightAdded, setIsFreightAdded] = useState<boolean>(false);
 
   const [clientEmail, setClientEmail] = useState('');
+  const [selectedCopies, setSelectedCopies] = useState({
+    customer: true,
+    transport: false,
+    supplier: false,
+    challan: false,
+  });
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [pdfZoom, setPdfZoom] = useState<number>(100);
   const [clientPhone, setClientPhone] = useState('');
@@ -200,6 +209,46 @@ export default function InvoiceModal({
   const [endOption, setEndOption] = useState<'indefinite' | 'date'>('indefinite');
 
   const [items, setItems] = useState<InvoiceItem[]>([]);
+
+  const editablePreviewRef = useRef<HTMLDivElement>(null);
+  const [measuredEditableHeight, setMeasuredEditableHeight] = useState(1123);
+
+  const successPreviewRef = useRef<HTMLDivElement>(null);
+  const [measuredSuccessHeight, setMeasuredSuccessHeight] = useState(1123);
+
+  useEffect(() => {
+    const element = editablePreviewRef.current;
+    if (!element) return;
+    setMeasuredEditableHeight(element.scrollHeight || 1123);
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setMeasuredEditableHeight(entry.target.scrollHeight || 1123);
+      }
+    });
+
+    resizeObserver.observe(element);
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [isOpen, items]);
+
+  useEffect(() => {
+    const element = successPreviewRef.current;
+    if (!element) return;
+    setMeasuredSuccessHeight(element.scrollHeight || 1123);
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setMeasuredSuccessHeight(entry.target.scrollHeight || 1123);
+      }
+    });
+
+    resizeObserver.observe(element);
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [savedInvoiceForPreview]);
 
   useEffect(() => {
     if (items && items.length > 0) {
@@ -480,6 +529,19 @@ export default function InvoiceModal({
         setRecurringEndDate('');
         setEndOption('indefinite');
       }
+
+      // Restore selectedCopies from embeddedTemplate if saved there
+      const savedCopies = (invoice as any).selectedCopies || invoice.embeddedTemplate?.selectedCopies;
+      if (savedCopies) {
+        setSelectedCopies({
+          customer: !!savedCopies.customer,
+          transport: !!savedCopies.transport,
+          supplier: !!savedCopies.supplier,
+          challan: !!savedCopies.challan,
+        });
+      } else {
+        setSelectedCopies({ customer: true, transport: false, supplier: false, challan: false });
+      }
     } else {
       // Set default for new invoice
       const now = new Date();
@@ -544,6 +606,8 @@ export default function InvoiceModal({
       setCustomTaxName(profile.customTaxName || 'Custom VAT');
       setCustomTaxPercentage(profile.customTaxPercentage !== undefined ? profile.customTaxPercentage : 0);
       setAdditionalTaxes(profile.additionalTaxes || []);
+      // Reset selectedCopies for a new invoice
+      setSelectedCopies({ customer: true, transport: false, supplier: false, challan: false });
     }
   }, [invoice, isOpen, defaultTaxRate]);
 
@@ -1035,7 +1099,8 @@ export default function InvoiceModal({
       shippedToCountry: silent ? shippedToCountry : (shippedToCountry.trim() || undefined),
       shippedToGstin: silent ? shippedToGstin : (shippedToGstin.trim() || undefined),
       shippedToAddress: silent ? shippedToAddress : (shippedToAddress.trim() || undefined),
-      customTaxCols
+      customTaxCols,
+      selectedCopies
     } as Invoice;
   };
 
@@ -1049,7 +1114,6 @@ export default function InvoiceModal({
     shippedToGstin, shippedToAddress,
     transport, vehicleNo, driverMobile, station, ewayBillNo, grRrNo,
     placeOfSupply, calculatedSubtotal, roundedTaxTotal, calculatedGrandTotal,
-    poNumber, deliveryNote, referenceNumber, invoiceType
   ]);
 
   const handleUpdateItemCustomTax = (id: string, colName: string, value: number) => {
@@ -1349,7 +1413,12 @@ export default function InvoiceModal({
   const handleSaveAsDraft = (e: React.MouseEvent) => {
     e.preventDefault();
 
-    if (!clientName || !clientName.trim()) {
+    const isClientNameVisible = activeTemplate.sections?.billTo?.visible !== false;
+    let currentName = clientName;
+    if (!isClientNameVisible && (!clientName || !clientName.trim())) {
+      currentName = `Guest_${invoiceNumber || Math.random().toString(36).substr(2, 6)}`;
+      setClientName(currentName);
+    } else if (isClientNameVisible && (!clientName || !clientName.trim())) {
       setShowClientNameError(true);
       emitNotification('Validation Error', 'Client Name is required to build the invoice.', 'error');
       return;
@@ -1363,6 +1432,7 @@ export default function InvoiceModal({
 
     const draftInvoice = buildTempInvoice(true);
     if (!draftInvoice) return;
+    draftInvoice.clientName = currentName;
 
     const draftId = invoice ? invoice.id : `inv_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -1372,7 +1442,7 @@ export default function InvoiceModal({
       id: draftId,
     });
 
-    emitNotification('Draft Saved', `Invoice draft for ${clientName} has been saved.`, 'success');
+    emitNotification('Draft Saved', `Invoice draft for ${currentName} has been saved.`, 'success');
     onClose();
   };
 
@@ -1393,37 +1463,42 @@ export default function InvoiceModal({
     window.location.href = mailto;
   };
 
-  const handleDirectPrint = (inv: Invoice) => {
-    const existingFrame = document.getElementById('invoice-print-iframe');
-    if (existingFrame) {
-      existingFrame.remove();
-    }
+  const handleDirectPrint = async (inv: Invoice) => {
+    try {
+      emitNotification('Preparing Print', 'Generating high-quality print document...', 'info');
+      const pdfBlob = await exportInvoicePDFAsync(inv, activeProfile, 'blob', activeTemplate);
+      if (pdfBlob instanceof Blob) {
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const existingFrame = document.getElementById('invoice-print-iframe');
+        if (existingFrame) {
+          existingFrame.remove();
+        }
 
-    const iframe = document.createElement('iframe');
-    iframe.id = 'invoice-print-iframe';
-    iframe.style.position = 'fixed';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
-    iframe.style.bottom = '0';
-    iframe.style.right = '0';
-    iframe.style.visibility = 'hidden';
-    
-    iframe.onload = () => {
-      try {
-        // Wait for layout to render within iframe before opening print prompt
-        setTimeout(() => {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        }, 500);
-      } catch (err) {
-        console.error('Direct print failed, redirecting to fallback preview:', err);
-        window.open(`${window.location.origin}/invoice/preview?id=${inv.id}&print=1`, '_blank');
+        const iframe = document.createElement('iframe');
+        iframe.id = 'invoice-print-iframe';
+        iframe.style.position = 'fixed';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+        iframe.style.bottom = '0';
+        iframe.style.right = '0';
+        iframe.style.visibility = 'hidden';
+        
+        iframe.onload = () => {
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          } catch (e) {
+            window.open(blobUrl, '_blank');
+          }
+        };
+        
+        iframe.src = blobUrl;
+        document.body.appendChild(iframe);
       }
-    };
-    
-    iframe.src = `${window.location.origin}/invoice/preview?id=${inv.id}`;
-    document.body.appendChild(iframe);
+    } catch (err: any) {
+      alert('Failed to generate print document: ' + (err.message || err.toString()));
+    }
   };
 
   const handleExportMSWord = (inv: Invoice) => {
@@ -1574,7 +1649,12 @@ export default function InvoiceModal({
   const handleSaveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!clientName || !clientName.trim()) {
+    const isClientNameVisible = activeTemplate.sections?.billTo?.visible !== false;
+    let currentName = clientName;
+    if (!isClientNameVisible && (!clientName || !clientName.trim())) {
+      currentName = `Guest_${invoiceNumber || Math.random().toString(36).substr(2, 6)}`;
+      setClientName(currentName);
+    } else if (isClientNameVisible && (!clientName || !clientName.trim())) {
       setShowClientNameError(true);
       emitNotification('Validation Error', 'Client Name is required to build the invoice.', 'error');
       return;
@@ -1586,11 +1666,13 @@ export default function InvoiceModal({
       return;
     }
 
+    const suffix = activeProfile?.email ? `_${encodeURIComponent(activeProfile.email)}` : '';
+
     // Save/update to master registry client database (vendors)
-    if (clientName && clientName.trim() !== '') {
-      const currentRegistry = [...registryClients];
-      const nameLower = clientName.trim().toLowerCase();
-      const existingIdx = currentRegistry.findIndex(c =>
+    if (currentName && currentName.trim() !== '') {
+      const currentRegistry = JSON.parse(localStorage.getItem('makbills_masters_vendors' + suffix) || '[]');
+      const nameLower = currentName.trim().toLowerCase();
+      const existingIdx = currentRegistry.findIndex((c: any) =>
         (c.name && c.name.toLowerCase() === nameLower) ||
         (c.company && c.company.toLowerCase() === nameLower)
       );
@@ -1605,20 +1687,20 @@ export default function InvoiceModal({
       } else {
         currentRegistry.push({
           id: `mat_${Math.random().toString(36).substr(2, 9)}`,
-          name: clientName.trim(),
-          company: clientName.trim(),
+          name: currentName.trim(),
+          company: currentName.trim(),
           address: clientAddress || '',
           email: clientEmail || '',
           phone: clientPhone || '',
           category: 'Auto-Added from Invoice'
         });
       }
-      localStorage.setItem('makbills_masters_vendors', JSON.stringify(currentRegistry));
+      localStorage.setItem('makbills_masters_vendors' + suffix, JSON.stringify(currentRegistry));
       window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
     }
 
     if (shippedToName && shippedToName.trim() !== '') {
-      const currentRegistry = JSON.parse(localStorage.getItem('makbills_masters_transports') || '[]');
+      const currentRegistry = JSON.parse(localStorage.getItem('makbills_masters_transports' + suffix) || '[]');
       const nameLower = shippedToName.trim().toLowerCase();
       const existingIdx = currentRegistry.findIndex((t: any) =>
         (t.name && t.name.toLowerCase() === nameLower)
@@ -1651,7 +1733,7 @@ export default function InvoiceModal({
             ...existing,
             ...newTransportRecord
           };
-          localStorage.setItem('makbills_masters_transports', JSON.stringify(currentRegistry));
+          localStorage.setItem('makbills_masters_transports' + suffix, JSON.stringify(currentRegistry));
           window.dispatchEvent(new CustomEvent('makbills_sync_transports'));
         }
       } else {
@@ -1659,7 +1741,7 @@ export default function InvoiceModal({
           id: `trans_${Math.random().toString(36).substr(2, 9)}`,
           ...newTransportRecord
         });
-        localStorage.setItem('makbills_masters_transports', JSON.stringify(currentRegistry));
+        localStorage.setItem('makbills_masters_transports' + suffix, JSON.stringify(currentRegistry));
         window.dispatchEvent(new CustomEvent('makbills_sync_transports'));
       }
     }
@@ -1688,13 +1770,13 @@ export default function InvoiceModal({
       deliveryNote: deliveryNote.trim() || undefined,
       selectedTemplateStyle,
       selectedCustomTemplateId: activeTemplate.id,
-      embeddedTemplate: activeTemplate,
+      embeddedTemplate: { ...activeTemplate, selectedCopies },
       qrCodeTriggerUrl: qrCodeTriggerUrl.trim() || undefined,
       date,
       dueDate,
       clientName: invoiceType === 'estimate'
-        ? (clientName.trim() || 'Quote / Estimate')
-        : (clientName.trim() || (() => {
+        ? (currentName.trim() || 'Quote / Estimate')
+        : (currentName.trim() || (() => {
           const now = new Date();
           const formattedDate = now.toISOString().replace(/T/, ' ').replace(/\..+/, '');
           const guestId = `Guest-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -1790,16 +1872,93 @@ export default function InvoiceModal({
       'success'
     );
 
-    setSavedInvoiceForPreview(finalInvoiceObj);
+    setSavedInvoiceForPreview({
+      ...finalInvoiceObj,
+      selectedCopies
+    } as any);
   };
+
+    const variables = theme === 'dark' ? `
+    :root {
+      --ink-deep: #0b1329;
+      --ink-panel: #111a36;
+      --ink-panel-2: #1b264f;
+      --paper: #111a36;
+      --paper-dim: #0b1329;
+      --paper-line: #223269;
+      --stamp-red: #38bdf8;
+      --stamp-red-dark: #0284c7;
+      --ledger-gold: #60a5fa;
+      --text-dark-bg: #f8fafc;
+      --text-dark-bg-dim: #94a3b8;
+      --text-on-paper: #f8fafc;
+      --text-on-paper-dim: #94a3b8;
+      --radius-doc: 8px;
+      --font-display: 'Fraunces', serif;
+      --font-body: 'IBM Plex Sans', sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+    }
+  ` : `
+    :root {
+      --ink-deep: #f4f9ff;
+      --ink-panel: #ffffff;
+      --ink-panel-2: #e0f2fe;
+      --paper: #ffffff;
+      --paper-dim: #f8fafc;
+      --paper-line: #bae6fd;
+      --stamp-red: #0284c7;
+      --stamp-red-dark: #0369a1;
+      --ledger-gold: #2563eb;
+      --text-dark-bg: #0f172a;
+      --text-dark-bg-dim: #475569;
+      --text-on-paper: #0f172a;
+      --text-on-paper-dim: #475569;
+      --radius-doc: 8px;
+      --font-display: 'Fraunces', serif;
+      --font-body: 'IBM Plex Sans', sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+
+      /* Override light brown / warm slate theme colors with clean slate grays */
+      --color-slate-50: #f8fafc;
+      --color-slate-100: #f1f5f9;
+      --color-slate-150: #e2e8f0;
+      --color-slate-200: #e2e8f0;
+      --color-slate-205: #cbd5e1;
+      --color-slate-350: #64748b;
+      --color-slate-405: #475569;
+      --color-slate-450: #334155;
+      --color-slate-550: #1e293b;
+      --color-slate-650: #0f172a;
+      --color-slate-705: #0f172a;
+      --color-slate-750: #020617;
+      --color-slate-805: #020617;
+      --color-slate-850: #e2e8f0;
+      --color-slate-900: #ffffff;
+      --color-slate-950: #f8fafc;
+
+      /* Override warm sky colors with clean sky blues */
+      --color-sky-50: #f0f9ff;
+      --color-sky-100: #e0f2fe;
+      --color-sky-102: #e0f2fe;
+      --color-sky-305: #7dd3fc;
+      --color-sky-600: #0284c7;
+      --color-sky-650: #0369a1;
+      --color-sky-700: #0369a1;
+      --color-sky-750: #075985;
+      --color-sky-800: #0c4a6e;
+      --color-sky-850: #0a3d5c;
+      --color-sky-955: #bae6fd;
+    }
+  `;
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4 bg-slate-900/65 backdrop-blur-sm overflow-hidden">
+      <style dangerouslySetInnerHTML={{ __html: variables }} />
       <div
         id="invoice-editor"
-        className="w-full h-full md:h-auto md:max-h-[96dvh] max-w-full md:max-w-4xl lg:max-w-5xl xl:max-w-[95vw] 2xl:max-w-[1700px] bg-white dark:bg-slate-900 rounded-none md:rounded-3xl overflow-hidden shadow-2xl flex flex-col border-none md:border md:border-slate-100 dark:md:border-slate-800 transition-all duration-300 md:my-auto"
+        className="w-full h-full md:h-auto md:max-h-[96dvh] max-w-full md:max-w-4xl lg:max-w-5xl xl:max-w-[95vw] 2xl:max-w-[1700px] rounded-none md:rounded-3xl overflow-hidden shadow-2xl flex flex-col border-none md:border transition-all duration-300 md:my-auto" style={{ backgroundColor: "var(--ink-deep)", borderColor: "var(--paper-line)" }}
       >
 
         {/* ─── Resume Draft Banner ─────────────────────────────────────────── */}
@@ -1918,9 +2077,9 @@ export default function InvoiceModal({
         })()}
 
         {/* Header */}
-        <div className="px-5 py-3.5 md:px-6 border-b border-slate-200/70 dark:border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-zinc-950 relative overflow-hidden shrink-0">
+        <div className="px-5 py-3.5 md:px-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-3 relative overflow-hidden shrink-0" style={{ backgroundColor: "var(--ink-panel)", borderBottomColor: "var(--paper-line)" }}>
           {/* Subtle background glow effect */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-sky-400 via-sky-300 to-transparent opacity-70"></div>
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#0284c7] via-[#2563eb] to-[#38bdf8] opacity-70"></div>
 
           <div className="flex items-center justify-between md:justify-start gap-3.5">
             <div className="flex items-center gap-3">
@@ -1980,7 +2139,7 @@ export default function InvoiceModal({
                       setInvoiceTerms(newDefaults.terms);
                     }
                   }}
-                  className="appearance-none pl-3.5 pr-8 py-2 rounded-xl border border-sky-300 dark:border-sky-800/80 bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-200 font-extrabold text-xs focus:ring-2 focus:ring-sky-500/50 focus:outline-none cursor-pointer shadow-xs transition-all tracking-tight"
+                  className="appearance-none pl-3.5 pr-8 py-2 rounded-xl border border-[#bae6fd] dark:border-[#223269]/60 bg-[#e0f2fe]/60 dark:bg-[#1b264f]/70 text-[#0284c7] dark:text-[#38bdf8] font-extrabold text-xs focus:ring-2 focus:ring-[#0284c7]/50 focus:outline-none cursor-pointer shadow-xs transition-all tracking-tight"
                 >
                   <option value="invoice">Tax Invoice</option>
                   <option value="proforma">Proforma Invoice</option>
@@ -1990,7 +2149,7 @@ export default function InvoiceModal({
                   <option value="purchase_order">Purchase Order</option>
                   <option value="purchase_debit_note">Debit Note</option>
                 </select>
-                <ChevronDown className="w-4 h-4 text-sky-700 dark:text-sky-300 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2.5} />
+                <ChevronDown className="w-4 h-4 text-[#0369a1] dark:text-[#38bdf8] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2.5} />
               </div>
 
               {/* Desktop Pill Tabs (>= md) */}
@@ -2037,7 +2196,7 @@ export default function InvoiceModal({
                       }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 border ${
                         isActive
-                          ? 'bg-sky-600 text-white border-sky-600 shadow-sm shadow-sky-600/20 scale-[1.02]'
+                          ? 'bg-[#0284c7] text-white border-[#0284c7] shadow-sm shadow-sky-500/20 scale-[1.02]'
                           : 'bg-slate-100/70 dark:bg-zinc-900 text-slate-650 dark:text-zinc-400 border-slate-200/80 dark:border-zinc-800 hover:bg-slate-200/60 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
@@ -2065,7 +2224,7 @@ export default function InvoiceModal({
             type="button"
             onClick={() => setActiveMode('editable')}
             className={`flex-1 justify-center py-2 rounded-lg text-xs sm:text-[13px] font-bold transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${activeMode === 'editable'
-                ? 'bg-sky-600 text-white shadow-sm ring-1 ring-slate-900/5'
+                ? 'bg-[#0284c7] text-white shadow-sm ring-1 ring-slate-900/5'
                 : 'text-slate-650 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
           >
@@ -2127,7 +2286,7 @@ export default function InvoiceModal({
           {/* ──────────────────────────────────────────────────────────────────── */}
 
           {/* Client Name Required Error Banner (shows on both mobile and desktop when saved without name) */}
-          {showClientNameError && !clientName?.trim() && (
+          {showClientNameError && !clientName?.trim() && activeTemplate.sections?.billTo?.visible !== false && (
             <div className="mx-1 mb-4 p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-zinc-900/60 dark:to-zinc-900/40 border border-amber-250 dark:border-amber-900/50 rounded-2xl flex items-center gap-2.5 shadow-xs shrink-0">
               <AlertCircle className="w-4.5 h-4.5 shrink-0 text-amber-500" />
               <span className="text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
@@ -2157,7 +2316,7 @@ export default function InvoiceModal({
                 <div className="space-y-4">
 
                   {/* General Metadata */}
-                  <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-900 space-y-3">
+                  <div className="p-3.5 rounded-2xl border space-y-3 shadow-xs" style={{ backgroundColor: "var(--ink-panel)", borderColor: "var(--paper-line)" }}>
                     <div className="grid grid-cols-1 gap-3">
                       <div>
                         <label htmlFor="inv-num" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">ID Number</label>
@@ -2705,7 +2864,7 @@ export default function InvoiceModal({
                   </div>
 
                   {/* Draw/Draft New Custom Line Item */}
-                  <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3.5 shadow-sm">
+                  <div className="p-4 rounded-2xl border space-y-3.5 shadow-sm" style={{ backgroundColor: "var(--ink-panel)", borderColor: "var(--paper-line)" }}>
                     <span className="block text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                       Add Custom Line Item
                     </span>
@@ -2838,7 +2997,7 @@ export default function InvoiceModal({
                     <button
                       type="button"
                       onClick={handleAddNewItem}
-                      className="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer shadow-md shadow-sky-900/20 border-none"
+                      className="w-full py-2.5 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer shadow-md shadow-sky-950/10 border-none"
                     >
                       <Plus className="w-4 h-4" />
                       Add Item to draft
@@ -2859,7 +3018,7 @@ export default function InvoiceModal({
                               setIsFreightAdded(!isFreightAdded);
                               if (isFreightAdded) setFreightCharges(0);
                             }}
-                            className="text-[10px] font-bold uppercase text-sky-600 hover:text-sky-700 bg-sky-50 px-2 py-0.5 rounded cursor-pointer transition-colors"
+                            className="text-[10px] font-bold uppercase text-[#0284c7] hover:text-[#0369a1] bg-[#e0f2fe] px-2 py-0.5 rounded cursor-pointer transition-colors"
                           >
                             {isFreightAdded ? 'Remove' : 'Add'}
                           </button>
@@ -2911,7 +3070,7 @@ export default function InvoiceModal({
                   </div>
 
                   {/* Recurring Schedule Option */}
-                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950/80 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3">
+                  <div className="p-3.5 rounded-2xl border space-y-3 shadow-xs" style={{ backgroundColor: "var(--ink-panel)", borderColor: "var(--paper-line)" }}>
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="block text-xs font-medium text-slate-800 dark:text-slate-200">Recurring Invoice Settings</span>
@@ -3211,135 +3370,142 @@ export default function InvoiceModal({
 
             {/* Invoice Layout Column */}
             <div className={`xl:w-[55%] xl:block xl:overflow-y-auto ${activeMode === 'editable' ? 'block' : 'hidden'}`}>
-              <div style={{ width: 794 * modalPreviewScale, height: 1123 * modalPreviewScale, transition: 'all 0.2s ease' }} className="shrink-0 mx-auto relative xl:mx-0 xl:-mb-[135px]">
-                <div
-                  id="pdf-export-content-editable"
-                  className="shadow-sm bg-white origin-top-left absolute top-0 left-0 flex flex-col border border-slate-200 dark:border-slate-300 p-4 sm:p-8 xl:p-5"
-                  style={{
-                    width: '794px',
-                    minHeight: '1123px',
-                    transform: `scale(${modalPreviewScale})`,
-                    transformOrigin: 'top left',
-                    transition: 'transform 0.2s ease',
-                  }}
-                >
-                  <LivePreview
-                    template={activeTemplate}
-                    invoiceData={liveInvoiceData || invoice || {}}
-                    businessProfile={activeProfile}
-                    currencySymbol={currencySymbol}
-                    isInteractive={true}
-                    clients={registryClients}
-                    onUpdateField={(field, val) => {
-                      if (field === 'invoiceNumber') setInvoiceNumber(val);
-                      if (field === 'date') setDate(val);
-                      if (field === 'dueDate') setDueDate(val);
-                      if (field === 'clientName') {
-                        setClientName(val);
-                        const matched = registryClients.find(c => c.name?.trim().toLowerCase() === val.trim().toLowerCase() || c.company?.trim().toLowerCase() === val.trim().toLowerCase() || c.companyName?.trim().toLowerCase() === val.trim().toLowerCase());
-                        if (matched) {
-                          if (matched.email) setClientEmail(matched.email);
-                          if (matched.phone) setClientPhone(matched.phone);
-                          if (matched.address) setClientAddress(matched.address);
-                          if ((matched as any).gstin || (matched as any).clientGstin) {
-                            setClientGstin((matched as any).gstin || (matched as any).clientGstin);
+              {(() => {
+                const previewHeight = measuredEditableHeight;
+                const previewContainerHeight = previewHeight * modalPreviewScale;
+                return (
+                  <div style={{ width: 794 * modalPreviewScale, height: previewContainerHeight, transition: 'all 0.2s ease' }} className="shrink-0 mx-auto relative xl:mx-0 xl:-mb-[135px]">
+                    <div
+                      ref={editablePreviewRef}
+                      id="pdf-export-content-editable"
+                      className="origin-top-left absolute top-0 left-0 flex flex-col"
+                      style={{
+                        width: '794px',
+                        height: 'auto',
+                        transform: `scale(${modalPreviewScale})`,
+                        transformOrigin: 'top left',
+                        transition: 'transform 0.2s ease',
+                      }}
+                    >
+                      <LivePreview
+                        template={activeTemplate}
+                        invoiceData={liveInvoiceData || invoice || {}}
+                        businessProfile={activeProfile}
+                        currencySymbol={currencySymbol}
+                        isInteractive={true}
+                        clients={registryClients}
+                        onUpdateField={(field, val) => {
+                          if (field === 'invoiceNumber') setInvoiceNumber(val);
+                          if (field === 'date') setDate(val);
+                          if (field === 'dueDate') setDueDate(val);
+                          if (field === 'clientName') {
+                            setClientName(val);
+                            const matched = registryClients.find(c => c.name?.trim().toLowerCase() === val.trim().toLowerCase() || c.company?.trim().toLowerCase() === val.trim().toLowerCase() || c.companyName?.trim().toLowerCase() === val.trim().toLowerCase());
+                            if (matched) {
+                              if (matched.email) setClientEmail(matched.email);
+                              if (matched.phone) setClientPhone(matched.phone);
+                              if (matched.address) setClientAddress(matched.address);
+                              if ((matched as any).gstin || (matched as any).clientGstin) {
+                                setClientGstin((matched as any).gstin || (matched as any).clientGstin);
+                              }
+                              if ((matched as any).state || (matched as any).clientState) {
+                                setClientState((matched as any).state || (matched as any).clientState);
+                              }
+                              if ((matched as any).country || (matched as any).clientCountry) {
+                                setClientCountry((matched as any).country || (matched as any).clientCountry);
+                              }
+                              if ((matched as any).pan || (matched as any).clientPan) {
+                                setClientPan((matched as any).pan || (matched as any).clientPan);
+                              }
+                            }
                           }
-                          if ((matched as any).state || (matched as any).clientState) {
-                            setClientState((matched as any).state || (matched as any).clientState);
+                          if (field === 'clientEmail') setClientEmail(val);
+                          if (field === 'clientPhone') setClientPhone(val);
+                          if (field === 'clientAddress') setClientAddress(val);
+                          if (field === 'clientGstin') setClientGstin(val);
+                          if (field === 'clientState') setClientState(val);
+                          if (field === 'clientCountry') setClientCountry(val);
+                          if (field === 'shippedToName') {
+                            setShippedToName(val);
+                            const matched = registryClients.find(c => c.name?.trim().toLowerCase() === val.trim().toLowerCase() || c.company?.trim().toLowerCase() === val.trim().toLowerCase() || c.companyName?.trim().toLowerCase() === val.trim().toLowerCase());
+                            if (matched) {
+                              if (matched.email) setShippedToEmail(matched.email);
+                              if (matched.phone) setShippedToPhone(matched.phone);
+                              if (matched.address) setShippedToAddress(matched.address);
+                              if ((matched as any).gstin || (matched as any).clientGstin) {
+                                setShippedToGstin((matched as any).gstin || (matched as any).clientGstin);
+                              }
+                              if ((matched as any).state || (matched as any).clientState) {
+                                setShippedToState((matched as any).state || (matched as any).clientState);
+                              }
+                              if ((matched as any).country || (matched as any).clientCountry) {
+                                setShippedToCountry((matched as any).country || (matched as any).clientCountry);
+                              }
+                              if ((matched as any).pan || (matched as any).clientPan) {
+                                setShippedToPan((matched as any).pan || (matched as any).clientPan);
+                              }
+                            }
                           }
-                          if ((matched as any).country || (matched as any).clientCountry) {
-                            setClientCountry((matched as any).country || (matched as any).clientCountry);
+                          if (field === 'shippedToPhone') setShippedToPhone(val);
+                          if (field === 'shippedToEmail') setShippedToEmail(val);
+                          if (field === 'shippedToPan') setShippedToPan(val);
+                          if (field === 'shippedToAddress') setShippedToAddress(val);
+                          if (field === 'shippedToGstin') setShippedToGstin(val);
+                          if (field === 'shippedToState') setShippedToState(val);
+                          if (field === 'shippedToCountry') setShippedToCountry(val);
+                          if (field === 'placeOfSupply') setPlaceOfSupply(val);
+                          if (field === 'grRrNo') setGrRrNo(val);
+                          if (field === 'transport') setTransport(val);
+                          if (field === 'vehicleNo') setVehicleNo(val);
+                          if (field === 'driverMobile') setDriverMobile(val);
+                          if (field === 'station') setStation(val);
+                          if (field === 'ewayBillNo') setEwayBillNo(val);
+                          if (field === 'invoiceTerms') setInvoiceTerms(val);
+                          if (field === 'notes') setNotes(val);
+                          if (field === 'poNumber') setPoNumber(val);
+                          if (field === 'deliveryNote') setDeliveryNote(val);
+                          if (field === 'referenceNumber') setReferenceNumber(val);
+                          if (field === 'discountType') setDiscountType(val as any);
+                          if (field === 'discountValue') {
+                            const parsed = parseFloat(val);
+                            setDiscountValue(!isNaN(parsed) ? parsed : 0);
                           }
-                          if ((matched as any).pan || (matched as any).clientPan) {
-                            setClientPan((matched as any).pan || (matched as any).clientPan);
+                          if (field === 'freightCharges') {
+                            const parsed = parseFloat(val);
+                            setFreightCharges(!isNaN(parsed) ? parsed : 0);
                           }
-                        }
-                      }
-                      if (field === 'clientEmail') setClientEmail(val);
-                      if (field === 'clientPhone') setClientPhone(val);
-                      if (field === 'clientAddress') setClientAddress(val);
-                      if (field === 'clientGstin') setClientGstin(val);
-                      if (field === 'clientState') setClientState(val);
-                      if (field === 'clientCountry') setClientCountry(val);
-                      if (field === 'shippedToName') {
-                        setShippedToName(val);
-                        const matched = registryClients.find(c => c.name?.trim().toLowerCase() === val.trim().toLowerCase() || c.company?.trim().toLowerCase() === val.trim().toLowerCase() || c.companyName?.trim().toLowerCase() === val.trim().toLowerCase());
-                        if (matched) {
-                          if (matched.email) setShippedToEmail(matched.email);
-                          if (matched.phone) setShippedToPhone(matched.phone);
-                          if (matched.address) setShippedToAddress(matched.address);
-                          if ((matched as any).gstin || (matched as any).clientGstin) {
-                            setShippedToGstin((matched as any).gstin || (matched as any).clientGstin);
+                          if (field === 'isFreightAdded') {
+                            setIsFreightAdded(val === 'true');
+                            if (val === 'false') setFreightCharges(0);
                           }
-                          if ((matched as any).state || (matched as any).clientState) {
-                            setShippedToState((matched as any).state || (matched as any).clientState);
-                          }
-                          if ((matched as any).country || (matched as any).clientCountry) {
-                            setShippedToCountry((matched as any).country || (matched as any).clientCountry);
-                          }
-                          if ((matched as any).pan || (matched as any).clientPan) {
-                            setShippedToPan((matched as any).pan || (matched as any).clientPan);
-                          }
-                        }
-                      }
-                      if (field === 'shippedToPhone') setShippedToPhone(val);
-                      if (field === 'shippedToEmail') setShippedToEmail(val);
-                      if (field === 'shippedToPan') setShippedToPan(val);
-                      if (field === 'shippedToAddress') setShippedToAddress(val);
-                      if (field === 'shippedToGstin') setShippedToGstin(val);
-                      if (field === 'shippedToState') setShippedToState(val);
-                      if (field === 'shippedToCountry') setShippedToCountry(val);
-                      if (field === 'placeOfSupply') setPlaceOfSupply(val);
-                      if (field === 'grRrNo') setGrRrNo(val);
-                      if (field === 'transport') setTransport(val);
-                      if (field === 'vehicleNo') setVehicleNo(val);
-                      if (field === 'driverMobile') setDriverMobile(val);
-                      if (field === 'station') setStation(val);
-                      if (field === 'ewayBillNo') setEwayBillNo(val);
-                      if (field === 'invoiceTerms') setInvoiceTerms(val);
-                      if (field === 'notes') setNotes(val);
-                      if (field === 'poNumber') setPoNumber(val);
-                      if (field === 'deliveryNote') setDeliveryNote(val);
-                      if (field === 'referenceNumber') setReferenceNumber(val);
-                      if (field === 'discountType') setDiscountType(val as any);
-                      if (field === 'discountValue') {
-                        const parsed = parseFloat(val);
-                        setDiscountValue(!isNaN(parsed) ? parsed : 0);
-                      }
-                      if (field === 'freightCharges') {
-                        const parsed = parseFloat(val);
-                        setFreightCharges(!isNaN(parsed) ? parsed : 0);
-                      }
-                      if (field === 'isFreightAdded') {
-                        setIsFreightAdded(val === 'true');
-                        if (val === 'false') setFreightCharges(0);
-                      }
-                    }}
-                    onInteractiveAddItem={handleAddItem}
-                    onInteractiveRemoveItem={handleInteractiveRemoveItem}
-                    onUpdateItemField={(itemId, field, val) => {
-                      setItems(prev => prev.map(item => item.id === itemId ? { ...item, [field]: val } : item));
-                    }}
-                    onCopyBillingToShipping={() => {
-                      setShippedToName(clientName);
-                      setShippedToPhone(clientPhone);
-                      setShippedToEmail(clientEmail);
-                      setShippedToCountry(clientCountry);
-                      setShippedToState(clientState);
-                      setShippedToAddress(clientAddress);
-                      setShippedToGstin(clientGstin);
-                      setShippedToPan(clientPan);
-                    }}
-                    hasTransport={hasTransport}
-                    onUpdateHasTransport={setHasTransport}
-                  />
-                </div>
-              </div>
+                        }}
+                        onInteractiveAddItem={handleAddItem}
+                        onInteractiveRemoveItem={handleInteractiveRemoveItem}
+                        onUpdateItemField={(itemId, field, val) => {
+                          setItems(prev => prev.map(item => item.id === itemId ? { ...item, [field]: val } : item));
+                        }}
+                        onCopyBillingToShipping={() => {
+                          setShippedToName(clientName);
+                          setShippedToPhone(clientPhone);
+                          setShippedToEmail(clientEmail);
+                          setShippedToCountry(clientCountry);
+                          setShippedToState(clientState);
+                          setShippedToAddress(clientAddress);
+                          setShippedToGstin(clientGstin);
+                          setShippedToPan(clientPan);
+                        }}
+                        hasTransport={hasTransport}
+                        onUpdateHasTransport={setHasTransport}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
           </div> {/* End Wrapper */}
 
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between sm:justify-end gap-2.5 sm:gap-3.5 bg-white dark:bg-slate-900 hide-on-print w-full shrink-0 mt-2">
+          <div className="pt-4 border-t flex flex-wrap items-center justify-between sm:justify-end gap-2.5 sm:gap-3.5 hide-on-print w-full shrink-0 mt-2 px-6 pb-2" style={{ backgroundColor: "var(--ink-panel)", borderTopColor: "var(--paper-line)" }}>
             <button
               type="button"
               onClick={onClose}
@@ -3358,7 +3524,7 @@ export default function InvoiceModal({
             </button>
             <button
               type="submit"
-              className="flex-1 sm:flex-none justify-center px-3 sm:px-6 py-2.5 sm:py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-sky-950/20 active:scale-95 cursor-pointer"
+              className="flex-1 sm:flex-none justify-center px-3 sm:px-6 py-2.5 sm:py-2 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-sky-950/20 active:scale-95 cursor-pointer"
             >
               <Check className="w-4 h-4 shrink-0" />
               <span className="whitespace-nowrap">Save</span>
@@ -3369,16 +3535,16 @@ export default function InvoiceModal({
       </div>
 
       {savedInvoiceForPreview && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-0 md:p-4 bg-slate-900/75 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="w-full h-full md:h-[92dvh] max-w-full md:max-w-5xl lg:max-w-6xl xl:max-w-7xl bg-white dark:bg-zinc-900 rounded-none md:rounded-3xl overflow-hidden shadow-2xl border-none md:border md:border-slate-150 dark:md:border-zinc-800 flex flex-col animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-0 md:p-4 bg-[#0b1329]/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full h-full md:h-[92dvh] max-w-full md:max-w-5xl lg:max-w-6xl xl:max-w-7xl bg-white dark:bg-[#111a36] rounded-none md:rounded-3xl overflow-hidden shadow-2xl border-none md:border md:border-[#bae6fd]/30 dark:md:border-[#223269]/60 flex flex-col animate-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="p-4 md:p-6 border-b border-slate-100 dark:border-zinc-800 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 flex items-center justify-between relative">
+            <div className="p-4 md:p-6 border-b border-[#bae6fd]/30 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] flex items-center justify-between relative">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner shrink-0">
                   <Check className="w-5 h-5" strokeWidth={3} />
                 </div>
                 <div>
-                  <h3 className="text-sm md:text-base font-black text-slate-805 dark:text-white uppercase tracking-wide">
+                  <h3 className="text-sm md:text-base font-black text-[#0f172a] dark:text-white uppercase tracking-wide">
                     Document Saved Successfully!
                   </h3>
                   <p className="text-[10px] md:text-[11px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">
@@ -3392,7 +3558,7 @@ export default function InvoiceModal({
                   setSavedInvoiceForPreview(null);
                   onClose();
                 }}
-                className="text-[10px] font-black uppercase tracking-widest text-slate-600 hover:text-slate-950 dark:text-zinc-400 dark:hover:text-white cursor-pointer px-4 py-2 rounded-xl bg-slate-100 dark:bg-zinc-800 transition-all hover:scale-105 active:scale-95 shrink-0"
+                className="text-[10px] font-black uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8] cursor-pointer px-4 py-2 rounded-xl bg-[#e0f2fe] dark:bg-[#1b264f] hover:bg-[#bae6fd]/40 dark:hover:bg-[#1b264f]/80 transition-all hover:scale-105 active:scale-95 shrink-0"
               >
                 Close Dialog
               </button>
@@ -3401,10 +3567,10 @@ export default function InvoiceModal({
             {/* Split Content */}
             <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
               {/* Left pane: Actions & Stats */}
-              <div className="w-full md:w-[380px] shrink-0 border-b md:border-b-0 md:border-r border-slate-100 dark:border-zinc-800 p-4 md:p-6 flex flex-col justify-between overflow-y-auto max-h-[45vh] md:max-h-none space-y-4 md:space-y-6 order-2 md:order-1">
+              <div className="w-full md:w-[380px] shrink-0 border-b md:border-b-0 md:border-r border-[#bae6fd]/30 dark:border-[#223269]/50 p-4 md:p-6 flex flex-col justify-between overflow-y-auto max-h-[45vh] md:max-h-none space-y-4 md:space-y-6 order-2 md:order-1">
                 <div className="space-y-6">
                   {/* Summary card */}
-                  <div className="hidden md:block bg-slate-50 dark:bg-zinc-950 p-4 rounded-2xl border border-slate-100 dark:border-zinc-900 space-y-3">
+                  <div className="hidden md:block p-4 rounded-2xl border border-[#bae6fd] dark:border-[#223269]/60 bg-white dark:bg-[#111a36] space-y-3 shadow-xs">
                     <span className="block text-[10px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
                       Billing Summary
                     </span>
@@ -3423,9 +3589,9 @@ export default function InvoiceModal({
                         <span>Tax Total</span>
                         <span>{currencySymbol}{savedInvoiceForPreview.taxTotal.toFixed(2)}</span>
                       </div>
-                      <div className="border-t border-slate-200 dark:border-zinc-800 pt-3 flex justify-between font-black text-slate-805 text-sm dark:text-white">
+                      <div className="border-t border-[#bae6fd]/50 dark:border-[#223269]/50 pt-3 flex justify-between font-black text-slate-805 text-sm dark:text-white">
                         <span>Grand Total</span>
-                        <span className="text-sky-600 dark:text-sky-400 font-mono text-base">
+                        <span className="text-[#0284c7] dark:text-[#38bdf8] font-mono text-base">
                           {currencySymbol}{savedInvoiceForPreview.grandTotal.toFixed(2)}
                         </span>
                       </div>
@@ -3441,7 +3607,7 @@ export default function InvoiceModal({
                     <button
                       type="button"
                       onClick={() => triggerWhatsAppShare(savedInvoiceForPreview)}
-                      className="w-full flex items-center justify-center gap-2 p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98 cursor-pointer"
+                      className="w-full flex items-center justify-center gap-2 p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98 cursor-pointer shadow-emerald-500/10"
                     >
                       <Smartphone className="w-4 h-4 shrink-0" />
                       Share via WhatsApp
@@ -3450,7 +3616,7 @@ export default function InvoiceModal({
                     <button
                       type="button"
                       onClick={() => triggerEmailShare(savedInvoiceForPreview)}
-                      className="w-full flex items-center justify-center gap-2 p-3 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98 cursor-pointer"
+                      className="w-full flex items-center justify-center gap-2 p-3 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98 cursor-pointer shadow-sky-500/10"
                     >
                       <Mail className="w-4 h-4 shrink-0" />
                       Dispatch via Email
@@ -3467,7 +3633,7 @@ export default function InvoiceModal({
                       <button
                         type="button"
                         onClick={() => exportInvoicePDFAsync(savedInvoiceForPreview, activeProfile, 'save', activeTemplate)}
-                        className="flex items-center justify-center gap-1.5 p-2.5 bg-slate-100 dark:bg-zinc-800 text-slate-805 dark:text-white hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-xl text-xs font-bold cursor-pointer transition-all border border-slate-250 dark:border-zinc-700/80"
+                        className="flex items-center justify-center gap-1.5 p-2.5 bg-[#f4f9ff] dark:bg-[#111a36] text-[#0f172a] dark:text-white hover:bg-[#e0f2fe]/40 dark:hover:bg-[#1b264f]/40 rounded-xl text-xs font-bold cursor-pointer transition-all border border-[#bae6fd] dark:border-[#223269]/50"
                       >
                         <FileDown className="w-4 h-4 text-rose-500 shrink-0" />
                         <span>Export PDF</span>
@@ -3476,7 +3642,7 @@ export default function InvoiceModal({
                       <button
                         type="button"
                         onClick={() => handleExportMSWord(savedInvoiceForPreview)}
-                        className="flex items-center justify-center gap-1.5 p-2.5 bg-slate-100 dark:bg-zinc-800 text-slate-805 dark:text-white hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-xl text-xs font-bold cursor-pointer transition-all border border-slate-250 dark:border-zinc-700/80"
+                        className="flex items-center justify-center gap-1.5 p-2.5 bg-[#f4f9ff] dark:bg-[#111a36] text-[#0f172a] dark:text-white hover:bg-[#e0f2fe]/40 dark:hover:bg-[#1b264f]/40 rounded-xl text-xs font-bold cursor-pointer transition-all border border-[#bae6fd] dark:border-[#223269]/50"
                       >
                         <FileDown className="w-4 h-4 text-blue-500 shrink-0" />
                         <span>Word Doc</span>
@@ -3485,7 +3651,7 @@ export default function InvoiceModal({
                       <button
                         type="button"
                         onClick={() => handleDirectPrint(savedInvoiceForPreview)}
-                        className="col-span-2 flex items-center justify-center gap-1.5 p-2.5 bg-slate-100 dark:bg-zinc-800 text-slate-805 dark:text-white hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-xl text-xs font-bold cursor-pointer transition-all border border-slate-250 dark:border-zinc-700/80"
+                        className="col-span-2 flex items-center justify-center gap-1.5 p-2.5 bg-[#f4f9ff] dark:bg-[#111a36] text-[#0f172a] dark:text-white hover:bg-[#e0f2fe]/40 dark:hover:bg-[#1b264f]/40 rounded-xl text-xs font-bold cursor-pointer transition-all border border-[#bae6fd] dark:border-[#223269]/50"
                       >
                         <Printer className="w-4 h-4 text-violet-500 shrink-0" />
                         <span>Print Document</span>
@@ -3494,7 +3660,7 @@ export default function InvoiceModal({
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-slate-100 dark:border-zinc-800">
+                <div className="pt-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/50">
                   <button
                     type="button"
                     onClick={() => {
@@ -3502,7 +3668,7 @@ export default function InvoiceModal({
                       setSavedInvoiceForPreview(null);
                       onClose();
                     }}
-                    className="w-full py-3 bg-slate-805 hover:bg-slate-750 text-white dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-xl text-xs font-bold transition-all active:scale-[0.97] cursor-pointer"
+                    className="w-full py-3 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl text-xs font-bold transition-all active:scale-[0.97] cursor-pointer shadow-md shadow-sky-950/10"
                   >
                     Finish and Close
                   </button>
@@ -3510,34 +3676,77 @@ export default function InvoiceModal({
               </div>
 
               {/* Right pane: Document Preview */}
-              <div className="flex-1 bg-slate-50 dark:bg-zinc-950 p-4 md:p-6 overflow-auto flex justify-center items-start order-1 md:order-2">
-                <div 
-                  className="bg-white shadow-xl border border-slate-200 dark:border-zinc-800 relative shrink-0"
-                  style={{ 
-                    width: 794 * successPreviewScale, 
-                    height: 1123 * successPreviewScale, 
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <div
-                    className="absolute top-0 left-0 origin-top-left"
-                    style={{
-                      width: '794px',
-                      height: '1123px',
-                      transform: `scale(${successPreviewScale})`,
-                    }}
-                  >
-                    <LivePreview
-                      template={activeTemplate}
-                      invoiceData={savedInvoiceForPreview}
-                      businessProfile={activeProfile}
-                      currencySymbol={currencySymbol}
-                      isInteractive={false}
-                      clients={[]}
-                    />
+              {(() => {
+                const previewHeight = measuredSuccessHeight;
+                return (
+                  <div className="flex-1 p-4 md:p-6 overflow-auto flex flex-col items-center justify-start order-1 md:order-2 border-l border-[#bae6fd]/30 dark:border-[#223269]/50 space-y-4" style={{ backgroundColor: "var(--ink-deep)" }}>
+                    {/* Copy Selector Checkboxes on Success Preview Screen */}
+                    <div className="w-full max-w-[794px] bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 flex flex-wrap items-center gap-6 justify-center shadow-xs">
+                      {[
+                        { key: 'customer', label: 'Customer' },
+                        { key: 'transport', label: 'Transport' },
+                        { key: 'supplier', label: 'Supplier' },
+                        { key: 'challan', label: 'Delivery Challan' },
+                      ].map(({ key, label }) => (
+                        <label key={key} className="flex items-center gap-2 text-xs font-bold text-slate-705 dark:text-zinc-300 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={!!((savedInvoiceForPreview as any)?.selectedCopies?.[key])}
+                            onChange={(e) => {
+                              const currentCopies = (savedInvoiceForPreview as any)?.selectedCopies || { customer: true };
+                              const updatedCopies = { ...currentCopies, [key]: e.target.checked };
+                              if (Object.values(updatedCopies).some(Boolean)) {
+                                const updatedInvoice = {
+                                  ...savedInvoiceForPreview,
+                                  selectedCopies: updatedCopies,
+                                  embeddedTemplate: {
+                                    ...(savedInvoiceForPreview?.embeddedTemplate || activeTemplate),
+                                    selectedCopies: updatedCopies,
+                                  },
+                                } as Invoice;
+                                setSavedInvoiceForPreview(updatedInvoice);
+                                // Persist so other devices see the selection
+                                onSave(updatedInvoice);
+                              }
+                            }}
+                            className="w-4.5 h-4.5 rounded border-[#bae6fd] text-[#0284c7] focus:ring-[#0284c7] cursor-pointer"
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    <div 
+                      className="relative shrink-0"
+                      style={{ 
+                        width: 794 * successPreviewScale, 
+                        height: previewHeight * successPreviewScale, 
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <div
+                        ref={successPreviewRef}
+                        className="absolute top-0 left-0 origin-top-left"
+                        style={{
+                          width: '794px',
+                          height: 'auto',
+                          transform: `scale(${successPreviewScale})`,
+                        }}
+                      >
+                        <LivePreview
+                          template={activeTemplate}
+                          invoiceData={savedInvoiceForPreview}
+                          businessProfile={activeProfile}
+                          currencySymbol={currencySymbol}
+                          isInteractive={false}
+                          isPrintMode={false}
+                          clients={[]}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                );
+              })()}
             </div>
           </div>
         </div>

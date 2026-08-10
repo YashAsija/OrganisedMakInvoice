@@ -435,7 +435,7 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
                 transition: 'transform 0.2s ease',
               }}
             >
-              <LivePreview template={template} />
+              <LivePreview template={template} forceFullHeight={true} />
             </div>
           </div>
         </div>

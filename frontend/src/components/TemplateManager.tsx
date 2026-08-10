@@ -33,7 +33,7 @@ function TemplatePreview({ template, businessProfile }: { template: InvoiceTempl
         className="w-[794px] h-[1123px] origin-top-left absolute top-0 left-0" 
         style={{ transform: `scale(${scale})`, width: '794px', height: '1123px' }}
       >
-        <LivePreview template={template} businessProfile={businessProfile} />
+        <LivePreview template={template} businessProfile={businessProfile} forceFullHeight={true} />
       </div>
     </div>
   );

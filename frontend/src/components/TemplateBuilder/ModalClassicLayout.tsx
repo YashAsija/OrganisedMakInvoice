@@ -190,7 +190,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
           <div className="w-1/2 border-r border-gray-300 p-2.5">
             {sections.billTo?.visible !== false && (
               <>
-                <h3 className="font-bold text-[11px] text-gray-800 uppercase mb-2">{isPurchase ? 'BILL FROM' : 'BILLED TO'}</h3>
+                <h3 className="font-bold text-[11px] text-gray-800 uppercase mb-2 whitespace-nowrap">{isPurchase ? 'BILL FROM' : 'BILLED TO'}</h3>
                 {config.client.fields.includes('name') && <div className="text-[12px] font-medium text-gray-900 mb-1">{clientName}</div>}
                 {config.client.fields.includes('phone') && <div className={rowStyle}><span className={labelStyle}>Party Mobile No</span><span className="mr-2">:</span><span className={valStyle}>{clientPhone}</span></div>}
                 {config.client.fields.includes('address') && (
@@ -208,7 +208,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
           <div className="w-1/2 p-2.5">
             {sections.shipTo?.visible !== false && (
               <>
-                <h3 className="font-bold text-[11px] text-gray-800 uppercase mb-2">{isPurchase ? 'SHIP FROM' : 'SHIPPED TO'}</h3>
+                <h3 className="font-bold text-[11px] text-gray-800 uppercase mb-2 whitespace-nowrap">{isPurchase ? 'SHIP FROM' : 'SHIPPED TO'}</h3>
                 {config.shipping.fields.includes('name') && <div className="text-[12px] font-medium text-gray-900 mb-1">{shipName}</div>}
                 {config.shipping.fields.includes('phone') && <div className={rowStyle}><span className={labelStyle}>Party Mobile No</span><span className="mr-2">:</span><span className={valStyle}>{shipPhone}</span></div>}
                  {config.shipping.fields.includes('address') && (
@@ -281,7 +281,22 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
             <div>
               <div className="font-bold text-gray-800 text-[10px] mb-1">Banking Information</div>
               <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap">
-                {config.payment.customNote || "Bank Name: Axis\nAccount No.: 098654345678\nIFSC Code: UTIB00056\nUPI ID: 9876543@upi"}
+                {(() => {
+                  const parts = [];
+                  if (businessProfile?.bankName) parts.push(`Bank Name: ${businessProfile.bankName}`);
+                  if (businessProfile?.accountNumber) parts.push(`Account No.: ${businessProfile.accountNumber}`);
+                  if (businessProfile?.ifsc) parts.push(`IFSC Code: ${businessProfile.ifsc}`);
+                  if (businessProfile?.upiId) parts.push(`UPI ID: ${businessProfile.upiId}`);
+                  
+                  if (parts.length > 0) {
+                    if (config.payment.customNote) {
+                      return `${parts.join('\n')}\nNote: ${config.payment.customNote}`;
+                    }
+                    return parts.join('\n');
+                  }
+                  
+                  return config.payment.customNote || "Bank Name: Axis\nAccount No.: 098654345678\nIFSC Code: UTIB00056\nUPI ID: 9876543@upi";
+                })()}
               </div>
             </div>
           )}

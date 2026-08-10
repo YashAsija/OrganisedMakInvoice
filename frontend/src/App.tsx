@@ -558,6 +558,11 @@ export default function App() {
           const lastUser = typeof window !== 'undefined' ? localStorage.getItem('makbills_last_user') : null;
           
           if (activeEmail && lastUser && activeEmail !== lastUser) {
+            setInvoices([]);
+            setClients([]);
+            setExpenses([]);
+            setPresets([]);
+            setCustomTemplates([]);
             if (typeof window !== 'undefined') {
               localStorage.removeItem('makbills_custom_templates');
             }
@@ -751,6 +756,9 @@ export default function App() {
                     try {
                       inv.embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
                       inv.selectedCustomTemplateId = inv.embeddedTemplate?.id;
+                      if (inv.embeddedTemplate && typeof inv.embeddedTemplate.paidAmount === 'number') {
+                        inv.paidAmount = inv.embeddedTemplate.paidAmount;
+                      }
                     } catch (e) {
                       // fallback if parsing fails
                     }
@@ -791,6 +799,9 @@ export default function App() {
                           try {
                             inv.embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
                             inv.selectedCustomTemplateId = inv.embeddedTemplate?.id;
+                            if (inv.embeddedTemplate && typeof inv.embeddedTemplate.paidAmount === 'number') {
+                              inv.paidAmount = inv.embeddedTemplate.paidAmount;
+                            }
                           } catch (e) { }
                         }
                         return inv;
@@ -1012,6 +1023,7 @@ export default function App() {
           setUser(null);
           setUserEmail(null);
           setInvoices([]);
+          setClients([]);
           setExpenses([]);
           setCustomTemplates([]);
           if (typeof window !== 'undefined' && event === 'SIGNED_OUT') {
@@ -1295,6 +1307,30 @@ export default function App() {
     }
   };
 
+  const sanitizeInvoiceForSync = (inv: Invoice): any => {
+    const dataToSync: any = { ...inv, userId: user?.id };
+    
+    if (dataToSync.paidAmount !== undefined) {
+      if (!dataToSync.embeddedTemplate) {
+        dataToSync.embeddedTemplate = inv.embeddedTemplate || {};
+      }
+      dataToSync.embeddedTemplate = {
+        ...dataToSync.embeddedTemplate,
+        paidAmount: dataToSync.paidAmount
+      };
+    }
+    
+    if (dataToSync.embeddedTemplate) {
+      dataToSync.selectedTemplateStyle = JSON.stringify(dataToSync.embeddedTemplate);
+      delete dataToSync.embeddedTemplate;
+    }
+    
+    delete dataToSync.selectedCustomTemplateId;
+    delete dataToSync.paidAmount;
+    
+    return dataToSync;
+  };
+
   // 2. Save Profile (Settings modifier)
   const handleSaveProfile = async (updatedProfile: BusinessProfile) => {
     const oldCurrency = profile.currency || 'INR';
@@ -1352,7 +1388,8 @@ export default function App() {
                 taxTotal,
                 grandTotal,
                 discountValue,
-                freightCharges
+                freightCharges,
+                paidAmount: inv.paidAmount !== undefined ? Number((inv.paidAmount * factor).toFixed(2)) : undefined
               };
             });
             
@@ -1360,29 +1397,7 @@ export default function App() {
             localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(convertedInvoices));
             
             if (user) {
-              const sanitizedInvoices = convertedInvoices.map(inv => {
-                const sanitized: any = {};
-                const validCols = [
-                  'id', 'userId', 'invoiceType', 'invoiceNumber', 'referenceNumber', 'poNumber',
-                  'date', 'dueDate', 'clientName', 'clientEmail', 'clientPhone', 'clientAddress',
-                  'notes', 'subtotal', 'discountType', 'discountValue', 'discountTotal',
-                  'taxTotal', 'grandTotal', 'status', 'items', 'createdAt', 'updatedAt',
-                  'paidDate', 'recurringSettings', 'parentInvoiceId', 'selectedTemplateStyle',
-                  'selectedCustomTemplateId', 'qrCodeTriggerUrl', 'companyState', 'companyCountry',
-                  'customTaxCols', 'clientState', 'clientCountry', 'taxMode', 'customTaxName',
-                  'customTaxPercentage', 'customTaxType', 'additionalTaxes', 'invoiceTerms',
-                  'placeOfSupply', 'grRrNo', 'transport', 'vehicleNo', 'driverMobile',
-                  'station', 'ewayBillNo', 'shippedToName', 'shippedToPhone', 'shippedToEmail',
-                  'shippedToPan', 'shippedToState', 'shippedToCountry', 'shippedToGstin',
-                  'shippedToAddress', 'clientGstin', 'clientPan', 'embeddedTemplate'
-                ];
-                validCols.forEach(col => {
-                  if ((inv as any)[col] !== undefined) {
-                    sanitized[col] = (inv as any)[col];
-                  }
-                });
-                return sanitized;
-              });
+              const sanitizedInvoices = convertedInvoices.map(inv => sanitizeInvoiceForSync(inv));
 
               const { error } = await supabase.from('invoices').upsert(sanitizedInvoices);
               if (error) {
@@ -1494,21 +1509,10 @@ export default function App() {
 
     if (user) {
       // Propagate directly to Cloud
-      const updatedInvoiceData = { ...invoice, userId: user.id };
-      
-      // SUPABASE COMPATIBILITY: Supabase rejects unknown columns. 
-      // We store the embedded template JSON inside the legacy selectedTemplateStyle column for cloud sync.
-      if (updatedInvoiceData.embeddedTemplate) {
-        updatedInvoiceData.selectedTemplateStyle = JSON.stringify(updatedInvoiceData.embeddedTemplate);
-        delete updatedInvoiceData.embeddedTemplate; // Remove so Supabase doesn't reject
-      }
-      
-      // Remove selectedCustomTemplateId as well to avoid schema errors, since its ID is inside embeddedTemplate
-      delete updatedInvoiceData.selectedCustomTemplateId;
-      
+      const dataToSync = sanitizeInvoiceForSync(invoice);
       const path = `invoices[id=${invoice.id}]`;
       try {
-        await supabase.from('invoices').upsert(updatedInvoiceData);
+        await supabase.from('invoices').upsert(dataToSync);
       } catch (error) {
         handleSupabaseError(error, OperationType.WRITE, path);
       }
@@ -1591,6 +1595,20 @@ export default function App() {
     }
   };
 
+  const handleUpdateInvoice = async (updatedInv: Invoice) => {
+    const updated = invoices.map(inv => inv.id === updatedInv.id ? updatedInv : inv);
+    setInvoices(updated);
+    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
+    if (user) {
+      try {
+        const dataToSync = sanitizeInvoiceForSync(updatedInv);
+        await supabase.from('invoices').upsert(dataToSync);
+      } catch (error) {
+        console.error('Failed to update invoice:', error);
+      }
+    }
+  };
+
   // 5. Onboarding quick-start preset templates loader
   const handleLoadPresetTemplate = async (templateId: string) => {
     const template = BUSINESS_TEMPLATES.find(p => p.id === templateId);
@@ -1634,7 +1652,7 @@ export default function App() {
       // Sync seeded configurations to Supabase
       try {
         await supabase.from('users').upsert({ ...cleanProfile, uid: user.id });
-        await supabase.from('invoices').upsert({ ...sample, userId: user.id });
+        await supabase.from('invoices').upsert(sanitizeInvoiceForSync(sample));
         if (seededPresets.length > 0) {
           await supabase.from('preset_items').upsert(
             seededPresets.map(p => ({ ...p, userId: user.id }))
@@ -1666,9 +1684,8 @@ export default function App() {
         const localInvoices: Invoice[] = JSON.parse(localInvoicesStr);
         const toSync = localInvoices
           .filter(inv => !inv.userId)
-          .map(inv => ({
+          .map(inv => sanitizeInvoiceForSync({
             ...inv,
-            userId: user.id,
             updatedAt: new Date().toISOString(),
           }));
         if (toSync.length > 0) {
@@ -1961,8 +1978,8 @@ export default function App() {
 
       if (user) {
         const allToSync = [
-          ...updatedParents.map(up => ({ ...up, userId: user.id })),
-          ...newSpawned.map(ch => ({ ...ch, userId: user.id })),
+          ...updatedParents.map(up => sanitizeInvoiceForSync(up)),
+          ...newSpawned.map(ch => sanitizeInvoiceForSync(ch)),
         ];
         supabase.from('invoices').upsert(allToSync).then(({ error }) => {
           if (error) console.error('Failed to sync recurring invoices:', error);
@@ -1985,7 +2002,7 @@ export default function App() {
     const font = profile.invoiceFont || 'inter';
     
     const accents = {
-      sky: { light: '#8c7558', dark: '#38bdf8' },
+      sky: { light: '#0284c7', dark: '#38bdf8' },
       emerald: { light: '#059669', dark: '#10b981' },
       indigo: { light: '#4f46e5', dark: '#6366f1' },
       violet: { light: '#7c3aed', dark: '#8b5cf6' },
@@ -2143,6 +2160,7 @@ export default function App() {
         onDeleteInvoice={handleDeleteInvoice}
         onBulkDeleteInvoices={handleBulkDeleteInvoices}
         onBulkUpdateInvoicesStatus={handleBulkUpdateInvoicesStatus}
+        onUpdateInvoice={handleUpdateInvoice}
         onLoadPresetTemplate={handleLoadPresetTemplate}
         isPinLockEnabled={securitySettings.isPinLockEnabled}
         onToggleSecurity={handleToggleSecurity}
@@ -2168,6 +2186,7 @@ export default function App() {
       />
 
       <InvoiceModal
+        theme={theme}
         invoice={editingInvoice}
         presets={presets}
         clients={clients}

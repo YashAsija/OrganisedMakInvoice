@@ -15,7 +15,7 @@ export interface InvoiceItem {
   quantityType?: string;
 }
 
-export type InvoiceStatus = 'draft' | 'sent' | 'pending' | 'paid' | 'cancelled' | 'approved' | 'rejected';
+export type InvoiceStatus = 'draft' | 'sent' | 'pending' | 'paid' | 'partially_paid' | 'cancelled' | 'approved' | 'rejected';
 export type DiscountType = 'none' | 'percent' | 'flat';
 export type RecurringInterval = 'weekly' | 'bi-weekly' | 'monthly' | 'yearly';
 
@@ -56,6 +56,7 @@ export interface Invoice {
   createdAt: string;
   updatedAt: string;
   paidDate?: string;
+  paidAmount?: number; // Tracks cumulative amount paid (for partial payment tracking)
   recurringSettings?: RecurringSettings; // Optional recurring invoice setup
   parentInvoiceId?: string; // Tracks which recurring series this was auto-generated from
   selectedTemplateStyle?: string; // Selected visual invoice layout style
@@ -227,11 +228,11 @@ export interface InvoiceTemplate {
 
   config: {
     header: { showLogo: boolean; logoPosition: 'Left' | 'Center' | 'Right'; logoWidth: number; logoHeight: number; titleAlignment: 'Left' | 'Center' | 'Right'; invoiceTitle: string; };
-    company: { fields: string[]; };
-    invoiceInfo: { fields: string[]; customFields: { id: string; label: string; type: string; value: string; }[]; position: 'Left' | 'Center' | 'Right'; };
-    client: { fields: string[]; };
-    shipping: { fields: string[]; sameAsBilling: boolean; };
-    transport: { fields: string[]; };
+    company: { fields: string[]; isCompact?: boolean; showLabels?: boolean; };
+    invoiceInfo: { fields: string[]; customFields: { id: string; label: string; type: string; value: string; }[]; position: 'Left' | 'Center' | 'Right'; isCompact?: boolean; showLabels?: boolean; };
+    client: { fields: string[]; isCompact?: boolean; showLabels?: boolean; };
+    shipping: { fields: string[]; sameAsBilling: boolean; isCompact?: boolean; showLabels?: boolean; };
+    transport: { fields: string[]; isCompact?: boolean; showLabels?: boolean; };
     table: {
       columns: { id: string; visible: boolean; label: string; type: 'Text' | 'Number' | 'Currency' | 'Percentage' | 'Formula'; formula?: string; width?: string; order: number; }[];
     };

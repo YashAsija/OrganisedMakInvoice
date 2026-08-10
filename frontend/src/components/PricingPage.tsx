@@ -1,119 +1,97 @@
+"use client";
 import React, { useState, useEffect } from 'react';
+import { initializePaddle, Paddle } from '@paddle/paddle-js';
+import { supabase } from '../lib/supabase';
+
+// Throw error early if environment variables are not set
+const clientToken = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
+const environment = process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT;
+
+if (typeof window !== 'undefined') {
+  if (!clientToken) {
+    console.warn("WARNING: NEXT_PUBLIC_PADDLE_CLIENT_TOKEN is not defined in environment variables. Billing will be disabled.");
+  }
+  if (!environment) {
+    console.warn("WARNING: NEXT_PUBLIC_PADDLE_ENVIRONMENT is not defined in environment variables. Billing will be disabled.");
+  }
+}
+
+export interface Tier {
+  name: 'Starter' | 'Pro' | 'Advanced';
+  description: string;
+  features: string[];
+  priceId: { month: string; year: string };
+}
 
 interface PricingPageProps {
   theme: 'light' | 'dark';
-  onNavigate: (path: string) => void;
-  onGoogleLogin: () => void;
+  onNavigate?: (path: string) => void;
+  onGoogleLogin?: () => void;
+  country?: string;
 }
 
-const PLANS = [
+const TIERS: Tier[] = [
   {
-    tier: 'Free',
     name: 'Starter',
-    tagline: 'Get started at zero cost. No credit card required.',
-    monthly: '₹0',
-    annual: '₹0',
-    annualNote: 'Free forever. No commitment needed.',
-    monthlyNote: 'Free forever. No credit card needed.',
-    cta: 'Get Started Free',
-    ctaVariant: 'ghost' as const,
-    popular: false,
+    description: 'Get started at a low cost. Perfect for individual freelancers.',
     features: [
-      { text: 'Up to 10 invoices / month', included: true },
-      { text: '1 business profile', included: true },
-      { text: 'Invoice & Quotation', included: true },
-      { text: 'Simple invoice template', included: true },
-      { text: 'PDF export', included: true },
-      { text: 'AI Smart Billing (Gemini)', included: false },
-      { text: 'Advanced templates', included: false },
-      { text: 'Priority support', included: false },
+      'Up to 10 invoices / month',
+      '1 business profile',
+      'Invoice & Quotation',
+      'Simple invoice template',
+      'PDF export',
     ],
+    priceId: {
+      month: 'pri_01kzgyek7a7g58fyprtr83m188',
+      year: 'pri_01kzgyemhfphepwc3j8ay9qwhx',
+    },
   },
   {
-    tier: 'Basic',
-    name: 'Basic',
-    tagline: 'Perfect for freelancers scaling their invoicing.',
-    monthly: '₹200',
-    annual: '₹160',
-    annualNote: 'Billed ₹1,920/year — save ₹480.',
-    monthlyNote: 'Billed monthly. Cancel anytime.',
-    cta: 'Start Basic',
-    ctaVariant: 'ghost' as const,
-    popular: false,
+    name: 'Pro',
+    description: 'Perfect for growing businesses that bill at volume.',
     features: [
-      { text: 'Up to 50 invoices / month', included: true },
-      { text: '2 business profiles', included: true },
-      { text: 'Invoice, Quotation & Purchase Order', included: true },
-      { text: 'Simple + Advanced templates', included: true },
-      { text: 'PDF export', included: true },
-      { text: 'Sales & Purchase ledger', included: true },
-      { text: 'AI Smart Billing (Gemini)', included: false },
-      { text: 'Priority support', included: false },
+      'Up to 100 invoices / month',
+      '3 business profiles',
+      'All document types incl. Debit & Credit Notes',
+      'All templates + custom logo & signature',
+      'AI Smart Billing (Gemini)',
+      'Multi-rate tax splits',
     ],
+    priceId: {
+      month: 'pri_01kzgyepxvsa4p7ekmc0k0mntg',
+      year: 'pri_01kzgyer2f8vmxp8r7yr9pd8hp',
+    },
   },
   {
-    tier: 'Pro',
-    name: 'Professional',
-    tagline: 'For growing businesses that bill at volume.',
-    monthly: '₹350',
-    annual: '₹280',
-    annualNote: 'Billed ₹3,360/year — save ₹840.',
-    monthlyNote: 'Billed monthly. Cancel anytime.',
-    cta: 'Start Pro →',
-    ctaVariant: 'solid' as const,
-    popular: true,
+    name: 'Advanced',
+    description: 'No caps, no limits. Built for high-volume operations.',
     features: [
-      { text: 'Up to 100 invoices / month', included: true },
-      { text: '3 business profiles', included: true },
-      { text: 'All document types incl. Debit & Credit Notes', included: true },
-      { text: 'All templates + custom logo & signature', included: true },
-      { text: 'AI Smart Billing (Gemini)', included: true },
-      { text: 'Multi-rate tax splits', included: true },
-      { text: 'Region-aware number formatting', included: true },
-      { text: 'Priority support', included: false },
+      'Unlimited invoices',
+      'Unlimited business profiles',
+      'All templates + custom logo & signature',
+      'AI Smart Billing (Gemini)',
+      'Recurring invoice scheduler',
+      'Priority support with SLA',
     ],
-  },
-  {
-    tier: 'Unlimited',
-    name: 'Unlimited',
-    tagline: 'No caps, no limits. Built for high-volume operations.',
-    monthly: '₹600',
-    annual: '₹480',
-    annualNote: 'Billed ₹5,760/year — save ₹1,440.',
-    monthlyNote: 'Billed monthly. Cancel anytime.',
-    cta: 'Go Unlimited',
-    ctaVariant: 'ghost' as const,
-    popular: false,
-    features: [
-      { text: 'Unlimited invoices', included: true },
-      { text: 'Unlimited business profiles', included: true },
-      { text: 'All document types incl. Debit & Credit Notes', included: true },
-      { text: 'All templates + custom logo & signature', included: true },
-      { text: 'AI Smart Billing (Gemini)', included: true },
-      { text: 'RAG-trained AI chat support', included: true },
-      { text: 'Recurring invoice scheduler', included: true },
-      { text: 'Priority support with SLA', included: true },
-    ],
+    priceId: {
+      month: 'pri_01kzgyetffh4ax8ng5yapbc9m7',
+      year: 'pri_01kzgyevq3hjc6dt54xje6vgk0',
+    },
   },
 ];
 
-
 const FAQS = [
-  {
-    q: 'Is the Free plan really free forever?',
-    a: 'Yes — no credit card, no trial expiry. The Free plan stays free with a 10 invoice/month limit and 1 business profile.',
-  },
   {
     q: 'Can I upgrade or downgrade at any time?',
     a: 'Absolutely. You can switch plans at any time. Upgrades are prorated; downgrades take effect at the end of your billing cycle.',
   },
   {
     q: 'What payment methods do you accept?',
-    a: 'We accept all major credit/debit cards, UPI, and net banking for Indian customers. International cards are accepted for global users.',
+    a: 'We accept credit cards, debit cards, PayPal, and Apple Pay through our secure integration with Paddle.',
   },
   {
     q: 'Does the annual plan auto-renew?',
-    a: 'Yes — annual plans auto-renew at the end of the year. You can cancel anytime from your account settings before the renewal date.',
+    a: 'Yes — annual plans auto-renew at the end of the year. You can cancel anytime from your subscription settings before the renewal date.',
   },
   {
     q: 'Is my data encrypted and secure?',
@@ -121,16 +99,100 @@ const FAQS = [
   },
 ];
 
-export default function PricingPage({ theme, onNavigate }: PricingPageProps) {
+export default function PricingPage({ theme, onNavigate, country }: PricingPageProps) {
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [paddle, setPaddle] = useState<Paddle | undefined>(undefined);
+  const [prices, setPrices] = useState<Record<string, string>>({});
+  const [loadingPrices, setLoadingPrices] = useState(true);
+  const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
+
+  const handleNavigate = (path: string) => {
+    if (onNavigate) {
+      onNavigate(path);
+    } else {
+      window.location.href = path;
+    }
+  };
+
+  // Get user details
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) {
+        setUserEmail(session.user.email);
+      }
+    });
+  }, []);
+
+  // Initialize Paddle JS
+  useEffect(() => {
+    if (!clientToken || !environment) return;
+
+    initializePaddle({
+      environment: environment as 'sandbox' | 'production',
+      token: clientToken,
+    }).then((instance) => {
+      if (instance) {
+        setPaddle(instance);
+      }
+    });
+  }, []);
+
+  // Fetch localized prices using PricePreview
+  useEffect(() => {
+    if (!paddle) return;
+
+    setLoadingPrices(true);
+    const items = TIERS.flatMap((t) => [
+      { priceId: t.priceId.month, quantity: 1 },
+      { priceId: t.priceId.year, quantity: 1 },
+    ]);
+
+    paddle
+      .PricePreview({
+        items,
+        address: country ? { countryCode: country } : undefined,
+      })
+      .then((preview) => {
+        const priceMap: Record<string, string> = {};
+        preview.data.details.lineItems.forEach((item: any) => {
+          priceMap[item.price.id] = item.formattedTotals.total;
+        });
+        setPrices(priceMap);
+        setLoadingPrices(false);
+      })
+      .catch((err) => {
+        console.error('Failed to preview prices:', err);
+        setLoadingPrices(false);
+      });
+  }, [paddle, country]);
 
   useEffect(() => {
     const onScroll = () => setShowScrollTop(window.scrollY > 300);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  // Checkout trigger
+  const handleSubscribe = (priceId: string) => {
+    if (!paddle) {
+      alert('Payment system is still initializing. Please try again in a moment.');
+      return;
+    }
+
+    paddle.Checkout.open({
+      items: [{ priceId, quantity: 1 }],
+      customer: userEmail ? { email: userEmail } : undefined,
+      settings: {
+        displayMode: 'overlay',
+        theme: theme === 'dark' ? 'dark' : 'light',
+        locale: country ? country.toLowerCase() : undefined,
+        variant: 'one-page',
+        successUrl: `${window.location.origin}/dashboard`,
+      },
+    });
+  };
 
   const isDark = theme === 'dark';
 
@@ -202,8 +264,8 @@ export default function PricingPage({ theme, onNavigate }: PricingPageProps) {
     }
     @keyframes pr-pop { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-    .pr-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; align-items: stretch; }
-    @media (max-width: 1100px) { .pr-grid { grid-template-columns: 1fr 1fr; gap: 18px; } }
+    .pr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: stretch; max-width: 1000px; margin: 0 auto; }
+    @media (max-width: 900px) { .pr-grid { grid-template-columns: 1fr 1fr; gap: 18px; } }
     @media (max-width: 560px) { .pr-grid { grid-template-columns: 1fr; } }
 
     .pr-card {
@@ -239,7 +301,7 @@ export default function PricingPage({ theme, onNavigate }: PricingPageProps) {
     .pr-tagline { font-size: 0.83rem; color: ${isDark ? '#94a3b8' : '#475569'}; margin-bottom: 22px; line-height: 1.55; font-family: 'IBM Plex Sans', sans-serif; }
     .pr-amount { display: flex; align-items: flex-end; gap: 3px; margin-bottom: 6px; }
     .pr-val {
-      font-family: 'Fraunces', serif; font-size: 3rem; font-weight: 700;
+      font-family: 'Fraunces', serif; font-size: 2.8rem; font-weight: 700;
       color: ${isDark ? '#f8fafc' : '#0f172a'}; line-height: 1; transition: all 0.25s ease;
     }
     .pr-per { font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem; color: ${isDark ? '#94a3b8' : '#475569'}; margin-bottom: 8px; }
@@ -318,6 +380,21 @@ export default function PricingPage({ theme, onNavigate }: PricingPageProps) {
     .pr-footer-badge:hover { background: ${isDark ? '#38bdf8' : '#0284c7'}; color: ${isDark ? '#0b1329' : '#fff'}; border-color: ${isDark ? '#38bdf8' : '#0284c7'}; }
     .pr-scroll-top { position: fixed; bottom: 28px; right: 28px; z-index: 50; background: ${isDark ? '#38bdf8' : '#0284c7'}; color: ${isDark ? '#0b1329' : '#fff'}; border: none; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 20px rgba(2,132,199,0.25); transition: all 0.2s; font-size: 1.1rem; }
     .pr-scroll-top:hover { transform: translateY(-2px); }
+
+    /* Skeleton Loading CSS */
+    .skeleton-price {
+      display: inline-block;
+      width: 120px;
+      height: 48px;
+      background: ${isDark ? 'linear-gradient(90deg, #1b264f 25%, #223269 50%, #1b264f 75%)' : 'linear-gradient(90deg, #e0f2fe 25%, #bae6fd 50%, #e0f2fe 75%)'};
+      background-size: 200% 100%;
+      animation: loading-shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes loading-shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
   `;
 
   return (
@@ -327,7 +404,7 @@ export default function PricingPage({ theme, onNavigate }: PricingPageProps) {
       {/* NAV */}
       <nav className="pr-nav">
         <div className="pr-nav-inner">
-          <div className="pr-logo" onClick={() => onNavigate('/')} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') onNavigate('/'); }} aria-label="Go to homepage">
+          <div className="pr-logo" onClick={() => handleNavigate('/')} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') handleNavigate('/'); }} aria-label="Go to homepage">
             <img src="/logo.svg" alt="MakInvoices Logo" />
             <div>
               <span style={{ fontSize: '0.95rem', fontWeight: 800, letterSpacing: '-0.01em', color: isDark ? '#f8fafc' : '#0f172a', display: 'block', lineHeight: 1 }}>
@@ -337,16 +414,16 @@ export default function PricingPage({ theme, onNavigate }: PricingPageProps) {
             </div>
           </div>
           <div className="pr-navlinks">
-            <button type="button" onClick={() => onNavigate('/#overview')}>Overview</button>
-            <button type="button" onClick={() => onNavigate('/#features')}>Features</button>
+            <button type="button" onClick={() => handleNavigate('/#overview')}>Overview</button>
+            <button type="button" onClick={() => handleNavigate('/#features')}>Features</button>
             <button type="button" className="active">Pricing</button>
-            <button type="button" onClick={() => onNavigate('/#compare')}>Compare</button>
-            <button type="button" onClick={() => onNavigate('/#faq')}>FAQ</button>
-            <button type="button" onClick={() => onNavigate('/contact')}>Contact</button>
+            <button type="button" onClick={() => handleNavigate('/#compare')}>Compare</button>
+            <button type="button" onClick={() => handleNavigate('/#faq')}>FAQ</button>
+            <button type="button" onClick={() => handleNavigate('/contact')}>Contact</button>
           </div>
           <div className="pr-nav-actions">
-            <button type="button" className="pr-login" onClick={() => onNavigate('/login')}>Log in</button>
-            <button type="button" className="pr-cta" onClick={() => onNavigate('/signup')}>Start Free →</button>
+            <button type="button" className="pr-login" onClick={() => handleNavigate('/login')}>Log in</button>
+            <button type="button" className="pr-cta" onClick={() => handleNavigate('/signup')}>Start Free →</button>
           </div>
         </div>
       </nav>
@@ -356,42 +433,56 @@ export default function PricingPage({ theme, onNavigate }: PricingPageProps) {
         <div className="pr-wrap">
           <div className="pr-eyebrow">Simple, Transparent Pricing</div>
           <h1 className="pr-h1">Plans for every <em>billing scale</em>.</h1>
-          <p className="pr-hero-sub">Start free — upgrade only when you need more power. No hidden fees, no lock-in.</p>
+          <p className="pr-hero-sub">Include a 7-day free trial on all plans. Start free — upgrade only when you need more power.</p>
 
           <div className="pr-toggle-wrap">
             <div className="pr-toggle">
               <button type="button" className={billing === 'monthly' ? 'active' : ''} onClick={() => setBilling('monthly')}>Monthly</button>
               <button type="button" className={billing === 'annual' ? 'active' : ''} onClick={() => setBilling('annual')}>Annual</button>
             </div>
-            {billing === 'annual' && <span className="pr-save-badge">Save 20%</span>}
+            {billing === 'annual' && <span className="pr-save-badge">Save with Annual</span>}
           </div>
 
           <div className="pr-grid">
-            {PLANS.map((plan) => (
-              <div key={plan.tier} className={`pr-card${plan.popular ? ' featured' : ''}`}>
-                {plan.popular && <span className="pr-popular">Most Popular</span>}
-                <div className="pr-tier">{plan.tier}</div>
-                <div className="pr-plan-name">{plan.name}</div>
-                <p className="pr-tagline">{plan.tagline}</p>
-                <div className="pr-amount">
-                  <span className="pr-val">{billing === 'annual' ? plan.annual : plan.monthly}</span>
-                  <span className="pr-per">/mo</span>
+            {TIERS.map((plan) => {
+              const currentPriceId = billing === 'annual' ? plan.priceId.year : plan.priceId.month;
+              const formattedPrice = prices[currentPriceId];
+              const popular = plan.name === 'Pro';
+              
+              return (
+                <div key={plan.name} className={`pr-card${popular ? ' featured' : ''}`}>
+                  {popular && <span className="pr-popular">Most Popular</span>}
+                  <div className="pr-tier">{plan.name}</div>
+                  <div className="pr-plan-name">{plan.name}</div>
+                  <p className="pr-tagline">{plan.description}</p>
+                  <div className="pr-amount">
+                    {loadingPrices ? (
+                      <span className="skeleton-price" />
+                    ) : (
+                      <span className="pr-val">{formattedPrice || (billing === 'annual' ? '$0' : '$0')}</span>
+                    )}
+                    <span className="pr-per">{billing === 'annual' ? '/yr' : '/mo'}</span>
+                  </div>
+                  <p className="pr-note">Includes 7-day free trial</p>
+                  <hr className="pr-divider" />
+                  <ul className="pr-features">
+                    {plan.features.map((f, i) => (
+                      <li key={i}>
+                        <span className="pr-check">✓</span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    type="button"
+                    className={`pr-btn ${popular ? 'solid' : 'ghost'}`}
+                    onClick={() => handleSubscribe(currentPriceId)}
+                  >
+                    Subscribe to {plan.name}
+                  </button>
                 </div>
-                <p className="pr-note">{billing === 'annual' ? plan.annualNote : plan.monthlyNote}</p>
-                <hr className="pr-divider" />
-                <ul className="pr-features">
-                  {plan.features.map((f, i) => (
-                    <li key={i} className={f.included ? '' : 'pr-feat-dim'}>
-                      {f.included ? <span className="pr-check">✓</span> : <span className="pr-dash">–</span>}
-                      {f.text}
-                    </li>
-                  ))}
-                </ul>
-                <button type="button" className={`pr-btn ${plan.ctaVariant}`} onClick={() => onNavigate('/signup')}>
-                  {plan.cta}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -443,7 +534,7 @@ export default function PricingPage({ theme, onNavigate }: PricingPageProps) {
         <div className="pr-wrap">
           <div className="pr-footer-grid">
             <div className="pr-footer-brand">
-              <div className="pr-footer-logo" onClick={() => onNavigate('/')} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') onNavigate('/'); }}>
+              <div className="pr-footer-logo" onClick={() => handleNavigate('/')} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') handleNavigate('/'); }}>
                 <img src="/logo.svg" alt="MakInvoices Logo" />
                 <div>
                   <div className="pr-footer-brand-name">Mak<span>Invoices</span></div>
@@ -455,25 +546,25 @@ export default function PricingPage({ theme, onNavigate }: PricingPageProps) {
             <div className="pr-footer-col">
               <h5>Product</h5>
               <ul>
-                <li><button type="button" onClick={() => onNavigate('/#features')}>Features</button></li>
-                <li><button type="button" onClick={() => onNavigate('/pricing')}>Pricing</button></li>
-                <li><button type="button" onClick={() => onNavigate('/#overview')}>Integrations</button></li>
+                <li><button type="button" onClick={() => handleNavigate('/#features')}>Features</button></li>
+                <li><button type="button" onClick={() => handleNavigate('/pricing')}>Pricing</button></li>
+                <li><button type="button" onClick={() => handleNavigate('/#overview')}>Integrations</button></li>
               </ul>
             </div>
             <div className="pr-footer-col">
               <h5>Trust</h5>
               <ul>
-                <li><button type="button" onClick={() => onNavigate('/security')}>Security</button></li>
-                <li><button type="button" onClick={() => onNavigate('/terms')}>Terms of Service</button></li>
-                <li><button type="button" onClick={() => onNavigate('/privacy')}>Privacy Policy</button></li>
+                <li><button type="button" onClick={() => handleNavigate('/security')}>Security</button></li>
+                <li><button type="button" onClick={() => handleNavigate('/terms')}>Terms of Service</button></li>
+                <li><button type="button" onClick={() => handleNavigate('/privacy')}>Privacy Policy</button></li>
               </ul>
             </div>
             <div className="pr-footer-col">
               <h5>Company</h5>
               <ul>
-                <li><button type="button" onClick={() => onNavigate('/contact')}>Contact</button></li>
-                <li><button type="button" onClick={() => onNavigate('/login')}>Log In</button></li>
-                <li><button type="button" onClick={() => onNavigate('/signup')}>Get Started</button></li>
+                <li><button type="button" onClick={() => handleNavigate('/contact')}>Contact</button></li>
+                <li><button type="button" onClick={() => handleNavigate('/login')}>Log In</button></li>
+                <li><button type="button" onClick={() => handleNavigate('/signup')}>Get Started</button></li>
               </ul>
             </div>
           </div>

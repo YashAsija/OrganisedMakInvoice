@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useCallback } from 'react';
 import { Sparkles, Loader2, X, Undo2, Redo2 } from 'lucide-react';
@@ -278,16 +278,16 @@ export function SmartBillingBox({ activeTemplate, setters, existingState }: Smar
   return (
     <div className="mx-1 mb-2.5 sm:mb-3 shrink-0">
       {/* Header */}
-      <div className="p-2.5 sm:p-3 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-slate-950 border border-indigo-200 dark:border-indigo-800/60 rounded-xl sm:rounded-2xl shadow-xs">
+      <div className="p-2.5 sm:p-3 bg-gradient-to-br from-[#f4f9ff] via-[#f4f9ff] to-[#e0f2fe] dark:from-[#111a36] dark:to-[#1b264f]/40 border border-[#bae6fd] dark:border-[#223269]/60 rounded-xl sm:rounded-2xl shadow-xs">
         <div className="flex items-center gap-2 mb-1.5">
-          <div className="w-6 h-6 rounded-md bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-xs shrink-0">
+          <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#0284c7] to-[#2563eb] flex items-center justify-center shadow-xs shrink-0">
             <Sparkles className="w-3.5 h-3.5 text-white" />
           </div>
           <div>
-            <span className="text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-indigo-900 dark:text-indigo-200">
+            <span className="text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8]">
               AI Smart Billing
             </span>
-            <span className="ml-1.5 text-[9.5px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/70 text-indigo-600 dark:text-indigo-300">
+            <span className="ml-1.5 text-[9.5px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]">
               {activeTemplate.name}
             </span>
           </div>
@@ -331,7 +331,7 @@ export function SmartBillingBox({ activeTemplate, setters, existingState }: Smar
               onClick={handleUndo}
               disabled={isLoading || historyIndex <= 0}
               title="Undo AI Prompt (Revert last AI prompt change)"
-              className="p-1.5 sm:p-2 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800/80 hover:border-indigo-500 dark:hover:border-indigo-500 text-indigo-700 dark:text-indigo-300 disabled:opacity-35 disabled:cursor-not-allowed rounded-lg sm:rounded-xl transition-all shadow-xs flex items-center justify-center cursor-pointer active:scale-95 shrink-0"
+              className="p-1.5 sm:p-2 bg-white dark:bg-slate-900 border border-[#bae6fd]/60 dark:border-[#223269]/60 hover:border-[#0284c7]/50 dark:hover:border-[#38bdf8]/50 text-[#0284c7] dark:text-[#38bdf8] disabled:opacity-35 disabled:cursor-not-allowed rounded-lg sm:rounded-xl transition-all shadow-xs flex items-center justify-center cursor-pointer active:scale-95 shrink-0"
             >
               <Undo2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
@@ -342,7 +342,7 @@ export function SmartBillingBox({ activeTemplate, setters, existingState }: Smar
               onClick={handleRedo}
               disabled={isLoading || historyIndex >= history.length - 1}
               title="Redo AI Prompt (Re-apply next AI prompt change)"
-              className="p-1.5 sm:p-2 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800/80 hover:border-indigo-500 dark:hover:border-indigo-500 text-indigo-700 dark:text-indigo-300 disabled:opacity-35 disabled:cursor-not-allowed rounded-xl transition-all shadow-xs flex items-center justify-center cursor-pointer active:scale-95 shrink-0"
+              className="p-1.5 sm:p-2 bg-white dark:bg-slate-900 border border-[#bae6fd]/60 dark:border-[#223269]/60 hover:border-[#0284c7]/50 dark:hover:border-[#38bdf8]/50 text-[#0284c7] dark:text-[#38bdf8] disabled:opacity-35 disabled:cursor-not-allowed rounded-xl transition-all shadow-xs flex items-center justify-center cursor-pointer active:scale-95 shrink-0"
             >
               <Redo2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
@@ -352,7 +352,7 @@ export function SmartBillingBox({ activeTemplate, setters, existingState }: Smar
               type="button"
               onClick={() => handleGenerate(false)}
               disabled={isLoading || !prompt.trim()}
-              className="flex-1 sm:flex-initial px-3 sm:px-3.5 py-1.5 sm:py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-lg sm:rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
+              className="flex-1 sm:flex-initial px-3 sm:px-3.5 py-1.5 sm:py-2 bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] shadow-[#0284c7]/15 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-lg sm:rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
             >
               {isLoading
                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -367,7 +367,7 @@ export function SmartBillingBox({ activeTemplate, setters, existingState }: Smar
                 onClick={() => handleGenerate(true)}
                 disabled={isLoading || !prompt.trim()}
                 title="Regenerate and overwrite all fields"
-                className="px-2.5 py-1.5 sm:py-2 border border-indigo-200 dark:border-indigo-700 hover:border-indigo-400 dark:hover:border-indigo-500 text-indigo-600 dark:text-indigo-300 font-bold text-xs rounded-lg sm:rounded-xl transition-all flex items-center justify-center gap-1 shrink-0 cursor-pointer"
+                className="px-2.5 py-1.5 sm:py-2 border border-[#bae6fd] dark:border-[#223269] hover:border-[#0284c7] dark:hover:border-[#38bdf8] text-[#0284c7] dark:text-[#38bdf8] font-bold text-xs rounded-lg sm:rounded-xl transition-all flex items-center justify-center gap-1 shrink-0 cursor-pointer"
               >
                 <span>↺ All</span>
               </button>
@@ -378,7 +378,7 @@ export function SmartBillingBox({ activeTemplate, setters, existingState }: Smar
 
       {/* AI Loading overlay (inside the box, not full-modal) */}
       {isLoading && (
-        <div className="mt-1.5 px-3 py-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 rounded-lg sm:rounded-xl flex items-center gap-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+        <div className="mt-1.5 px-3 py-2 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-lg sm:rounded-xl flex items-center gap-2 text-xs font-semibold text-[#0284c7] dark:text-[#38bdf8]">
           <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
           <span>Scanning template schema &amp; extracting invoice data…</span>
         </div>

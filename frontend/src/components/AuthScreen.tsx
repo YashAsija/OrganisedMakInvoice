@@ -395,7 +395,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
         >
           <img src="/logo.svg" alt="MakInvoices Logo" style={{ width: 44, height: 44, objectFit: 'contain' }} />
           <div>
-            <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: '1.25rem', fontWeight: 900, color: theme === 'dark' ? '#f8fafc' : '#0f172a', display: 'block', lineHeight: 1, tracking: '-0.02em' }}>
+            <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: '1.25rem', fontWeight: 900, color: theme === 'dark' ? '#f8fafc' : '#0f172a', display: 'block', lineHeight: 1, letterSpacing: '-0.02em' }}>
               Mak<span style={{ color: '#0ea5e9' }}>Invoices</span>
             </span>
             <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.6rem', fontWeight: 700, color: theme === 'dark' ? '#64748b' : '#475569', letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block', marginTop: 4 }}>Advanced Ledger Hub</span>
@@ -546,7 +546,7 @@ export default function AuthScreen({ defaultMode }: AuthScreenProps) {
               </div>
             )}
             {(formErrors.email || formErrors.phone || formErrors.otp) && (
-              <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', borderRadius: 10, fontSize: '0.82rem', fontWeight: 600 }}>
+              <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', borderRadius: 10, fontSize: '0.82rem', fontWeight: 600, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                 {formErrors.email || formErrors.phone || formErrors.otp}
               </div>
             )}

@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Check, Trash2, Upload, CreditCard, ShieldCheck, Sparkles, Building2, Landmark, Sliders, Award, FileSpreadsheet, KeyRound, ArrowLeft, ArrowRight, Plus, AlertCircle, Lock, Banknote, SlidersHorizontal, Hash, FileText, HelpCircle, RefreshCw } from 'lucide-react';
 import { BusinessProfile } from '../types';
 import { Country, State } from 'country-state-city';
@@ -153,7 +153,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const [cropZoom, setCropZoom] = useState<number>(1);
   const [cropPanX, setCropPanX] = useState<number>(0);
   const [cropPanY, setCropPanY] = useState<number>(0);
-  const [cropRatio, setCropRatio] = useState<'1:1' | '3:1' | 'free'>('1:1');
+  const [cropRatio, setCropRatio] = useState<'1:1' | '3:1' | 'free' | 'circle'>('1:1');
   const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isPanningLogo, setIsPanningLogo] = useState(false);
   const panStart = useRef({ x: 0, y: 0 });
@@ -760,6 +760,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
     if (!ctx) return;
 
     const img = new Image();
+    img.crossOrigin = 'anonymous';
     img.onload = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -788,7 +789,11 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       const cy = canvas.height / 2;
 
       ctx.beginPath();
-      ctx.rect(cx - cropW/2, cy - cropH/2, cropW, cropH);
+      if (cropRatio === 'circle') {
+        ctx.arc(cx, cy, cropW / 2, 0, Math.PI * 2);
+      } else {
+        ctx.rect(cx - cropW/2, cy - cropH/2, cropW, cropH);
+      }
       ctx.clip();
 
       const drawW = img.width * cropZoom;
@@ -805,13 +810,23 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
       ctx.strokeStyle = '#0ea5e9';
       ctx.lineWidth = 2;
-      ctx.strokeRect(cx - cropW/2, cy - cropH/2, cropW, cropH);
+      ctx.beginPath();
+      if (cropRatio === 'circle') {
+        ctx.arc(cx, cy, cropW / 2, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.strokeRect(cx - cropW/2, cy - cropH/2, cropW, cropH);
+      }
 
       ctx.fillStyle = 'rgba(9, 13, 22, 0.7)';
-      ctx.fillRect(0, 0, canvas.width, cy - cropH/2);
-      ctx.fillRect(0, cy + cropH/2, canvas.width, cy - cropH/2);
-      ctx.fillRect(0, cy - cropH/2, cx - cropW/2, cropH);
-      ctx.fillRect(cx + cropW/2, cy - cropH/2, cx - cropW/2, cropH);
+      ctx.beginPath();
+      ctx.rect(0, 0, canvas.width, canvas.height);
+      if (cropRatio === 'circle') {
+        ctx.arc(cx, cy, cropW / 2, 0, Math.PI * 2, true);
+      } else {
+        ctx.rect(cx + cropW/2, cy - cropH/2, -cropW, cropH);
+      }
+      ctx.fill('evenodd');
     };
     img.src = logoToCrop;
   }, [logoToCrop, cropZoom, cropPanX, cropPanY, cropRatio]);
@@ -819,6 +834,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const handleApplyLogoCrop = () => {
     if (!logoToCrop) return;
     const img = new Image();
+    img.crossOrigin = 'anonymous';
     img.onload = () => {
       const croppedCanvas = document.createElement('canvas');
       
@@ -842,6 +858,12 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
       croppedCanvas.height = cropH;
       const ctx = croppedCanvas.getContext('2d');
       if (!ctx) return;
+
+      if (cropRatio === 'circle') {
+        ctx.beginPath();
+        ctx.arc(cropW / 2, cropH / 2, cropW / 2, 0, Math.PI * 2);
+        ctx.clip();
+      }
 
       const drawW = img.width * cropZoom;
       const drawH = img.height * cropZoom;
@@ -3352,15 +3374,15 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                {/* Ratio Selection */}
                <div className="space-y-1.5">
                  <span className="block text-[10px] font-bold text-[#64748b] dark:text-[#94a3b8] uppercase tracking-wide">Display Ratio Aspect</span>
-                 <div className="grid grid-cols-3 gap-2">
-                   {(['1:1', '3:1', 'free'] as const).map((r) => (
+                 <div className="grid grid-cols-4 gap-2">
+                   {(['1:1', '3:1', 'circle', 'free'] as const).map((r) => (
                      <button
                        key={r}
                        type="button"
                        onClick={() => setCropRatio(r)}
                        className={`py-2 text-[10px] font-bold uppercase rounded-lg border transition-all cursor-pointer ${cropRatio === r ? 'bg-[#0284c7] border-[#0284c7] text-white shadow-sm' : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-[#f4f9ff] dark:hover:bg-slate-850 bg-white dark:bg-slate-900'}`}
                      >
-                       {r === '1:1' ? 'Square' : r === '3:1' ? 'Landscape' : 'Original'}
+                       {r === '1:1' ? 'Square' : r === '3:1' ? 'Landscape' : r === 'circle' ? 'Circle' : 'Original'}
                      </button>
                    ))}
                  </div>
