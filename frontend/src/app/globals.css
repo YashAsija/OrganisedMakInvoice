@@ -319,3 +319,10 @@ section::-webkit-scrollbar {
   opacity: 0.7 !important;
   display: inline-block !important;
 }
+
+/* Screen styling for individual print page cards in the preview portal */
+#preview-portal-container .invoice-pdf-page {
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+}

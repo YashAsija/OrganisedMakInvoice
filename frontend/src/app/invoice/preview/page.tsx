@@ -17,6 +17,7 @@ function InvoicePreviewContent() {
   const [previewScale, setPreviewScale] = useState(1);
   const previewRef = React.useRef<HTMLDivElement>(null);
   const [measuredHeight, setMeasuredHeight] = useState(1123);
+  const [printPageChunks, setPrintPageChunks] = useState<any[][] | null>(null);
 
   useEffect(() => {
     const element = previewRef.current;
@@ -34,6 +35,126 @@ function InvoicePreviewContent() {
       resizeObserver.disconnect();
     };
   }, [invoice]);
+
+  useEffect(() => {
+    if (!invoice || !profile || !previewRef.current || printPageChunks !== null) return;
+
+    const calculatePreviewChunks = async () => {
+      await new Promise(r => setTimeout(r, 600));
+      const container = previewRef.current;
+      if (!container) return;
+
+      try {
+        const activeTemplate = invoice.embeddedTemplate || getDefaultTemplatePreset();
+        const pageHeight = activeTemplate.layout.pageSize === 'A4' ? 1123 : 1056;
+
+        const footerEl = container.querySelector('#pinned-footer-container') as HTMLElement;
+        const footerHeight = footerEl && footerEl.offsetHeight > 50 ? footerEl.offsetHeight : 240;
+
+        const tableEl = container.querySelector('table') as HTMLElement;
+        let tableTop = tableEl ? tableEl.getBoundingClientRect().top - container.getBoundingClientRect().top : 450;
+        if (tableTop < 100) {
+           tableTop = 450;
+        }
+
+        const theadEl = container.querySelector('thead') as HTMLElement;
+        const tableHeaderHeight = theadEl && theadEl.offsetHeight > 10 ? theadEl.offsetHeight : 35;
+
+        const rows = Array.from(container.querySelectorAll('tbody tr')) as HTMLElement[];
+        const rowHeights = rows.map(r => r.offsetHeight > 20 ? r.offsetHeight : 55);
+
+        let totalsHeight = 0;
+        const totalsEls = Array.from(container.querySelectorAll('#section-taxEngine, #section-payment, #section-amountInWords')) as HTMLElement[];
+        if (totalsEls.length > 0) {
+          let minTop = Infinity;
+          let maxBottom = 0;
+          totalsEls.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const top = rect.top - containerRect.top;
+            const bottom = rect.bottom - containerRect.top;
+            if (top < minTop) minTop = top;
+            if (bottom > maxBottom) maxBottom = bottom;
+          });
+          if (maxBottom > minTop && (maxBottom - minTop) > 50) {
+            totalsHeight = maxBottom - minTop;
+          }
+        }
+
+        const items = invoice.items || [];
+        const N = items.length;
+        const chunks: any[][] = [];
+        const availablePageHeight = pageHeight - footerHeight - 20;
+        const page1Budget = availablePageHeight - tableTop - tableHeaderHeight;
+        const subsequentPageBudget = page1Budget;
+
+        const totalRowsHeight = rowHeights.reduce((a, b) => a + b, 0);
+        const singlePageBudget = page1Budget - totalsHeight;
+
+        if (totalRowsHeight <= singlePageBudget || N === 0) {
+          chunks.push(items);
+        } else {
+          let currentHeight = 0;
+          let idx = 0;
+          const p1Items: any[] = [];
+          while (idx < N) {
+            const isLastItem = (idx === N - 1);
+            const requiredBudget = isLastItem ? rowHeights[idx] + totalsHeight : rowHeights[idx];
+            if (currentHeight + requiredBudget <= page1Budget) {
+              currentHeight += rowHeights[idx];
+              p1Items.push(items[idx]);
+              idx++;
+            } else {
+              break;
+            }
+          }
+          if (p1Items.length === 0 && N > 0) {
+            currentHeight += rowHeights[0];
+            p1Items.push(items[0]);
+            idx++;
+          }
+          chunks.push(p1Items);
+
+          while (idx < N) {
+            const pageItems: any[] = [];
+            let curHeight = 0;
+            let remainingRowsHeight = 0;
+            for (let r = idx; r < N; r++) {
+              remainingRowsHeight += rowHeights[r];
+            }
+            if (remainingRowsHeight + totalsHeight <= subsequentPageBudget) {
+              chunks.push(items.slice(idx));
+              break;
+            }
+
+            while (idx < N) {
+              const isLastItem = (idx === N - 1);
+              const requiredBudget = isLastItem ? rowHeights[idx] + totalsHeight : rowHeights[idx];
+              if (curHeight + requiredBudget <= subsequentPageBudget) {
+                curHeight += rowHeights[idx];
+                pageItems.push(items[idx]);
+                idx++;
+              } else {
+                break;
+              }
+            }
+            if (pageItems.length === 0 && N > 0) {
+              curHeight += rowHeights[idx];
+              pageItems.push(items[idx]);
+              idx++;
+            }
+            chunks.push(pageItems);
+          }
+        }
+
+        setPrintPageChunks(chunks);
+      } catch (err) {
+        console.error('Failed to calculate preview chunks:', err);
+      }
+    };
+
+    calculatePreviewChunks();
+  }, [invoice, profile, printPageChunks]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -55,6 +176,7 @@ function InvoicePreviewContent() {
 
     const fetchInvoice = async () => {
       try {
+        setPrintPageChunks(null);
         const res = await fetch(`/api/invoice/preview?id=${id}`);
         if (!res.ok) {
           const data = await res.json();
@@ -190,7 +312,8 @@ function InvoicePreviewContent() {
         const previewHeight = measuredHeight;
         return (
           <div 
-            className="bg-white shadow-xl border border-slate-205 dark:border-zinc-800 relative rounded-none md:rounded-3xl overflow-hidden"
+            id="preview-portal-container"
+            className="relative overflow-visible"
             style={{ 
               width: 794 * previewScale, 
               height: previewHeight * previewScale,
@@ -215,6 +338,7 @@ function InvoicePreviewContent() {
                 currencySymbol={currencySymbol}
                 isInteractive={false}
                 isPrintMode={true}
+                printPageChunks={printPageChunks || undefined}
                 clients={[]}
               />
             </div>
