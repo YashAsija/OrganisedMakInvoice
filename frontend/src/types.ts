@@ -239,7 +239,7 @@ export interface InvoiceTemplate {
     tax: { showTaxableAmount: boolean; showCgstSgst: boolean; showIgst: boolean; showCess: boolean; showDiscount: boolean; showRoundOff: boolean; showTotal: boolean; enableHsnSummary: boolean; enableGstSummary: boolean; enableTaxBreakdown: boolean; };
     payment: { generateQrCode: boolean; enableInstructions: boolean; customNote: string; };
     amountInWords: { format: 'Indian' | 'International'; enabled: boolean; };
-    terms: { presetId: string; customText: string; notesText?: string; };
+    terms: { presetId: string; customText: string; notesText?: string; showNotes?: boolean; showTerms?: boolean; };
     signature: { showSignature: boolean; showStamp: boolean; position: 'Left' | 'Center' | 'Right'; width: number; height: number; signatoryName: string; designation: string; };
     footer: { message: string; thankYouNote: string; supportContact: string; website: string; showPageNumbers: boolean; showGeneratedBy: boolean; customText: string; showContact?: boolean; showWebsite?: boolean; };
   };

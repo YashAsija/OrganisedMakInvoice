@@ -1702,12 +1702,20 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '40px' }}>
             {/* Left Column: Terms */}
             <div style={{ flex: 1 }}>
-              {sections.terms?.visible !== false && (
+              {sections.terms?.visible !== false && (config.terms.showNotes !== false || config.terms.showTerms !== false) && (
                 <div>
-                  <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">NOTES</div>
-                  <div className="text-gray-600 text-[10px] leading-relaxed mb-4">{renderInteractive(invoiceData?.notes || config.terms.notesText || 'Thank you for your business!', 'notes', 'textarea')}</div>
-                  <div className="font-bold text-gray-800 text-[10px] mb-1">Terms & Conditions</div>
-                  <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap">{renderInteractive(invoiceData?.invoiceTerms || config.terms.customText, 'invoiceTerms', 'textarea')}</div>
+                  {config.terms.showNotes !== false && (
+                    <>
+                      <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">NOTES</div>
+                      <div className="text-gray-600 text-[10px] leading-relaxed mb-4">{renderInteractive(invoiceData?.notes || config.terms.notesText || 'Thank you for your business!', 'notes', 'textarea')}</div>
+                    </>
+                  )}
+                  {config.terms.showTerms !== false && (
+                    <>
+                      <div className="font-bold text-gray-800 text-[10px] mb-1">Terms & Conditions</div>
+                      <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap">{renderInteractive(invoiceData?.invoiceTerms || config.terms.customText, 'invoiceTerms', 'textarea')}</div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

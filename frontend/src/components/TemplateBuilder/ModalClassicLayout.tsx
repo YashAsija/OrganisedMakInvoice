@@ -265,16 +265,20 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
       {/* Footer */}
       <div className="flex justify-between items-start pt-2 border-t border-gray-300 mt-auto">
         <div className="w-7/12 pr-6 space-y-4">
-          {sections.terms?.visible !== false && (
+          {sections.terms?.visible !== false && (config.terms.showNotes !== false || config.terms.showTerms !== false) && (
             <>
-              <div>
-                <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">Notes</div>
-                <div className="text-gray-600 text-[10px] leading-relaxed">{invoiceData?.notes || config.terms.notesText || "Thank you for your business!"}</div>
-              </div>
-              <div>
-                <div className="font-bold text-gray-800 text-[10px] mb-1">Terms & Conditions</div>
-                <div className="text-gray-600 text-[10px] leading-relaxed">{config.terms.customText || "Standard Net-15 terms apply. Unresolved overdue balances are subject to three times the bank rate penalties under Indian MSME guidelines."}</div>
-              </div>
+              {config.terms.showNotes !== false && (
+                <div>
+                  <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">Notes</div>
+                  <div className="text-gray-600 text-[10px] leading-relaxed">{invoiceData?.notes || config.terms.notesText || "Thank you for your business!"}</div>
+                </div>
+              )}
+              {config.terms.showTerms !== false && (
+                <div>
+                  <div className="font-bold text-gray-800 text-[10px] mb-1">Terms & Conditions</div>
+                  <div className="text-gray-600 text-[10px] leading-relaxed">{config.terms.customText || "Standard Net-15 terms apply. Unresolved overdue balances are subject to three times the bank rate penalties under Indian MSME guidelines."}</div>
+                </div>
+              )}
             </>
           )}
           {sections.payment?.visible !== false && (

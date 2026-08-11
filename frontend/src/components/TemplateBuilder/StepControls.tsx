@@ -505,15 +505,36 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
   }
 
   if (stepId === 'terms') {
+    const showNotes = config.terms.showNotes !== false;
+    const showTerms = config.terms.showTerms !== false;
+
     return (
       <div className="space-y-4">
         <div>
-          <label className="text-xs font-bold text-slate-700 mb-1 block">Notes / Greetings</label>
-          <textarea value={config.terms.notesText || ''} onChange={e => updateConfig('terms', { notesText: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm h-20" placeholder="Thank you for your business!" />
+          <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-2 cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={showNotes} 
+              onChange={e => updateConfig('terms', { showNotes: e.target.checked })}
+            />
+            Show Notes / Greetings
+          </label>
+          {showNotes && (
+            <textarea value={config.terms.notesText || ''} onChange={e => updateConfig('terms', { notesText: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm h-20" placeholder="Thank you for your business!" />
+          )}
         </div>
         <div>
-          <label className="text-xs font-bold text-slate-700 mb-1 block">Terms & Conditions</label>
-          <textarea value={config.terms.customText || ''} onChange={e => updateConfig('terms', { customText: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm h-32" />
+          <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-2 cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={showTerms} 
+              onChange={e => updateConfig('terms', { showTerms: e.target.checked })}
+            />
+            Show Terms & Conditions
+          </label>
+          {showTerms && (
+            <textarea value={config.terms.customText || ''} onChange={e => updateConfig('terms', { customText: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm h-32" />
+          )}
         </div>
       </div>
     );
