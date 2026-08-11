@@ -451,7 +451,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const clientState = (invoiceData as any)?.clientState || getFallback('Delhi');
   const clientCountry = (invoiceData as any)?.clientCountry || getFallback('India');
 
-  const cellPadding = (layout.compact || styleConfig.spacing === 'Compact') ? '6px' : '10px';
+  const cellPadding = (layout.compact || config.table.isCompact || styleConfig.spacing === 'Compact') ? '6px' : '10px';
   const items: any[] = invoiceData?.items || [];
 
   const subTotal = invoiceData?.subtotal !== undefined

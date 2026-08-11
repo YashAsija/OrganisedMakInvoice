@@ -178,6 +178,10 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
                         ...template.config.payment,
                         isCompact: isCompactChecked
                       },
+                      table: {
+                        ...template.config.table,
+                        isCompact: isCompactChecked
+                      },
                       header: {
                         ...template.config.header,
                         headerSize: isCompactChecked ? 'Small' : 'Medium'
@@ -409,6 +413,12 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
     return (
       <div className="space-y-4">
         <p className="text-xs text-slate-500 mb-2">Manage columns for your product table.</p>
+        <div>
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-2 cursor-pointer">
+              <input type="checkbox" checked={config.table.isCompact || false} onChange={e => updateConfig('table', { isCompact: e.target.checked })} />
+              Compact Section
+           </label>
+        </div>
         <div className="space-y-2 border border-slate-200 rounded-lg p-2 bg-slate-50">
            {ensureAllColumns(config.table.columns).map(col => (
              <div key={col.id} className="flex items-center gap-2 bg-white p-2 rounded border border-slate-100">

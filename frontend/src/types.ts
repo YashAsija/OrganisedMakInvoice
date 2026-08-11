@@ -236,6 +236,7 @@ export interface InvoiceTemplate {
     transport: { fields: string[]; isCompact?: boolean; showLabels?: boolean; };
     table: {
       columns: { id: string; visible: boolean; label: string; type: 'Text' | 'Number' | 'Currency' | 'Percentage' | 'Formula'; formula?: string; width?: string; order: number; }[];
+      isCompact?: boolean;
     };
     tax: { showTaxableAmount: boolean; showCgstSgst: boolean; showIgst: boolean; showCess: boolean; showDiscount: boolean; showRoundOff: boolean; showTotal: boolean; enableHsnSummary: boolean; enableGstSummary: boolean; enableTaxBreakdown: boolean; };
     payment: { generateQrCode: boolean; enableInstructions: boolean; customNote: string; isCompact?: boolean; };
