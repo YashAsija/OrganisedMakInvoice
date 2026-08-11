@@ -1593,9 +1593,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               );
 
               return (
-                <div id="section-payment" key="payment" style={{ ...getSectionStyle('payment'), textAlign: align, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', width: '100%' }}>
+                <div id="section-payment" key="payment" style={{ ...getSectionStyle('payment'), textAlign: align, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', width: '100%', marginBottom: config.payment.isCompact ? '4px' : undefined, paddingBottom: config.payment.isCompact ? '2px' : undefined }}>
                   <div className="font-bold text-gray-800 text-[10px] mb-1">Banking Information</div>
-                  <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap" style={{ textAlign: align, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+                  <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap" style={{ textAlign: align, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: config.payment.isCompact ? '6px' : '12px', marginTop: config.payment.isCompact ? '2px' : '4px' }}>
                     {isPaymentAfterTax ? (
                       <>
                         {detailsBlock}
@@ -1631,9 +1631,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             );
 
             return (
-              <div id="section-payment" key="payment" style={{ ...getSectionStyle('payment'), textAlign: payAlign }}>
+              <div id="section-payment" key="payment" style={{ ...getSectionStyle('payment'), textAlign: payAlign, marginBottom: config.payment.isCompact ? '4px' : undefined, paddingTop: config.payment.isCompact ? '4px' : undefined, paddingBottom: config.payment.isCompact ? '4px' : undefined }}>
                 <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0, color: '#64748b' }}>Payment Details</p>
-                <div style={{ display: 'flex', gap: '20px', marginTop: '10px', justifyContent: payJustify, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: config.payment.isCompact ? '10px' : '20px', marginTop: config.payment.isCompact ? '4px' : '10px', justifyContent: payJustify, alignItems: 'center' }}>
                   {isPaymentAfterTax ? (
                     <>
                       {detailsBlockLarge}

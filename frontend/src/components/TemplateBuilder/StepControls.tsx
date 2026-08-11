@@ -174,6 +174,10 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
                         ...template.config.transport,
                         isCompact: isCompactChecked
                       },
+                      payment: {
+                        ...template.config.payment,
+                        isCompact: isCompactChecked
+                      },
                       header: {
                         ...template.config.header,
                         headerSize: isCompactChecked ? 'Small' : 'Medium'
@@ -458,9 +462,15 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
     return (
       <div className="space-y-4">
         <div>
-           <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1 cursor-pointer">
               <input type="checkbox" checked={config.payment.generateQrCode} onChange={e => updateConfig('payment', { generateQrCode: e.target.checked })} />
               Generate QR Code for UPI automatically
+           </label>
+        </div>
+        <div>
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1 cursor-pointer">
+              <input type="checkbox" checked={config.payment.isCompact || false} onChange={e => updateConfig('payment', { isCompact: e.target.checked })} />
+              Compact Section
            </label>
         </div>
         <div>
