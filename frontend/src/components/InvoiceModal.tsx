@@ -1790,6 +1790,8 @@ export default function InvoiceModal({
       discountType,
       discountValue: Number(discountValue),
       discountTotal: parseFloat((totalItemDiscounts + calculatedDiscountTotal).toFixed(2)),
+      freightCharges: Number(freightCharges),
+      isFreightAdded,
       taxTotal: roundedTaxTotal,
       grandTotal: calculatedGrandTotal,
       status: status === 'draft' ? 'pending' : status,
