@@ -15,6 +15,25 @@ function InvoicePreviewContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previewScale, setPreviewScale] = useState(1);
+  const previewRef = React.useRef<HTMLDivElement>(null);
+  const [measuredHeight, setMeasuredHeight] = useState(1123);
+
+  useEffect(() => {
+    const element = previewRef.current;
+    if (!element) return;
+    setMeasuredHeight(element.scrollHeight || 1123);
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setMeasuredHeight(entry.target.scrollHeight || 1123);
+      }
+    });
+
+    resizeObserver.observe(element);
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [invoice]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -168,9 +187,7 @@ function InvoicePreviewContent() {
 
       {/* Styled Printable Preview Container */}
       {(() => {
-        const invoiceItems = invoice?.items || [];
-        const previewPagesCount = Math.max(1, 1 + Math.ceil(Math.max(0, invoiceItems.length - 8) / 7));
-        const previewHeight = 1123 * previewPagesCount + 40 * (previewPagesCount - 1);
+        const previewHeight = measuredHeight;
         return (
           <div 
             className="bg-white shadow-xl border border-slate-205 dark:border-zinc-800 relative rounded-none md:rounded-3xl overflow-hidden"
@@ -181,10 +198,11 @@ function InvoicePreviewContent() {
             }}
           >
             <div
+              ref={previewRef}
               className="invoice-print-sheet absolute top-0 left-0 origin-top-left"
               style={{
                 width: '794px',
-                height: `${previewHeight}px`,
+                height: 'auto',
                 transform: `scale(${previewScale})`,
                 transformOrigin: 'top left',
                 transition: 'transform 0.2s ease',
