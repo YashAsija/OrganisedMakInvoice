@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { getFinancialYearShort } from './InvoiceModal';
 
 import * as XLSX from 'xlsx';
 
@@ -79,7 +80,7 @@ import {
   ChevronDown,
 
   X,
-
+  RotateCcw,
   Printer as PrintIcon,
 
   Smartphone,
@@ -233,7 +234,8 @@ interface DashboardProps {
   onOpenInvoiceEditor: (invoice: Invoice | null) => void;
 
   onDeleteInvoice: (id: string) => void;
-
+  onRestoreInvoice?: (id: string) => void;
+  onHardDeleteInvoice?: (id: string) => void;
   onBulkDeleteInvoices: (ids: string[]) => void;
 
   onBulkUpdateInvoicesStatus: (ids: string[], status: InvoiceStatus) => void;
@@ -293,7 +295,8 @@ export default function Dashboard({
   onOpenInvoiceEditor,
 
   onDeleteInvoice,
-
+  onRestoreInvoice,
+  onHardDeleteInvoice,
   onBulkDeleteInvoices,
 
   onBulkUpdateInvoicesStatus,
@@ -371,16 +374,13 @@ export default function Dashboard({
 
 
   // States for Record Payment Modal
-
   const [paymentModalInv, setPaymentModalInv] = useState<Invoice | null>(null);
-
   const [paymentMethod, setPaymentMethod] = useState<string>('UPI');
-
   const [paymentAmount, setPaymentAmount] = useState<string>('');
-
   const [paymentNote, setPaymentNote] = useState<string>('');
-
   const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [isEditingTotalPaid, setIsEditingTotalPaid] = useState<boolean>(false);
+  const [editTotalPaidAmount, setEditTotalPaidAmount] = useState<string>('');
 
 
 
@@ -443,6 +443,7 @@ export default function Dashboard({
 
 
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [showBinView, setShowBinView] = useState(false);
 
   const [isDesktopSidebarExpanded, setIsDesktopSidebarExpanded] = useState(true);
 
@@ -4134,7 +4135,44 @@ export default function Dashboard({
 
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'all'>('all');
 
-  const [sortBy, setSortBy] = useState<string>('issue_date_desc');
+  const [ledgerSection, setLedgerSection] = useState<'invoice' | 'proforma' | 'credit_note' | 'debit_note' | 'quote'>('invoice');
+
+  const [purchaseLedgerSection, setPurchaseLedgerSection] = useState<'purchases' | 'purchase_order' | 'purchase_debit_note'>('purchases');
+
+  const [sectionSortMap, setSectionSortMap] = useState<Record<string, string>>(() => {
+    const defaults: Record<string, string> = {
+      invoice: 'issue_date_desc',
+      proforma: 'issue_date_desc',
+      credit_note: 'issue_date_desc',
+      debit_note: 'issue_date_desc',
+      quote: 'issue_date_desc',
+      purchases: 'issue_date_desc',
+      purchase_order: 'issue_date_desc',
+      purchase_debit_note: 'issue_date_desc',
+    };
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('makbills_section_sort_map');
+      if (saved) {
+        try {
+          return { ...defaults, ...JSON.parse(saved) };
+        } catch (e) {}
+      }
+    }
+    return defaults;
+  });
+
+  const currentSectionKey = activeTab === 'purchases' ? purchaseLedgerSection : ledgerSection;
+  const sortBy = sectionSortMap[currentSectionKey] || 'issue_date_desc';
+
+  const handleSetSortBy = useCallback((newSort: string) => {
+    setSectionSortMap(prev => {
+      const updated = { ...prev, [currentSectionKey]: newSort };
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('makbills_section_sort_map', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  }, [currentSectionKey]);
 
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
 
@@ -4604,7 +4642,7 @@ export default function Dashboard({
 
   const [reportClientFilter, setReportClientFilter] = useState('all');
 
-  const [ledgerSection, setLedgerSection] = useState<'invoice' | 'proforma' | 'credit_note' | 'debit_note' | 'quote'>('invoice');
+
 
 
 
@@ -4910,7 +4948,11 @@ export default function Dashboard({
 
   const [isPurchasesLedgerExpanded, setIsPurchasesLedgerExpanded] = useState(false);
 
-  const [purchaseLedgerSection, setPurchaseLedgerSection] = useState<'purchases' | 'purchase_order' | 'purchase_debit_note'>('purchases');
+
+
+  useEffect(() => {
+    setShowBinView(false);
+  }, [activeTab, ledgerSection, purchaseLedgerSection]);
 
 
 
@@ -4935,18 +4977,18 @@ export default function Dashboard({
 
 
   const sectionInvoices = useMemo(() => {
-
+    let filtered = [];
     if (activeTab === 'purchases') {
-
-      return invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === purchaseLedgerSection);
-
+      filtered = invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === purchaseLedgerSection);
+    } else {
+      // Exclude drafts from ledger listings — drafts belong exclusively to the Drafts page
+      filtered = invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === ledgerSection);
     }
-
-    // Exclude drafts from ledger listings — drafts belong exclusively to the Drafts page
-
-    return invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === ledgerSection);
-
-  }, [invoices, ledgerSection, purchaseLedgerSection, activeTab]);
+    if (showBinView) {
+      return filtered.filter(inv => inv.isDeleted);
+    }
+    return filtered.filter(inv => !inv.isDeleted);
+  }, [invoices, ledgerSection, purchaseLedgerSection, activeTab, showBinView]);
 
 
 
@@ -5039,57 +5081,32 @@ export default function Dashboard({
   // Non-draft Tax Invoices only for Global Billing Ledger totals & Analytics
 
   const allLedgerInvoices = useMemo(() => {
-
-    return invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === 'invoice');
-
+    return invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === 'invoice' && !inv.isDeleted);
   }, [invoices]);
 
-
-
   const totalBilled = allLedgerInvoices
-
     .reduce((sum, inv) => sum + (inv.status === 'paid' ? (inv.paidAmount ?? inv.grandTotal) : (inv.paidAmount ?? 0)), 0);
 
-
-
   const totalOutstanding = allLedgerInvoices
-
     .reduce((sum, inv) => sum + (inv.status === 'paid' ? 0 : Math.max(0, inv.grandTotal - (inv.paidAmount ?? 0))), 0);
 
-
-
   const totalTax = allLedgerInvoices
-
     .reduce((sum, inv) => sum + (inv.taxTotal || 0), 0);
 
-
-
   const totalDraft = invoices
-
-    .filter(inv => inv.status === 'draft')
-
+    .filter(inv => inv.status === 'draft' && !inv.isDeleted)
     .reduce((sum, inv) => sum + inv.grandTotal, 0);
 
-
-
   const activeLedgerStats = useMemo(() => {
-
     const targets = invoices.filter(inv => {
-
       if (inv.status === 'draft') return false;
-
+      if (showBinView ? !inv.isDeleted : inv.isDeleted) return false;
       const docType = getInvoiceDocumentType(inv);
-
       if (activeTab === 'purchases') {
-
         return docType === purchaseLedgerSection;
-
       } else {
-
         return docType === ledgerSection;
-
       }
-
     });
 
 
@@ -5210,9 +5227,9 @@ export default function Dashboard({
 
 
 
+    const fy = getFinancialYearShort(today);
     const prefix = prefixMap[section] || 'INV';
-
-    const num = `${prefix}-${paddedNum}`;
+    const num = `${prefix}-${fy}-${paddedNum}`;
 
 
 
@@ -5271,31 +5288,8 @@ export default function Dashboard({
       status: 'pending',
 
       invoiceType: typeMap[section],
-
       createdAt: today,
-
-      updatedAt: today,
-
-      embeddedTemplate: {
-
-        ...getDefaultTemplatePreset(),
-
-        config: {
-
-          ...getDefaultTemplatePreset().config,
-
-          header: {
-
-            ...getDefaultTemplatePreset().config.header,
-
-            invoiceTitle: titleMap[section]
-
-          }
-
-        }
-
-      }
-
+      updatedAt: today
     };
 
 
@@ -5862,17 +5856,38 @@ export default function Dashboard({
 
     const remaining = Math.max(0, inv.grandTotal - alreadyPaid);
 
-    setPaymentAmount(remaining.toFixed(2));
+    setPaymentAmount(remaining > 0 ? remaining.toFixed(2) : '0.00');
+
+    setEditTotalPaidAmount(alreadyPaid.toFixed(2));
+
+    setIsEditingTotalPaid(alreadyPaid > 0 && remaining <= 0);
 
     setPaymentMethod('UPI');
 
     setPaymentNote('');
 
-    setPaymentDate(new Date().toISOString().split('T')[0]);
-
+    setPaymentDate(inv.paidDate || new Date().toISOString().split('T')[0]);
   };
 
+  const handleResetInputs = () => {
+    setPaymentAmount('0.00');
+    setEditTotalPaidAmount('0.00');
+    emitNotification('Inputs Cleared', 'Payment input values reset to 0.00.', 'info');
+  };
 
+  const handleResetAndSavePayment = () => {
+    if (!paymentModalInv) return;
+    const updatedInv: Invoice = {
+      ...paymentModalInv,
+      status: 'pending',
+      paidAmount: 0,
+      paidDate: undefined,
+      updatedAt: new Date().toISOString(),
+    };
+    onUpdateInvoice(updatedInv);
+    emitNotification('Payment Reset', `Payment for ${paymentModalInv.invoiceNumber || 'document'} reset to 0.00 (Pending).`, 'info');
+    setPaymentModalInv(null);
+  };
 
   const handleSavePayment = (e: React.FormEvent) => {
 
@@ -5880,41 +5895,71 @@ export default function Dashboard({
 
     if (!paymentModalInv) return;
 
-    const thisPayment = parseFloat(paymentAmount) || 0;
 
-    const alreadyPaid = paymentModalInv.paidAmount || 0;
 
     const total = paymentModalInv.grandTotal;
 
-    const remaining = Math.max(0, total - alreadyPaid);
-
-    const sym = profile.currencySymbol || (profile.currency === 'INR' ? '\u20b9' : (profile.currency === 'USD' ? '$' : (profile.currency || '\u20b9')));
+    const sym = profile.currencySymbol || (profile.currency === 'INR' ? '₹' : (profile.currency === 'USD' ? '$' : (profile.currency || '₹')));
 
 
 
-    // Hard cap: never allow recording more than remaining
+    let newPaidAmount = 0;
 
-    if (thisPayment > remaining + 0.001) {
 
-      emitNotification('Invalid Amount', `Cannot record more than the remaining balance of ${sym}${remaining.toFixed(2)}.`, 'error');
 
-      return;
+    if (isEditingTotalPaid) {
+
+      const editedVal = parseFloat(editTotalPaidAmount);
+
+      if (isNaN(editedVal) || editedVal < 0) {
+
+        emitNotification('Invalid Amount', 'Please enter a valid paid amount.', 'error');
+
+        return;
+
+      }
+
+      if (editedVal > total + 0.001) {
+
+        emitNotification('Invalid Amount', `Cannot set paid amount greater than document total of ${sym}${total.toFixed(2)}.`, 'error');
+
+        return;
+
+      }
+
+      newPaidAmount = editedVal;
+
+    } else {
+
+      const thisPayment = parseFloat(paymentAmount) || 0;
+
+      const alreadyPaid = paymentModalInv.paidAmount || 0;
+
+      const remaining = Math.max(0, total - alreadyPaid);
+
+
+
+      if (thisPayment > remaining + 0.001) {
+
+        emitNotification('Invalid Amount', `Cannot record more than the remaining balance of ${sym}${remaining.toFixed(2)}.`, 'error');
+
+        return;
+
+      }
+
+      newPaidAmount = alreadyPaid + thisPayment;
 
     }
 
 
 
-    const newPaidAmount = alreadyPaid + thisPayment;
-
     const isFull = newPaidAmount >= total - 0.001;
 
-    const isPartial = thisPayment > 0 && !isFull;
+    const isPartial = newPaidAmount > 0 && !isFull;
 
     const newStatus: InvoiceStatus = isFull ? 'paid' : isPartial ? 'partially_paid' : 'pending';
 
 
-
-    // Update invoice with both new status and accumulated paidAmount
 
     const updatedInv: Invoice = {
 
@@ -5924,27 +5969,31 @@ export default function Dashboard({
 
       paidAmount: newPaidAmount,
 
-      paidDate: isFull ? new Date().toISOString().split('T')[0] : paymentModalInv.paidDate,
+      paidDate: newPaidAmount > 0 ? (paymentDate || paymentModalInv.paidDate || new Date().toISOString().split('T')[0]) : undefined,
 
       updatedAt: new Date().toISOString(),
 
     };
 
+
+
     onUpdateInvoice(updatedInv);
 
 
 
-    const statusLabel = isFull ? 'marked as PAID' : isPartial ? 'marked as PARTIALLY PAID' : 'kept as PENDING';
+    const statusLabel = isFull ? 'marked as PAID' : isPartial ? 'marked as PARTIALLY PAID' : 'reset to PENDING';
 
     emitNotification(
 
-      isFull ? 'Payment Recorded' : isPartial ? 'Partial Payment Recorded' : 'Payment Saved',
+      isFull ? 'Payment Updated' : isPartial ? 'Partial Payment Updated' : 'Payment Reset',
 
-      `${sym}${thisPayment.toFixed(2)} via ${paymentMethod} on ${paymentDate} \u2014 document ${statusLabel}.`,
+      `Total paid amount set to ${sym}${newPaidAmount.toFixed(2)} \u2014 document ${statusLabel}.`,
 
       isFull ? 'success' : 'info'
 
     );
+
+
 
     setPaymentModalInv(null);
 
@@ -7627,114 +7676,78 @@ export default function Dashboard({
 
 
             {/* Search, Action Header and Filters */}
-
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
-
-              <div className="flex items-center gap-2">
-
-                <h2 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight flex items-center gap-2" style={{fontFamily: "'Fraunces', serif"}}>
-
-                  <span className="w-3.5 h-px bg-[#0284c7] dark:bg-[#38bdf8] inline-block" />
-
-                  {activeTab === 'purchases'
-
-                    ? (purchaseLedgerSection === 'purchase_order' ? 'Purchase Orders Ledger' : purchaseLedgerSection === 'purchase_debit_note' ? 'Purchase Debit Notes Ledger' : 'Purchases Ledger')
-
-                    : (ledgerSection === 'proforma' ? 'Proforma Invoices Ledger' : ledgerSection === 'credit_note' ? 'Credit Notes Ledger' : ledgerSection === 'debit_note' ? 'Debit Notes Ledger' : ledgerSection === 'quote' ? 'Quotes & Estimates Ledger' : 'Invoices Ledger')}
-
-                </h2>
-
-                <span className="px-1.5 py-0.5 bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] rounded text-[9px] font-black" style={{fontFamily: "'IBM Plex Mono', monospace"}}>{filteredInvoices.length} Docs</span>
-
-              </div>
-
-              <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-
-                <button
-
-                  onClick={() => {
-
-                    setDraftsOrigin(activeTab === 'purchases' ? 'purchases' : 'sales');
-
-                    setDraftsSection('all');
-
-                    setActiveTab('drafts');
-
-                  }}
-
-                  className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 sm:py-1.5 bg-white dark:bg-[#111a36] border border-[#bae6fd] dark:border-[#223269] hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap"
-
-                >
-
-                  <FileText className="w-3.5 h-3.5" />
-
-                  <span>Drafts</span>
-
-                </button>
-
-                <button
-
-                  onClick={() => handleCreateDocumentForSection(activeTab === 'purchases' ? purchaseLedgerSection : ledgerSection)}
-
-                  className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 sm:py-1.5 bg-[#0284c7] dark:bg-[#38bdf8] border border-[#0369a1] dark:border-[#0284c7] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap"
-
-                >
-
-                  <Plus className="w-3.5 h-3.5" />
-
-                  <span>
-
+              <div className="flex items-center gap-2 min-w-0">
+                <h2 className="text-xs sm:text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight flex items-center gap-2 truncate" style={{fontFamily: "'Fraunces', serif"}}>
+                  <span className="w-3.5 h-px bg-[#0284c7] dark:bg-[#38bdf8] inline-block shrink-0" />
+                  <span className="truncate">
                     {activeTab === 'purchases'
-
-                      ? (purchaseLedgerSection === 'purchase_order' ? 'Create Purchase Order' : purchaseLedgerSection === 'purchase_debit_note' ? 'Create Debit Note' : 'Create Purchase Bill')
-
-                      : (ledgerSection === 'proforma' ? 'Create Proforma' : ledgerSection === 'credit_note' ? 'Create Credit Note' : ledgerSection === 'debit_note' ? 'Create Debit Note' : ledgerSection === 'quote' ? 'Create Quote' : 'Create Invoice')}
-
+                      ? (purchaseLedgerSection === 'purchase_order' ? 'Purchase Orders Ledger' : purchaseLedgerSection === 'purchase_debit_note' ? 'Purchase Debit Notes' : 'Purchases Ledger')
+                      : (ledgerSection === 'proforma' ? 'Proforma Invoices' : ledgerSection === 'credit_note' ? 'Credit Notes' : ledgerSection === 'debit_note' ? 'Debit Notes' : ledgerSection === 'quote' ? 'Quotes & Estimates' : 'Invoices Ledger')}
                   </span>
-
-                </button>
-
+                </h2>
+                <span className="px-1.5 py-0.5 bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] rounded text-[9px] font-black shrink-0" style={{fontFamily: "'IBM Plex Mono', monospace"}}>{filteredInvoices.length} Docs</span>
               </div>
 
+              <div className="flex items-center gap-1.5 sm:gap-3 w-full sm:w-auto">
+                <button
+                  onClick={() => {
+                    setDraftsOrigin(activeTab === 'purchases' ? 'purchases' : 'sales');
+                    setDraftsSection('all');
+                    setActiveTab('drafts');
+                  }}
+                  className="flex-1 sm:flex-none justify-center px-2.5 sm:px-4 py-2 sm:py-1.5 bg-white dark:bg-[#111a36] border border-[#bae6fd] dark:border-[#223269] hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1 sm:gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap"
+                >
+                  <FileText className="w-3.5 h-3.5 shrink-0" />
+                  <span>Drafts</span>
+                </button>
+                <button
+                  onClick={() => setShowBinView(!showBinView)}
+                  className={`flex-1 sm:flex-none justify-center px-2.5 sm:px-4 py-2 sm:py-1.5 ${showBinView ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700/50' : 'bg-white dark:bg-[#111a36] text-[#64748b] dark:text-[#94a3b8] border-[#e2e8f0] dark:border-[#223269] hover:bg-slate-50 dark:hover:bg-[#1b264f]'} border rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1 sm:gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap`}
+                >
+                  <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>{showBinView ? 'Exit Bin' : 'Bin'}</span>
+                </button>
+
+                <button
+                  onClick={() => handleCreateDocumentForSection(activeTab === 'purchases' ? purchaseLedgerSection : ledgerSection)}
+                  className="flex-[1.4] sm:flex-none justify-center px-3 sm:px-4 py-2 sm:py-1.5 bg-[#0284c7] dark:bg-[#38bdf8] border border-[#0369a1] dark:border-[#0284c7] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1 sm:gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 whitespace-nowrap"
+                >
+                  <Plus className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden sm:inline">
+                    {activeTab === 'purchases'
+                      ? (purchaseLedgerSection === 'purchase_order' ? 'Create Purchase Order' : purchaseLedgerSection === 'purchase_debit_note' ? 'Create Debit Note' : 'Create Purchase Bill')
+                      : (ledgerSection === 'proforma' ? 'Create Proforma' : ledgerSection === 'credit_note' ? 'Create Credit Note' : ledgerSection === 'debit_note' ? 'Create Debit Note' : ledgerSection === 'quote' ? 'Create Quote' : 'Create Invoice')}
+                  </span>
+                  <span className="sm:hidden">
+                    {activeTab === 'purchases'
+                      ? (purchaseLedgerSection === 'purchase_order' ? '+ PO' : purchaseLedgerSection === 'purchase_debit_note' ? '+ Debit Note' : '+ Bill')
+                      : (ledgerSection === 'proforma' ? '+ Proforma' : ledgerSection === 'credit_note' ? '+ Credit Note' : ledgerSection === 'debit_note' ? '+ Debit Note' : ledgerSection === 'quote' ? '+ Quote' : '+ Invoice')}
+                  </span>
+                </button>
+              </div>
             </div>
 
-
-
             {/* Search Input, status selection, and sort by filters */}
-
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 sm:gap-3 bg-[#e0f2fe]/30 dark:bg-[#1b264f]/20 p-2.5 sm:p-3 rounded-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60">
-
               <div className="sm:col-span-6 relative">
-
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#64748b]/60" />
-
                 <input 
-
                   type="text"
-
                   value={searchTerm}
-
                   onChange={(e) => setSearchTerm(e.target.value)}
-
                   placeholder="Search by client or invoice number..."
-
                   className="w-full pl-8 pr-3 py-1.5 sm:py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 focus:border-[#0284c7] dark:border-[#223269] rounded-xl text-xs text-[#0f172a] dark:text-white placeholder-[#0284c7]/30 dark:placeholder-[#38bdf8]/30 focus:outline-none transition-colors"
-
                 />
-
               </div>
 
-              <div className="sm:col-span-3 flex relative">
-
-                <select 
-
-                  value={statusFilter}
-
-                  onChange={(e) => setStatusFilter(e.target.value as InvoiceStatus | 'all')}
-
-                  className="w-full pl-3 pr-7 py-1.5 sm:py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269] rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#0284c7]/60 cursor-pointer transition-colors"
-
-                >
+              <div className="grid grid-cols-2 sm:col-span-6 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                <div className="flex relative">
+                  <select 
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as InvoiceStatus | 'all')}
+                    className="w-full pl-2.5 sm:pl-3 pr-7 py-1.5 sm:py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269] rounded-xl text-[11px] sm:text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#0284c7]/60 cursor-pointer transition-colors text-ellipsis overflow-hidden whitespace-nowrap"
+                  >
 
                   <option value="all">All Statuses</option>
 
@@ -7768,16 +7781,11 @@ export default function Dashboard({
 
               </div>
 
-              <div className="sm:col-span-3 flex relative">
-
+              <div className="flex relative">
                 <select 
-
                   value={sortBy}
-
-                  onChange={(e) => setSortBy(e.target.value)}
-
-                  className="w-full pl-3 pr-7 py-1.5 sm:py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269] rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#0284c7]/60 cursor-pointer transition-colors"
-
+                  onChange={(e) => handleSetSortBy(e.target.value)}
+                  className="w-full pl-2.5 sm:pl-3 pr-7 py-1.5 sm:py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269] rounded-xl text-[11px] sm:text-xs font-bold text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#0284c7]/60 cursor-pointer transition-colors text-ellipsis overflow-hidden whitespace-nowrap"
                 >
 
                   <option value="issue_date_desc">Issue Date (Newest)</option>
@@ -7797,10 +7805,9 @@ export default function Dashboard({
                   <option value="number_asc">Doc No (Lowest)</option>
 
                 </select>
-
               </div>
-
             </div>
+          </div>
 
 
 
@@ -8132,7 +8139,34 @@ export default function Dashboard({
 
                               >
 
-                                <button
+                                
+        {showBinView ? (
+          <>
+            <button
+              onClick={() => {
+                setActiveActionMenuId(null);
+                if (onRestoreInvoice) onRestoreInvoice(inv.id);
+              }}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-colors cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Restore Document</span>
+            </button>
+            <div className="border-t border-[#bae6fd]/25 dark:border-[#223269]/40 my-1"></div>
+            <button
+              onClick={() => {
+                setActiveActionMenuId(null);
+                if (onHardDeleteInvoice) onHardDeleteInvoice(inv.id);
+              }}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Permanently Delete</span>
+            </button>
+          </>
+        ) : (
+          <>
+<button
 
                                   onClick={() => {
 
@@ -8572,35 +8606,19 @@ export default function Dashboard({
 
 
 
-                                {inv.status !== 'paid' && (
-
-                                  <>
-
-                                    <button
-
-                                      onClick={() => {
-
-                                        setActiveActionMenuId(null);
-
-                                        handleRecordPayment(inv);
-
-                                      }}
-
-                                      className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
-
-                                    >
-
-                                      <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-
-                                      <span>Record Payment</span>
-
-                                    </button>
-
-                                    <div className="border-t border-[#bae6fd]/25 dark:border-[#223269]/40 my-1"></div>
-
-                                  </>
-
-                                )}
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setActiveActionMenuId(null);
+                                      handleRecordPayment(inv);
+                                    }}
+                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
+                                  >
+                                    <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>{(inv.paidAmount && inv.paidAmount > 0) || inv.status === 'paid' ? 'Record / Edit Payment' : 'Record Payment'}</span>
+                                  </button>
+                                  <div className="border-t border-[#bae6fd]/25 dark:border-[#223269]/40 my-1"></div>
+                                </>
 
 
 
@@ -8623,6 +8641,9 @@ export default function Dashboard({
                                   <span>Delete Invoice</span>
 
                                 </button>
+          </>
+        )}
+
 
                               </div>
 
@@ -8958,7 +8979,34 @@ export default function Dashboard({
 
                                 >
 
-                                  <button
+                                  
+        {showBinView ? (
+          <>
+            <button
+              onClick={() => {
+                setActiveActionMenuId(null);
+                if (onRestoreInvoice) onRestoreInvoice(inv.id);
+              }}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-colors cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Restore Document</span>
+            </button>
+            <div className="border-t border-[#bae6fd]/25 dark:border-[#223269]/40 my-1"></div>
+            <button
+              onClick={() => {
+                setActiveActionMenuId(null);
+                if (onHardDeleteInvoice) onHardDeleteInvoice(inv.id);
+              }}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Permanently Delete</span>
+            </button>
+          </>
+        ) : (
+          <>
+<button
 
                                     onClick={() => {
 
@@ -9398,35 +9446,19 @@ export default function Dashboard({
 
 
 
-                                {inv.status !== 'paid' && (
-
-                                  <>
-
-                                    <button
-
-                                      onClick={() => {
-
-                                        setActiveActionMenuId(null);
-
-                                        handleRecordPayment(inv);
-
-                                      }}
-
-                                      className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
-
-                                    >
-
-                                      <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-
-                                      <span>Record Payment</span>
-
-                                    </button>
-
-                                    <div className="border-t border-[#bae6fd]/25 dark:border-[#223269]/40 my-1"></div>
-
-                                  </>
-
-                                )}
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setActiveActionMenuId(null);
+                                      handleRecordPayment(inv);
+                                    }}
+                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
+                                  >
+                                    <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>{(inv.paidAmount && inv.paidAmount > 0) || inv.status === 'paid' ? 'Record / Edit Payment' : 'Record Payment'}</span>
+                                  </button>
+                                  <div className="border-t border-[#bae6fd]/25 dark:border-[#223269]/40 my-1"></div>
+                                </>
 
 
 
@@ -9449,6 +9481,9 @@ export default function Dashboard({
                                     <span>Delete Invoice</span>
 
                                   </button>
+          </>
+        )}
+
 
                                 </div>
 
@@ -9738,8 +9773,6 @@ export default function Dashboard({
 
                 { id: 'proforma', label: 'Proforma', count: draftCounts.proforma, activeColor: 'bg-sky-600 text-white shadow-sm' },
 
-                { id: 'debit_note', label: 'Debit Note', count: draftCounts.debit_note, activeColor: 'bg-indigo-600 text-white shadow-sm' },
-
                 { id: 'credit_note', label: 'Credit Note', count: draftCounts.credit_note, activeColor: 'bg-violet-600 text-white shadow-sm' },
 
                 { id: 'quote', label: 'Quotes / Est', count: draftCounts.quote, activeColor: 'bg-teal-600 text-white shadow-sm' }
@@ -9769,8 +9802,6 @@ export default function Dashboard({
                 { id: 'invoice', label: 'Tax Invoices', count: draftCounts.invoice, activeColor: 'bg-emerald-600 text-white shadow-sm' },
 
                 { id: 'proforma', label: 'Proforma', count: draftCounts.proforma, activeColor: 'bg-sky-600 text-white shadow-sm' },
-
-                { id: 'debit_note', label: 'Debit Notes', count: draftCounts.debit_note, activeColor: 'bg-indigo-600 text-white shadow-sm' },
 
                 { id: 'credit_note', label: 'Credit Notes', count: draftCounts.credit_note, activeColor: 'bg-violet-600 text-white shadow-sm' },
 
@@ -15216,11 +15247,33 @@ export default function Dashboard({
 
                   <div className="flex-1">
 
-                    <label className="block text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 dark:text-zinc-500 mb-1.5">
+                    <div className="flex items-center justify-between mb-1.5">
 
-                      {alreadyPaid > 0 ? 'Amount to Pay Now' : 'Amount Received'}
+                      <label className="block text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 dark:text-zinc-500">
 
-                    </label>
+                        {isEditingTotalPaid ? 'Total Paid Amount' : (alreadyPaid > 0 ? 'Amount to Add' : 'Amount Received')}
+
+                      </label>
+
+                      <button
+
+                        type="button"
+
+                        onClick={handleResetInputs}
+
+                        className="text-[10px] font-bold text-[#0284c7] hover:underline dark:text-[#38bdf8] flex items-center gap-1 cursor-pointer"
+
+                        title="Clear input values to 0.00"
+
+                      >
+
+                        <RotateCcw className="w-2.5 h-2.5" />
+
+                        <span>Reset Input</span>
+
+                      </button>
+
+                    </div>
 
                     <div className="relative">
 
@@ -15444,7 +15497,29 @@ export default function Dashboard({
 
               {/* Footer */}
 
-              <div className="px-6 pb-5 pt-1 flex gap-2.5">
+              <div className="px-6 pb-5 pt-1 flex flex-col sm:flex-row gap-2.5">
+
+                {(alreadyPaid > 0 || paymentModalInv.status === 'paid' || paymentModalInv.status === 'partially_paid') && (
+
+                  <button
+
+                    type="button"
+
+                    onClick={handleResetAndSavePayment}
+
+                    className="py-2.5 px-3 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/70 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+
+                    title="Reset recorded payment to 0.00 (Unpaid / Pending)"
+
+                  >
+
+                    <RotateCcw className="w-3.5 h-3.5" />
+
+                    <span>Reset Payment</span>
+
+                  </button>
+
+                )}
 
                 <button
 
@@ -15464,7 +15539,7 @@ export default function Dashboard({
 
                   type="submit"
 
-                  disabled={isOverpay || thisAmt <= 0}
+                  disabled={isOverpay || (!isEditingTotalPaid && thisAmt <= 0 && alreadyPaid === 0)}
 
                   className={`flex-1 py-2.5 rounded-xl text-white text-xs font-black transition-all cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ${
 
@@ -15476,7 +15551,7 @@ export default function Dashboard({
 
                       ? 'bg-sky-500 hover:bg-sky-600 shadow-sky-500/20'
 
-                      : 'bg-slate-300 dark:bg-slate-700'
+                      : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
 
                   }`}
 

@@ -451,7 +451,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const clientState = (invoiceData as any)?.clientState || getFallback('Delhi');
   const clientCountry = (invoiceData as any)?.clientCountry || getFallback('India');
 
-  const cellPadding = (layout.compact || config.table.isCompact || styleConfig.spacing === 'Compact') ? '6px' : '10px';
+  const isGlobalCompact = layout.compact === true || layout.margins === 'Compact' || styleConfig.spacing === 'Compact';
+  const cellPadding = (isGlobalCompact || config.table.isCompact) ? '6px' : '10px';
   const items: any[] = invoiceData?.items || [];
 
   const subTotal = invoiceData?.subtotal !== undefined
@@ -682,7 +683,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             const hasStateCode = compStateCodeFull.trim() !== '';
             const hasCountry = config.company.fields.includes('country') && compCountryFull.trim() !== '';
 
-            const isCompCompact = config.company.isCompact === true;
+            const isCompCompact = config.company.isCompact === true || isGlobalCompact;
             const showLabels = config.company.showLabels !== false;
             if (layout.type === 'Modal Classic') {
               if (!compLogo && !config.header.showLogo) return null;
@@ -756,7 +757,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               isEstimate ? 'Valid Until' : 
               isPurchaseOrder ? 'Expected Delivery' :
               'Due Date';
-            const isInvCompact = config.invoiceInfo.isCompact === true;
+            const isInvCompact = config.invoiceInfo.isCompact === true || isGlobalCompact;
             const showLabels = config.invoiceInfo.showLabels !== false;
             if (layout.type === 'Modal Classic') {
               const placeOfSupply = invoiceData?.placeOfSupply || getFallback('N/A');
@@ -804,7 +805,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           if (section.id === 'billTo') {
             const clientCountry = (invoiceData as any)?.clientCountry || (isInteractive ? "" : "India");
             const clientState = (invoiceData as any)?.clientState || (isInteractive ? "" : "Delhi");
-            const isClientCompact = config.client.isCompact === true;
+            const clientCompany = (invoiceData as any)?.clientCompanyName || (invoiceData as any)?.clientCompany || (isInteractive ? "" : "Acme Corp Ltd");
+            const isClientCompact = config.client.isCompact === true || isGlobalCompact;
             const showLabels = config.client.showLabels !== false;
             if (layout.type === 'Modal Classic') {
               const amigoIndex = orderedSections.filter(s => ['billTo', 'shipTo', 'transport'].includes(s.id)).findIndex(a => a.id === 'billTo');
@@ -815,9 +817,23 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 <div key="billTo" style={{ ...getSectionStyle('billTo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginBottom: '0px', marginTop: amigoIndex === 2 ? '-1px' : '5px' }}>
                   <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${isVertical ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
                     <h3 className={`font-bold ${isClientCompact ? 'text-[9.5px] mb-0.5' : 'text-[11px] mb-1'} text-gray-800 uppercase ${!isVertical && 'w-full mb-0'} whitespace-nowrap`}>{isPurchase ? 'BILL FROM' : 'BILLED TO'}</h3>
-                    {config.client.fields.includes('name') && <div className={`${isVertical ? `${isClientCompact ? 'text-[10px]' : 'text-[12px]'} font-medium text-gray-900 mb-0.5` : `flex items-center ${isClientCompact ? 'text-[9px]' : 'text-[10px]'}`}`}>{isVertical ? renderInteractive(clientName, 'clientName', 'text', isPurchase ? 'Supplier Name' : 'Client Name') : <>{showLabels && <span className="text-gray-500 font-medium mr-1">Name:</span>}<span className="text-gray-900 font-bold">{renderInteractive(clientName, 'clientName', 'text', isPurchase ? 'Supplier Name' : 'Client Name')}</span></>}</div>}
+                    {(config.client.fields.includes('companyName') || config.client.fields.includes('company')) ? (
+                      <>
+                        <div className={`${isVertical ? `${isClientCompact ? 'text-[10px]' : 'text-[12px]'} font-bold text-gray-900 mb-0.5` : `flex items-center ${isClientCompact ? 'text-[9px]' : 'text-[10px]'}`}`}>
+                          {isVertical ? renderInteractive(clientCompany, 'clientCompanyName', 'text', 'Company Name') : <>{showLabels && <span className="text-gray-500 font-medium mr-1">Company:</span>}<span className="text-gray-900 font-bold">{renderInteractive(clientCompany, 'clientCompanyName', 'text', 'Company Name')}</span></>}
+                        </div>
+                        {(config.client.fields.includes('name') || config.client.fields.includes('partyName')) && (
+                          isVertical ? <div className={`flex items-center ${isClientCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isClientCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Customer Name</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(clientName, 'clientName', 'text', isPurchase ? 'Supplier Name' : 'Customer Name')}</span></div> :
+                            <div className={`flex items-center ${isClientCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Customer:</span>}<span className="text-gray-900 font-bold">{renderInteractive(clientName, 'clientName', 'text', isPurchase ? 'Supplier Name' : 'Customer Name')}</span></div>
+                        )}
+                      </>
+                    ) : (
+                      (config.client.fields.includes('name') || config.client.fields.includes('partyName')) && (
+                        <div className={`${isVertical ? `${isClientCompact ? 'text-[10px]' : 'text-[12px]'} font-bold text-gray-900 mb-0.5` : `flex items-center ${isClientCompact ? 'text-[9px]' : 'text-[10px]'}`}`}>{isVertical ? renderInteractive(clientName, 'clientName', 'text', isPurchase ? 'Supplier Name' : 'Customer Name') : <>{showLabels && <span className="text-gray-500 font-medium mr-1">Name:</span>}<span className="text-gray-900 font-bold">{renderInteractive(clientName, 'clientName', 'text', isPurchase ? 'Supplier Name' : 'Customer Name')}</span></>}</div>
+                      )
+                    )}
                     {config.client.fields.includes('phone') && (
-                      isVertical ? <div className={`flex items-center ${isClientCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isClientCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Party Mobile No</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(clientPhone, 'clientPhone', 'text', 'Phone')}</span></div> :
+                      isVertical ? <div className={`flex items-center ${isClientCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isClientCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Customer Mobile No</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(clientPhone, 'clientPhone', 'text', 'Phone')}</span></div> :
                         <div className={`flex items-center ${isClientCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Mobile No:</span>}<span className="text-gray-900 font-bold">{renderInteractive(clientPhone, 'clientPhone', 'text', 'Phone')}</span></div>
                     )}
                     {config.client.fields.includes('email') && (
@@ -853,7 +869,18 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             return (
               <div key="billTo" style={getSectionStyle('billTo')}>
                 <h4 style={{ fontSize: isClientCompact ? '11px' : '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: isClientCompact ? '2px' : '5px', whiteSpace: 'nowrap' }}>{isPurchase ? 'Bill From' : 'Bill To'}</h4>
-                <h3 style={{ fontWeight: 'bold', fontSize: isClientCompact ? '12px' : '14px', color: '#1e293b' }}>{renderInteractive(clientName, 'clientName', 'text', isPurchase ? 'Supplier Name' : 'Client Name')}</h3>
+                {(config.client.fields.includes('companyName') || config.client.fields.includes('company')) ? (
+                  <>
+                    <h3 style={{ fontWeight: 'bold', fontSize: isClientCompact ? '12px' : '14px', color: '#1e293b' }}>{renderInteractive(clientCompany, 'clientCompanyName', 'text', 'Company Name')}</h3>
+                    {(config.client.fields.includes('name') || config.client.fields.includes('partyName')) && (
+                      <p style={{ fontSize: isClientCompact ? '10px' : '12px', margin: isClientCompact ? '0px' : '2px 0' }}>{showLabels && <strong>Customer Name: </strong>}{renderInteractive(clientName, 'clientName', 'text', isPurchase ? 'Supplier Name' : 'Customer Name')}</p>
+                    )}
+                  </>
+                ) : (
+                  (config.client.fields.includes('name') || config.client.fields.includes('partyName')) && (
+                    <h3 style={{ fontWeight: 'bold', fontSize: isClientCompact ? '12px' : '14px', color: '#1e293b' }}>{renderInteractive(clientName, 'clientName', 'text', isPurchase ? 'Supplier Name' : 'Customer Name')}</h3>
+                  )
+                )}
                 {config.client.fields.includes('address') && <>
                   <div style={{ fontSize: isClientCompact ? '10px' : '12px', margin: isClientCompact ? '0px' : '2px 0' }}>{showLabels && <strong>Country: </strong>}{renderSelectInteractive(clientCountryNM, 'clientCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</div>
                   <div style={{ fontSize: isClientCompact ? '10px' : '12px', margin: isClientCompact ? '0px' : '2px 0' }}>{showLabels && <strong>State: </strong>}{renderSelectInteractive(clientStateNM, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountryNM)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</div>
@@ -868,6 +895,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
           if (section.id === 'shipTo') {
             const shipName = (invoiceData as any)?.shippedToName || getFallback('Sameer Enterprises');
+            const shipCompany = (invoiceData as any)?.shippedToCompanyName || (invoiceData as any)?.shippedToCompany || (isInteractive ? "" : "Global Logistics Ltd");
             const shipPhone = (invoiceData as any)?.shippedToPhone || getFallback('+91 9999988888');
             const shipEmail = (invoiceData as any)?.shippedToEmail || getFallback('sameer@enterprises.com');
             const shipPan = (invoiceData as any)?.shippedToPan || getFallback('PANSM1234E');
@@ -876,7 +904,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             const shipAddr = (invoiceData as any)?.shippedToAddress || getFallback('Plot No. 45, Phase 3, Okhla Industrial Area, New Delhi');
             const shipGst = (invoiceData as any)?.shippedToGstin || getFallback('07SM123456789A1');
 
-            const isShipCompact = config.shipping.isCompact === true;
+            const isShipCompact = config.shipping.isCompact === true || isGlobalCompact;
             const showLabels = config.shipping.showLabels !== false;
             if (layout.type === 'Modal Classic') {
               const amigoIndex = orderedSections.filter(s => ['billTo', 'shipTo', 'transport'].includes(s.id)).findIndex(a => a.id === 'shipTo');
@@ -899,9 +927,23 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                       )}
                     </div>
                     <>
-                      {config.shipping.fields.includes('name') && <div className={`${isVertical ? `${isShipCompact ? 'text-[10px]' : 'text-[12px]'} font-medium text-gray-900 mb-0.5` : `flex items-center ${isShipCompact ? 'text-[9px]' : 'text-[10px]'}`}`}>{isVertical ? renderInteractive(shipName, 'shippedToName', 'text', isPurchase ? 'Supplier Name' : 'Client Name') : <>{showLabels && <span className="text-gray-500 font-medium mr-1">Name:</span>}<span className="text-gray-900 font-bold">{renderInteractive(shipName, 'shippedToName', 'text', isPurchase ? 'Supplier Name' : 'Client Name')}</span></>}</div>}
+                      {(config.shipping.fields.includes('companyName') || config.shipping.fields.includes('company')) ? (
+                        <>
+                          <div className={`${isVertical ? `${isShipCompact ? 'text-[10px]' : 'text-[12px]'} font-bold text-gray-900 mb-0.5` : `flex items-center ${isShipCompact ? 'text-[9px]' : 'text-[10px]'}`}`}>
+                            {isVertical ? renderInteractive(shipCompany, 'shippedToCompanyName', 'text', 'Company Name') : <>{showLabels && <span className="text-gray-500 font-medium mr-1">Company:</span>}<span className="text-gray-900 font-bold">{renderInteractive(shipCompany, 'shippedToCompanyName', 'text', 'Company Name')}</span></>}
+                          </div>
+                          {(config.shipping.fields.includes('name') || config.shipping.fields.includes('partyName')) && (
+                            isVertical ? <div className={`flex items-center ${isShipCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isShipCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Customer Name</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipName, 'shippedToName', 'text', isPurchase ? 'Supplier Name' : 'Customer Name')}</span></div> :
+                              <div className={`flex items-center ${isShipCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Customer:</span>}<span className="text-gray-900 font-bold">{renderInteractive(shipName, 'shippedToName', 'text', isPurchase ? 'Supplier Name' : 'Customer Name')}</span></div>
+                          )}
+                        </>
+                      ) : (
+                        (config.shipping.fields.includes('name') || config.shipping.fields.includes('partyName')) && (
+                          <div className={`${isVertical ? `${isShipCompact ? 'text-[10px]' : 'text-[12px]'} font-medium text-gray-900 mb-0.5` : `flex items-center ${isShipCompact ? 'text-[9px]' : 'text-[10px]'}`}`}>{isVertical ? renderInteractive(shipName, 'shippedToName', 'text', isPurchase ? 'Supplier Name' : 'Customer Name') : <>{showLabels && <span className="text-gray-500 font-medium mr-1">Name:</span>}<span className="text-gray-900 font-bold">{renderInteractive(shipName, 'shippedToName', 'text', isPurchase ? 'Supplier Name' : 'Customer Name')}</span></>}</div>
+                        )
+                      )}
                       {config.shipping.fields.includes('phone') && (
-                        isVertical ? <div className={`flex items-center ${isShipCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isShipCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Party Mobile No</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipPhone, 'shippedToPhone', 'text', 'Phone')}</span></div> :
+                        isVertical ? <div className={`flex items-center ${isShipCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isShipCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Customer Mobile No</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipPhone, 'shippedToPhone', 'text', 'Phone')}</span></div> :
                           <div className={`flex items-center ${isShipCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Mobile No:</span>}<span className="text-gray-900 font-bold">{renderInteractive(shipPhone, 'shippedToPhone', 'text', 'Phone')}</span></div>
                       )}
                       {config.shipping.fields.includes('email') && (
@@ -948,7 +990,18 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   )}
                 </div>
                 <>
-                  <h3 style={{ fontWeight: 'bold', fontSize: isShipCompact ? '12px' : '14px', color: '#1e293b' }}>{renderInteractive(shipName, "shippedToName", 'text', isPurchase ? 'Supplier Name' : 'Client Name')}</h3>
+                  {(config.shipping.fields.includes('companyName') || config.shipping.fields.includes('company')) ? (
+                    <>
+                      <h3 style={{ fontWeight: 'bold', fontSize: isShipCompact ? '12px' : '14px', color: '#1e293b' }}>{renderInteractive(shipCompany, 'shippedToCompanyName', 'text', 'Company Name')}</h3>
+                      {(config.shipping.fields.includes('name') || config.shipping.fields.includes('partyName')) && (
+                        <p style={{ fontSize: isShipCompact ? '10px' : '12px', margin: isShipCompact ? '0px' : '2px 0' }}>{showLabels && <strong>Customer Name: </strong>}{renderInteractive(shipName, 'shippedToName', 'text', isPurchase ? 'Supplier Name' : 'Customer Name')}</p>
+                      )}
+                    </>
+                  ) : (
+                    (config.shipping.fields.includes('name') || config.shipping.fields.includes('partyName')) && (
+                      <h3 style={{ fontWeight: 'bold', fontSize: isShipCompact ? '12px' : '14px', color: '#1e293b' }}>{renderInteractive(shipName, 'shippedToName', 'text', isPurchase ? 'Supplier Name' : 'Customer Name')}</h3>
+                    )
+                  )}
                   {config.shipping.fields.includes('address') && <>
                     <div style={{ fontSize: isShipCompact ? '10px' : '12px', margin: isShipCompact ? '0px' : '2px 0' }}>{showLabels && <strong>Country: </strong>}{renderSelectInteractive(shipCountry, 'shippedToCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</div>
                     <div style={{ fontSize: isShipCompact ? '10px' : '12px', margin: isShipCompact ? '0px' : '2px 0' }}>{showLabels && <strong>State: </strong>}{renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</div>
@@ -1005,12 +1058,17 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                     <tbody>
                       {activeItems.map((item, idx) => {
                         return (
-                          <tr key={idx} className="align-top text-[11px] relative group">
+                          <tr key={idx} className={`align-top ${(isGlobalCompact || config.table.isCompact) ? 'text-[9.5px]' : 'text-[11px]'} relative group`}>
                             {renderCols.map((col, colIdx) => (
-                              <td key={col.id} style={{ verticalAlign: 'top', borderBottom: idx === activeItems.length - 1 ? 'none' : '1px solid #d1d5db', borderRight: colIdx === renderCols.length - 1 ? 'none' : '1px solid #d1d5db' }} className={`${(layout.compact || config.table.isCompact || styleConfig.spacing === 'Compact') ? 'py-1.5 px-2' : 'py-3 px-3'} relative ${colIdx === 0 && isInteractive ? 'pl-7' : ''} ${col.id === 'sr' ? 'text-left text-gray-500' : 'text-left font-bold'}`}>
+                              <td key={col.id} style={{ verticalAlign: 'top', borderBottom: idx === activeItems.length - 1 ? 'none' : '1px solid #d1d5db', borderRight: colIdx === renderCols.length - 1 ? 'none' : '1px solid #d1d5db' }} className={`${(isGlobalCompact || config.table.isCompact) ? 'py-1.5 px-2' : 'py-3 px-3'} relative ${colIdx === 0 && isInteractive ? 'pl-7' : ''} ${col.id === 'sr' ? 'text-left text-gray-500' : 'text-left font-bold'}`}>
                                 {colIdx === 0 && isInteractive && onInteractiveRemoveItem && (
                                   <button
-                                    onClick={() => onInteractiveRemoveItem(item.id)}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      onInteractiveRemoveItem(item.id);
+                                    }}
                                     className={`print:hidden absolute left-1 ${(layout.compact || config.table.isCompact || styleConfig.spacing === 'Compact') ? 'top-[4px]' : 'top-[12px]'} text-rose-500 transition-opacity p-1 hover:bg-rose-50 rounded`}
                                     title="Remove Item"
                                   >
@@ -1023,10 +1081,10 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                                     {(item as any).description && <div className="text-[10px] text-gray-500 mt-0.5">{(item as any).description}</div>}
                                   </div>
                                 ) : col.id === 'hsn' ? renderItemInteractive(item.id, (item as any).hsnCode || (item as any).sacCode || '-', 'hsnCode') : col.id === 'qty' ? (
-                                  <div className="flex flex-col items-start">
+                                  <div className={`flex ${(isGlobalCompact || config.table.isCompact) ? 'flex-row items-baseline gap-1' : 'flex-col items-start'}`}>
                                     <div>{renderItemInteractive(item.id, item.quantity, 'quantity', 'number')}</div>
                                     {((item as any).quantityType || isInteractive) && (
-                                      <div className="text-[9px] text-gray-500 mt-0.5 font-normal normal-case">
+                                      <div className={`${(isGlobalCompact || config.table.isCompact) ? 'text-[9px] text-gray-500 font-normal normal-case' : 'text-[9px] text-gray-500 mt-0.5 font-normal normal-case'}`}>
                                         {renderItemInteractive(item.id, (item as any).quantityType || '', 'quantityType', 'text', 'type')}
                                       </div>
                                     )}
@@ -1110,7 +1168,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             return (
               <div key="productTable" style={{ ...getSectionStyle('productTable'), marginTop: '0px', gridColumn: 'span 12' }}>
                 <div style={{ border: styleConfig.borderStyle !== 'None' ? '1px solid #e2e8f0' : 'none', borderRadius: getBorderRadius(), overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '12px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: (isGlobalCompact || config.table.isCompact) ? '10.5px' : '12px' }}>
                   <thead>
                     <tr style={{ backgroundColor: styleConfig.tableHeaderBackground, color: styleConfig.tableHeaderTextColor }}>
                       {renderCols.map((col, idx) => (
@@ -1125,7 +1183,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                           <td key={col.id} style={{ padding: cellPadding, paddingLeft: colIdx === 0 && isInteractive ? '28px' : cellPadding, textAlign: 'left', position: colIdx === 0 ? 'relative' : undefined, verticalAlign: 'top', borderBottom: styleConfig.borderStyle !== 'None' && index !== activeItems.length - 1 ? '1px solid #e2e8f0' : 'none', borderRight: styleConfig.borderStyle !== 'None' && colIdx !== renderCols.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
                             {colIdx === 0 && isInteractive && onInteractiveRemoveItem && (
                               <button
-                                onClick={() => onInteractiveRemoveItem(item.id)}
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  onInteractiveRemoveItem(item.id);
+                                }}
                                 className="print:hidden absolute left-1 top-[6px] text-rose-500 transition-opacity p-1 hover:bg-rose-50 rounded"
                                 title="Remove Item"
                               >
@@ -1136,10 +1199,10 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                               col.id === 'name' ? renderItemInteractive(item.id, item.name, 'name') :
                                 col.id === 'hsn' ? renderItemInteractive(item.id, (item as any).hsnCode || (item as any).sacCode || '-', 'hsnCode') :
                                   col.id === 'qty' ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                    <div style={{ display: 'flex', flexDirection: (isGlobalCompact || config.table.isCompact) ? 'row' : 'column', alignItems: (isGlobalCompact || config.table.isCompact) ? 'baseline' : 'flex-start', gap: (isGlobalCompact || config.table.isCompact) ? '4px' : '0' }}>
                                       <div>{renderItemInteractive(item.id, item.quantity, 'quantity', 'number')}</div>
                                       {((item as any).quantityType || isInteractive) && (
-                                        <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px', fontWeight: 'normal' }}>
+                                        <div style={{ fontSize: '9px', color: '#64748b', marginTop: (isGlobalCompact || config.table.isCompact) ? '0' : '2px', fontWeight: 'normal' }}>
                                           {renderItemInteractive(item.id, (item as any).quantityType || '', 'quantityType', 'text', 'type')}
                                         </div>
                                       )}
@@ -1195,8 +1258,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             const transportName = (invoiceData as any)?.transportName || (invoiceData as any)?.transport || (isInteractive ? "" : "N/A");
             const poNumber = invoiceData?.poNumber || (isInteractive ? "" : "N/A");
             const grRrNo = invoiceData?.grRrNo || (isInteractive ? "" : "N/A");
+            const marka = (invoiceData as any)?.marka || (isInteractive ? "" : "MK-102");
 
-            const isTransCompact = config.transport.isCompact === true;
+            const isTransCompact = config.transport.isCompact === true || isGlobalCompact;
             const showLabels = config.transport.showLabels !== false;
             if (layout.type === 'Modal Classic') {
 
@@ -1254,6 +1318,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>GR/RR No.</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(grRrNo, 'grRrNo', 'text', 'GR/RR No')}</span></div> :
                         <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">GR/RR No:</span>}<span className="text-gray-900 font-bold">{renderInteractive(grRrNo, 'grRrNo', 'text', 'GR/RR No')}</span></div>
                     )}
+                    {(!config.transport?.fields || config.transport.fields.includes('marka')) && (
+                      isVertical ?
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Marka</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(marka, 'marka', 'text', 'Marka')}</span></div> :
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Marka:</span>}<span className="text-gray-900 font-bold">{renderInteractive(marka, 'marka', 'text', 'Marka')}</span></div>
+                    )}
                   </div>
                 </div>
               );
@@ -1270,6 +1339,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   {(!config.transport?.fields || config.transport.fields.includes('station')) && <div style={{ fontSize: isTransCompact ? '10px' : '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{showLabels && <strong>Station:</strong>} {renderInteractive(station || (isInteractive ? '' : 'Mumbai HQ'), 'station', 'text', 'Station')}</div>}
                   {(!config.transport?.fields || config.transport.fields.includes('driverMobile')) && <div style={{ fontSize: isTransCompact ? '10px' : '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{showLabels && <strong>Driver Mobile No:</strong>} {renderInteractive(driverMobile || (isInteractive ? '' : '+91 9876543210'), 'driverMobile', 'text', 'Driver Mobile')}</div>}
                   {(!config.transport?.fields || config.transport.fields.includes('grRrNo')) && <div style={{ fontSize: isTransCompact ? '10px' : '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{showLabels && <strong>GR/RR No:</strong>} {renderInteractive(grRrNo || (isInteractive ? '' : 'N/A'), 'grRrNo', 'text', 'GR/RR No')}</div>}
+                  {(!config.transport?.fields || config.transport.fields.includes('marka')) && <div style={{ fontSize: isTransCompact ? '10px' : '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{showLabels && <strong>Marka:</strong>} {renderInteractive(marka || (isInteractive ? '' : 'MK-102'), 'marka', 'text', 'Marka')}</div>}
                 </div>
               </div>
             );
@@ -1287,7 +1357,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               
               return (
                 <div id="section-taxEngine" key="taxEngine" style={{ ...getSectionStyle('taxEngine'), ...paddingStyle, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', width: '100%' }}>
-                  <div className="space-y-2 text-[11px] w-full max-w-[240px]">
+                  <div className={`space-y-${(isGlobalCompact || config.table?.isCompact) ? '1' : '2'} ${(isGlobalCompact || config.table?.isCompact) ? 'text-[9.5px]' : 'text-[11px]'} w-full max-w-[240px]`}>
                     {config.tax.showTotal && (
                       <div className="flex justify-between text-gray-600">
                         <span>Sub Total</span>
@@ -1332,28 +1402,50 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                       )
                     )}
                     {/* Discount row - always visible for every template */}
-                    {((invoiceData?.discountTotal || 0) > 0 || (invoiceData?.discountValue || 0) > 0 || isInteractive) && (
-                      <div className="flex justify-between" style={{ color: '#e11d48' }}>
-                        <span
-                          style={isInteractive ? { cursor: 'pointer', textDecoration: 'underline dashed', textUnderlineOffset: '2px' } : {}}
-                          onClick={() => {
-                            if (isInteractive && onUpdateField) {
-                              const nextType = invoiceData?.discountType === 'none' ? 'percent' : invoiceData?.discountType === 'percent' ? 'flat' : 'none';
-                              onUpdateField('discountType', nextType);
-                              if (nextType === 'none') onUpdateField('discountValue', '0');
-                            }
-                          }}
-                          title={isInteractive ? 'Click to toggle discount type (None, %, Flat)' : ''}
-                        >
-                          Discount {invoiceData?.discountType === 'percent' ? '(%)' : invoiceData?.discountType === 'flat' ? '(Flat)' : '(Add)'}
-                        </span>
-                        {(invoiceData?.discountType !== 'none' || (invoiceData?.discountValue || 0) > 0) && (
-                          <span>
-                            {invoiceData?.discountType === 'percent' ? `${invoiceData?.discountValue}%` : `- ${currencySymbol}`} {renderInteractive(invoiceData?.discountValue || 0, 'discountValue', 'text', 'Amount')}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    {((invoiceData?.discountTotal || 0) > 0 || (invoiceData?.discountValue || 0) > 0 || isInteractive) && (() => {
+                      const discVal = Number(invoiceData?.discountValue || 0);
+                      const discType = invoiceData?.discountType || 'none';
+                      const isDiscPercent = discType === 'percent';
+                      const isDiscFlat = discType === 'flat';
+                      const isDiscNone = discType === 'none';
+                      const calcDiscTotal = isDiscPercent
+                        ? parseFloat(((subTotal * discVal) / 100).toFixed(2))
+                        : (invoiceData?.discountTotal !== undefined && invoiceData?.discountTotal !== 0 ? invoiceData.discountTotal : discVal);
+
+                      return (
+                        <div className="flex justify-between items-center" style={{ color: '#e11d48', margin: '4px 0' }}>
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              style={isInteractive ? { cursor: 'pointer', textDecoration: 'underline dashed', textUnderlineOffset: '2px' } : {}}
+                              onClick={() => {
+                                if (isInteractive && onUpdateField) {
+                                  const nextType = isDiscNone ? 'percent' : isDiscPercent ? 'flat' : 'none';
+                                  onUpdateField('discountType', nextType);
+                                  if (nextType === 'none') onUpdateField('discountValue', '0');
+                                }
+                              }}
+                              title={isInteractive ? 'Click to toggle discount mode (Percent %, Flat Amount, Off)' : ''}
+                            >
+                              Discount {isDiscPercent ? '(%)' : isDiscFlat ? '(Flat)' : '(Off)'}
+                            </span>
+                            {isDiscPercent && isInteractive && (
+                              <span className="inline-flex items-center text-xs font-semibold text-rose-600">
+                                ({renderInteractive(discVal, 'discountValue', 'text', '0')}%)
+                              </span>
+                            )}
+                          </div>
+                          {(calcDiscTotal > 0 || discVal > 0 || isInteractive) && (
+                            <div className="flex items-center">
+                              {isDiscPercent ? (
+                                <span>- {currencySymbol} {calcDiscTotal.toFixed(2)}</span>
+                              ) : (
+                                <span>- {currencySymbol} {renderInteractive(discVal, 'discountValue', 'text', '0.00')}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                     {hasTaxCol && (
                       isCustomTax ? (
                         <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-2">
@@ -1431,28 +1523,50 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             );
 
             const discountRow = (
-              ((invoiceData?.discountTotal || 0) > 0 || (invoiceData?.discountValue || 0) > 0 || isInteractive) && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', color: '#e11d48' }}>
-                  <span
-                    style={isInteractive ? { cursor: 'pointer', textDecoration: 'underline dashed', textUnderlineOffset: '2px' } : {}}
-                    onClick={() => {
-                      if (isInteractive && onUpdateField) {
-                        const nextType = invoiceData?.discountType === 'none' ? 'percent' : invoiceData?.discountType === 'percent' ? 'flat' : 'none';
-                        onUpdateField('discountType', nextType);
-                        if (nextType === 'none') onUpdateField('discountValue', '0');
-                      }
-                    }}
-                    title={isInteractive ? 'Click to toggle discount type (None, %, Flat)' : ''}
-                  >
-                    Discount {invoiceData?.discountType === 'percent' ? '(%)' : invoiceData?.discountType === 'flat' ? '(Flat)' : '(Add)'}
-                  </span>
-                  {(invoiceData?.discountType !== 'none' || (invoiceData?.discountValue || 0) > 0) && (
-                    <span style={{ display: 'flex', alignItems: 'center' }}>
-                      {invoiceData?.discountType === 'percent' ? `${invoiceData?.discountValue}%` : `- ${currencySymbol}`} {renderInteractive(invoiceData?.discountValue || 0, 'discountValue', 'text', 'Amount')}
-                    </span>
-                  )}
-                </div>
-              )
+              ((invoiceData?.discountTotal || 0) > 0 || (invoiceData?.discountValue || 0) > 0 || isInteractive) && (() => {
+                const discVal = Number(invoiceData?.discountValue || 0);
+                const discType = invoiceData?.discountType || 'none';
+                const isDiscPercent = discType === 'percent';
+                const isDiscFlat = discType === 'flat';
+                const isDiscNone = discType === 'none';
+                const calcDiscTotal = isDiscPercent
+                  ? parseFloat(((subTotal * discVal) / 100).toFixed(2))
+                  : (invoiceData?.discountTotal !== undefined && invoiceData?.discountTotal !== 0 ? invoiceData.discountTotal : discVal);
+
+                return (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '12px', color: '#e11d48' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span
+                        style={isInteractive ? { cursor: 'pointer', textDecoration: 'underline dashed', textUnderlineOffset: '2px' } : {}}
+                        onClick={() => {
+                          if (isInteractive && onUpdateField) {
+                            const nextType = isDiscNone ? 'percent' : isDiscPercent ? 'flat' : 'none';
+                            onUpdateField('discountType', nextType);
+                            if (nextType === 'none') onUpdateField('discountValue', '0');
+                          }
+                        }}
+                        title={isInteractive ? 'Click to toggle discount mode (Percent %, Flat Amount, Off)' : ''}
+                      >
+                        Discount {isDiscPercent ? '(%)' : isDiscFlat ? '(Flat)' : '(Off)'}
+                      </span>
+                      {isDiscPercent && isInteractive && (
+                        <span style={{ fontSize: '12px', fontWeight: 600 }}>
+                          ({renderInteractive(discVal, 'discountValue', 'text', '0')}%)
+                        </span>
+                      )}
+                    </div>
+                    {(calcDiscTotal > 0 || discVal > 0 || isInteractive) && (
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        {isDiscPercent ? (
+                          <span>- {currencySymbol} {calcDiscTotal.toFixed(2)}</span>
+                        ) : (
+                          <span>- {currencySymbol} {renderInteractive(discVal, 'discountValue', 'text', '0.00')}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
             );
 
             return (

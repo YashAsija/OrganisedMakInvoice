@@ -28,20 +28,36 @@ interface InvoiceModalProps {
   onSave: (inv: Invoice) => void;
 }
 
-const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesList: Invoice[], docType: string = 'invoice') => {
+export const getFinancialYearShort = (dateInput?: string | Date): string => {
+  const d = dateInput ? new Date(dateInput) : new Date();
+  const year = isNaN(d.getTime()) ? new Date().getFullYear() : d.getFullYear();
+  const month = isNaN(d.getTime()) ? new Date().getMonth() : d.getMonth();
+  const startYear = month >= 3 ? year : year - 1;
+  const endYear = startYear + 1;
+  const y1 = String(startYear).slice(-2);
+  const y2 = String(endYear).slice(-2);
+  return `${y1}-${y2}`;
+};
+
+const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesList: Invoice[], docType: string = 'invoice', docDate?: string) => {
   const defaultPrefixes: Record<string, string> = {
     invoice: 'INV',
     proforma: 'PRO',
     debit_note: 'DN',
     credit_note: 'CN',
     estimate: 'EST',
-    quote: 'EST'
+    quote: 'EST',
+    purchases: 'PUR',
+    purchase_order: 'PO',
+    purchase_debit_note: 'PDN'
   };
   const prefix = prefixInput ? String(prefixInput).trim() : (defaultPrefixes[docType] || 'INV');
   const starting = startingInput !== undefined && startingInput !== null && String(startingInput).trim() !== '' ? String(startingInput).trim() : '1';
 
+  const fy = getFinancialYearShort(docDate);
+  const formatPrefix = `${prefix}-${fy}-`; // e.g. "INV-26-27-"
   const currentYear = new Date().getFullYear();
-  const formatPrefix = `${prefix}-${currentYear}-`; // e.g. "INV-2026-"
+  const oldFormatPrefix = `${prefix}-${currentYear}-`; // e.g. "INV-2026-"
 
   // Extract digits from starting input suffix
   const match = starting.match(/^(.*?)(\d+)$/);
@@ -52,12 +68,20 @@ const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesL
   let maxNum = startNum - 1;
   if (invoicesList && invoicesList.length > 0) {
     invoicesList.forEach(inv => {
-      if (inv.status === 'draft') {
+      if (inv.status === 'draft' || inv.isDeleted === true) {
         return;
       }
       const invNum = inv.invoiceNumber || '';
       if (invNum.startsWith(formatPrefix)) {
         const suffix = invNum.substring(formatPrefix.length);
+        if (/^\d+$/.test(suffix)) {
+          const num = parseInt(suffix, 10);
+          if (num > maxNum) {
+            maxNum = num;
+          }
+        }
+      } else if (invNum.startsWith(oldFormatPrefix)) {
+        const suffix = invNum.substring(oldFormatPrefix.length);
         if (/^\d+$/.test(suffix)) {
           const num = parseInt(suffix, 10);
           if (num > maxNum) {
@@ -145,6 +169,9 @@ export default function InvoiceModal({
   const [driverMobile, setDriverMobile] = useState('');
   const [station, setStation] = useState('');
   const [ewayBillNo, setEwayBillNo] = useState('');
+  const [marka, setMarka] = useState('');
+  const [clientCompanyName, setClientCompanyName] = useState('');
+  const [shippedToCompanyName, setShippedToCompanyName] = useState('');
   const [shippedToName, setShippedToName] = useState('');
   const [shippedToPhone, setShippedToPhone] = useState('');
   const [shippedToEmail, setShippedToEmail] = useState('');
@@ -348,6 +375,8 @@ export default function InvoiceModal({
       purchases: 'preset_mak_purchases'
     };
     const defaultPresetId = presetDocMap[normType] || 'preset_modal_classic';
+    const matchCustomDefault = customTemplates.find(t => t.id === defaultPresetId);
+    if (matchCustomDefault) return matchCustomDefault;
     const builtInPreset = TEMPLATE_PRESETS.find(t => t.id === defaultPresetId);
     if (builtInPreset) return builtInPreset;
 
@@ -365,6 +394,22 @@ export default function InvoiceModal({
 
   // Helper: load the correct default template from storage
   const loadDefaultTemplate = useCallback((typeToUse?: string) => {
+    // If user edited/updated this template in TemplateManager, load the latest version from customTemplates
+    const targetId = invoice?.embeddedTemplate?.id || invoice?.selectedCustomTemplateId;
+    if (targetId) {
+      const savedCustom = localStorage.getItem('makbills_custom_templates');
+      if (savedCustom) {
+        try {
+          const parsed = JSON.parse(savedCustom);
+          const match = parsed.find((t: InvoiceTemplate) => t.id === targetId);
+          if (match) {
+            setActiveTemplate(match);
+            return;
+          }
+        } catch (e) {}
+      }
+    }
+
     // If an exact snapshot of the template was embedded in the invoice, use it to ensure historical consistency
     if (invoice?.embeddedTemplate) {
       setActiveTemplate(invoice.embeddedTemplate);
@@ -479,7 +524,7 @@ export default function InvoiceModal({
       setQrCodeTriggerUrl(invoice.qrCodeTriggerUrl || '');
       setClientGstin(invoice.clientGstin || '');
       setClientPan((invoice as any).clientPan || '');
-      setHasTransport(!!(invoice.placeOfSupply || invoice.transport || invoice.grRrNo || invoice.vehicleNo || invoice.driverMobile || invoice.station || invoice.ewayBillNo));
+      setHasTransport(!!(invoice.placeOfSupply || invoice.transport || invoice.grRrNo || invoice.vehicleNo || invoice.driverMobile || invoice.station || invoice.ewayBillNo || (invoice as any).marka));
       setPlaceOfSupply(invoice.placeOfSupply || '');
       setGrRrNo(invoice.grRrNo || '');
       setTransport(invoice.transport || '');
@@ -487,6 +532,9 @@ export default function InvoiceModal({
       setDriverMobile(invoice.driverMobile || '');
       setStation(invoice.station || '');
       setEwayBillNo(invoice.ewayBillNo || '');
+      setMarka((invoice as any).marka || '');
+      setClientCompanyName((invoice as any).clientCompanyName || '');
+      setShippedToCompanyName((invoice as any).shippedToCompanyName || '');
       setShippedToName(invoice.shippedToName || '');
       setShippedToPhone(invoice.shippedToPhone || '');
       setShippedToEmail(invoice.shippedToEmail || '');
@@ -1091,6 +1139,9 @@ export default function InvoiceModal({
       driverMobile: silent ? driverMobile : (driverMobile.trim() || undefined),
       station: silent ? station : (station.trim() || undefined),
       ewayBillNo: silent ? ewayBillNo : (ewayBillNo.trim() || undefined),
+      marka: silent ? marka : (marka.trim() || undefined),
+      clientCompanyName: silent ? clientCompanyName : (clientCompanyName.trim() || undefined),
+      shippedToCompanyName: silent ? shippedToCompanyName : (shippedToCompanyName.trim() || undefined),
       shippedToName: silent ? shippedToName : (shippedToName.trim() || undefined),
       shippedToPhone: silent ? shippedToPhone : (shippedToPhone.trim() || undefined),
       shippedToEmail: silent ? shippedToEmail : (shippedToEmail.trim() || undefined),
@@ -1112,7 +1163,8 @@ export default function InvoiceModal({
     items, discountType, discountValue, shippedToName, shippedToPhone,
     shippedToEmail, shippedToPan, shippedToState, shippedToCountry,
     shippedToGstin, shippedToAddress,
-    transport, vehicleNo, driverMobile, station, ewayBillNo, grRrNo,
+    transport, vehicleNo, driverMobile, station, ewayBillNo, grRrNo, marka,
+    clientCompanyName, shippedToCompanyName,
     placeOfSupply, calculatedSubtotal, roundedTaxTotal, calculatedGrandTotal,
   ]);
 
@@ -1186,7 +1238,7 @@ export default function InvoiceModal({
 
   // A stable ID for this WIP invoice. Generated once on first edit, reused.
   // If we're editing an existing invoice, use its ID; otherwise generate a new one.
-  const draftIdRef = useRef<string>(invoice?.id ?? `inv_draft_${Math.random().toString(36).substr(2, 9)}`);
+  const draftIdRef = useRef<string>((invoice?.id || '').trim() !== '' ? invoice!.id : `inv_draft_${Math.random().toString(36).substr(2, 9)}`);
 
   // Tracks the real authenticated userId — updated whenever the session is available.
   // Used by buildAndSave() so sendBeacon payloads always carry the correct userId.
@@ -1199,7 +1251,7 @@ export default function InvoiceModal({
 
   // Reset draftId when the modal opens for a brand-new invoice
   useEffect(() => {
-    if (isOpen && !invoice) {
+    if (isOpen && (!invoice || (invoice.id || '').trim() === '')) {
       draftIdRef.current = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
     } else if (isOpen && invoice) {
       draftIdRef.current = invoice.id;
@@ -1220,7 +1272,16 @@ export default function InvoiceModal({
     const storageKey = `invoice_maker_invoices${suffix}`;
     try {
       const pendingDraftId = localStorage.getItem('makbills_pending_resume_draft');
-      if (!pendingDraftId) {
+      if (!pendingDraftId || !pendingDraftId.startsWith('inv_draft_')) {
+        localStorage.removeItem('makbills_pending_resume_draft');
+        setResumableDraft(null);
+        return;
+      }
+
+      // Check if this pendingDraftId belongs to an already saved billed document
+      const isAlreadyBilledDoc = (invoices || []).some(i => i.id === pendingDraftId && i.status !== 'draft');
+      if (isAlreadyBilledDoc) {
+        localStorage.removeItem('makbills_pending_resume_draft');
         setResumableDraft(null);
         return;
       }
@@ -1249,7 +1310,7 @@ export default function InvoiceModal({
     } catch {
       setResumableDraft(null);
     }
-  }, [isOpen, invoice]);
+  }, [isOpen, invoice, invoices]);
 
   // Helper: get the correct storage key for this user
   const getStorageKey = useCallback(() => {
@@ -1260,13 +1321,23 @@ export default function InvoiceModal({
 
   // Core save-to-localStorage function (synchronous, safe for unload)
   const saveDraftToLocalStorage = useCallback((draftInvoice: any) => {
+    // NEVER save or set as draft if ID is not a temporary inv_draft_ prefix
+    if (!draftInvoice.id || !draftInvoice.id.startsWith('inv_draft_')) {
+      return;
+    }
     try {
       const storageKey = getStorageKey();
       const raw = localStorage.getItem(storageKey);
       const all = raw ? JSON.parse(raw) : [];
       const idx = all.findIndex((i: any) => i.id === draftInvoice.id);
-      if (idx > -1) all[idx] = draftInvoice;
-      else all.push(draftInvoice);
+      if (idx > -1) {
+        if (all[idx].status && all[idx].status !== 'draft') {
+          return; // Do NOT overwrite an already billed invoice
+        }
+        all[idx] = draftInvoice;
+      } else {
+        all.push(draftInvoice);
+      }
       localStorage.setItem(storageKey, JSON.stringify(all));
     } catch (err) {
       console.error('[draft] localStorage save failed', err);
@@ -1285,6 +1356,8 @@ export default function InvoiceModal({
   // Watch all key form fields — debounce the save
   useEffect(() => {
     if (!isOpen) return;
+    // CRITICAL: Do NOT autosave as draft if editing an existing billed invoice OR if ID is not a temporary draft
+    if ((invoice && invoice.status !== 'draft') || !draftIdRef.current.startsWith('inv_draft_')) return;
 
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
 
@@ -1331,7 +1404,7 @@ export default function InvoiceModal({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    isOpen, clientName, clientEmail, clientPhone, clientAddress, notes, invoiceTerms,
+    isOpen, invoice, clientName, clientEmail, clientPhone, clientAddress, notes, invoiceTerms,
     items, discountType, discountValue, referenceNumber, poNumber, deliveryNote,
     shippedToName, shippedToPhone, shippedToEmail, shippedToAddress,
     transport, vehicleNo, driverMobile, station, ewayBillNo, grRrNo, placeOfSupply,
@@ -1340,6 +1413,9 @@ export default function InvoiceModal({
   // ─── Unload handlers: beforeunload + visibilitychange ──────────────────────
   useEffect(() => {
     const buildAndSave = () => {
+      // CRITICAL: Do NOT save draft on reload if editing an existing billed invoice OR if ID is not a temporary draft
+      if ((invoice && invoice.status !== 'draft') || !draftIdRef.current.startsWith('inv_draft_')) return;
+
       const draft = buildTempInvoiceRef.current(true);
       if (!draft) return;
 
@@ -1845,18 +1921,21 @@ export default function InvoiceModal({
       const raw = localStorage.getItem(storageKey);
       if (raw) {
         const all = JSON.parse(raw) as any[];
-        // Remove old draft entry (by savedDraftId) — finalInvoiceObj (new UUID) will be added by onSave
-        const filtered = all.filter((i: any) => i.id !== savedDraftId);
+        // Remove temporary draft entry if it existed
+        const filtered = all.filter((i: any) => i.id !== savedDraftId || (i.status && i.status !== 'draft'));
         localStorage.setItem(storageKey, JSON.stringify(filtered));
       }
     } catch { /* ignore */ }
-    // Also clean up the draft from Supabase (use savedDraftId, NOT finalInvoiceId,
-    // so we never accidentally delete the newly-saved real invoice)
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user && savedDraftId.startsWith('inv_draft_')) {
-        supabase.from('invoices').delete().eq('id', savedDraftId).then(() => { });
-      }
-    });
+    // Also clean up temporary draft from Supabase (ONLY if savedDraftId was a temp draft)
+    if (savedDraftId.startsWith('inv_draft_')) {
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session?.user) {
+          supabase.from('invoices').delete().eq('id', savedDraftId).then(() => { });
+        }
+      });
+    }
+    // Reset draftIdRef to a new temp draft ID
+    draftIdRef.current = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
 
     const docTypeNames: Record<string, string> = {
       proforma: 'Proforma Invoice',
@@ -2051,18 +2130,23 @@ export default function InvoiceModal({
                 <button
                   type="button"
                   onClick={async () => {
-                    // Discard: remove from localStorage + Supabase
+                    const draftIdToDiscard = resumableDraft?.id;
                     try {
                       const storageKey = getStorageKey();
                       const raw = localStorage.getItem(storageKey);
-                      if (raw) {
+                      if (raw && draftIdToDiscard) {
                         const all = JSON.parse(raw) as any[];
-                        localStorage.setItem(storageKey, JSON.stringify(all.filter((i: any) => i.id !== resumableDraft.id)));
+                        // ONLY remove draft records, preserve any real non-draft documents
+                        localStorage.setItem(storageKey, JSON.stringify(all.filter((i: any) => i.id !== draftIdToDiscard || i.status !== 'draft')));
                       }
                     } catch { /* ignore */ }
-                    try {
-                      await supabase.from('invoices').delete().eq('id', resumableDraft.id);
-                    } catch { /* ignore */ }
+                    // SAFETY CHECK: ONLY delete from Supabase if ID starts with 'inv_draft_'!
+                    // NEVER delete real billed documents!
+                    if (draftIdToDiscard && draftIdToDiscard.startsWith('inv_draft_')) {
+                      try {
+                        await supabase.from('invoices').delete().eq('id', draftIdToDiscard);
+                      } catch { /* ignore */ }
+                    }
                     try {
                       localStorage.removeItem('makbills_pending_resume_draft');
                     } catch { /* ignore */ }
@@ -2122,7 +2206,7 @@ export default function InvoiceModal({
                     if (currentWip) {
                       const hasName = currentWip.clientName && currentWip.clientName.trim() !== '' && !currentWip.clientName.startsWith('Guest-') && currentWip.clientName !== 'Quote / Estimate';
                       const hasItems = Array.isArray(currentWip.items) && currentWip.items.length > 0;
-                      if (hasName || hasItems) {
+                      if (currentWip && (!invoice || (invoice as any).status === 'draft') && draftIdRef.current.startsWith('inv_draft_')) {
                         const draftToSave = {
                           ...currentWip,
                           id: draftIdRef.current,
@@ -2177,7 +2261,7 @@ export default function InvoiceModal({
                         if (currentWip) {
                           const hasName = currentWip.clientName && currentWip.clientName.trim() !== '' && !currentWip.clientName.startsWith('Guest-') && currentWip.clientName !== 'Quote / Estimate';
                           const hasItems = Array.isArray(currentWip.items) && currentWip.items.length > 0;
-                          if (hasName || hasItems) {
+                          if ((!invoice || (invoice as any).status === 'draft') && draftIdRef.current.startsWith('inv_draft_')) {
                             const draftToSave = {
                               ...currentWip,
                               id: draftIdRef.current,
@@ -2496,6 +2580,19 @@ export default function InvoiceModal({
                           className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none focus:border-sky-500"
                         />
                       </div>
+                      {(activeTemplate.config.client?.fields.includes('companyName') || activeTemplate.config.client?.fields.includes('company')) && (
+                        <div>
+                          <label htmlFor="col-client-company-name" className="sr-only">Client Company Name</label>
+                          <input
+                            id="col-client-company-name"
+                            type="text"
+                            value={clientCompanyName}
+                            onChange={(e) => setClientCompanyName(e.target.value)}
+                            placeholder="Client Company Name"
+                            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none focus:border-sky-500"
+                          />
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {activeTemplate.config.client?.fields.includes('email') && (
@@ -2658,6 +2755,9 @@ export default function InvoiceModal({
                           {activeTemplate.config.shipping?.fields.includes('name') && (
                             <input type="text" value={shippedToName} onChange={e => setShippedToName(e.target.value)} placeholder="Name" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
                           )}
+                          {(activeTemplate.config.shipping?.fields.includes('companyName') || activeTemplate.config.shipping?.fields.includes('company')) && (
+                            <input type="text" value={shippedToCompanyName} onChange={e => setShippedToCompanyName(e.target.value)} placeholder="Company Name" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                          )}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {(activeTemplate.config.shipping?.fields.includes('address') || activeTemplate.config.shipping?.fields.includes('country')) && (
                               <select
@@ -2764,6 +2864,9 @@ export default function InvoiceModal({
                           {activeTemplate.config.transport?.fields?.some(f => f.toLowerCase() === 'ewaybillno') && (
                             <input type="text" value={ewayBillNo} onChange={e => setEwayBillNo(e.target.value)} placeholder="E-Way Bill No." className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
                           )}
+                          {activeTemplate.config.transport?.fields?.includes('marka') && (
+                            <input type="text" value={marka} onChange={e => setMarka(e.target.value)} placeholder="Marka" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                          )}
                         </div>
                       )}
                     </div>
@@ -2852,7 +2955,11 @@ export default function InvoiceModal({
 
                               <button
                                 type="button"
-                                onClick={() => removeItem(item.id)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  removeItem(item.id);
+                                }}
                                 className="p-1.5 rounded-lg text-rose-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/35 transition-colors cursor-pointer"
                                 aria-label={`Remove invoice item ${item.name}`}
                               >
@@ -3462,6 +3569,9 @@ export default function InvoiceModal({
                           if (field === 'driverMobile') setDriverMobile(val);
                           if (field === 'station') setStation(val);
                           if (field === 'ewayBillNo') setEwayBillNo(val);
+                          if (field === 'marka') setMarka(val);
+                          if (field === 'clientCompanyName') setClientCompanyName(val);
+                          if (field === 'shippedToCompanyName') setShippedToCompanyName(val);
                           if (field === 'invoiceTerms') setInvoiceTerms(val);
                           if (field === 'notes') setNotes(val);
                           if (field === 'poNumber') setPoNumber(val);
@@ -3470,7 +3580,11 @@ export default function InvoiceModal({
                           if (field === 'discountType') setDiscountType(val as any);
                           if (field === 'discountValue') {
                             const parsed = parseFloat(val);
-                            setDiscountValue(!isNaN(parsed) ? parsed : 0);
+                            const numericVal = !isNaN(parsed) ? parsed : 0;
+                            setDiscountValue(numericVal);
+                            if (numericVal > 0 && discountType === 'none') {
+                              setDiscountType('flat');
+                            }
                           }
                           if (field === 'freightCharges') {
                             const parsed = parseFloat(val);

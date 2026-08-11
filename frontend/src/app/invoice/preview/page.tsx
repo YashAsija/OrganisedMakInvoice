@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { LivePreview } from '../../../components/TemplateBuilder/LivePreview';
 import { Invoice, BusinessProfile } from '../../../types';
 import { Loader2 } from 'lucide-react';
-import { exportInvoicePDFAsync } from '../../../lib/pdfExporter';
+import { exportInvoicePDFAsync, resolveTemplateForInvoice } from '../../../lib/pdfExporter';
 
 function InvoicePreviewContent() {
   const searchParams = useSearchParams();
@@ -12,7 +12,7 @@ function InvoicePreviewContent() {
   const autoPrint = searchParams.get('print') === '1';
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [previewScale, setPreviewScale] = useState(1);
   const previewRef = React.useRef<HTMLDivElement>(null);
@@ -45,7 +45,7 @@ function InvoicePreviewContent() {
       if (!container) return;
 
       try {
-        const activeTemplate = invoice.embeddedTemplate || getDefaultTemplatePreset();
+        const activeTemplate = resolveTemplateForInvoice(invoice);
         const pageHeight = activeTemplate.layout.pageSize === 'A4' ? 1123 : 1056;
 
         const footerEl = container.querySelector('#pinned-footer-container') as HTMLElement;
@@ -338,7 +338,7 @@ function InvoicePreviewContent() {
               }}
             >
               <LivePreview
-                template={invoice.embeddedTemplate || getDefaultTemplatePreset()}
+                template={resolveTemplateForInvoice(invoice)}
                 invoiceData={invoice}
                 businessProfile={(profile ?? {}) as Partial<BusinessProfile>}
                 currencySymbol={currencySymbol}

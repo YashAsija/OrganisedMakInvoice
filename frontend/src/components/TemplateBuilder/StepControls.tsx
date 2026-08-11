@@ -348,18 +348,33 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
   }
 
   if (stepId === 'client') {
+    const clientFieldOptions = [
+      { id: 'companyName', label: 'Show Company Name' },
+      { id: 'name',        label: 'Show Customer Name' },
+      { id: 'address',     label: 'Show Address' },
+      { id: 'gstin',       label: 'Show GSTIN' },
+      { id: 'pan',         label: 'Show PAN' },
+      { id: 'phone',       label: 'Show Phone / Mobile' },
+      { id: 'email',       label: 'Show Email' },
+    ];
     return (
       <div className="space-y-4">
         <p className="text-xs text-slate-500 mb-2">Select fields to display for Bill To section.</p>
-        {['name', 'address', 'gstin', 'pan', 'phone', 'email'].map(field => (
-           <label key={field} className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
-              <input type="checkbox" checked={config.client.fields.includes(field)} onChange={e => {
-                 const newFields = e.target.checked ? [...config.client.fields, field] : config.client.fields.filter(f => f !== field);
-                 updateConfig('client', { fields: newFields });
-              }} />
-              Show {field.toUpperCase()}
-           </label>
-        ))}
+        {clientFieldOptions.map(({ id, label }) => {
+           const isChecked = config.client.fields.includes(id) || (id === 'name' && config.client.fields.includes('partyName')) || (id === 'companyName' && config.client.fields.includes('company'));
+           return (
+             <label key={id} className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1 cursor-pointer">
+                <input type="checkbox" checked={isChecked} onChange={e => {
+                   let newFields = config.client.fields.filter(f => f !== id && (id !== 'name' || f !== 'partyName') && (id !== 'companyName' || f !== 'company'));
+                   if (e.target.checked) {
+                      newFields = [...newFields, id];
+                   }
+                   updateConfig('client', { fields: newFields });
+                }} />
+                {label}
+             </label>
+           );
+        })}
         <div className="pt-2 border-t border-slate-105 dark:border-zinc-800 space-y-2">
            <label className="flex items-center gap-2 text-xs font-bold text-slate-705 mb-1">
               <input type="checkbox" checked={config.client.isCompact === true} onChange={e => {
@@ -379,18 +394,33 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
   }
 
   if (stepId === 'shipping') {
+    const shippingFieldOptions = [
+      { id: 'companyName', label: 'Show Company Name' },
+      { id: 'name',        label: 'Show Customer Name' },
+      { id: 'address',     label: 'Show Address' },
+      { id: 'gstin',       label: 'Show GSTIN' },
+      { id: 'pan',         label: 'Show PAN' },
+      { id: 'phone',       label: 'Show Phone / Mobile' },
+      { id: 'email',       label: 'Show Email' },
+    ];
     return (
       <div className="space-y-4">
         <p className="text-xs text-slate-500 mb-2">Select fields to display for Ship To section.</p>
-        {['name', 'address', 'gstin', 'pan', 'phone', 'email'].map(field => (
-           <label key={field} className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
-              <input type="checkbox" checked={config.shipping.fields.includes(field)} onChange={e => {
-                 const newFields = e.target.checked ? [...config.shipping.fields, field] : config.shipping.fields.filter(f => f !== field);
-                 updateConfig('shipping', { fields: newFields });
-              }} />
-              Show {field.toUpperCase()}
-           </label>
-        ))}
+        {shippingFieldOptions.map(({ id, label }) => {
+           const isChecked = config.shipping.fields.includes(id) || (id === 'name' && config.shipping.fields.includes('partyName')) || (id === 'companyName' && config.shipping.fields.includes('company'));
+           return (
+             <label key={id} className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1 cursor-pointer">
+                <input type="checkbox" checked={isChecked} onChange={e => {
+                   let newFields = config.shipping.fields.filter(f => f !== id && (id !== 'name' || f !== 'partyName') && (id !== 'companyName' || f !== 'company'));
+                   if (e.target.checked) {
+                      newFields = [...newFields, id];
+                   }
+                   updateConfig('shipping', { fields: newFields });
+                }} />
+                {label}
+             </label>
+           );
+        })}
         <div className="pt-2 border-t border-slate-105 dark:border-zinc-800 space-y-2">
            <label className="flex items-center gap-2 text-xs font-bold text-slate-705 mb-1">
               <input type="checkbox" checked={config.shipping.isCompact === true} onChange={e => {
@@ -532,6 +562,7 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
       { id: 'transport',    label: 'Transport Name' },
       { id: 'station',      label: 'Station' },
       { id: 'grRrNo',       label: 'GR/RR No.' },
+      { id: 'marka',        label: 'Marka' },
     ];
     return (
       <div className="space-y-4">

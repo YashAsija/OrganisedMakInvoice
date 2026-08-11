@@ -81,6 +81,7 @@ export interface Invoice {
   driverMobile?: string;
   station?: string;
   ewayBillNo?: string;
+  marka?: string;
   shippedToName?: string;
   shippedToPhone?: string;
   shippedToEmail?: string;
@@ -91,6 +92,10 @@ export interface Invoice {
   shippedToAddress?: string;
   clientGstin?: string;
   clientPan?: string;
+  clientCompanyName?: string;
+  shippedToCompanyName?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface ClientProfile {

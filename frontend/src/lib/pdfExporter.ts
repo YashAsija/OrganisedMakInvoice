@@ -204,43 +204,63 @@ export function resolveTaxMode(invoice: Invoice, profile: BusinessProfile): 'cgs
   return 'igst';
 }
 
-export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessProfile, action: 'save' | 'datauri' | 'blob' = 'save', templateOverride?: InvoiceTemplate): Promise<string | Blob | void> {
-  // Use the provided template override if available (exact instance from modal = no race condition)
-  // Otherwise fall back to the global default from localStorage
-  let activeTemplate: InvoiceTemplate = templateOverride || getDefaultTemplatePreset();
+export function resolveTemplateForInvoice(invoice: Invoice, templateOverride?: InvoiceTemplate): InvoiceTemplate {
+  if (templateOverride) return templateOverride;
 
-  if (!templateOverride) {
-    if (invoice.embeddedTemplate) {
-      activeTemplate = invoice.embeddedTemplate;
-    } else if (!invoice.selectedCustomTemplateId && invoice.selectedTemplateStyle) {
-      const style = invoice.selectedTemplateStyle.toLowerCase();
-      if (style === 'minimal') activeTemplate = TEMPLATE_PRESETS.find(t => t.id === 'preset_barebones') || TEMPLATE_PRESETS[0];
-      else if (style === 'modern') activeTemplate = TEMPLATE_PRESETS.find(t => t.id === 'preset_medical') || TEMPLATE_PRESETS[0];
-      else if (style === 'professional') activeTemplate = TEMPLATE_PRESETS.find(t => t.id === 'preset_corporate') || TEMPLATE_PRESETS[0];
-      else if (style === 'startup' || style === 'agency') activeTemplate = TEMPLATE_PRESETS.find(t => t.id === 'preset_user') || TEMPLATE_PRESETS[0];
-      else if (style === 'enterprise') activeTemplate = TEMPLATE_PRESETS.find(t => t.id === 'preset_gst') || TEMPLATE_PRESETS[0];
-    } else {
-      const targetTemplateId = invoice.selectedCustomTemplateId || localStorage.getItem('makbills_global_default_template');
-      if (targetTemplateId) {
-        let foundCustom = false;
-        const saved = localStorage.getItem('makbills_custom_templates');
-        if (saved) {
-          try {
-            const templates = JSON.parse(saved);
-            const custom = templates.find((t: any) => t.id === targetTemplateId);
-            if (custom) {
-              activeTemplate = custom;
-              foundCustom = true;
-            }
-          } catch (e) {}
-        }
-        if (!foundCustom) {
-          const preset = TEMPLATE_PRESETS.find(t => t.id === targetTemplateId);
-          if (preset) activeTemplate = preset;
-        }
-      }
+  const targetId = invoice?.embeddedTemplate?.id || invoice?.selectedCustomTemplateId || invoice?.selectedTemplateStyle;
+
+  if (typeof localStorage !== 'undefined' && targetId) {
+    const saved = localStorage.getItem('makbills_custom_templates');
+    if (saved) {
+      try {
+        const templates = JSON.parse(saved);
+        const customMatch = templates.find((t: any) => t.id === targetId || t.id.toLowerCase() === targetId.toLowerCase());
+        if (customMatch) return customMatch;
+      } catch (e) {}
     }
   }
+
+  if (invoice?.embeddedTemplate) return invoice.embeddedTemplate;
+
+  if (invoice?.selectedTemplateStyle) {
+    const style = invoice.selectedTemplateStyle.trim();
+    if (style.startsWith('{')) {
+      try {
+        return JSON.parse(style);
+      } catch (e) {}
+    }
+    const preset = TEMPLATE_PRESETS.find(t => t.id === style || t.id.toLowerCase() === style.toLowerCase());
+    if (preset) return preset;
+
+    const lowerStyle = style.toLowerCase();
+    if (lowerStyle === 'minimal') return TEMPLATE_PRESETS.find(t => t.id === 'preset_barebones') || TEMPLATE_PRESETS[0];
+    else if (lowerStyle === 'modern') return TEMPLATE_PRESETS.find(t => t.id === 'preset_medical') || TEMPLATE_PRESETS[0];
+    else if (lowerStyle === 'professional') return TEMPLATE_PRESETS.find(t => t.id === 'preset_corporate') || TEMPLATE_PRESETS[0];
+    else if (lowerStyle === 'startup' || lowerStyle === 'agency') return TEMPLATE_PRESETS.find(t => t.id === 'preset_user') || TEMPLATE_PRESETS[0];
+    else if (lowerStyle === 'enterprise') return TEMPLATE_PRESETS.find(t => t.id === 'preset_gst') || TEMPLATE_PRESETS[0];
+  }
+
+  const targetTemplateId = invoice?.selectedCustomTemplateId || (typeof localStorage !== 'undefined' ? localStorage.getItem('makbills_global_default_template') : null);
+  if (targetTemplateId) {
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('makbills_custom_templates');
+      if (saved) {
+        try {
+          const templates = JSON.parse(saved);
+          const custom = templates.find((t: any) => t.id === targetTemplateId);
+          if (custom) return custom;
+        } catch (e) {}
+      }
+    }
+    const preset = TEMPLATE_PRESETS.find(t => t.id === targetTemplateId);
+    if (preset) return preset;
+  }
+
+  return getDefaultTemplatePreset();
+}
+
+export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessProfile, action: 'save' | 'datauri' | 'blob' = 'save', templateOverride?: InvoiceTemplate): Promise<string | Blob | void> {
+  const activeTemplate: InvoiceTemplate = resolveTemplateForInvoice(invoice, templateOverride);
 
   // Create a hidden container within viewport bounds to prevent blank captures
   const container = document.createElement('div');

@@ -191,8 +191,19 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
             {sections.billTo?.visible !== false && (
               <>
                 <h3 className="font-bold text-[11px] text-gray-800 uppercase mb-2 whitespace-nowrap">{isPurchase ? 'BILL FROM' : 'BILLED TO'}</h3>
-                {config.client.fields.includes('name') && <div className="text-[12px] font-medium text-gray-900 mb-1">{clientName}</div>}
-                {config.client.fields.includes('phone') && <div className={rowStyle}><span className={labelStyle}>Party Mobile No</span><span className="mr-2">:</span><span className={valStyle}>{clientPhone}</span></div>}
+                {(config.client.fields.includes('companyName') || config.client.fields.includes('company')) ? (
+                  <>
+                    <div className="text-[12px] font-bold text-gray-900 mb-1">{(invoiceData as any)?.clientCompanyName || 'Acme Corp Ltd'}</div>
+                    {(config.client.fields.includes('name') || config.client.fields.includes('partyName')) && (
+                      <div className={rowStyle}><span className={labelStyle}>Customer Name</span><span className="mr-2">:</span><span className={valStyle}>{clientName}</span></div>
+                    )}
+                  </>
+                ) : (
+                  (config.client.fields.includes('name') || config.client.fields.includes('partyName')) && (
+                    <div className="text-[12px] font-bold text-gray-900 mb-1">{clientName}</div>
+                  )
+                )}
+                {config.client.fields.includes('phone') && <div className={rowStyle}><span className={labelStyle}>Customer Mobile No</span><span className="mr-2">:</span><span className={valStyle}>{clientPhone}</span></div>}
                 {config.client.fields.includes('address') && (
                   <>
                     <div className={rowStyle}><span className={labelStyle}>Country</span><span className="mr-2">:</span><span className={valStyle}>{clientCountry}</span></div>
@@ -209,8 +220,19 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
             {sections.shipTo?.visible !== false && (
               <>
                 <h3 className="font-bold text-[11px] text-gray-800 uppercase mb-2 whitespace-nowrap">{isPurchase ? 'SHIP FROM' : 'SHIPPED TO'}</h3>
-                {config.shipping.fields.includes('name') && <div className="text-[12px] font-medium text-gray-900 mb-1">{shipName}</div>}
-                {config.shipping.fields.includes('phone') && <div className={rowStyle}><span className={labelStyle}>Party Mobile No</span><span className="mr-2">:</span><span className={valStyle}>{shipPhone}</span></div>}
+                {(config.shipping.fields.includes('companyName') || config.shipping.fields.includes('company')) ? (
+                  <>
+                    <div className="text-[12px] font-bold text-gray-900 mb-1">{(invoiceData as any)?.shippedToCompanyName || 'Global Logistics Ltd'}</div>
+                    {(config.shipping.fields.includes('name') || config.shipping.fields.includes('partyName')) && (
+                      <div className={rowStyle}><span className={labelStyle}>Customer Name</span><span className="mr-2">:</span><span className={valStyle}>{shipName}</span></div>
+                    )}
+                  </>
+                ) : (
+                  (config.shipping.fields.includes('name') || config.shipping.fields.includes('partyName')) && (
+                    <div className="text-[12px] font-bold text-gray-900 mb-1">{shipName}</div>
+                  )
+                )}
+                {config.shipping.fields.includes('phone') && <div className={rowStyle}><span className={labelStyle}>Customer Mobile No</span><span className="mr-2">:</span><span className={valStyle}>{shipPhone}</span></div>}
                  {config.shipping.fields.includes('address') && (
                    <>
                      <div className={rowStyle}><span className={labelStyle}>Country</span><span className="mr-2">:</span><span className={valStyle}>{shipCountry}</span></div>

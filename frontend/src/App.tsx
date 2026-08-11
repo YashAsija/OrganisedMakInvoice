@@ -7,6 +7,23 @@ import { getSampleInvoice, BUSINESS_TEMPLATES } from './lib/presets';
 import { getSecuritySettings, saveSecuritySettings, SecuritySettings, hashPin, hashPinPBKDF2, generateSalt, hashAnswer, saveSecurityQuestions, clearSecurityQuestions } from './lib/biometrics';
 import type { PinSetupSecQPayload } from './components/PinSetupModal';
 
+const ALLOWED_SUPABASE_COLUMNS = [
+  'id', 'userId', 'invoiceType', 'invoiceNumber', 'referenceNumber',
+  'poNumber', 'date', 'dueDate', 'clientName', 'clientEmail',
+  'clientPhone', 'clientAddress', 'notes', 'subtotal', 'discountType',
+  'discountValue', 'discountTotal', 'taxTotal', 'grandTotal', 'status',
+  'items', 'createdAt', 'updatedAt', 'paidDate', 'recurringSettings',
+  'parentInvoiceId', 'selectedTemplateStyle', 'selectedCustomTemplateId',
+  'qrCodeTriggerUrl', 'companyState', 'companyCountry', 'customTaxCols',
+  'clientState', 'clientCountry', 'taxMode', 'customTaxName',
+  'customTaxPercentage', 'customTaxType', 'additionalTaxes', 'invoiceTerms',
+  'placeOfSupply', 'grRrNo', 'transport', 'vehicleNo', 'driverMobile',
+  'station', 'ewayBillNo', 'shippedToName', 'shippedToPhone', 'shippedToEmail',
+  'shippedToPan', 'shippedToState', 'shippedToCountry', 'shippedToGstin',
+  'shippedToAddress', 'clientGstin', 'clientPan', 'embeddedTemplate'
+];
+
+
 // Global error and rejection handlers to suppress development error overlays for network blocks (adblockers/extensions)
 if (typeof window !== 'undefined') {
   // Suppress Next.js Console TypeError overlay by routing network-related console.errors to console.warn
@@ -754,10 +771,13 @@ export default function App() {
                 const parsedCloudInvoices = (cloudInvoices as Invoice[]).map(inv => {
                   if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
                     try {
-                      inv.embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
-                      inv.selectedCustomTemplateId = inv.embeddedTemplate?.id;
-                      if (inv.embeddedTemplate && typeof inv.embeddedTemplate.paidAmount === 'number') {
-                        inv.paidAmount = inv.embeddedTemplate.paidAmount;
+                      const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
+                      inv.embeddedTemplate = embeddedTemplate;
+                      inv.selectedCustomTemplateId = embeddedTemplate?.id;
+                      for (const key of Object.keys(embeddedTemplate)) {
+                        if ((inv as any)[key] === undefined) {
+                          (inv as any)[key] = embeddedTemplate[key];
+                        }
                       }
                     } catch (e) {
                       // fallback if parsing fails
@@ -797,10 +817,13 @@ export default function App() {
                       const parsedCloudInvoices2 = (data as Invoice[]).map(inv => {
                         if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
                           try {
-                            inv.embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
-                            inv.selectedCustomTemplateId = inv.embeddedTemplate?.id;
-                            if (inv.embeddedTemplate && typeof inv.embeddedTemplate.paidAmount === 'number') {
-                              inv.paidAmount = inv.embeddedTemplate.paidAmount;
+                            const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
+                            inv.embeddedTemplate = embeddedTemplate;
+                            inv.selectedCustomTemplateId = embeddedTemplate?.id;
+                            for (const key of Object.keys(embeddedTemplate)) {
+                              if ((inv as any)[key] === undefined) {
+                                (inv as any)[key] = embeddedTemplate[key];
+                              }
                             }
                           } catch (e) { }
                         }
@@ -1309,24 +1332,27 @@ export default function App() {
 
   const sanitizeInvoiceForSync = (inv: Invoice): any => {
     const dataToSync: any = { ...inv, userId: user?.id };
-    
-    if (dataToSync.paidAmount !== undefined) {
-      if (!dataToSync.embeddedTemplate) {
-        dataToSync.embeddedTemplate = inv.embeddedTemplate || {};
+
+    const embeddedTemplate = { ...(dataToSync.embeddedTemplate || {}) };
+
+    for (const key of Object.keys(dataToSync)) {
+      if (!ALLOWED_SUPABASE_COLUMNS.includes(key) && key !== 'embeddedTemplate') {
+        embeddedTemplate[key] = dataToSync[key];
+        delete dataToSync[key];
       }
-      dataToSync.embeddedTemplate = {
-        ...dataToSync.embeddedTemplate,
-        paidAmount: dataToSync.paidAmount
-      };
+    }
+
+    if (inv.isDeleted === undefined) {
+      delete embeddedTemplate.isDeleted;
+      delete embeddedTemplate.deletedAt;
+    }
+
+    if (Object.keys(embeddedTemplate).length > 0) {
+      dataToSync.selectedTemplateStyle = JSON.stringify(embeddedTemplate);
     }
     
-    if (dataToSync.embeddedTemplate) {
-      dataToSync.selectedTemplateStyle = JSON.stringify(dataToSync.embeddedTemplate);
-      delete dataToSync.embeddedTemplate;
-    }
-    
+    delete dataToSync.embeddedTemplate;
     delete dataToSync.selectedCustomTemplateId;
-    delete dataToSync.paidAmount;
     
     return dataToSync;
   };
@@ -1521,11 +1547,64 @@ export default function App() {
 
   // 4. Delete Invoice
   const handleDeleteInvoice = async (invoiceId: string) => {
-    const isDraft = invoices.find(i => i.id === invoiceId)?.status === 'draft';
+    const invoice = invoices.find(i => i.id === invoiceId);
+    if (!invoice) return;
+    const isDraft = invoice.status === 'draft';
+    
+    if (isDraft) {
+      const confirmed = await confirm({
+        title: 'Delete Draft',
+        message: 'Are you sure you want to permanently delete this draft? This action cannot be undone.',
+        confirmText: 'Delete'
+      });
+      if (!confirmed) return;
+
+      const remaining = invoices.filter(inv => inv.id !== invoiceId);
+      setInvoices(remaining);
+      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
+
+      if (user) {
+        const path = `invoices[id=${invoiceId}]`;
+        try {
+          await supabase.from('invoices').delete().eq('id', invoiceId).eq('userId', user.id);
+        } catch (error) {
+          handleSupabaseError(error, OperationType.DELETE, path);
+        }
+      }
+    } else {
+      // Soft delete
+      const confirmed = await confirm({
+        title: 'Move to Bin',
+        message: 'Are you sure you want to move this document to the bin?',
+        confirmText: 'Move to Bin'
+      });
+      if (!confirmed) return;
+
+      const updated = invoices.map(inv => 
+        inv.id === invoiceId ? { ...inv, isDeleted: true, deletedAt: new Date().toISOString() } : inv
+      );
+      setInvoices(updated);
+      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
+
+      if (user) {
+        const path = `invoices[id=${invoiceId}]`;
+        try {
+          const invToUpdate = updated.find(i => i.id === invoiceId);
+          if (invToUpdate) {
+             await supabase.from('invoices').upsert(sanitizeInvoiceForSync(invToUpdate));
+          }
+        } catch (error) {
+          handleSupabaseError(error, OperationType.WRITE, path);
+        }
+      }
+    }
+  };
+
+  const handleHardDeleteInvoice = async (invoiceId: string) => {
     const confirmed = await confirm({
-      title: isDraft ? 'Delete Draft' : 'Delete Invoice',
-      message: `Are you sure you want to permanently delete this ${isDraft ? 'draft' : 'invoice'}? This action cannot be undone.`,
-      confirmText: 'Delete'
+      title: 'Permanently Delete',
+      message: 'Are you sure you want to permanently delete this document? This action cannot be undone.',
+      confirmText: 'Delete Permanently'
     });
     if (!confirmed) return;
 
@@ -1543,25 +1622,89 @@ export default function App() {
     }
   };
 
-  // Bulk Delete Invoices
-  const handleBulkDeleteInvoices = async (invoiceIds: string[]) => {
-    if (invoiceIds.length === 0) return;
-    const confirmed = await confirm({
-      title: 'Bulk Delete Invoices',
-      message: `Are you sure you want to delete the ${invoiceIds.length} selected invoices? This action cannot be undone.`,
-      confirmText: 'Delete All'
+  const handleRestoreInvoice = async (invoiceId: string) => {
+    const updated = invoices.map(inv => {
+      if (inv.id === invoiceId) {
+        const { isDeleted, deletedAt, ...rest } = inv;
+        return { ...rest, updatedAt: new Date().toISOString() } as Invoice;
+      }
+      return inv;
     });
-    if (!confirmed) return;
-
-    const remaining = invoices.filter(inv => !invoiceIds.includes(inv.id));
-    setInvoices(remaining);
-    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
+    setInvoices(updated);
+    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
 
     if (user) {
       try {
-        await supabase.from('invoices').delete().in('id', invoiceIds).eq('userId', user.id);
+        const invToUpdate = updated.find(i => i.id === invoiceId);
+        if (invToUpdate) {
+           await supabase.from('invoices').upsert(sanitizeInvoiceForSync(invToUpdate));
+        }
       } catch (error) {
-        console.error('Failed to bulk delete invoices:', error);
+        console.error('Failed to restore invoice:', error);
+      }
+    }
+  };
+
+  // Bulk Delete Invoices
+  const handleBulkDeleteInvoices = async (invoiceIds: string[]) => {
+    if (invoiceIds.length === 0) return;
+    
+    // Check if any of the selected are non-drafts
+    const selectedInvoices = invoices.filter(inv => invoiceIds.includes(inv.id));
+    const hasNonDrafts = selectedInvoices.some(inv => inv.status !== 'draft');
+    
+    if (hasNonDrafts) {
+      const confirmed = await confirm({
+        title: 'Bulk Move to Bin / Delete',
+        message: `Are you sure you want to process the ${invoiceIds.length} selected invoices? Drafts will be permanently deleted and others will be moved to the bin.`,
+        confirmText: 'Confirm'
+      });
+      if (!confirmed) return;
+
+      const draftsToDelete = selectedInvoices.filter(inv => inv.status === 'draft').map(i => i.id);
+      
+      const updated = invoices.map(inv => {
+        if (invoiceIds.includes(inv.id) && inv.status !== 'draft') {
+          return { ...inv, isDeleted: true, deletedAt: new Date().toISOString() };
+        }
+        return inv;
+      }).filter(inv => !draftsToDelete.includes(inv.id));
+
+      setInvoices(updated);
+      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
+
+      if (user) {
+        try {
+          if (draftsToDelete.length > 0) {
+            await supabase.from('invoices').delete().in('id', draftsToDelete).eq('userId', user.id);
+          }
+          const toSoftDelete = updated.filter(inv => invoiceIds.includes(inv.id) && inv.isDeleted);
+          if (toSoftDelete.length > 0) {
+            await supabase.from('invoices').upsert(toSoftDelete.map(sanitizeInvoiceForSync));
+          }
+        } catch (error) {
+          console.error('Failed to bulk process invoices:', error);
+        }
+      }
+    } else {
+      // Only drafts
+      const confirmed = await confirm({
+        title: 'Bulk Delete Drafts',
+        message: `Are you sure you want to permanently delete the ${invoiceIds.length} selected drafts? This action cannot be undone.`,
+        confirmText: 'Delete All'
+      });
+      if (!confirmed) return;
+
+      const remaining = invoices.filter(inv => !invoiceIds.includes(inv.id));
+      setInvoices(remaining);
+      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
+
+      if (user) {
+        try {
+          await supabase.from('invoices').delete().in('id', invoiceIds).eq('userId', user.id);
+        } catch (error) {
+          console.error('Failed to bulk delete invoices:', error);
+        }
       }
     }
   };
@@ -2158,6 +2301,8 @@ export default function App() {
         onOpenProfile={() => setIsProfileOpen(true)}
         onOpenInvoiceEditor={handleOpenInvoiceEditor}
         onDeleteInvoice={handleDeleteInvoice}
+        onRestoreInvoice={handleRestoreInvoice}
+        onHardDeleteInvoice={handleHardDeleteInvoice}
         onBulkDeleteInvoices={handleBulkDeleteInvoices}
         onBulkUpdateInvoicesStatus={handleBulkUpdateInvoicesStatus}
         onUpdateInvoice={handleUpdateInvoice}

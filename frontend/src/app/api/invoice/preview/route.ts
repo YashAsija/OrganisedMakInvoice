@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { TEMPLATE_PRESETS } from '../../../../lib/templatePresets';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
@@ -61,6 +62,11 @@ export async function GET(req: NextRequest) {
       try {
         invoice.embeddedTemplate = JSON.parse(invoice.selectedTemplateStyle);
       } catch (e) {}
+    } else if (invoice.selectedTemplateStyle) {
+      const preset = TEMPLATE_PRESETS.find(t => t.id === invoice.selectedTemplateStyle);
+      if (preset) {
+        invoice.embeddedTemplate = preset;
+      }
     }
 
     // 2. Fetch business profile of the owner
