@@ -227,7 +227,7 @@ export interface InvoiceTemplate {
   sections: Record<TemplateSectionId, TemplateSection>;
 
   config: {
-    header: { showLogo: boolean; logoPosition: 'Left' | 'Center' | 'Right'; logoWidth: number; logoHeight: number; titleAlignment: 'Left' | 'Center' | 'Right'; invoiceTitle: string; };
+    header: { showLogo: boolean; logoPosition: 'Left' | 'Center' | 'Right'; logoWidth: number; logoHeight: number; titleAlignment: 'Left' | 'Center' | 'Right'; invoiceTitle: string; logoSize?: number; headerSize?: 'Small' | 'Medium' | 'Large'; };
     company: { fields: string[]; isCompact?: boolean; showLabels?: boolean; };
     invoiceInfo: { fields: string[]; customFields: { id: string; label: string; type: string; value: string; }[]; position: 'Left' | 'Center' | 'Right'; isCompact?: boolean; showLabels?: boolean; };
     client: { fields: string[]; isCompact?: boolean; showLabels?: boolean; };

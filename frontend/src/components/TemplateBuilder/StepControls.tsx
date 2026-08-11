@@ -175,8 +175,14 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
           </select>
         </div>
         <div>
-          <label className="text-xs font-bold text-slate-700 mb-1 block">Logo Width (px)</label>
-          <input type="number" value={config.header.logoWidth} onChange={e => updateConfig('header', { logoWidth: parseInt(e.target.value) || 120 })} className="w-full p-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none focus:border-[#64748b]" />
+          <label className="text-xs font-bold text-slate-700 mb-1 block">Logo Size (px)</label>
+          <input type="number" value={config.header.logoSize ?? config.header.logoWidth ?? 120} onChange={e => updateConfig('header', { logoSize: parseInt(e.target.value) || 120 })} className="w-full p-2 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none focus:border-[#64748b]" />
+        </div>
+        <div>
+          <label className="text-xs font-bold text-slate-700 mb-1 block">Header Size</label>
+          <select value={config.header.headerSize || 'Medium'} onChange={e => updateConfig('header', { headerSize: e.target.value as 'Small' | 'Medium' | 'Large' })} className="w-full p-2.5 bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-700 rounded-xl text-xs text-[#0f172a] dark:text-zinc-200 focus:outline-none focus:border-[#64748b]">
+            {['Small', 'Medium', 'Large'].map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
         </div>
         <div>
           <label className="text-[10px] font-black uppercase tracking-wider text-[#64748b] mb-1.5 block">Invoice Title / Heading</label>

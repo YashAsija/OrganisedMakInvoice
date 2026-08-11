@@ -537,33 +537,58 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             if (!isLastPage) return null;
           }
           if (section.id === 'header') {
+            const logoSize = config.header.logoSize ?? config.header.logoWidth ?? 120;
+            const logoWidth = logoSize * 1.4;
+            const logoHeight = logoSize * 1.4 * 0.45;
+
+            const headerSize = config.header.headerSize || 'Medium';
+            let headerPaddingTop = '8px';
+            let headerPaddingBottom = '8px';
+            let headerMarginBottom = '12px';
+            let titleFontSize = '30px';
+            let titleClassName = 'text-3xl font-bold tracking-wider text-gray-900 uppercase';
+
+            if (headerSize === 'Small') {
+              headerPaddingTop = '4px';
+              headerPaddingBottom = '4px';
+              headerMarginBottom = '4px';
+              titleFontSize = '20px';
+              titleClassName = 'text-xl font-bold tracking-wider text-gray-900 uppercase';
+            } else if (headerSize === 'Large') {
+              headerPaddingTop = '16px';
+              headerPaddingBottom = '16px';
+              headerMarginBottom = '24px';
+              titleFontSize = '40px';
+              titleClassName = 'text-5xl font-bold tracking-wider text-gray-900 uppercase';
+            }
+
             if (layout.type === 'Modal Classic') {
               const renderLogoPlaceholder = (position: 'Left' | 'Right' | 'Center') => (
-                <div style={{ width: config.header.logoWidth * 1.4, height: config.header.logoHeight * 1.4, border: '2px dashed #cbd5e1', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#94a3b8', fontWeight: 'bold', backgroundColor: '#f8fafc', marginBottom: position === 'Center' ? '10px' : '0px' }}>
+                <div style={{ width: logoWidth, height: logoHeight, border: '2px dashed #cbd5e1', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#94a3b8', fontWeight: 'bold', backgroundColor: '#f8fafc', marginBottom: position === 'Center' ? '10px' : '0px' }}>
                   Logo Space
                 </div>
               );
 
               if (config.header.logoPosition === 'Center' && config.header.showLogo) {
                 return (
-                  <div key="header" style={{ ...getSectionStyle('header'), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingBottom: '0px', marginBottom: '0px' }}>
+                  <div key="header" style={{ ...getSectionStyle('header'), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: headerPaddingTop, paddingBottom: headerPaddingBottom, marginBottom: headerMarginBottom }}>
                     {compLogo ? (
-                      <div style={{ width: config.header.logoWidth * 1.4, height: config.header.logoHeight * 1.4, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
+                      <div style={{ width: logoWidth, height: logoHeight, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
                         <img src={compLogo} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} crossOrigin="anonymous" />
                       </div>
                     ) : (
                       renderLogoPlaceholder('Center')
                     )}
-                    <h1 className="text-3xl font-bold tracking-wider text-gray-900 uppercase" style={{ color: styleConfig.primaryColor, textAlign: config.header.titleAlignment === 'Right' ? 'right' : config.header.titleAlignment === 'Left' ? 'left' : 'center', whiteSpace: 'nowrap' }}>{config.header.invoiceTitle}</h1>
+                    <h1 className={titleClassName} style={{ color: styleConfig.primaryColor, fontSize: titleFontSize, textAlign: config.header.titleAlignment === 'Right' ? 'right' : config.header.titleAlignment === 'Left' ? 'left' : 'center', whiteSpace: 'nowrap' }}>{config.header.invoiceTitle}</h1>
                   </div>
                 );
               }
 
               return (
-                <div key="header" style={{ ...getSectionStyle('header'), display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0px', marginBottom: '0px' }}>
+                <div key="header" style={{ ...getSectionStyle('header'), display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: headerPaddingTop, paddingBottom: headerPaddingBottom, marginBottom: headerMarginBottom }}>
                   {config.header.logoPosition === 'Left' && config.header.showLogo && (
                     compLogo ? (
-                      <div style={{ width: config.header.logoWidth * 1.4, height: config.header.logoHeight * 1.4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: logoWidth, height: logoHeight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <img src={compLogo} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} crossOrigin="anonymous" />
                       </div>
                     ) : (
@@ -572,12 +597,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   )}
 
                   <div style={{ flex: 1, textAlign: config.header.titleAlignment === 'Right' ? 'right' : config.header.titleAlignment === 'Left' ? 'left' : 'center' }}>
-                    <h1 className="text-3xl font-bold tracking-wider text-gray-900 uppercase" style={{ color: styleConfig.primaryColor, whiteSpace: 'nowrap' }}>{config.header.invoiceTitle}</h1>
+                    <h1 className={titleClassName} style={{ color: styleConfig.primaryColor, fontSize: titleFontSize, whiteSpace: 'nowrap' }}>{config.header.invoiceTitle}</h1>
                   </div>
 
                   {config.header.logoPosition === 'Right' && config.header.showLogo && (
                     compLogo ? (
-                      <div style={{ width: config.header.logoWidth * 1.4, height: config.header.logoHeight * 1.4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: logoWidth, height: logoHeight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <img src={compLogo} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} crossOrigin="anonymous" />
                       </div>
                     ) : (
@@ -592,46 +617,46 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
             if (config.header.logoPosition === 'Center' && config.header.showLogo) {
               return (
-                <div key="header" style={{ ...getSectionStyle('header'), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: textColor }}>
+                <div key="header" style={{ ...getSectionStyle('header'), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: textColor, paddingTop: headerPaddingTop, paddingBottom: headerPaddingBottom, marginBottom: headerMarginBottom }}>
                   {compLogo ? (
-                    <div style={{ width: config.header.logoWidth * 1.4, height: config.header.logoHeight * 1.4, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
+                    <div style={{ width: logoWidth, height: logoHeight, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
                       <img src={compLogo} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} crossOrigin="anonymous" />
                     </div>
                   ) : (
-                    <div style={{ width: config.header.logoWidth * 1.4, height: config.header.logoHeight * 1.4, border: '2px dashed #cbd5e1', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#94a3b8', fontWeight: 'bold', backgroundColor: '#f8fafc', marginBottom: '10px' }}>
+                    <div style={{ width: logoWidth, height: logoHeight, border: '2px dashed #cbd5e1', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#94a3b8', fontWeight: 'bold', backgroundColor: '#f8fafc', marginBottom: '10px' }}>
                       Logo Space
                     </div>
                   )}
-                  <h1 style={{ color: textColor, fontSize: '32px', margin: 0, fontWeight: 'bold', whiteSpace: 'nowrap' }}>{config.header.invoiceTitle}</h1>
+                  <h1 style={{ color: textColor, fontSize: titleFontSize, margin: 0, fontWeight: 'bold', whiteSpace: 'nowrap' }}>{config.header.invoiceTitle}</h1>
                 </div>
               );
             }
 
             return (
-              <div key="header" style={{ ...getSectionStyle('header'), display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: textColor }}>
+              <div key="header" style={{ ...getSectionStyle('header'), display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: textColor, paddingTop: headerPaddingTop, paddingBottom: headerPaddingBottom, marginBottom: headerMarginBottom }}>
                 {config.header.logoPosition === 'Left' && config.header.showLogo && (
                   compLogo ? (
-                    <div style={{ width: config.header.logoWidth * 1.4, height: config.header.logoHeight * 1.4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: logoWidth, height: logoHeight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <img src={compLogo} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} crossOrigin="anonymous" />
                     </div>
                   ) : (
-                    <div style={{ width: config.header.logoWidth * 1.4, height: config.header.logoHeight * 1.4, border: '2px dashed #cbd5e1', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#94a3b8', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>
+                    <div style={{ width: logoWidth, height: logoHeight, border: '2px dashed #cbd5e1', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#94a3b8', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>
                       Logo Space
                     </div>
                   )
                 )}
 
                 <div style={{ flex: 1, textAlign: config.header.titleAlignment === 'Right' ? 'right' : config.header.titleAlignment === 'Left' ? 'left' : 'center' }}>
-                  <h1 style={{ color: textColor, fontSize: '32px', margin: 0, fontWeight: 'bold', whiteSpace: 'nowrap' }}>{config.header.invoiceTitle}</h1>
+                  <h1 style={{ color: textColor, fontSize: titleFontSize, margin: 0, fontWeight: 'bold', whiteSpace: 'nowrap' }}>{config.header.invoiceTitle}</h1>
                 </div>
 
                 {config.header.logoPosition === 'Right' && config.header.showLogo && (
                   compLogo ? (
-                    <div style={{ width: config.header.logoWidth * 1.4, height: config.header.logoHeight * 1.4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: logoWidth, height: logoHeight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <img src={compLogo} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} crossOrigin="anonymous" />
                     </div>
                   ) : (
-                    <div style={{ width: config.header.logoWidth * 1.4, height: config.header.logoHeight * 1.4, border: '2px dashed #cbd5e1', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#94a3b8', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>
+                    <div style={{ width: logoWidth, height: logoHeight, border: '2px dashed #cbd5e1', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#94a3b8', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>
                       Logo Space
                     </div>
                   )
