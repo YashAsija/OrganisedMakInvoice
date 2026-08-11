@@ -215,6 +215,7 @@ export interface InvoiceTemplate {
     pageSize: 'A4' | 'Letter';
     orientation: 'Portrait' | 'Landscape';
     margins: 'Compact' | 'Standard' | 'Wide' | 'Custom';
+    compact?: boolean;
     watermark: {
       enabled: boolean;
       text: string;

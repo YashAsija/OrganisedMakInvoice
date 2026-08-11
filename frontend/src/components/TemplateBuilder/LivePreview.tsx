@@ -277,6 +277,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const valStyle = "flex-1 text-gray-900";
 
   const getPadding = () => {
+    if (layout.compact) return '15px';
     switch (layout.margins) {
       case 'Compact': return '20px';
       case 'Wide': return '60px';
@@ -291,7 +292,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     width: isPrintMode ? '100%' : width,
     height: (isPrintMode || forceFullHeight) ? minHeight : 'auto',
     minHeight: (isPrintMode || forceFullHeight) ? minHeight : 'auto',
-    paddingTop: layout.margins === 'Compact' ? '10px' : '20px',
+    paddingTop: (layout.compact || layout.margins === 'Compact') ? '10px' : '20px',
     paddingLeft: getPadding(),
     paddingRight: getPadding(),
     paddingBottom: '15px',
@@ -392,7 +393,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     const bg = styleConfig.sectionBackgroundColors[sectionId as keyof typeof styleConfig.sectionBackgroundColors];
     const span = dynamicSpans[sectionId] || sections[sectionId as keyof typeof sections].gridColumnSpan;
 
-    const baseMarginBottom = styleConfig.spacing === 'Compact' ? '6px' : styleConfig.spacing === 'Spacious' ? '16px' : '10px';
+    const baseMarginBottom = layout.compact ? '4px' : (styleConfig.spacing === 'Compact' ? '6px' : styleConfig.spacing === 'Spacious' ? '16px' : '10px');
     const marginTop = (sectionId === 'taxEngine' || sectionId === 'payment') ? '8px' : undefined;
     const marginBottom = sectionId === 'productTable' 
       ? '8px' 
@@ -450,6 +451,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const clientState = (invoiceData as any)?.clientState || getFallback('Delhi');
   const clientCountry = (invoiceData as any)?.clientCountry || getFallback('India');
 
+  const cellPadding = (layout.compact || styleConfig.spacing === 'Compact') ? '6px' : '10px';
   const items: any[] = invoiceData?.items || [];
 
   const subTotal = invoiceData?.subtotal !== undefined
@@ -1112,7 +1114,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   <thead>
                     <tr style={{ backgroundColor: styleConfig.tableHeaderBackground, color: styleConfig.tableHeaderTextColor }}>
                       {renderCols.map((col, idx) => (
-                        <th key={col.id} style={{ padding: '10px', textAlign: 'left', borderBottom: styleConfig.borderStyle !== 'None' ? '1px solid #e2e8f0' : 'none', borderRight: styleConfig.borderStyle !== 'None' && idx !== renderCols.length - 1 ? '1px solid #e2e8f0' : 'none', borderRadius: styleConfig.roundedCorners ? (idx === 0 ? '8px 0 0 0' : idx === renderCols.length - 1 ? '0 8px 0 0' : '0') : '0' }}>{col.id === 'tax' ? dynamicTaxHeader.toUpperCase() : col.label}</th>
+                        <th key={col.id} style={{ padding: cellPadding, textAlign: 'left', borderBottom: styleConfig.borderStyle !== 'None' ? '1px solid #e2e8f0' : 'none', borderRight: styleConfig.borderStyle !== 'None' && idx !== renderCols.length - 1 ? '1px solid #e2e8f0' : 'none', borderRadius: styleConfig.roundedCorners ? (idx === 0 ? '8px 0 0 0' : idx === renderCols.length - 1 ? '0 8px 0 0' : '0') : '0' }}>{col.id === 'tax' ? dynamicTaxHeader.toUpperCase() : col.label}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1120,11 +1122,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                     {activeItems.map((item, index) => (
                       <tr key={index} className="relative group" style={{ backgroundColor: styleConfig.alternatingRowColors && index % 2 !== 0 ? '#f8fafc' : 'transparent' }}>
                         {renderCols.map((col, colIdx) => (
-                          <td key={col.id} style={{ padding: '10px', paddingLeft: colIdx === 0 && isInteractive ? '28px' : '10px', textAlign: 'left', position: colIdx === 0 ? 'relative' : undefined, verticalAlign: 'top', borderBottom: styleConfig.borderStyle !== 'None' && index !== activeItems.length - 1 ? '1px solid #e2e8f0' : 'none', borderRight: styleConfig.borderStyle !== 'None' && colIdx !== renderCols.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
+                          <td key={col.id} style={{ padding: cellPadding, paddingLeft: colIdx === 0 && isInteractive ? '28px' : cellPadding, textAlign: 'left', position: colIdx === 0 ? 'relative' : undefined, verticalAlign: 'top', borderBottom: styleConfig.borderStyle !== 'None' && index !== activeItems.length - 1 ? '1px solid #e2e8f0' : 'none', borderRight: styleConfig.borderStyle !== 'None' && colIdx !== renderCols.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
                             {colIdx === 0 && isInteractive && onInteractiveRemoveItem && (
                               <button
                                 onClick={() => onInteractiveRemoveItem(item.id)}
-                                className="print:hidden absolute left-1 top-[10px] text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-rose-50 rounded"
+                                className="print:hidden absolute left-1 top-[6px] text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-rose-50 rounded"
                                 title="Remove Item"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>

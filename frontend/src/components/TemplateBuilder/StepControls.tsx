@@ -138,6 +138,58 @@ export const StepControls: React.FC<StepControlsProps> = ({ stepId, template, up
           </select>
         </div>
         <div>
+           <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1 cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={layout.compact || false} 
+                onChange={e => {
+                  const isCompactChecked = e.target.checked;
+                  if (!updateFullTemplate) return;
+                  updateFullTemplate({
+                    ...template,
+                    layout: {
+                      ...template.layout,
+                      compact: isCompactChecked,
+                      margins: isCompactChecked ? 'Compact' : 'Standard'
+                    },
+                    config: {
+                      ...template.config,
+                      company: {
+                        ...template.config.company,
+                        isCompact: isCompactChecked
+                      },
+                      invoiceInfo: {
+                        ...template.config.invoiceInfo,
+                        isCompact: isCompactChecked
+                      },
+                      client: {
+                        ...template.config.client,
+                        isCompact: isCompactChecked
+                      },
+                      shipping: {
+                        ...template.config.shipping,
+                        isCompact: isCompactChecked
+                      },
+                      transport: {
+                        ...template.config.transport,
+                        isCompact: isCompactChecked
+                      },
+                      header: {
+                        ...template.config.header,
+                        headerSize: isCompactChecked ? 'Small' : 'Medium'
+                      }
+                    },
+                    styleConfig: {
+                      ...template.styleConfig,
+                      spacing: isCompactChecked ? 'Compact' : 'Normal'
+                    }
+                  });
+                }} 
+              />
+              Compact Layout Spacing
+           </label>
+        </div>
+        <div>
            <label className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-1">
               <input type="checkbox" checked={layout.watermark.enabled} onChange={e => updateLayout({ watermark: { ...layout.watermark, enabled: e.target.checked } })} />
               Enable Watermark
