@@ -1801,7 +1801,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const totalPages = pages.length;
 
   return (
-    <div className={`invoice-live-preview-container ${isPrintMode ? 'invoice-print-container' : 'flex-1 h-full'}`} style={isPrintMode ? { display: 'flex', flexDirection: 'column', gap: '40px', backgroundColor: '#f1f5f9' } : { display: 'flex', flexDirection: 'column', gap: '40px', height: '100%', flex: 1 }}>
+    <div className={`invoice-live-preview-container ${isPrintMode ? 'invoice-print-container' : 'flex-1 h-full'}`} style={isPrintMode ? { display: 'flex', flexDirection: 'column', gap: '40px', backgroundColor: 'transparent' } : { display: 'flex', flexDirection: 'column', gap: '40px', height: '100%', flex: 1 }}>
       {copiesToRender.map((copyLabel, copyIdx) =>
         pages.map((pageItems, pageIdx) => {
           const isFirstPage = pageIdx === 0;

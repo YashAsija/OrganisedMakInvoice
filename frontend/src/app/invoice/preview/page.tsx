@@ -312,14 +312,20 @@ function InvoicePreviewContent() {
         const previewHeight = measuredHeight;
         return (
           <div 
-            id="preview-portal-container"
-            className="relative overflow-visible"
+            className="relative"
             style={{ 
               width: 794 * previewScale, 
               height: previewHeight * previewScale,
               transition: 'all 0.2s ease'
             }}
           >
+            <style dangerouslySetInnerHTML={{ __html: `
+              .invoice-print-sheet .invoice-pdf-page {
+                border: 1px solid #e2e8f0 !important;
+                box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+                border-radius: 8px !important;
+              }
+            `}} />
             <div
               ref={previewRef}
               className="invoice-print-sheet absolute top-0 left-0 origin-top-left"
