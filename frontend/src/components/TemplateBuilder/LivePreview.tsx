@@ -277,7 +277,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const valStyle = "flex-1 text-gray-900";
 
   const getPadding = () => {
-    if (layout.compact) return '15px';
+    if (layout.compact) return '25px';
     switch (layout.margins) {
       case 'Compact': return '20px';
       case 'Wide': return '60px';
@@ -292,7 +292,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     width: isPrintMode ? '100%' : width,
     height: (isPrintMode || forceFullHeight) ? minHeight : 'auto',
     minHeight: (isPrintMode || forceFullHeight) ? minHeight : 'auto',
-    paddingTop: (layout.compact || layout.margins === 'Compact') ? '10px' : '20px',
+    paddingTop: layout.compact ? '15px' : (layout.margins === 'Compact' ? '10px' : '20px'),
     paddingLeft: getPadding(),
     paddingRight: getPadding(),
     paddingBottom: '15px',
