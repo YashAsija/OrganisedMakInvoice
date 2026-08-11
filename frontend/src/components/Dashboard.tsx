@@ -12262,7 +12262,7 @@ export default function Dashboard({
 
                   ) : (
 
-                    <table className="w-full text-left text-xs border-collapse">
+                    <table className="w-full min-w-[600px] text-left text-xs border-collapse">
 
                       <thead>
 
@@ -12388,7 +12388,7 @@ export default function Dashboard({
 
                   ) : (
 
-                    <table className="w-full text-left text-xs border-collapse">
+                    <table className="w-full min-w-[600px] text-left text-xs border-collapse">
 
                       <thead>
 
@@ -12428,7 +12428,7 @@ export default function Dashboard({
 
                                 onClick={() => onDeleteExpense(exp.id)}
 
-                                className="text-[#64748b]/60 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                                className="text-[#64748b]/60 hover:text-rose-500 transition-opacity p-1 cursor-pointer rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20"
 
                                 aria-label="Delete expense"
 
