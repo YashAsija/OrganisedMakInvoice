@@ -253,7 +253,7 @@ function InvoicePreviewContent() {
   const currencySymbol = profile?.currencySymbol || (profile?.currency === 'GBP' ? '£' : profile?.currency === 'EUR' ? '€' : profile?.currency === 'JPY' ? '¥' : profile?.currency === 'INR' ? '₹' : '$');
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 py-8 px-4 flex flex-col items-center">
+    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 pt-8 pb-10 px-4 flex flex-col items-center">
       {/* Top Banner */}
       <div className="w-full max-w-[794px] flex items-center justify-between mb-6 bg-white dark:bg-zinc-900 p-4 border border-slate-205 dark:border-zinc-800 rounded-2xl shadow-xs">
         <div>
