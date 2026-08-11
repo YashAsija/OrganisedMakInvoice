@@ -12262,75 +12262,105 @@ export default function Dashboard({
 
                   ) : (
 
-                    <table className="w-full min-w-[600px] text-left text-xs border-collapse">
+                    <>
+                      {/* Desktop Table View */}
+                      <table className="hidden sm:table w-full text-left text-xs border-collapse">
 
-                      <thead>
+                        <thead>
 
-                        <tr className="text-[10px] font-black uppercase text-[#64748b]/60 tracking-wider border-b border-[#bae6fd]/30">
+                          <tr className="text-[10px] font-black uppercase text-[#64748b]/60 tracking-wider border-b border-[#bae6fd]/30">
 
-                          <th className="py-2.5 font-black">INV ID</th>
+                            <th className="py-2.5 font-black">INV ID</th>
 
-                          <th className="py-2.5 font-black">CLIENT NAME</th>
+                            <th className="py-2.5 font-black">CLIENT NAME</th>
 
-                          <th className="py-2.5 font-black">DUE DATE</th>
+                            <th className="py-2.5 font-black">DUE DATE</th>
 
-                          <th className="py-2.5 font-black">AMOUNT</th>
+                            <th className="py-2.5 font-black">AMOUNT</th>
 
-                          <th className="py-2.5 font-black">STATUS</th>
+                            <th className="py-2.5 font-black">STATUS</th>
 
-                          <th className="py-2.5"></th>
-
-                        </tr>
-
-                      </thead>
-
-                      <tbody>
-
-                        {reportedInvoices.filter(i => i.status === 'pending').slice(0, 3).map(inv => (
-
-                          <tr key={inv.id} className="border-b border-[#bae6fd]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20">
-
-                            <td className="py-3 font-extrabold text-[#0f172a] dark:text-white">{inv.invoiceNumber}</td>
-
-                            <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[150px]">{inv.clientName}</td>
-
-                            <td className="py-3 font-medium text-rose-500 font-sans">Due: {inv.dueDate || inv.date}</td>
-
-                            <td className="py-3 font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{formatNum(inv.grandTotal)}</td>
-
-                            <td className="py-3">
-
-                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-900/30 text-amber-600 dark:text-amber-400">
-
-                                PENDING
-
-                              </span>
-
-                            </td>
-
-                            <td className="py-3 text-right">
-
-                              <button 
-
-                                onClick={() => setActivePreviewInvoice(inv)}
-
-                                className="text-[#64748b] hover:text-[#0f172a] dark:hover:text-white p-1 cursor-pointer"
-
-                              >
-
-                                <MoreVertical className="w-4 h-4" />
-
-                              </button>
-
-                            </td>
+                            <th className="py-2.5"></th>
 
                           </tr>
 
+                        </thead>
+
+                        <tbody>
+
+                          {reportedInvoices.filter(i => i.status === 'pending').slice(0, 3).map(inv => (
+
+                            <tr key={inv.id} className="border-b border-[#bae6fd]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20">
+
+                              <td className="py-3 font-extrabold text-[#0f172a] dark:text-white">{inv.invoiceNumber}</td>
+
+                              <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[150px]">{inv.clientName}</td>
+
+                              <td className="py-3 font-medium text-rose-500 font-sans">Due: {inv.dueDate || inv.date}</td>
+
+                              <td className="py-3 font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{formatNum(inv.grandTotal)}</td>
+
+                              <td className="py-3">
+
+                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-900/30 text-amber-600 dark:text-amber-400">
+
+                                  PENDING
+
+                                </span>
+
+                              </td>
+
+                              <td className="py-3 text-right">
+
+                                <button 
+
+                                  onClick={() => setActivePreviewInvoice(inv)}
+
+                                  className="text-[#64748b] hover:text-[#0f172a] dark:hover:text-white p-1 cursor-pointer"
+
+                                >
+
+                                  <MoreVertical className="w-4 h-4" />
+
+                                </button>
+
+                              </td>
+
+                            </tr>
+
+                          ))}
+
+                        </tbody>
+
+                      </table>
+
+                      {/* Mobile Card List View */}
+                      <div className="block sm:hidden space-y-3">
+                        {reportedInvoices.filter(i => i.status === 'pending').slice(0, 3).map(inv => (
+                          <div key={inv.id} className="p-3 bg-slate-50 dark:bg-zinc-900/40 rounded-xl border border-[#bae6fd]/20 dark:border-zinc-800 space-y-2 relative">
+                            <div className="flex justify-between items-center pr-6">
+                              <span className="font-extrabold text-[#0f172a] dark:text-white text-xs">{inv.invoiceNumber}</span>
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-900/30 text-amber-600 dark:text-amber-400">
+                                PENDING
+                              </span>
+                            </div>
+                            <div className="font-bold text-[#64748b] dark:text-zinc-300 text-xs pr-6">{inv.clientName}</div>
+                            <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-100 dark:border-zinc-800">
+                              <span className="font-medium text-rose-500">Due: {inv.dueDate || inv.date}</span>
+                              <span className="font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{formatNum(inv.grandTotal)}</span>
+                            </div>
+                            <div className="absolute right-2 top-2">
+                              <button 
+                                onClick={() => setActivePreviewInvoice(inv)}
+                                className="text-[#64748b] hover:text-[#0f172a] dark:hover:text-white p-1 cursor-pointer"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
                         ))}
-
-                      </tbody>
-
-                    </table>
+                      </div>
+                    </>
 
                   )}
 
@@ -12388,65 +12418,91 @@ export default function Dashboard({
 
                   ) : (
 
-                    <table className="w-full min-w-[600px] text-left text-xs border-collapse">
+                    <>
+                      {/* Desktop Table View */}
+                      <table className="hidden sm:table w-full text-left text-xs border-collapse">
 
-                      <thead>
+                        <thead>
 
-                        <tr className="text-[10px] font-black uppercase text-[#64748b]/60 tracking-wider border-b border-[#bae6fd]/30">
+                          <tr className="text-[10px] font-black uppercase text-[#64748b]/60 tracking-wider border-b border-[#bae6fd]/30">
 
-                          <th className="py-2.5 font-black">CATEGORY</th>
+                            <th className="py-2.5 font-black">CATEGORY</th>
 
-                          <th className="py-2.5 font-black">DESCRIPTION</th>
+                            <th className="py-2.5 font-black">DESCRIPTION</th>
 
-                          <th className="py-2.5 font-black">CHARGED DATE</th>
+                            <th className="py-2.5 font-black">CHARGED DATE</th>
 
-                          <th className="py-2.5 font-black">AMOUNT</th>
+                            <th className="py-2.5 font-black">AMOUNT</th>
 
-                          <th className="py-2.5"></th>
-
-                        </tr>
-
-                      </thead>
-
-                      <tbody>
-
-                        {(showAllExpenses ? reportedExpenses : reportedExpenses.slice(0, 3)).map(exp => (
-
-                          <tr key={exp.id} className="border-b border-[#bae6fd]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 group">
-
-                            <td className="py-3 font-extrabold text-[#0f172a] dark:text-white uppercase tracking-tight font-mono text-[10px]">{exp.category}</td>
-
-                            <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[200px]">{exp.description || 'General category expenditure'}</td>
-
-                            <td className="py-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans">{exp.date}</td>
-
-                            <td className="py-3 font-extrabold font-mono text-rose-500">-{currencySymbol}{formatNum(exp.amount)}</td>
-
-                            <td className="py-3 text-right">
-
-                              <button
-
-                                onClick={() => onDeleteExpense(exp.id)}
-
-                                className="text-[#64748b]/60 hover:text-rose-500 transition-opacity p-1 cursor-pointer rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20"
-
-                                aria-label="Delete expense"
-
-                              >
-
-                                <Trash2 className="w-3.5 h-3.5" />
-
-                              </button>
-
-                            </td>
+                            <th className="py-2.5"></th>
 
                           </tr>
 
+                        </thead>
+
+                        <tbody>
+
+                          {(showAllExpenses ? reportedExpenses : reportedExpenses.slice(0, 3)).map(exp => (
+
+                            <tr key={exp.id} className="border-b border-[#bae6fd]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 group">
+
+                              <td className="py-3 font-extrabold text-[#0f172a] dark:text-white uppercase tracking-tight font-mono text-[10px]">{exp.category}</td>
+
+                              <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[200px]">{exp.description || 'General category expenditure'}</td>
+
+                              <td className="py-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans">{exp.date}</td>
+
+                              <td className="py-3 font-extrabold font-mono text-rose-500">-{currencySymbol}{formatNum(exp.amount)}</td>
+
+                              <td className="py-3 text-right">
+
+                                <button
+
+                                  onClick={() => onDeleteExpense(exp.id)}
+
+                                  className="text-[#64748b]/60 hover:text-rose-500 transition-opacity p-1 cursor-pointer rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20"
+
+                                  aria-label="Delete expense"
+
+                                >
+
+                                  <Trash2 className="w-3.5 h-3.5" />
+
+                                </button>
+
+                              </td>
+
+                            </tr>
+
+                          ))}
+
+                        </tbody>
+
+                      </table>
+
+                      {/* Mobile Card List View */}
+                      <div className="block sm:hidden space-y-3">
+                        {(showAllExpenses ? reportedExpenses : reportedExpenses.slice(0, 3)).map(exp => (
+                          <div key={exp.id} className="p-3 bg-slate-50 dark:bg-zinc-900/40 rounded-xl border border-[#bae6fd]/20 dark:border-zinc-800 space-y-2 relative">
+                            <div className="flex justify-between items-center">
+                              <span className="font-extrabold text-[#0f172a] dark:text-white uppercase tracking-tight font-mono text-[9px]">{exp.category}</span>
+                              <span className="font-medium text-[#64748b]/80 dark:text-zinc-400 text-xs">{exp.date}</span>
+                            </div>
+                            <div className="font-bold text-[#64748b] dark:text-zinc-300 text-xs">{exp.description || 'General category expenditure'}</div>
+                            <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-100 dark:border-zinc-800">
+                              <span className="font-extrabold font-mono text-rose-500">-{currencySymbol}{formatNum(exp.amount)}</span>
+                              <button
+                                onClick={() => onDeleteExpense(exp.id)}
+                                className="text-[#64748b]/60 hover:text-rose-500 transition-opacity p-1 cursor-pointer rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                                aria-label="Delete expense"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
                         ))}
-
-                      </tbody>
-
-                    </table>
+                      </div>
+                    </>
 
                   )}
 
