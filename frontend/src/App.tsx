@@ -20,9 +20,7 @@ const ALLOWED_SUPABASE_COLUMNS = [
   'placeOfSupply', 'grRrNo', 'transport', 'vehicleNo', 'driverMobile',
   'station', 'ewayBillNo', 'shippedToName', 'shippedToPhone', 'shippedToEmail',
   'shippedToPan', 'shippedToState', 'shippedToCountry', 'shippedToGstin',
-  'shippedToAddress', 'clientGstin', 'clientPan', 'embeddedTemplate',
-  'clientCompanyName', 'clientCompany', 'shippedToCompanyName', 'shippedToCompany',
-  'deliveryNote', 'freightCharges', 'isFreightAdded', 'marka', 'isDeleted', 'deletedAt'
+  'shippedToAddress', 'clientGstin', 'clientPan', 'embeddedTemplate'
 ];
 
 
