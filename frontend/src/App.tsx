@@ -32,8 +32,13 @@ if (typeof window !== 'undefined') {
   const originalConsoleError = console.error;
   console.error = function (...args) {
     const errorString = args.map(arg => (arg instanceof Error ? arg.message : String(arg))).join(' ');
-    if (errorString.includes('Failed to fetch') || errorString.includes('TypeError')) {
-      console.warn('[Suppressed Next.js Overlay] Suppressed network console.error:', ...args);
+    if (
+      errorString.includes('Failed to fetch') ||
+      errorString.includes('TypeError') ||
+      errorString.includes('SUPABASE') ||
+      errorString.includes('Supabase')
+    ) {
+      console.warn('[Suppressed Next.js Overlay] Suppressed console.error:', ...args);
       return;
     }
     originalConsoleError.apply(console, args);
@@ -758,7 +763,7 @@ export default function App() {
               .order('date', { ascending: false });
 
             if (fetchErr) {
-              console.error('[SUPABASE INVOICES FETCH ERROR] Details:', {
+              console.warn('[SUPABASE INVOICES FETCH ERROR] Details:', {
                 message: fetchErr.message,
                 code: fetchErr.code,
                 details: fetchErr.details,
@@ -794,7 +799,7 @@ export default function App() {
             setInvoices(parsedCloudInvoices);
             localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsedCloudInvoices));
           } catch (err) {
-            console.error('[SUPABASE GET INVOICES EXCEPTION]:', err);
+            console.warn('[SUPABASE GET INVOICES EXCEPTION]:', err);
             handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
           }
 
