@@ -1401,11 +1401,26 @@ export default function App() {
   };
 
   const sanitizeInvoiceForSync = (inv: Invoice): any => {
-    const targetUid = inv.userId || (inv as any).user_id || getActiveUserId(user, userEmail);
+    let targetUid = inv.userId || (inv as any).user_id;
+    if (user?.id) {
+      targetUid = user.id;
+    } else {
+      const activeUid = getActiveUserId(user, userEmail);
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(targetUid || '') && uuidRegex.test(activeUid)) {
+        targetUid = activeUid;
+      }
+    }
+
     const dataToSync: any = { ...inv };
     delete dataToSync.user_id;
-    if (targetUid) {
+    
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (targetUid && uuidRegex.test(targetUid)) {
       dataToSync.userId = targetUid;
+    } else {
+      console.warn('[sanitizeInvoiceForSync] Omitting invalid non-UUID userId:', targetUid);
+      delete dataToSync.userId;
     }
 
     const embeddedTemplate = { ...(dataToSync.embeddedTemplate || {}) };
