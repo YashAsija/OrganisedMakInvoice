@@ -826,6 +826,19 @@ export default function App() {
                 const merged = Array.from(invoiceMap.values());
                 setInvoices(merged);
                 localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(merged));
+                localStorage.setItem('invoice_maker_invoices', JSON.stringify(merged));
+
+                // Auto-sync any local unsynced invoices to Cloud with current userId so all devices stay in sync
+                if (uid && merged.length > 0) {
+                  const unsyncedToPush = merged
+                    .filter(inv => inv && inv.id)
+                    .map(inv => sanitizeInvoiceForSync({ ...inv, userId: uid }));
+                  try {
+                    await supabase.from('invoices').upsert(unsyncedToPush);
+                  } catch (syncErr) {
+                    console.warn('Auto multi-device cloud sync warn:', syncErr);
+                  }
+                }
               }
             } catch (err) {
               handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
@@ -1437,7 +1450,11 @@ export default function App() {
   };
 
   const sanitizeInvoiceForSync = (inv: Invoice): any => {
-    const dataToSync: any = { ...inv, userId: user?.id };
+    const targetUid = inv.userId || user?.id || '';
+    const dataToSync: any = { ...inv };
+    if (targetUid) {
+      dataToSync.userId = targetUid;
+    }
 
     const embeddedTemplate = { ...(dataToSync.embeddedTemplate || {}) };
 
@@ -1451,6 +1468,9 @@ export default function App() {
     if (inv.isDeleted === undefined) {
       delete embeddedTemplate.isDeleted;
       delete embeddedTemplate.deletedAt;
+    } else {
+      dataToSync.isDeleted = inv.isDeleted;
+      embeddedTemplate.isDeleted = inv.isDeleted;
     }
 
     if (Object.keys(embeddedTemplate).length > 0) {
