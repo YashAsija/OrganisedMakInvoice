@@ -612,10 +612,7 @@ export default function App() {
 
           setIsAuthLoading(false);
 
-          // Only load cloud data if unlocked (PIN gate for data protection)
-          if (!isUnlocked) return;
-
-          if (true) {
+          if (currentUser) {
             // --- SYNC / RESOLVE FROM CLOUD ---
             const uid = currentUser.id;
 
@@ -1204,6 +1201,10 @@ export default function App() {
         }
 
         if (!session) {
+          setIsAuthLoading(false);
+        } else if (session.user) {
+          setUser(session.user);
+          setUserEmail(session.user.email ?? session.user.phone ?? null);
           setIsAuthLoading(false);
         }
       } catch (err) {
