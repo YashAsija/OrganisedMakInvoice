@@ -1970,7 +1970,9 @@ export default function App() {
       const updated = invoices.map(inv => 
         inv.id === invoiceId ? { ...inv, isDeleted: true, deletedAt: new Date().toISOString() } : inv
       );
-      setInvoices(updated.filter(inv => inv.id !== invoiceId || !inv.isDeleted)); // filter out of visible list
+      // Keep the invoice in React state with isDeleted:true so the Bin view can show it.
+      // Dashboard.tsx filters on !inv.isDeleted for main ledger and inv.isDeleted for Bin.
+      setInvoices(updated);
       localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
       localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
 
@@ -2083,7 +2085,9 @@ export default function App() {
         return inv;
       }).filter(inv => !draftsToDelete.includes(inv.id));
 
-      setInvoices(updated.filter(inv => !inv.isDeleted)); // filter out of visible list
+      // Keep soft-deleted invoices in state (isDeleted:true) — Dashboard.tsx filters them to Bin.
+      // Only hard-remove the permanently deleted drafts.
+      setInvoices(updated);
       localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
       localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
 
