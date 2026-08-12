@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { getFinancialYearShort } from './InvoiceModal';
+import { getFinancialYearShort, getNextInvoiceNumber } from './InvoiceModal';
 
 import * as XLSX from 'xlsx';
 
@@ -5438,6 +5438,98 @@ export default function Dashboard({
     return candidate;
   }
 
+  const handleConvertDocument = (inv: Invoice, targetType: string) => {
+    setActiveActionMenuId(null);
+    const defaultPrefixes: Record<string, string> = {
+      invoice: 'INV',
+      proforma: 'PRO',
+      debit_note: 'DN',
+      credit_note: 'CN',
+      estimate: 'EST',
+      quote: 'EST',
+      purchases: 'PUR',
+      purchase_order: 'PO',
+      purchase_debit_note: 'PDN'
+    };
+    const prefix = defaultPrefixes[targetType] || 'INV';
+    const todayStr = new Date().toISOString().split('T')[0];
+    const nextNumber = getNextInvoiceNumber(prefix, '1', invoices, targetType, todayStr);
+
+    onOpenInvoiceEditor({
+      // Base identifier
+      id: '', // Blank ID ensures original source document stays intact
+      invoiceType: targetType as any,
+      invoiceNumber: nextNumber,
+      referenceNumber: inv.invoiceNumber ? `Ref: ${inv.invoiceNumber}` : (inv.referenceNumber || ''),
+      date: todayStr,
+      dueDate: todayStr,
+      status: 'pending',
+      parentInvoiceId: inv.id || undefined,
+
+      // Bill To details (copied 100%)
+      clientName: inv.clientName || '',
+      clientEmail: inv.clientEmail || '',
+      clientPhone: inv.clientPhone || '',
+      clientAddress: inv.clientAddress || '',
+      clientGstin: inv.clientGstin || '',
+      clientPan: inv.clientPan || '',
+      clientCompanyName: inv.clientCompanyName || inv.clientCompany || '',
+      clientCompany: inv.clientCompany || inv.clientCompanyName || '',
+      clientState: inv.clientState || '',
+      clientCountry: inv.clientCountry || '',
+
+      // Ship To details (copied 100%)
+      shippedToName: inv.shippedToName || '',
+      shippedToPhone: inv.shippedToPhone || '',
+      shippedToEmail: inv.shippedToEmail || '',
+      shippedToAddress: inv.shippedToAddress || '',
+      shippedToGstin: inv.shippedToGstin || '',
+      shippedToPan: inv.shippedToPan || '',
+      shippedToCompanyName: inv.shippedToCompanyName || inv.shippedToCompany || '',
+      shippedToCompany: inv.shippedToCompany || inv.shippedToCompanyName || '',
+      shippedToState: inv.shippedToState || '',
+      shippedToCountry: inv.shippedToCountry || '',
+
+      // Product details (copied 100%)
+      items: inv.items ? JSON.parse(JSON.stringify(inv.items)) : [],
+      subtotal: inv.subtotal || 0,
+      discountType: inv.discountType || 'percentage',
+      discountValue: inv.discountValue || 0,
+      discountTotal: inv.discountTotal || 0,
+      taxTotal: inv.taxTotal || 0,
+      grandTotal: inv.grandTotal || 0,
+      taxMode: inv.taxMode,
+      customTaxCols: inv.customTaxCols ? [...inv.customTaxCols] : undefined,
+      customTaxName: inv.customTaxName,
+      customTaxPercentage: inv.customTaxPercentage,
+      customTaxType: inv.customTaxType,
+      additionalTaxes: inv.additionalTaxes ? [...inv.additionalTaxes] : undefined,
+      freightCharges: inv.freightCharges || 0,
+      isFreightAdded: inv.isFreightAdded || false,
+      marka: inv.marka || '',
+
+      // Transport details (copied 100%)
+      transport: inv.transport || '',
+      vehicleNo: inv.vehicleNo || '',
+      driverMobile: inv.driverMobile || '',
+      station: inv.station || '',
+      ewayBillNo: inv.ewayBillNo || '',
+      grRrNo: inv.grRrNo || '',
+      placeOfSupply: inv.placeOfSupply || '',
+
+      // Explicitly DO NOT copy Notes & Terms
+      notes: '',
+      invoiceTerms: '',
+
+      // Reset template snapshots to load target document type's clean preset
+      selectedCustomTemplateId: undefined,
+      embeddedTemplate: undefined,
+      selectedTemplateStyle: undefined,
+      createdAt: undefined,
+      updatedAt: undefined
+    } as any);
+  };
+
   function getCurrencySymbol(code: string): string {
 
     switch (code) {
@@ -8270,23 +8362,7 @@ export default function Dashboard({
 
                                           <button
 
-                                            onClick={() => {
-
-                                              setActiveActionMenuId(null);
-
-                                              onOpenInvoiceEditor({
-
-                                                ...inv,
-
-                                                id: '',
-
-                                                invoiceType: 'purchases',
-
-                                                invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                              } as any);
-
-                                            }}
+                                            onClick={() => handleConvertDocument(inv, 'purchases')}
 
                                             className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -8304,23 +8380,7 @@ export default function Dashboard({
 
                                           <button
 
-                                            onClick={() => {
-
-                                              setActiveActionMenuId(null);
-
-                                              onOpenInvoiceEditor({
-
-                                                ...inv,
-
-                                                id: '',
-
-                                                invoiceType: 'purchase_order',
-
-                                                invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                              } as any);
-
-                                            }}
+                                            onClick={() => handleConvertDocument(inv, 'purchase_order')}
 
                                             className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -8338,23 +8398,7 @@ export default function Dashboard({
 
                                           <button
 
-                                            onClick={() => {
-
-                                              setActiveActionMenuId(null);
-
-                                              onOpenInvoiceEditor({
-
-                                                ...inv,
-
-                                                id: '',
-
-                                                invoiceType: 'purchase_debit_note',
-
-                                                invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                              } as any);
-
-                                            }}
+                                            onClick={() => handleConvertDocument(inv, 'purchase_debit_note')}
 
                                             className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -8382,23 +8426,7 @@ export default function Dashboard({
 
                                           <button
 
-                                            onClick={() => {
-
-                                              setActiveActionMenuId(null);
-
-                                              onOpenInvoiceEditor({
-
-                                                ...inv,
-
-                                                id: '',
-
-                                                invoiceType: 'invoice',
-
-                                                invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                              } as any);
-
-                                            }}
+                                            onClick={() => handleConvertDocument(inv, 'invoice')}
 
                                             className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -8416,23 +8444,7 @@ export default function Dashboard({
 
                                           <button
 
-                                            onClick={() => {
-
-                                              setActiveActionMenuId(null);
-
-                                              onOpenInvoiceEditor({
-
-                                                ...inv,
-
-                                                id: '',
-
-                                                invoiceType: 'proforma',
-
-                                                invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                              } as any);
-
-                                            }}
+                                            onClick={() => handleConvertDocument(inv, 'proforma')}
 
                                             className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -8450,23 +8462,7 @@ export default function Dashboard({
 
                                           <button
 
-                                            onClick={() => {
-
-                                              setActiveActionMenuId(null);
-
-                                              onOpenInvoiceEditor({
-
-                                                ...inv,
-
-                                                id: '',
-
-                                                invoiceType: 'quote',
-
-                                                invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                              } as any);
-
-                                            }}
+                                            onClick={() => handleConvertDocument(inv, 'quote')}
 
                                             className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -8484,23 +8480,7 @@ export default function Dashboard({
 
                                           <button
 
-                                            onClick={() => {
-
-                                              setActiveActionMenuId(null);
-
-                                              onOpenInvoiceEditor({
-
-                                                ...inv,
-
-                                                id: '',
-
-                                                invoiceType: 'credit_note',
-
-                                                invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                              } as any);
-
-                                            }}
+                                            onClick={() => handleConvertDocument(inv, 'credit_note')}
 
                                             className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -8518,23 +8498,7 @@ export default function Dashboard({
 
                                           <button
 
-                                            onClick={() => {
-
-                                              setActiveActionMenuId(null);
-
-                                              onOpenInvoiceEditor({
-
-                                                ...inv,
-
-                                                id: '',
-
-                                                invoiceType: 'debit_note',
-
-                                                invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                              } as any);
-
-                                            }}
+                                            onClick={() => handleConvertDocument(inv, 'debit_note')}
 
                                             className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -9110,23 +9074,7 @@ export default function Dashboard({
 
                                             <button
 
-                                              onClick={() => {
-
-                                                setActiveActionMenuId(null);
-
-                                                onOpenInvoiceEditor({
-
-                                                  ...inv,
-
-                                                  id: '',
-
-                                                  invoiceType: 'purchases',
-
-                                                  invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                                } as any);
-
-                                              }}
+                                              onClick={() => handleConvertDocument(inv, 'purchases')}
 
                                               className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -9144,23 +9092,7 @@ export default function Dashboard({
 
                                             <button
 
-                                              onClick={() => {
-
-                                                setActiveActionMenuId(null);
-
-                                                onOpenInvoiceEditor({
-
-                                                  ...inv,
-
-                                                  id: '',
-
-                                                  invoiceType: 'purchase_order',
-
-                                                  invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                                } as any);
-
-                                              }}
+                                              onClick={() => handleConvertDocument(inv, 'purchase_order')}
 
                                               className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -9178,23 +9110,7 @@ export default function Dashboard({
 
                                             <button
 
-                                              onClick={() => {
-
-                                                setActiveActionMenuId(null);
-
-                                                onOpenInvoiceEditor({
-
-                                                  ...inv,
-
-                                                  id: '',
-
-                                                  invoiceType: 'purchase_debit_note',
-
-                                                  invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                                } as any);
-
-                                              }}
+                                              onClick={() => handleConvertDocument(inv, 'purchase_debit_note')}
 
                                               className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -9222,23 +9138,7 @@ export default function Dashboard({
 
                                             <button
 
-                                              onClick={() => {
-
-                                                setActiveActionMenuId(null);
-
-                                                onOpenInvoiceEditor({
-
-                                                  ...inv,
-
-                                                  id: '',
-
-                                                  invoiceType: 'invoice',
-
-                                                  invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                                } as any);
-
-                                              }}
+                                              onClick={() => handleConvertDocument(inv, 'invoice')}
 
                                               className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -9256,23 +9156,7 @@ export default function Dashboard({
 
                                             <button
 
-                                              onClick={() => {
-
-                                                setActiveActionMenuId(null);
-
-                                                onOpenInvoiceEditor({
-
-                                                  ...inv,
-
-                                                  id: '',
-
-                                                  invoiceType: 'proforma',
-
-                                                  invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                                } as any);
-
-                                              }}
+                                              onClick={() => handleConvertDocument(inv, 'proforma')}
 
                                               className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -9290,23 +9174,7 @@ export default function Dashboard({
 
                                             <button
 
-                                              onClick={() => {
-
-                                                setActiveActionMenuId(null);
-
-                                                onOpenInvoiceEditor({
-
-                                                  ...inv,
-
-                                                  id: '',
-
-                                                  invoiceType: 'quote',
-
-                                                  invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                                } as any);
-
-                                              }}
+                                              onClick={() => handleConvertDocument(inv, 'quote')}
 
                                               className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -9324,23 +9192,7 @@ export default function Dashboard({
 
                                             <button
 
-                                              onClick={() => {
-
-                                                setActiveActionMenuId(null);
-
-                                                onOpenInvoiceEditor({
-
-                                                  ...inv,
-
-                                                  id: '',
-
-                                                  invoiceType: 'credit_note',
-
-                                                  invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                                } as any);
-
-                                              }}
+                                              onClick={() => handleConvertDocument(inv, 'credit_note')}
 
                                               className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
@@ -9358,23 +9210,7 @@ export default function Dashboard({
 
                                             <button
 
-                                              onClick={() => {
-
-                                                setActiveActionMenuId(null);
-
-                                                onOpenInvoiceEditor({
-
-                                                  ...inv,
-
-                                                  id: '',
-
-                                                  invoiceType: 'debit_note',
-
-                                                  invoiceNumber: `CNV-${inv.invoiceNumber}`
-
-                                                } as any);
-
-                                              }}
+                                              onClick={() => handleConvertDocument(inv, 'debit_note')}
 
                                               className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 

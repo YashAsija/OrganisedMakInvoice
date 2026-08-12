@@ -174,25 +174,114 @@ function InvoicePreviewContent() {
       return;
     }
 
-    const fetchInvoice = async () => {
+    const findLocalInvoice = (targetId: string): Invoice | null => {
       try {
-        setPrintPageChunks(null);
-        const res = await fetch(`/api/invoice/preview?id=${id}`);
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || 'Failed to load document preview.');
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('invoice_maker_invoices')) {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              try {
+                const list = JSON.parse(raw);
+                if (Array.isArray(list)) {
+                  const match = list.find((inv: any) => inv && inv.id === targetId);
+                  if (match) {
+                    const cloned = { ...match };
+                    if (cloned.selectedTemplateStyle && cloned.selectedTemplateStyle.startsWith('{')) {
+                      try {
+                        const embedded = JSON.parse(cloned.selectedTemplateStyle);
+                        cloned.embeddedTemplate = embedded;
+                        for (const k of Object.keys(embedded)) {
+                          if (cloned[k] === undefined) {
+                            cloned[k] = embedded[k];
+                          }
+                        }
+                      } catch (e) {}
+                    }
+                    return cloned;
+                  }
+                }
+              } catch (e) {}
+            }
+          }
         }
-        const data = await res.json();
-        setInvoice(data.invoice);
-        setProfile(data.profile);
+      } catch (e) {}
+      return null;
+    };
+
+    const findLocalProfile = (): BusinessProfile | null => {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('invoice_maker_biz_profile')) {
+            const rawProf = localStorage.getItem(key);
+            if (rawProf) {
+              try {
+                const parsed = JSON.parse(rawProf);
+                if (parsed) return parsed;
+              } catch (e) {}
+            }
+          }
+        }
+      } catch (e) {}
+      return null;
+    };
+
+    const fetchInvoice = async () => {
+      setPrintPageChunks(null);
+      const localMatch = findLocalInvoice(id);
+      const localProf = findLocalProfile();
+
+      try {
+        const res = await fetch(`/api/invoice/preview?id=${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.invoice) {
+            const cloudInv = data.invoice;
+            // Merge local edits over cloud invoice so unsynced or fresh edits render immediately
+            const mergedInvoice = localMatch ? { ...cloudInv, ...localMatch } : cloudInv;
+            const mergedProfile = data.profile || localProf || ({} as BusinessProfile);
+            setInvoice(mergedInvoice);
+            setProfile(mergedProfile);
+            setError(null);
+            setLoading(false);
+            return;
+          }
+        }
       } catch (err: any) {
-        setError(err.message || 'An error occurred while loading the preview.');
-      } finally {
-        setLoading(false);
+        console.warn('Cloud preview fetch error:', err);
       }
+
+      // If cloud fetch failed or invoice not found in cloud, fall back to local storage match
+      if (localMatch) {
+        setInvoice(localMatch);
+        setProfile(localProf || ({} as BusinessProfile));
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
+      setError('The requested document could not be found.');
+      setLoading(false);
     };
 
     fetchInvoice();
+
+    // Listen for realtime updates from other tabs or local storage writes
+    const handleStorageOrCustomEvent = (e: any) => {
+      const updatedMatch = findLocalInvoice(id);
+      if (updatedMatch) {
+        setInvoice(updatedMatch);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageOrCustomEvent);
+    window.addEventListener('invoice_updated', handleStorageOrCustomEvent);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageOrCustomEvent);
+      window.removeEventListener('invoice_updated', handleStorageOrCustomEvent);
+    };
   }, [id]);
 
   // Auto-trigger print dialog when ?print=1 is in the URL

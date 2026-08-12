@@ -1,0 +1,34 @@
+{
+  "appId": "com.makinvoices.app",
+  "appName": "MakInvoices",
+  "webDir": "www",
+  "server": {
+    "url": "https://makinvoices.com",
+    "cleartext": false,
+    "allowNavigation": [
+      "https://makinvoices.com/*",
+      "*.makinvoices.com",
+      "*.supabase.co",
+      "*.razorpay.com",
+      "*.stripe.com"
+    ]
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#0f172a",
+      "androidSplashResourceName": "splash",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0f172a"
+    }
+  }
+}

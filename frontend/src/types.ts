@@ -93,7 +93,9 @@ export interface Invoice {
   clientGstin?: string;
   clientPan?: string;
   clientCompanyName?: string;
+  clientCompany?: string;
   shippedToCompanyName?: string;
+  shippedToCompany?: string;
   isDeleted?: boolean;
   deletedAt?: string;
 }

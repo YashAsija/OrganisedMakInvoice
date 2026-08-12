@@ -191,9 +191,9 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
             {sections.billTo?.visible !== false && (
               <>
                 <h3 className="font-bold text-[11px] text-gray-800 uppercase mb-2 whitespace-nowrap">{isPurchase ? 'BILL FROM' : 'BILLED TO'}</h3>
-                {(config.client.fields.includes('companyName') || config.client.fields.includes('company')) ? (
+                {(config.client.fields.includes('companyName') || config.client.fields.includes('company') || !!((invoiceData as any)?.clientCompanyName || (invoiceData as any)?.clientCompany)) ? (
                   <>
-                    <div className="text-[12px] font-bold text-gray-900 mb-1">{(invoiceData as any)?.clientCompanyName || 'Acme Corp Ltd'}</div>
+                    <div className="text-[12px] font-bold text-gray-900 mb-1">{(invoiceData as any)?.clientCompanyName || (invoiceData as any)?.clientCompany || ''}</div>
                     {(config.client.fields.includes('name') || config.client.fields.includes('partyName')) && (
                       <div className={rowStyle}><span className={labelStyle}>Customer Name</span><span className="mr-2">:</span><span className={valStyle}>{clientName}</span></div>
                     )}
@@ -220,9 +220,9 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
             {sections.shipTo?.visible !== false && (
               <>
                 <h3 className="font-bold text-[11px] text-gray-800 uppercase mb-2 whitespace-nowrap">{isPurchase ? 'SHIP FROM' : 'SHIPPED TO'}</h3>
-                {(config.shipping.fields.includes('companyName') || config.shipping.fields.includes('company')) ? (
+                {(config.shipping.fields.includes('companyName') || config.shipping.fields.includes('company') || !!((invoiceData as any)?.shippedToCompanyName || (invoiceData as any)?.shippedToCompany)) ? (
                   <>
-                    <div className="text-[12px] font-bold text-gray-900 mb-1">{(invoiceData as any)?.shippedToCompanyName || 'Global Logistics Ltd'}</div>
+                    <div className="text-[12px] font-bold text-gray-900 mb-1">{(invoiceData as any)?.shippedToCompanyName || (invoiceData as any)?.shippedToCompany || ''}</div>
                     {(config.shipping.fields.includes('name') || config.shipping.fields.includes('partyName')) && (
                       <div className={rowStyle}><span className={labelStyle}>Customer Name</span><span className="mr-2">:</span><span className={valStyle}>{shipName}</span></div>
                     )}

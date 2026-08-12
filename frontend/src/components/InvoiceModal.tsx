@@ -39,7 +39,7 @@ export const getFinancialYearShort = (dateInput?: string | Date): string => {
   return `${y1}-${y2}`;
 };
 
-const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesList: Invoice[], docType: string = 'invoice', docDate?: string) => {
+export const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesList: Invoice[], docType: string = 'invoice', docDate?: string) => {
   const defaultPrefixes: Record<string, string> = {
     invoice: 'INV',
     proforma: 'PRO',
@@ -393,56 +393,61 @@ export default function InvoiceModal({
   }, []);
 
   // Helper: load the correct default template from storage
-  const loadDefaultTemplate = useCallback((typeToUse?: string) => {
-    // If user edited/updated this template in TemplateManager, load the latest version from customTemplates
-    const targetId = invoice?.embeddedTemplate?.id || invoice?.selectedCustomTemplateId;
-    if (targetId) {
-      const savedCustom = localStorage.getItem('makbills_custom_templates');
-      if (savedCustom) {
-        try {
-          const parsed = JSON.parse(savedCustom);
-          const match = parsed.find((t: InvoiceTemplate) => t.id === targetId);
-          if (match) {
-            setActiveTemplate(match);
-            return;
-          }
-        } catch (e) {}
+  const loadDefaultTemplate = useCallback((typeToUse?: string, forceDocTypeChange: boolean = false) => {
+    const isExistingDoc = Boolean(invoice && (invoice.id || '').trim() !== '') && !forceDocTypeChange;
+    const isTypeMismatch = typeToUse && invoice?.invoiceType && typeToUse !== invoice.invoiceType;
+
+    if (isExistingDoc && !isTypeMismatch) {
+      // If user edited/updated this template in TemplateManager, load the latest version from customTemplates
+      const targetId = invoice?.embeddedTemplate?.id || invoice?.selectedCustomTemplateId;
+      if (targetId) {
+        const savedCustom = localStorage.getItem('makbills_custom_templates');
+        if (savedCustom) {
+          try {
+            const parsed = JSON.parse(savedCustom);
+            const match = parsed.find((t: InvoiceTemplate) => t.id === targetId);
+            if (match) {
+              setActiveTemplate(match);
+              return;
+            }
+          } catch (e) {}
+        }
       }
-    }
 
-    // If an exact snapshot of the template was embedded in the invoice, use it to ensure historical consistency
-    if (invoice?.embeddedTemplate) {
-      setActiveTemplate(invoice.embeddedTemplate);
-      return;
-    }
-
-    // For very old invoices that didn't have selectedCustomTemplateId, map their selectedTemplateStyle
-    if (invoice && !invoice.selectedCustomTemplateId && invoice.selectedTemplateStyle) {
-      const style = invoice.selectedTemplateStyle.toLowerCase();
-      if (style === 'minimal') { setActiveTemplate(TEMPLATE_PRESETS.find(t => t.id === 'preset_barebones') || TEMPLATE_PRESETS[0]); return; }
-      if (style === 'modern') { setActiveTemplate(TEMPLATE_PRESETS.find(t => t.id === 'preset_medical') || TEMPLATE_PRESETS[0]); return; }
-      if (style === 'professional') { setActiveTemplate(TEMPLATE_PRESETS.find(t => t.id === 'preset_corporate') || TEMPLATE_PRESETS[0]); return; }
-      if (style === 'startup' || style === 'agency') { setActiveTemplate(TEMPLATE_PRESETS.find(t => t.id === 'preset_user') || TEMPLATE_PRESETS[0]); return; }
-      if (style === 'enterprise') { setActiveTemplate(TEMPLATE_PRESETS.find(t => t.id === 'preset_gst') || TEMPLATE_PRESETS[0]); return; }
-    }
-
-    // If editing an existing invoice that doesn't have an embedded template (legacy)
-    if (invoice?.selectedCustomTemplateId) {
-      const savedCustom = localStorage.getItem('makbills_custom_templates');
-      if (savedCustom) {
-        try {
-          const parsed = JSON.parse(savedCustom);
-          const match = parsed.find((t: InvoiceTemplate) => t.id === invoice.selectedCustomTemplateId);
-          if (match) {
-            setActiveTemplate(match);
-            return;
-          }
-        } catch (e) { }
-      }
-      const systemMatch = TEMPLATE_PRESETS.find(t => t.id === invoice.selectedCustomTemplateId);
-      if (systemMatch) {
-        setActiveTemplate(systemMatch);
+      // If an exact snapshot of the template was embedded in the invoice, use it to ensure historical consistency
+      if (invoice?.embeddedTemplate) {
+        setActiveTemplate(invoice.embeddedTemplate);
         return;
+      }
+
+      // For very old invoices that didn't have selectedCustomTemplateId, map their selectedTemplateStyle
+      if (invoice && !invoice.selectedCustomTemplateId && invoice.selectedTemplateStyle) {
+        const style = invoice.selectedTemplateStyle.toLowerCase();
+        if (style === 'minimal') { setActiveTemplate(TEMPLATE_PRESETS.find(t => t.id === 'preset_barebones') || TEMPLATE_PRESETS[0]); return; }
+        if (style === 'modern') { setActiveTemplate(TEMPLATE_PRESETS.find(t => t.id === 'preset_medical') || TEMPLATE_PRESETS[0]); return; }
+        if (style === 'professional') { setActiveTemplate(TEMPLATE_PRESETS.find(t => t.id === 'preset_corporate') || TEMPLATE_PRESETS[0]); return; }
+        if (style === 'startup' || style === 'agency') { setActiveTemplate(TEMPLATE_PRESETS.find(t => t.id === 'preset_user') || TEMPLATE_PRESETS[0]); return; }
+        if (style === 'enterprise') { setActiveTemplate(TEMPLATE_PRESETS.find(t => t.id === 'preset_gst') || TEMPLATE_PRESETS[0]); return; }
+      }
+
+      // If editing an existing invoice that doesn't have an embedded template (legacy)
+      if (invoice?.selectedCustomTemplateId) {
+        const savedCustom = localStorage.getItem('makbills_custom_templates');
+        if (savedCustom) {
+          try {
+            const parsed = JSON.parse(savedCustom);
+            const match = parsed.find((t: InvoiceTemplate) => t.id === invoice.selectedCustomTemplateId);
+            if (match) {
+              setActiveTemplate(match);
+              return;
+            }
+          } catch (e) { }
+        }
+        const systemMatch = TEMPLATE_PRESETS.find(t => t.id === invoice.selectedCustomTemplateId);
+        if (systemMatch) {
+          setActiveTemplate(systemMatch);
+          return;
+        }
       }
     }
 
@@ -623,6 +628,8 @@ export default function InvoiceModal({
       setQrCodeTriggerUrl('');
       setClientGstin('');
       setClientPan('');
+      setClientCompanyName('');
+      setShippedToCompanyName('');
       setPlaceOfSupply('');
       setGrRrNo('');
       setTransport('');
@@ -1140,8 +1147,8 @@ export default function InvoiceModal({
       station: silent ? station : (station.trim() || undefined),
       ewayBillNo: silent ? ewayBillNo : (ewayBillNo.trim() || undefined),
       marka: silent ? marka : (marka.trim() || undefined),
-      clientCompanyName: silent ? clientCompanyName : (clientCompanyName.trim() || undefined),
-      shippedToCompanyName: silent ? shippedToCompanyName : (shippedToCompanyName.trim() || undefined),
+      clientCompanyName: clientCompanyName,
+      shippedToCompanyName: shippedToCompanyName,
       shippedToName: silent ? shippedToName : (shippedToName.trim() || undefined),
       shippedToPhone: silent ? shippedToPhone : (shippedToPhone.trim() || undefined),
       shippedToEmail: silent ? shippedToEmail : (shippedToEmail.trim() || undefined),
@@ -1873,7 +1880,7 @@ export default function InvoiceModal({
       status: status === 'draft' ? 'pending' : status,
       paidDate: status === 'paid' ? (invoice?.paidDate || new Date().toISOString().split('T')[0]) : undefined,
       items,
-      createdAt: invoice ? invoice.createdAt : new Date().toISOString(),
+      createdAt: (invoice && (invoice.id || '').trim() !== '') ? invoice.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       recurringSettings: isRecurring ? {
         isRecurring: true,
@@ -1892,7 +1899,10 @@ export default function InvoiceModal({
       customTaxName,
       customTaxPercentage,
       customTaxType,
-      invoiceTerms,
+      clientCompanyName: clientCompanyName ? clientCompanyName.trim() : undefined,
+      clientCompany: clientCompanyName ? clientCompanyName.trim() : undefined,
+      shippedToCompanyName: shippedToCompanyName ? shippedToCompanyName.trim() : undefined,
+      shippedToCompany: shippedToCompanyName ? shippedToCompanyName.trim() : undefined,
       clientGstin: clientGstin.trim() || undefined,
       clientPan: clientPan.trim() || undefined,
       placeOfSupply: placeOfSupply.trim() || undefined,
@@ -1907,8 +1917,10 @@ export default function InvoiceModal({
       shippedToEmail: shippedToEmail.trim() || undefined,
       shippedToPan: shippedToPan.trim() || undefined,
       shippedToState: shippedToState.trim() || undefined,
+      shippedToCountry: shippedToCountry.trim() || undefined,
       shippedToGstin: shippedToGstin.trim() || undefined,
-      shippedToAddress: shippedToAddress.trim() || undefined
+      shippedToAddress: shippedToAddress.trim() || undefined,
+      marka: marka.trim() || undefined
     };
 
     onSave(finalInvoiceObj);
@@ -1921,9 +1933,10 @@ export default function InvoiceModal({
       const raw = localStorage.getItem(storageKey);
       if (raw) {
         const all = JSON.parse(raw) as any[];
-        // Remove temporary draft entry if it existed
-        const filtered = all.filter((i: any) => i.id !== savedDraftId || (i.status && i.status !== 'draft'));
+        // Remove temporary draft entry if it was a temp inv_draft_ prefix
+        const filtered = all.filter((i: any) => !(savedDraftId.startsWith('inv_draft_') && i.id === savedDraftId && i.status === 'draft'));
         localStorage.setItem(storageKey, JSON.stringify(filtered));
+        localStorage.setItem('invoice_maker_invoices', JSON.stringify(filtered));
       }
     } catch { /* ignore */ }
     // Also clean up temporary draft from Supabase (ONLY if savedDraftId was a temp draft)
@@ -2107,7 +2120,8 @@ export default function InvoiceModal({
                       setDriverMobile(d.driverMobile || '');
                       setStation(d.station || '');
                       setEwayBillNo(d.ewayBillNo || '');
-                      setGrRrNo(d.grRrNo || '');
+                      setClientCompanyName(d.clientCompanyName || d.clientCompany || '');
+                      setShippedToCompanyName(d.shippedToCompanyName || d.shippedToCompany || '');
                       setShippedToName(d.shippedToName || '');
                       setShippedToPhone(d.shippedToPhone || '');
                       setShippedToEmail(d.shippedToEmail || '');
@@ -2218,7 +2232,7 @@ export default function InvoiceModal({
                       }
                     }
                     setInvoiceType(newType);
-                    loadDefaultTemplate(newType);
+                    loadDefaultTemplate(newType, true);
                     if (!invoice) {
                       const newDefaults = getDocumentTypeDefaults(newType, profile);
                       setNotes(newDefaults.notes);
@@ -2273,7 +2287,7 @@ export default function InvoiceModal({
                           }
                         }
                         setInvoiceType(newType);
-                        loadDefaultTemplate(newType);
+                        loadDefaultTemplate(newType, true);
                         if (!invoice) {
                           const newDefaults = getDocumentTypeDefaults(newType, profile);
                           setNotes(newDefaults.notes);
@@ -2550,10 +2564,12 @@ export default function InvoiceModal({
                               const found = clients.find(c => c.id === selectedId);
                               if (found) {
                                 setClientName(found.name);
+                                setClientCompanyName((found as any).companyName || (found as any).company || '');
                                 setClientEmail(found.email || '');
                                 setClientPhone(found.phone || '');
                                 setClientAddress(found.address || '');
                                 setClientPan((found as any).pan || (found as any).taxId || '');
+                                setClientGstin((found as any).gstin || '');
                               }
                             }}
                             className="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500"
@@ -2580,19 +2596,17 @@ export default function InvoiceModal({
                           className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none focus:border-sky-500"
                         />
                       </div>
-                      {(activeTemplate.config.client?.fields.includes('companyName') || activeTemplate.config.client?.fields.includes('company')) && (
-                        <div>
-                          <label htmlFor="col-client-company-name" className="sr-only">Client Company Name</label>
-                          <input
-                            id="col-client-company-name"
-                            type="text"
-                            value={clientCompanyName}
-                            onChange={(e) => setClientCompanyName(e.target.value)}
-                            placeholder="Client Company Name"
-                            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none focus:border-sky-500"
-                          />
-                        </div>
-                      )}
+                      <div>
+                        <label htmlFor="col-client-company-name" className="sr-only">Client Company Name</label>
+                        <input
+                          id="col-client-company-name"
+                          type="text"
+                          value={clientCompanyName}
+                          onChange={(e) => setClientCompanyName(e.target.value)}
+                          placeholder="Client Company Name"
+                          className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none focus:border-sky-500"
+                        />
+                      </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {activeTemplate.config.client?.fields.includes('email') && (
@@ -2736,6 +2750,7 @@ export default function InvoiceModal({
                             <button
                               type="button"
                               onClick={() => {
+                                setShippedToCompanyName(clientCompanyName);
                                 setShippedToName(clientName);
                                 setShippedToEmail(clientEmail);
                                 setShippedToPhone(clientPhone);
@@ -2755,9 +2770,7 @@ export default function InvoiceModal({
                           {activeTemplate.config.shipping?.fields.includes('name') && (
                             <input type="text" value={shippedToName} onChange={e => setShippedToName(e.target.value)} placeholder="Name" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
                           )}
-                          {(activeTemplate.config.shipping?.fields.includes('companyName') || activeTemplate.config.shipping?.fields.includes('company')) && (
-                            <input type="text" value={shippedToCompanyName} onChange={e => setShippedToCompanyName(e.target.value)} placeholder="Company Name" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
-                          )}
+                          <input type="text" value={shippedToCompanyName} onChange={e => setShippedToCompanyName(e.target.value)} placeholder="Company Name" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {(activeTemplate.config.shipping?.fields.includes('address') || activeTemplate.config.shipping?.fields.includes('country')) && (
                               <select

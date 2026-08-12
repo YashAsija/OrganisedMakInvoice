@@ -60,7 +60,13 @@ export async function GET(req: NextRequest) {
     // Restore embeddedTemplate from selectedTemplateStyle column if present
     if (invoice.selectedTemplateStyle && invoice.selectedTemplateStyle.startsWith('{')) {
       try {
-        invoice.embeddedTemplate = JSON.parse(invoice.selectedTemplateStyle);
+        const embeddedTemplate = JSON.parse(invoice.selectedTemplateStyle);
+        invoice.embeddedTemplate = embeddedTemplate;
+        for (const key of Object.keys(embeddedTemplate)) {
+          if (embeddedTemplate[key] !== undefined && embeddedTemplate[key] !== null) {
+            (invoice as any)[key] = embeddedTemplate[key];
+          }
+        }
       } catch (e) {}
     } else if (invoice.selectedTemplateStyle) {
       const preset = TEMPLATE_PRESETS.find(t => t.id === invoice.selectedTemplateStyle);

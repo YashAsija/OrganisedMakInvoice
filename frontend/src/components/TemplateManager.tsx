@@ -8,6 +8,7 @@ import { useConfirm } from './ConfirmContext';
 import TemplateCreationHub from './TemplateBuilder/TemplateCreationHub';
 import { TEMPLATE_PRESETS } from '../lib/templatePresets';
 import { emitNotification } from '../lib/notifications';
+import { supabase } from '../lib/supabase';
 
 function TemplatePreview({ template, businessProfile }: { template: InvoiceTemplate; businessProfile?: BusinessProfile }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -174,6 +175,27 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
     }
   }, [templates, globalDefaultId]);
 
+  const persistTemplates = async (updated: InvoiceTemplate[]) => {
+    setTemplates(updated);
+    localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
+    window.dispatchEvent(new Event('custom_templates_local_update'));
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.storage
+          .from('CompanyLogo')
+          .upload(`${user.id}/custom_templates.json`, JSON.stringify(updated), {
+            cacheControl: '0',
+            upsert: true,
+            contentType: 'application/json'
+          });
+      }
+    } catch (e) {
+      console.warn('Failed to sync templates to cloud storage', e);
+    }
+  };
+
   const handleSaveTemplate = (template: InvoiceTemplate) => {
     const exists = templates.some(t => t.id === template.id);
     let updated = templates;
@@ -191,9 +213,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
       updated = [finalTemplate, ...updated];
     }
     
-    setTemplates(updated);
-    localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
-    window.dispatchEvent(new Event('custom_templates_local_update'));
+    persistTemplates(updated);
     setIsBuilding(false);
     setEditingTemplate(null);
   };
@@ -217,20 +237,14 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
             ...t,
             isDefault: t.id === newDefaultId
           }));
-          setTemplates(markedUpdated);
-          localStorage.setItem('makbills_custom_templates', JSON.stringify(markedUpdated));
-          window.dispatchEvent(new Event('custom_templates_local_update'));
+          persistTemplates(markedUpdated);
         } else {
-          setTemplates(updated);
-          localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
-          window.dispatchEvent(new Event('custom_templates_local_update'));
+          persistTemplates(updated);
         }
         setGlobalDefaultId(newDefaultId);
         localStorage.setItem('makbills_global_default_template', newDefaultId);
       } else {
-        setTemplates(updated);
-        localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
-        window.dispatchEvent(new Event('custom_templates_local_update'));
+        persistTemplates(updated);
       }
     }
   };
@@ -304,9 +318,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
       ...t,
       isDefault: t.id === template.id
     }));
-    setTemplates(updated);
-    localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
-    window.dispatchEvent(new Event('custom_templates_local_update'));
+    persistTemplates(updated);
   };
   
   const handleDuplicate = (template: InvoiceTemplate) => {
@@ -318,9 +330,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
       updatedAt: Date.now()
     };
     const updated = [dupe, ...templates];
-    setTemplates(updated);
-    localStorage.setItem('makbills_custom_templates', JSON.stringify(updated));
-    window.dispatchEvent(new Event('custom_templates_local_update'));
+    persistTemplates(updated);
   };
   
   const handleExportPDF = async (template: InvoiceTemplate) => {

@@ -32,7 +32,7 @@ const generateBaseTemplate = (id: string, name: string, category: InvoiceTemplat
     header: { showLogo: true, logoPosition: 'Left', logoWidth: 120, logoHeight: 60, titleAlignment: 'Right', invoiceTitle: 'TAX INVOICE' },
     company: { fields: ['name', 'address', 'gstin', 'email', 'phone', 'pan'] },
     invoiceInfo: { fields: ['invoiceNumber', 'invoiceDate', 'dueDate'], customFields: [], position: 'Right' },
-    client: { fields: ['name', 'address', 'gstin'] },
+    client: { fields: ['companyName', 'name', 'address', 'gstin'] },
     shipping: { fields: ['name', 'address', 'gstin', 'phone', 'email', 'pan'], sameAsBilling: false },
     transport: { fields: ['vehicleNo', 'transportName'] },
     table: {
@@ -211,7 +211,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       ...generateBaseTemplate('preset_user', 'Personal & Simple', 'User').config,
       header: { showLogo: true, logoPosition: 'Center', logoWidth: 90, logoHeight: 90, titleAlignment: 'Center', invoiceTitle: 'INVOICE' },
       company: { fields: ['name', 'email'] },
-      client: { fields: ['name'] },
+      client: { fields: ['companyName', 'name'] },
       tax: { showTaxableAmount: false, showCgstSgst: false, showIgst: false, showCess: false, showDiscount: false, showRoundOff: false, showTotal: true, enableHsnSummary: false, enableGstSummary: false, enableTaxBreakdown: true },
       table: {
         columns: [
@@ -245,7 +245,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       ...generateBaseTemplate('preset_gst', 'GST Exhaustive', 'GST').config,
       header: { showLogo: true, logoPosition: 'Left', logoWidth: 120, logoHeight: 60, titleAlignment: 'Right', invoiceTitle: 'TAX INVOICE' },
       company: { fields: ['name', 'address', 'gstin', 'email', 'phone', 'pan'] },
-      client: { fields: ['name', 'address', 'gstin'] },
+      client: { fields: ['companyName', 'name', 'address', 'gstin'] },
       tax: { showTaxableAmount: true, showCgstSgst: true, showIgst: true, showCess: false, showDiscount: true, showRoundOff: true, showTotal: true, enableHsnSummary: true, enableGstSummary: true, enableTaxBreakdown: true }
     },
     styleConfig: {
@@ -307,7 +307,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       ...generateBaseTemplate('preset_corporate', 'Corporate Professional', 'Default').config,
       header: { showLogo: true, logoPosition: 'Left', logoWidth: 120, logoHeight: 60, titleAlignment: 'Right', invoiceTitle: 'TAX INVOICE' },
       company: { fields: ['name', 'address', 'gstin', 'email', 'phone', 'pan'] },
-      client: { fields: ['name', 'address', 'gstin'] },
+      client: { fields: ['companyName', 'name', 'address', 'gstin'] },
       tax: { showTaxableAmount: true, showCgstSgst: true, showIgst: true, showCess: false, showDiscount: true, showRoundOff: true, showTotal: true, enableHsnSummary: true, enableGstSummary: false, enableTaxBreakdown: true },
       table: {
         columns: [
@@ -411,7 +411,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
     config: {
       ...generateBaseTemplate('preset_medical', 'Medical & Healthcare', 'Retail').config,
       header: { showLogo: true, logoPosition: 'Center', logoWidth: 80, logoHeight: 80, titleAlignment: 'Right', invoiceTitle: 'MEDICAL RECEIPT' },
-      client: { fields: ['name', 'address', 'phone'] },
+      client: { fields: ['companyName', 'name', 'address', 'phone'] },
       table: {
         columns: [
           { id: 'sr', visible: true, label: '#', type: 'Number', order: 1 },
@@ -668,7 +668,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       ...generateBaseTemplate('preset_compact_nano', 'Compact Express Receipt', 'Retail').config,
       header: { showLogo: true, logoPosition: 'Left', logoWidth: 80, logoHeight: 40, titleAlignment: 'Right', invoiceTitle: 'CASH RECEIPT' },
       company: { fields: ['name', 'phone', 'address'] },
-      client: { fields: ['name', 'phone'] },
+      client: { fields: ['companyName', 'name', 'phone'] },
       tax: { showTaxableAmount: true, showCgstSgst: true, showIgst: false, showCess: false, showDiscount: true, showRoundOff: true, showTotal: true, enableHsnSummary: false, enableGstSummary: false, enableTaxBreakdown: false }
     },
     styleConfig: {
@@ -710,7 +710,7 @@ export const TEMPLATE_PRESETS: InvoiceTemplate[] = [
       ...generateBaseTemplate('preset_detailed_enterprise_b2b', 'Detailed Enterprise B2B', 'GST').config,
       header: { showLogo: true, logoPosition: 'Left', logoWidth: 140, logoHeight: 65, titleAlignment: 'Right', invoiceTitle: 'TAX INVOICE' },
       company: { fields: ['name', 'owner', 'email', 'phone', 'address', 'state', 'country', 'gstin', 'pan', 'website'] },
-      client: { fields: ['name', 'phone', 'country', 'state', 'address', 'gstin'] },
+      client: { fields: ['companyName', 'name', 'phone', 'country', 'state', 'address', 'gstin'] },
       shipping: { fields: ['name', 'phone', 'country', 'state', 'address', 'gstin'], sameAsBilling: false },
       transport: { fields: ['vehicleNo', 'driverMobile', 'ewayBillNo'] },
       tax: { showTaxableAmount: true, showCgstSgst: true, showIgst: true, showCess: true, showDiscount: true, showRoundOff: true, showTotal: true, enableHsnSummary: true, enableGstSummary: true, enableTaxBreakdown: true },

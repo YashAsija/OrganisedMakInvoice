@@ -20,7 +20,9 @@ const ALLOWED_SUPABASE_COLUMNS = [
   'placeOfSupply', 'grRrNo', 'transport', 'vehicleNo', 'driverMobile',
   'station', 'ewayBillNo', 'shippedToName', 'shippedToPhone', 'shippedToEmail',
   'shippedToPan', 'shippedToState', 'shippedToCountry', 'shippedToGstin',
-  'shippedToAddress', 'clientGstin', 'clientPan', 'embeddedTemplate'
+  'shippedToAddress', 'clientGstin', 'clientPan', 'embeddedTemplate',
+  'clientCompanyName', 'clientCompany', 'shippedToCompanyName', 'shippedToCompany',
+  'deliveryNote', 'freightCharges', 'isFreightAdded', 'marka', 'isDeleted', 'deletedAt'
 ];
 
 
@@ -469,18 +471,34 @@ export default function App() {
       });
     }
 
-    // Invoices list
-    const localInvoices = localStorage.getItem(`invoice_maker_invoices${suffix}`);
-    if (localInvoices) {
-      try {
-        setInvoices(JSON.parse(localInvoices));
-      } catch (e) {
-        console.warn('Failed to parse local invoices');
-        setInvoices([]);
+    // Invoices list (combines suffixed and guest storage to prevent loss across auth shifts)
+    const localMap = new Map<string, Invoice>();
+    const localSourcesInit = [
+      localStorage.getItem(`invoice_maker_invoices${suffix}`),
+      localStorage.getItem('invoice_maker_invoices')
+    ];
+    localSourcesInit.forEach(raw => {
+      if (raw) {
+        try {
+          const list: Invoice[] = JSON.parse(raw);
+          if (Array.isArray(list)) {
+            list.forEach((inv: Invoice) => {
+              if (inv && inv.id) {
+                const existing = localMap.get(inv.id);
+                if (!existing) localMap.set(inv.id, inv);
+                else localMap.set(inv.id, { ...existing, ...inv });
+              }
+            });
+          }
+        } catch (e) {}
       }
-    } else {
-      setInvoices([]);
-      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify([]));
+    });
+
+    const initialInvoicesList = Array.from(localMap.values());
+    setInvoices(initialInvoicesList);
+    if (initialInvoicesList.length > 0) {
+      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(initialInvoicesList));
+      localStorage.setItem('invoice_maker_invoices', JSON.stringify(initialInvoicesList));
     }
 
     // Presets catalog
@@ -760,14 +778,7 @@ export default function App() {
                 .order('date', { ascending: false });
 
               if (cloudInvoices) {
-                // Merge: keep local drafts that aren't yet persisted to cloud
-                const localRaw = localStorage.getItem(`invoice_maker_invoices${suffix}`);
-                const localAll: Invoice[] = localRaw ? JSON.parse(localRaw) : [];
-                const localDraftsOnly = localAll.filter(
-                  (loc: Invoice) =>
-                    loc.status === 'draft' &&
-                    !cloudInvoices.some((c: any) => c.id === loc.id)
-                );
+                // Merge: 3-way non-destructive merge combining cloud, suffixed local, and guest local storage
                 const parsedCloudInvoices = (cloudInvoices as Invoice[]).map(inv => {
                   if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
                     try {
@@ -779,13 +790,40 @@ export default function App() {
                           (inv as any)[key] = embeddedTemplate[key];
                         }
                       }
-                    } catch (e) {
-                      // fallback if parsing fails
-                    }
+                    } catch (e) {}
                   }
                   return inv;
                 });
-                const merged = [...localDraftsOnly, ...parsedCloudInvoices];
+
+                const invoiceMap = new Map<string, Invoice>();
+                parsedCloudInvoices.forEach(c => { if (c && c.id) invoiceMap.set(c.id, c); });
+
+                const localSources = [
+                  localStorage.getItem(`invoice_maker_invoices${suffix}`),
+                  localStorage.getItem('invoice_maker_invoices')
+                ];
+
+                localSources.forEach(raw => {
+                  if (raw) {
+                    try {
+                      const list: Invoice[] = JSON.parse(raw);
+                      if (Array.isArray(list)) {
+                        list.forEach(loc => {
+                          if (loc && loc.id) {
+                            const existing = invoiceMap.get(loc.id);
+                            if (!existing) {
+                              invoiceMap.set(loc.id, loc);
+                            } else {
+                              invoiceMap.set(loc.id, { ...existing, ...loc });
+                            }
+                          }
+                        });
+                      }
+                    } catch (e) {}
+                  }
+                });
+
+                const merged = Array.from(invoiceMap.values());
                 setInvoices(merged);
                 localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(merged));
               }
@@ -806,14 +844,6 @@ export default function App() {
                       .eq('userId', uid)
                       .order('date', { ascending: false });
                     if (data) {
-                      // Merge: preserve local-only drafts on realtime sync
-                      const localRaw2 = localStorage.getItem(`invoice_maker_invoices${suffix}`);
-                      const localAll2: Invoice[] = localRaw2 ? JSON.parse(localRaw2) : [];
-                      const localDraftsOnly2 = localAll2.filter(
-                        (loc: Invoice) =>
-                          loc.status === 'draft' &&
-                          !data.some((c: any) => c.id === loc.id)
-                      );
                       const parsedCloudInvoices2 = (data as Invoice[]).map(inv => {
                         if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
                           try {
@@ -829,7 +859,36 @@ export default function App() {
                         }
                         return inv;
                       });
-                      const merged2 = [...localDraftsOnly2, ...parsedCloudInvoices2];
+
+                      const invoiceMap2 = new Map<string, Invoice>();
+                      parsedCloudInvoices2.forEach(c => { if (c && c.id) invoiceMap2.set(c.id, c); });
+
+                      const localSources2 = [
+                        localStorage.getItem(`invoice_maker_invoices${suffix}`),
+                        localStorage.getItem('invoice_maker_invoices')
+                      ];
+
+                      localSources2.forEach(raw => {
+                        if (raw) {
+                          try {
+                            const list: Invoice[] = JSON.parse(raw);
+                            if (Array.isArray(list)) {
+                              list.forEach(loc => {
+                                if (loc && loc.id) {
+                                  const existing = invoiceMap2.get(loc.id);
+                                  if (!existing) {
+                                    invoiceMap2.set(loc.id, loc);
+                                  } else {
+                                    invoiceMap2.set(loc.id, { ...existing, ...loc });
+                                  }
+                                }
+                              });
+                            }
+                          } catch (e) {}
+                        }
+                      });
+
+                      const merged2 = Array.from(invoiceMap2.values());
                       setInvoices(merged2);
                       localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(merged2));
                     }
@@ -961,14 +1020,61 @@ export default function App() {
               if (data) {
                 const text = await data.text();
                 const cloudTemplates = JSON.parse(text);
-                if (cloudTemplates && cloudTemplates.length > 0) {
-                  setCustomTemplates(cloudTemplates);
-                  localStorage.setItem('makbills_custom_templates', JSON.stringify(cloudTemplates));
+                if (cloudTemplates && Array.isArray(cloudTemplates) && cloudTemplates.length > 0) {
+                  const localData = localStorage.getItem('makbills_custom_templates');
+                  let localTemplates: any[] = [];
+                  if (localData) {
+                    try { localTemplates = JSON.parse(localData); } catch (e) {}
+                  }
+
+                  const mergedMap = new Map<string, any>();
+                  cloudTemplates.forEach((ct: any) => { if (ct && ct.id) mergedMap.set(ct.id, ct); });
+                  let needsUpload = false;
+                  localTemplates.forEach((lt: any) => {
+                    if (!lt || !lt.id) return;
+                    const existing = mergedMap.get(lt.id);
+                    if (!existing || (lt.updatedAt && lt.updatedAt > (existing.updatedAt || 0))) {
+                      mergedMap.set(lt.id, lt);
+                      needsUpload = true;
+                    }
+                  });
+
+                  const finalTemplates = Array.from(mergedMap.values());
+                  setCustomTemplates(finalTemplates);
+                  localStorage.setItem('makbills_custom_templates', JSON.stringify(finalTemplates));
                   window.dispatchEvent(new Event('custom_templates_updated_from_cloud'));
+
+                  if (needsUpload) {
+                    try {
+                      await supabase.storage
+                        .from('CompanyLogo')
+                        .upload(`${uid}/custom_templates.json`, JSON.stringify(finalTemplates), {
+                          cacheControl: '0',
+                          upsert: true,
+                          contentType: 'application/json'
+                        });
+                    } catch (e) {}
+                  }
                 } else {
-                  setCustomTemplates([]);
-                  localStorage.setItem('makbills_custom_templates', '[]');
-                  window.dispatchEvent(new Event('custom_templates_updated_from_cloud'));
+                  const localData = localStorage.getItem('makbills_custom_templates');
+                  let localTemplates: any[] = [];
+                  if (localData) {
+                    try { localTemplates = JSON.parse(localData); } catch (e) {}
+                  }
+                  if (localTemplates && localTemplates.length > 0) {
+                    setCustomTemplates(localTemplates);
+                    try {
+                      await supabase.storage
+                        .from('CompanyLogo')
+                        .upload(`${uid}/custom_templates.json`, JSON.stringify(localTemplates), {
+                          cacheControl: '0',
+                          upsert: true,
+                          contentType: 'application/json'
+                        });
+                    } catch (e) {}
+                  } else {
+                    setCustomTemplates([]);
+                  }
                 }
               } else {
                 // Cloud is empty or missing. If we have stranded local templates, push them!
@@ -1532,6 +1638,10 @@ export default function App() {
 
     setInvoices(matchesList);
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(matchesList));
+    localStorage.setItem('invoice_maker_invoices', JSON.stringify(matchesList));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('invoice_updated', { detail: invoice }));
+    }
 
     if (user) {
       // Propagate directly to Cloud
@@ -1562,6 +1672,7 @@ export default function App() {
       const remaining = invoices.filter(inv => inv.id !== invoiceId);
       setInvoices(remaining);
       localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
+      localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
 
       if (user) {
         const path = `invoices[id=${invoiceId}]`;
@@ -1585,6 +1696,7 @@ export default function App() {
       );
       setInvoices(updated);
       localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
+      localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
 
       if (user) {
         const path = `invoices[id=${invoiceId}]`;
@@ -1611,6 +1723,7 @@ export default function App() {
     const remaining = invoices.filter(inv => inv.id !== invoiceId);
     setInvoices(remaining);
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
+    localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
 
     if (user) {
       const path = `invoices[id=${invoiceId}]`;
@@ -1625,19 +1738,26 @@ export default function App() {
   const handleRestoreInvoice = async (invoiceId: string) => {
     const updated = invoices.map(inv => {
       if (inv.id === invoiceId) {
-        const { isDeleted, deletedAt, ...rest } = inv;
-        return { ...rest, updatedAt: new Date().toISOString() } as Invoice;
+        return {
+          ...inv,
+          isDeleted: false,
+          deletedAt: undefined,
+          updatedAt: new Date().toISOString()
+        } as Invoice;
       }
       return inv;
     });
     setInvoices(updated);
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
+    localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
 
     if (user) {
       try {
         const invToUpdate = updated.find(i => i.id === invoiceId);
         if (invToUpdate) {
-           await supabase.from('invoices').upsert(sanitizeInvoiceForSync(invToUpdate));
+           const dataToSync = sanitizeInvoiceForSync(invToUpdate);
+           dataToSync.isDeleted = false;
+           await supabase.from('invoices').upsert(dataToSync);
         }
       } catch (error) {
         console.error('Failed to restore invoice:', error);
@@ -1672,6 +1792,7 @@ export default function App() {
 
       setInvoices(updated);
       localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
+      localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
 
       if (user) {
         try {
@@ -1698,6 +1819,7 @@ export default function App() {
       const remaining = invoices.filter(inv => !invoiceIds.includes(inv.id));
       setInvoices(remaining);
       localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
+      localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
 
       if (user) {
         try {
@@ -1724,6 +1846,7 @@ export default function App() {
     });
     setInvoices(updated);
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
+    localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
 
     if (user) {
       try {
@@ -1742,6 +1865,7 @@ export default function App() {
     const updated = invoices.map(inv => inv.id === updatedInv.id ? updatedInv : inv);
     setInvoices(updated);
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
+    localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
     if (user) {
       try {
         const dataToSync = sanitizeInvoiceForSync(updatedInv);

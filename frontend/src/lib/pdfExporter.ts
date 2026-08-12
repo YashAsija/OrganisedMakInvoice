@@ -207,56 +207,104 @@ export function resolveTaxMode(invoice: Invoice, profile: BusinessProfile): 'cgs
 export function resolveTemplateForInvoice(invoice: Invoice, templateOverride?: InvoiceTemplate): InvoiceTemplate {
   if (templateOverride) return templateOverride;
 
-  const targetId = invoice?.embeddedTemplate?.id || invoice?.selectedCustomTemplateId || invoice?.selectedTemplateStyle;
+  const docType = (invoice?.invoiceType || 'invoice').toLowerCase().trim();
 
-  if (typeof localStorage !== 'undefined' && targetId) {
+  const defaultDocPresetMap: Record<string, string> = {
+    invoice: 'preset_modal_classic',
+    proforma: 'preset_makinvoices_proforma',
+    debit_note: 'preset_mak_debit_note',
+    purchase_debit_note: 'preset_mak_debit_note',
+    credit_note: 'preset_makinvoices_credit_note',
+    estimate: 'preset_makinvoices_quotation',
+    quote: 'preset_makinvoices_quotation',
+    purchase_order: 'preset_mak_po',
+    purchases: 'preset_mak_purchases'
+  };
+
+  const docPresetTypeMap: Record<string, string[]> = {
+    proforma: ['preset_makinvoices_proforma'],
+    estimate: ['preset_makinvoices_quotation'],
+    quote: ['preset_makinvoices_quotation'],
+    purchase_order: ['preset_mak_po', 'preset_po_enterprise', 'preset_po_minimal'],
+    purchases: ['preset_mak_purchases', 'preset_purchases_vendor_bill', 'preset_purchases_logistics'],
+    debit_note: ['preset_mak_debit_note'],
+    purchase_debit_note: ['preset_mak_debit_note'],
+    credit_note: ['preset_makinvoices_credit_note'],
+    invoice: ['preset_modal_classic', 'preset_corporate', 'preset_gst', 'preset_minimal', 'preset_user']
+  };
+
+  const isPresetMismatch = (presetId?: string): boolean => {
+    if (!presetId || !presetId.startsWith('preset_')) return false;
+    const validPresets = docPresetTypeMap[docType];
+    if (!validPresets) return false;
+    return !validPresets.includes(presetId);
+  };
+
+  const applyDocTypeHeaderTitle = (tmpl: InvoiceTemplate): InvoiceTemplate => {
+    if (!invoice?.invoiceType) return tmpl;
+    const typeMap: Record<string, string> = {
+      invoice: 'TAX INVOICE',
+      proforma: 'PROFORMA INVOICE',
+      credit_note: 'CREDIT NOTE',
+      debit_note: 'DEBIT NOTE',
+      estimate: 'QUOTATION / ESTIMATE',
+      quote: 'QUOTATION / ESTIMATE',
+      purchases: 'PURCHASE BILL',
+      purchase_order: 'PURCHASE ORDER',
+      purchase_debit_note: 'DEBIT NOTE'
+    };
+    const targetTitle = typeMap[invoice.invoiceType];
+    if (targetTitle && tmpl.config?.header) {
+      return {
+        ...tmpl,
+        config: {
+          ...tmpl.config,
+          header: {
+            ...tmpl.config.header,
+            invoiceTitle: targetTitle
+          }
+        }
+      };
+    }
+    return tmpl;
+  };
+
+  // Check custom user-created templates first
+  const targetId = invoice?.embeddedTemplate?.id || invoice?.selectedCustomTemplateId || invoice?.selectedTemplateStyle;
+  if (typeof localStorage !== 'undefined' && targetId && !targetId.startsWith('preset_')) {
     const saved = localStorage.getItem('makbills_custom_templates');
     if (saved) {
       try {
         const templates = JSON.parse(saved);
         const customMatch = templates.find((t: any) => t.id === targetId || t.id.toLowerCase() === targetId.toLowerCase());
-        if (customMatch) return customMatch;
+        if (customMatch) return applyDocTypeHeaderTitle(customMatch);
       } catch (e) {}
     }
   }
 
-  if (invoice?.embeddedTemplate) return invoice.embeddedTemplate;
+  // If embeddedTemplate exists AND is NOT a preset mismatch from a converted original document, use it
+  if (invoice?.embeddedTemplate && !isPresetMismatch(invoice.embeddedTemplate.id)) {
+    return applyDocTypeHeaderTitle(invoice.embeddedTemplate);
+  }
 
   if (invoice?.selectedTemplateStyle) {
     const style = invoice.selectedTemplateStyle.trim();
     if (style.startsWith('{')) {
       try {
-        return JSON.parse(style);
+        const parsed = JSON.parse(style);
+        if (parsed && !isPresetMismatch(parsed.id)) {
+          return applyDocTypeHeaderTitle(parsed);
+        }
       } catch (e) {}
     }
     const preset = TEMPLATE_PRESETS.find(t => t.id === style || t.id.toLowerCase() === style.toLowerCase());
-    if (preset) return preset;
-
-    const lowerStyle = style.toLowerCase();
-    if (lowerStyle === 'minimal') return TEMPLATE_PRESETS.find(t => t.id === 'preset_barebones') || TEMPLATE_PRESETS[0];
-    else if (lowerStyle === 'modern') return TEMPLATE_PRESETS.find(t => t.id === 'preset_medical') || TEMPLATE_PRESETS[0];
-    else if (lowerStyle === 'professional') return TEMPLATE_PRESETS.find(t => t.id === 'preset_corporate') || TEMPLATE_PRESETS[0];
-    else if (lowerStyle === 'startup' || lowerStyle === 'agency') return TEMPLATE_PRESETS.find(t => t.id === 'preset_user') || TEMPLATE_PRESETS[0];
-    else if (lowerStyle === 'enterprise') return TEMPLATE_PRESETS.find(t => t.id === 'preset_gst') || TEMPLATE_PRESETS[0];
+    if (preset && !isPresetMismatch(preset.id)) return preset;
   }
 
-  const targetTemplateId = invoice?.selectedCustomTemplateId || (typeof localStorage !== 'undefined' ? localStorage.getItem('makbills_global_default_template') : null);
-  if (targetTemplateId) {
-    if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem('makbills_custom_templates');
-      if (saved) {
-        try {
-          const templates = JSON.parse(saved);
-          const custom = templates.find((t: any) => t.id === targetTemplateId);
-          if (custom) return custom;
-        } catch (e) {}
-      }
-    }
-    const preset = TEMPLATE_PRESETS.find(t => t.id === targetTemplateId);
-    if (preset) return preset;
-  }
-
-  return getDefaultTemplatePreset();
+  // Fallback to default preset corresponding to invoiceType
+  const defaultPresetId = defaultDocPresetMap[docType] || 'preset_modal_classic';
+  const targetPreset = TEMPLATE_PRESETS.find(t => t.id === defaultPresetId) || getDefaultTemplatePreset();
+  return applyDocTypeHeaderTitle(targetPreset);
 }
 
 export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessProfile, action: 'save' | 'datauri' | 'blob' = 'save', templateOverride?: InvoiceTemplate): Promise<string | Blob | void> {

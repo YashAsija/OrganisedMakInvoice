@@ -47,8 +47,8 @@ const defaultTemplate: InvoiceTemplate = {
     header: { showLogo: true, logoPosition: 'Left', logoWidth: 120, logoHeight: 60, titleAlignment: 'Right', invoiceTitle: 'TAX INVOICE' },
     company: { fields: ['name', 'address', 'gstin', 'email', 'phone', 'pan'] },
     invoiceInfo: { fields: ['invoiceNumber', 'invoiceDate', 'dueDate'], customFields: [], position: 'Right' },
-    client: { fields: ['name', 'address', 'gstin'] },
-    shipping: { fields: ['name', 'address'], sameAsBilling: true },
+    client: { fields: ['companyName', 'name', 'address', 'gstin'] },
+    shipping: { fields: ['companyName', 'name', 'address'], sameAsBilling: true },
     transport: { fields: ['vehicleNo', 'transportName'] },
     table: {
       columns: [
