@@ -579,14 +579,9 @@ export default function App() {
       activeChannels = [];
     };
 
-    // Setup Auth State Listener — runs unconditionally so login always works
-    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        try {
-          // First clean up any active snapshot listeners to prevent orphaned loops upon auth state shifts
-          await cleanupActiveListeners();
-
-        const currentUser = session?.user ?? null;
+    const syncUserData = async (currentUser: any, event: string) => {
+      try {
+        await cleanupActiveListeners();
 
         if (currentUser) {
           const activeEmail = currentUser.email ?? currentUser.phone ?? null;
@@ -609,519 +604,501 @@ export default function App() {
           setUser(currentUser);
           setUserEmail(activeEmail);
           const suffix = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
+          const uid = currentUser.id;
 
-          setIsAuthLoading(false);
+          // 1. Fetch Cloud Profile (users table) + company_settings for full details
+          try {
+            const { data: cloudProf } = await supabase
+              .from('users')
+              .select('*')
+              .eq('uid', uid)
+              .single();
 
-          if (currentUser) {
-            // --- SYNC / RESOLVE FROM CLOUD ---
-            const uid = currentUser.id;
+            const { data: companySettings } = await supabase
+              .from('company_settings')
+              .select('*')
+              .eq('user_id', uid)
+              .single();
 
-            // 1. Fetch Cloud Profile (users table) + company_settings for full details
-            try {
-              const { data: cloudProf } = await supabase
-                .from('users')
-                .select('*')
-                .eq('uid', uid)
-                .single();
-
-              // Also fetch company_settings to get the detailed profile fields
-              const { data: companySettings } = await supabase
-                .from('company_settings')
-                .select('*')
-                .eq('user_id', uid)
-                .single();
-
-              console.log("[APP] Loaded company settings from Supabase:", companySettings);
-
-              // Helper: derive currency code from symbol when the currency column doesn't exist yet
-              const deriveCurrencyCode = (sym: string | null | undefined, fallback: string): string => {
-                if (!sym) return fallback;
-                const symToCode: Record<string, string> = {
-                  '₹': 'INR', '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY',
-                  'C$': 'CAD', 'A$': 'AUD', 'Fr': 'CHF', 'HK$': 'HKD', 'S$': 'SGD',
-                  'NZ$': 'NZD', '₩': 'KRW', 'R$': 'BRL', '₽': 'RUB', 'R': 'ZAR',
-                  '₺': 'TRY', 'kr': 'SEK', 'zł': 'PLN', '฿': 'THB', 'Rp': 'IDR',
-                  'RM': 'MYR', '₱': 'PHP', '₫': 'VND', '₦': 'NGN', '₪': 'ILS',
-                  'Kč': 'CZK', 'Ft': 'HUF', '₴': 'UAH', '₾': 'GEL', '₸': 'KZT',
-                  'NT$': 'TWD', '₵': 'GHS', 'KSh': 'KES', '₼': 'AZN',
-                  '﷼': 'SAR', 'د.إ': 'AED', '₮': 'MNT',
-                };
-                return symToCode[sym] || fallback;
+            const deriveCurrencyCode = (sym: string | null | undefined, fallback: string): string => {
+              if (!sym) return fallback;
+              const symToCode: Record<string, string> = {
+                '₹': 'INR', '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY',
+                'C$': 'CAD', 'A$': 'AUD', 'Fr': 'CHF', 'HK$': 'HKD', 'S$': 'SGD',
+                'NZ$': 'NZD', '₩': 'KRW', 'R$': 'BRL', '₽': 'RUB', 'R': 'ZAR',
+                '₺': 'TRY', 'kr': 'SEK', 'zł': 'PLN', '฿': 'THB', 'Rp': 'IDR',
+                'RM': 'MYR', '₱': 'PHP', '₫': 'VND', '₦': 'NGN', '₪': 'ILS',
+                'Kč': 'CZK', 'Ft': 'HUF', '₴': 'UAH', '₾': 'GEL', '₸': 'KZT',
+                'NT$': 'TWD', '₵': 'GHS', 'KSh': 'KES', '₼': 'AZN',
+                '﷼': 'SAR', 'د.إ': 'AED', '₮': 'MNT',
               };
+              return symToCode[sym] || fallback;
+            };
 
-              if (cloudProf) {
-                // Merge company_settings fields into the profile if available
-                let extraConfig: any = {};
-                if (companySettings && companySettings.custom_templates) {
-                  try {
-                    extraConfig = typeof companySettings.custom_templates === 'string'
-                      ? JSON.parse(companySettings.custom_templates)
-                      : companySettings.custom_templates;
-                  } catch (e) {}
-                }
-
-                const mergedProf: BusinessProfile = companySettings ? {
-                  ...(cloudProf as BusinessProfile),
-                  name: companySettings.business_name || cloudProf.name || '',
-                  displayName: companySettings.owner_name || cloudProf.displayName || '',
-                  ownerName: companySettings.owner_name || cloudProf.ownerName || '',
-                  email: companySettings.email || cloudProf.email || '',
-                  phone: companySettings.mobile || cloudProf.phone || '',
-                  mobile: companySettings.mobile || '',
-                  address: companySettings.address || cloudProf.address || '',
-                  taxId: companySettings.gstin || cloudProf.taxId || '',
-                  pan: companySettings.pan || cloudProf.pan || '',
-                  logoUrl: companySettings.logo_url || cloudProf.logoUrl || '',
-                  signature: companySettings.signature_url ? `${companySettings.signature_url.split('?')[0]}?t=${Date.now()}` : (cloudProf.signature || ''),
-                  signatureSize: extraConfig.signatureSize || cloudProf.signatureSize || 150,
-                  signatureText: extraConfig.signatureText || extraConfig.signature_text || '',
-                  signatureFont: extraConfig.signatureFont || extraConfig.signature_font || 'Caveat',
-                  signatureMode: companySettings.signature_type || extraConfig.signatureMode || cloudProf.signatureMode || 'draw',
-                  country: companySettings.country || cloudProf.country || '',
-                  state: companySettings.state || cloudProf.state || '',
-                  stateCode: companySettings.state_code || cloudProf.stateCode || '',
-                  currency: companySettings.currency || deriveCurrencyCode(companySettings.currency_symbol, cloudProf.currency || 'INR'),
-                  currencySymbol: companySettings.currency_symbol || cloudProf.currencySymbol || '',
-                  taxMode: companySettings.tax_mode || cloudProf.taxMode || 'dynamic',
-                  customTaxName: companySettings.custom_tax_name || cloudProf.customTaxName || 'Tax',
-                  customTaxPercentage: companySettings.custom_tax_percentage !== undefined ? companySettings.custom_tax_percentage : cloudProf.customTaxPercentage,
-                  defaultTaxRate: companySettings.default_tax_rate !== undefined ? companySettings.default_tax_rate : (cloudProf.defaultTaxRate || 18),
-                  bankName: companySettings.bank_name || cloudProf.bankName || '',
-                  accountNumber: companySettings.account_number || cloudProf.accountNumber || '',
-                  ifsc: companySettings.ifsc || cloudProf.ifsc || '',
-                  upiId: companySettings.upi_id || cloudProf.upiId || '',
-                  invoicePrefix: companySettings.invoice_prefix || cloudProf.invoicePrefix || 'INV',
-                  startingInvoiceNumber: companySettings.starting_invoice_number || cloudProf.startingInvoiceNumber || '1',
-                  proformaPrefix: companySettings.proforma_prefix || cloudProf.proformaPrefix || 'PI',
-                  startingProformaNumber: companySettings.starting_proforma_number || cloudProf.startingProformaNumber || '1',
-                  debitNotePrefix: companySettings.debit_note_prefix || cloudProf.debitNotePrefix || 'DN',
-                  startingDebitNoteNumber: companySettings.starting_debit_note_number || cloudProf.startingDebitNoteNumber || '1',
-                  creditNotePrefix: companySettings.credit_note_prefix || cloudProf.creditNotePrefix || 'CN',
-                  startingCreditNoteNumber: companySettings.starting_credit_note_number || cloudProf.startingCreditNoteNumber || '1',
-                  quotePrefix: companySettings.quote_prefix || cloudProf.quotePrefix || 'EST',
-                  startingQuoteNumber: companySettings.starting_quote_number || cloudProf.startingQuoteNumber || '1',
-                  purchaseOrderPrefix: companySettings.purchase_order_prefix || cloudProf.purchaseOrderPrefix || 'PO',
-                  startingPurchaseOrderNumber: companySettings.starting_purchase_order_number || cloudProf.startingPurchaseOrderNumber || '1',
-                  purchasesPrefix: companySettings.purchases_prefix || cloudProf.purchasesPrefix || 'PUR',
-                  startingPurchasesNumber: companySettings.starting_purchases_number || cloudProf.startingPurchasesNumber || '1',
-                  defaultNotes: companySettings.default_notes || cloudProf.defaultNotes || '',
-                  defaultTerms: companySettings.default_terms || cloudProf.defaultTerms || '',
-                } : (cloudProf as BusinessProfile);
-
-                // SYNC PIN STATUS ACROSS DEVICES
-                // If the user has a PIN configured on the backend, ensure the local device enforces it.
-                if (cloudProf.pin_hash) {
-                  const currentSec = getSecuritySettings();
-                  if (!currentSec.isPinLockEnabled) {
-                    const newSec = { ...currentSec, isPinLockEnabled: true };
-                    saveSecuritySettings(newSec);
-                    setSecuritySettings(newSec);
-                    setIsUnlocked(false);
-                  }
-                }
-
-                setProfile(mergedProf);
-                localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(mergedProf));
-              } else {
-                // Creating initial business profile for new users in Supabase
-                const initProf: BusinessProfile = {
-                  uid,
-                  name: companySettings?.business_name || (typeof window !== 'undefined' ? localStorage.getItem('makbills_custom_brand') : null) || profile.name || '',
-                  displayName: companySettings?.owner_name || (typeof window !== 'undefined' ? localStorage.getItem('makbills_custom_owner') : null) || profile.displayName || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '',
-                  ownerName: companySettings?.owner_name || (typeof window !== 'undefined' ? localStorage.getItem('makbills_custom_owner') : null) || profile.ownerName || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '',
-                  email: companySettings?.email || profile.email || currentUser.email || '',
-                  phone: companySettings?.mobile || profile.phone || '',
-                  mobile: companySettings?.mobile || '',
-                  address: companySettings?.address || profile.address || '',
-                  taxId: companySettings?.gstin || profile.taxId || '',
-                  pan: companySettings?.pan || profile.pan || '',
-                  country: companySettings?.country || profile.country || '',
-                  state: companySettings?.state || profile.state || '',
-                  stateCode: companySettings?.state_code || profile.stateCode || '',
-                  currency: companySettings?.currency || deriveCurrencyCode(companySettings?.currency_symbol, profile.currency || 'INR'),
-                  currencySymbol: companySettings?.currency_symbol || profile.currencySymbol || '',
-                  taxMode: companySettings?.tax_mode || profile.taxMode || 'dynamic',
-                  customTaxName: companySettings?.custom_tax_name || profile.customTaxName || 'Tax',
-                  customTaxPercentage: companySettings?.custom_tax_percentage !== undefined ? companySettings.custom_tax_percentage : profile.customTaxPercentage,
-                  defaultTaxRate: companySettings?.default_tax_rate !== undefined ? companySettings.default_tax_rate : (profile.defaultTaxRate || 18),
-                  logoUrl: companySettings?.logo_url || profile.logoUrl || '',
-                  signature: companySettings?.signature_url || profile.signature || '',
-                  // ✅ Banking fields — always pull from company_settings (source of truth)
-                  bankName: companySettings?.bank_name || profile.bankName || '',
-                  accountNumber: companySettings?.account_number || profile.accountNumber || '',
-                  ifsc: companySettings?.ifsc || profile.ifsc || '',
-                  upiId: companySettings?.upi_id || profile.upiId || '',
-                  updatedAt: new Date().toISOString()
-                };
-                await supabase.from('users').upsert(initProf);
-                setProfile(initProf);
-                localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(initProf));
+            if (cloudProf) {
+              let extraConfig: any = {};
+              if (companySettings && companySettings.custom_templates) {
+                try {
+                  extraConfig = typeof companySettings.custom_templates === 'string'
+                    ? JSON.parse(companySettings.custom_templates)
+                    : companySettings.custom_templates;
+                } catch (e) {}
               }
 
-              if (!companySettings || !companySettings.business_name || !companySettings.owner_name) {
-                setIsOnboarding(true);
-                setIsProfileOpen(true);
+              const mergedProf: BusinessProfile = companySettings ? {
+                ...(cloudProf as BusinessProfile),
+                name: companySettings.business_name || cloudProf.name || '',
+                displayName: companySettings.owner_name || cloudProf.displayName || '',
+                ownerName: companySettings.owner_name || cloudProf.ownerName || '',
+                email: companySettings.email || cloudProf.email || '',
+                phone: companySettings.mobile || cloudProf.phone || '',
+                mobile: companySettings.mobile || '',
+                address: companySettings.address || cloudProf.address || '',
+                taxId: companySettings.gstin || cloudProf.taxId || '',
+                pan: companySettings.pan || cloudProf.pan || '',
+                logoUrl: companySettings.logo_url || cloudProf.logoUrl || '',
+                signature: companySettings.signature_url ? `${companySettings.signature_url.split('?')[0]}?t=${Date.now()}` : (cloudProf.signature || ''),
+                signatureSize: extraConfig.signatureSize || cloudProf.signatureSize || 150,
+                signatureText: extraConfig.signatureText || extraConfig.signature_text || '',
+                signatureFont: extraConfig.signatureFont || extraConfig.signature_font || 'Caveat',
+                signatureMode: companySettings.signature_type || extraConfig.signatureMode || cloudProf.signatureMode || 'draw',
+                country: companySettings.country || cloudProf.country || '',
+                state: companySettings.state || cloudProf.state || '',
+                stateCode: companySettings.state_code || cloudProf.stateCode || '',
+                currency: companySettings.currency || deriveCurrencyCode(companySettings.currency_symbol, cloudProf.currency || 'INR'),
+                currencySymbol: companySettings.currency_symbol || cloudProf.currencySymbol || '',
+                taxMode: companySettings.tax_mode || cloudProf.taxMode || 'dynamic',
+                customTaxName: companySettings.custom_tax_name || cloudProf.customTaxName || 'Tax',
+                customTaxPercentage: companySettings.custom_tax_percentage !== undefined ? companySettings.custom_tax_percentage : cloudProf.customTaxPercentage,
+                defaultTaxRate: companySettings.default_tax_rate !== undefined ? companySettings.default_tax_rate : (cloudProf.defaultTaxRate || 18),
+                bankName: companySettings.bank_name || cloudProf.bankName || '',
+                accountNumber: companySettings.account_number || cloudProf.accountNumber || '',
+                ifsc: companySettings.ifsc || cloudProf.ifsc || '',
+                upiId: companySettings.upi_id || cloudProf.upiId || '',
+                invoicePrefix: companySettings.invoice_prefix || cloudProf.invoicePrefix || 'INV',
+                startingInvoiceNumber: companySettings.starting_invoice_number || cloudProf.startingInvoiceNumber || '1',
+                proformaPrefix: companySettings.proforma_prefix || cloudProf.proformaPrefix || 'PI',
+                startingProformaNumber: companySettings.starting_proforma_number || cloudProf.startingProformaNumber || '1',
+                debitNotePrefix: companySettings.debit_note_prefix || cloudProf.debitNotePrefix || 'DN',
+                startingDebitNoteNumber: companySettings.starting_debit_note_number || cloudProf.startingDebitNoteNumber || '1',
+                creditNotePrefix: companySettings.credit_note_prefix || cloudProf.creditNotePrefix || 'CN',
+                startingCreditNoteNumber: companySettings.starting_credit_note_number || cloudProf.startingCreditNoteNumber || '1',
+                quotePrefix: companySettings.quote_prefix || cloudProf.quotePrefix || 'EST',
+                startingQuoteNumber: companySettings.starting_quote_number || cloudProf.startingQuoteNumber || '1',
+                purchaseOrderPrefix: companySettings.purchase_order_prefix || cloudProf.purchaseOrderPrefix || 'PO',
+                startingPurchaseOrderNumber: companySettings.starting_purchase_order_number || cloudProf.startingPurchaseOrderNumber || '1',
+                purchasesPrefix: companySettings.purchases_prefix || cloudProf.purchasesPrefix || 'PUR',
+                startingPurchasesNumber: companySettings.starting_purchases_number || cloudProf.startingPurchasesNumber || '1',
+                defaultNotes: companySettings.default_notes || cloudProf.defaultNotes || '',
+                defaultTerms: companySettings.default_terms || cloudProf.defaultTerms || '',
+              } : (cloudProf as BusinessProfile);
+
+              if (cloudProf.pin_hash) {
+                const currentSec = getSecuritySettings();
+                if (!currentSec.isPinLockEnabled) {
+                  const newSec = { ...currentSec, isPinLockEnabled: true };
+                  saveSecuritySettings(newSec);
+                  setSecuritySettings(newSec);
+                  setIsUnlocked(false);
+                }
               }
-            } catch (err) {
-              console.warn('Error fetching/setting cloud profile:', String(err));
+
+              setProfile(mergedProf);
+              localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(mergedProf));
+            } else {
+              const initProf: BusinessProfile = {
+                uid,
+                name: companySettings?.business_name || (typeof window !== 'undefined' ? localStorage.getItem('makbills_custom_brand') : null) || profile.name || '',
+                displayName: companySettings?.owner_name || (typeof window !== 'undefined' ? localStorage.getItem('makbills_custom_owner') : null) || profile.displayName || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '',
+                ownerName: companySettings?.owner_name || (typeof window !== 'undefined' ? localStorage.getItem('makbills_custom_owner') : null) || profile.ownerName || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '',
+                email: companySettings?.email || profile.email || currentUser.email || '',
+                phone: companySettings?.mobile || profile.phone || '',
+                mobile: companySettings?.mobile || '',
+                address: companySettings?.address || profile.address || '',
+                taxId: companySettings?.gstin || profile.taxId || '',
+                pan: companySettings?.pan || profile.pan || '',
+                country: companySettings?.country || profile.country || '',
+                state: companySettings?.state || profile.state || '',
+                stateCode: companySettings?.state_code || profile.stateCode || '',
+                currency: companySettings?.currency || deriveCurrencyCode(companySettings?.currency_symbol, profile.currency || 'INR'),
+                currencySymbol: companySettings?.currency_symbol || profile.currencySymbol || '',
+                taxMode: companySettings?.tax_mode || profile.taxMode || 'dynamic',
+                customTaxName: companySettings?.custom_tax_name || profile.customTaxName || 'Tax',
+                customTaxPercentage: companySettings?.custom_tax_percentage !== undefined ? companySettings.custom_tax_percentage : profile.customTaxPercentage,
+                defaultTaxRate: companySettings?.default_tax_rate !== undefined ? companySettings.default_tax_rate : (profile.defaultTaxRate || 18),
+                logoUrl: companySettings?.logo_url || profile.logoUrl || '',
+                signature: companySettings?.signature_url || profile.signature || '',
+                bankName: companySettings?.bank_name || profile.bankName || '',
+                accountNumber: companySettings?.account_number || profile.accountNumber || '',
+                ifsc: companySettings?.ifsc || profile.ifsc || '',
+                upiId: companySettings?.upi_id || profile.upiId || '',
+                updatedAt: new Date().toISOString()
+              };
+              await supabase.from('users').upsert(initProf);
+              setProfile(initProf);
+              localStorage.setItem(`invoice_maker_biz_profile${suffix}`, JSON.stringify(initProf));
             }
 
-            // 2. Load Invoices and attach realtime listener
-            // 2. Load Invoices directly from Supabase Database (Single Source of Truth)
-            try {
-              const uidsToQuery = Array.from(new Set([
-                uid,
-                activeEmail,
-                activeEmail ? `user_${activeEmail.trim().toLowerCase().replace(/[^a-z0-9]/g, '_')}` : ''
-              ].filter(Boolean)));
-
-              console.log('[AUTH] Logged in as:', activeEmail, '| UID:', uid, '| Querying user IDs:', uidsToQuery);
-
-              const { data: cloudInvoices, error: fetchErr } = await supabase
-                .from('invoices')
-                .select('*')
-                .in('userId', uidsToQuery)
-                .order('date', { ascending: false });
-
-              if (fetchErr) {
-                console.error('[SUPABASE INVOICES FETCH ERROR]:', fetchErr);
-              }
-
-              const parsedCloudInvoices = (cloudInvoices || [])
-                .filter(inv => inv && inv.id && String(inv.id).trim() !== '')
-                .map(inv => {
-                  if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
-                    try {
-                      const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
-                      inv.embeddedTemplate = embeddedTemplate;
-                      inv.selectedCustomTemplateId = embeddedTemplate?.id;
-                      for (const key of Object.keys(embeddedTemplate)) {
-                        if ((inv as any)[key] === undefined) {
-                          (inv as any)[key] = embeddedTemplate[key];
-                        }
-                      }
-                    } catch (e) {}
-                  }
-                  return inv;
-                });
-
-              console.log('[SUPABASE INVOICES FETCHED]', {
-                uid,
-                email: activeEmail,
-                count: parsedCloudInvoices.length,
-                firstFew: parsedCloudInvoices.slice(0, 5).map(i => ({ id: i.id, invoiceNumber: i.invoiceNumber, clientName: i.clientName }))
-              });
-
-              setInvoices(parsedCloudInvoices);
-              localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsedCloudInvoices));
-            } catch (err) {
-              console.error('[SUPABASE GET INVOICES EXCEPTION]:', err);
-              handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
+            if (!companySettings || !companySettings.business_name || !companySettings.owner_name) {
+              setIsOnboarding(true);
+              setIsProfileOpen(true);
             }
+          } catch (err) {
+            console.warn('Error fetching/setting cloud profile:', String(err));
+          }
 
-            const uidsToWatch = Array.from(new Set([
+          // 2. Load Invoices directly from Supabase Database (Single Source of Truth)
+          try {
+            const uidsToQuery = Array.from(new Set([
               uid,
               activeEmail,
               activeEmail ? `user_${activeEmail.trim().toLowerCase().replace(/[^a-z0-9]/g, '_')}` : ''
             ].filter(Boolean)));
 
-            const invoicesChannel = supabase
-              .channel(`invoices:${uid}:${Date.now()}`)
-              .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'invoices' },
-                async (payload: any) => {
+            console.log('[AUTH] Syncing data for:', activeEmail, '| UID:', uid, '| Querying user IDs:', uidsToQuery);
+
+            const { data: cloudInvoices, error: fetchErr } = await supabase
+              .from('invoices')
+              .select('*')
+              .in('userId', uidsToQuery)
+              .order('date', { ascending: false });
+
+            if (fetchErr) {
+              console.error('[SUPABASE INVOICES FETCH ERROR]:', fetchErr);
+            }
+
+            const parsedCloudInvoices = (cloudInvoices || [])
+              .filter(inv => inv && inv.id && String(inv.id).trim() !== '')
+              .map(inv => {
+                if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
                   try {
-                    const newRec = payload.new || {};
-                    const oldRec = payload.old || {};
-                    const matchesUser = uidsToWatch.includes(newRec.userId) || uidsToWatch.includes(oldRec.userId);
-                    if (!matchesUser && (Object.keys(newRec).length > 0 || Object.keys(oldRec).length > 0)) return;
+                    const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
+                    inv.embeddedTemplate = embeddedTemplate;
+                    inv.selectedCustomTemplateId = embeddedTemplate?.id;
+                    for (const key of Object.keys(embeddedTemplate)) {
+                      if ((inv as any)[key] === undefined) {
+                        (inv as any)[key] = embeddedTemplate[key];
+                      }
+                    }
+                  } catch (e) {}
+                }
+                return inv;
+              });
 
-                    const { data } = await supabase
-                      .from('invoices')
-                      .select('*')
-                      .in('userId', uidsToWatch)
-                      .order('date', { ascending: false });
+            console.log('[SUPABASE INVOICES LOADED]', {
+              uid,
+              email: activeEmail,
+              count: parsedCloudInvoices.length,
+              firstFew: parsedCloudInvoices.slice(0, 5).map(i => ({ id: i.id, invoiceNumber: i.invoiceNumber, clientName: i.clientName }))
+            });
 
-                    if (data) {
-                      const parsedCloudInvoices2 = (data as Invoice[])
-                        .filter(inv => inv && inv.id && String(inv.id).trim() !== '')
-                        .map(inv => {
-                          if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
-                            try {
-                              const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
-                              inv.embeddedTemplate = embeddedTemplate;
-                              inv.selectedCustomTemplateId = embeddedTemplate?.id;
-                              for (const key of Object.keys(embeddedTemplate)) {
-                                if ((inv as any)[key] === undefined) {
-                                  (inv as any)[key] = embeddedTemplate[key];
-                                }
+            setInvoices(parsedCloudInvoices);
+            localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsedCloudInvoices));
+          } catch (err) {
+            console.error('[SUPABASE GET INVOICES EXCEPTION]:', err);
+            handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
+          }
+
+          const uidsToWatch = Array.from(new Set([
+            uid,
+            activeEmail,
+            activeEmail ? `user_${activeEmail.trim().toLowerCase().replace(/[^a-z0-9]/g, '_')}` : ''
+          ].filter(Boolean)));
+
+          const invoicesChannel = supabase
+            .channel(`invoices:${uid}:${Date.now()}`)
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'invoices' },
+              async (payload: any) => {
+                try {
+                  const newRec = payload.new || {};
+                  const oldRec = payload.old || {};
+                  const matchesUser = uidsToWatch.includes(newRec.userId) || uidsToWatch.includes(oldRec.userId);
+                  if (!matchesUser && (Object.keys(newRec).length > 0 || Object.keys(oldRec).length > 0)) return;
+
+                  const { data } = await supabase
+                    .from('invoices')
+                    .select('*')
+                    .in('userId', uidsToWatch)
+                    .order('date', { ascending: false });
+
+                  if (data) {
+                    const parsedCloudInvoices2 = (data as Invoice[])
+                      .filter(inv => inv && inv.id && String(inv.id).trim() !== '')
+                      .map(inv => {
+                        if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
+                          try {
+                            const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
+                            inv.embeddedTemplate = embeddedTemplate;
+                            inv.selectedCustomTemplateId = embeddedTemplate?.id;
+                            for (const key of Object.keys(embeddedTemplate)) {
+                              if ((inv as any)[key] === undefined) {
+                                (inv as any)[key] = embeddedTemplate[key];
                               }
-                            } catch (e) { }
-                          }
-                          return inv;
-                        });
+                            }
+                          } catch (e) { }
+                        }
+                        return inv;
+                      });
 
-                      setInvoices(parsedCloudInvoices2);
-                      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsedCloudInvoices2));
-                    }
-                  } catch (err) {
-                    console.warn("Error in realtime invoice sync:", String(err));
+                    setInvoices(parsedCloudInvoices2);
+                    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsedCloudInvoices2));
                   }
+                } catch (err) {
+                  console.warn("Error in realtime invoice sync:", String(err));
                 }
-              )
-              .subscribe();
-            activeChannels.push(invoicesChannel);
-
-            // 3. Load Presets and attach realtime listener
-            try {
-              const { data: cloudPresets } = await supabase
-                .from('preset_items')
-                .select('*')
-                .eq('userId', uid);
-              if (cloudPresets) {
-                setPresets(cloudPresets as PresetItem[]);
-                localStorage.setItem(`invoice_maker_presets${suffix}`, JSON.stringify(cloudPresets));
               }
-            } catch (err) {
-              handleSupabaseError(err, OperationType.GET, `preset_items[userId=${uid}]`);
+            )
+            .subscribe();
+          activeChannels.push(invoicesChannel);
+
+          // 3. Load Presets and attach realtime listener
+          try {
+            const { data: cloudPresets } = await supabase
+              .from('presets')
+              .select('*')
+              .eq('userId', uid);
+            if (cloudPresets && cloudPresets.length > 0) {
+              setPresets(cloudPresets as PresetItem[]);
+              localStorage.setItem(`invoice_maker_presets${suffix}`, JSON.stringify(cloudPresets));
             }
+          } catch (err) {
+            handleSupabaseError(err, OperationType.GET, `presets[userId=${uid}]`);
+          }
 
-            const presetsChannel = supabase
-              .channel(`preset_items:${uid}:${Date.now()}`)
-              .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'preset_items', filter: `userId=eq.${uid}` },
-                async () => {
-                  try {
-                    const { data } = await supabase
-                      .from('preset_items')
-                      .select('*')
-                      .eq('userId', uid);
-                    if (data) {
-                      setPresets(data as PresetItem[]);
-                      localStorage.setItem(`invoice_maker_presets${suffix}`, JSON.stringify(data));
-                    }
-                  } catch (err) {
-                    console.warn("Error in realtime preset sync:", String(err));
+          const presetsChannel = supabase
+            .channel(`presets:${uid}:${Date.now()}`)
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'presets', filter: `userId=eq.${uid}` },
+              async () => {
+                try {
+                  const { data } = await supabase
+                    .from('presets')
+                    .select('*')
+                    .eq('userId', uid);
+                  if (data) {
+                    setPresets(data as PresetItem[]);
+                    localStorage.setItem(`invoice_maker_presets${suffix}`, JSON.stringify(data));
                   }
+                } catch (err) {
+                  console.warn("Error in realtime preset sync:", String(err));
                 }
-              )
-              .subscribe();
-            activeChannels.push(presetsChannel);
-
-            // 4. Load Clients and attach realtime listener
-            try {
-              const { data: cloudClients } = await supabase
-                .from('clients')
-                .select('*')
-                .eq('userId', uid);
-              if (cloudClients) {
-                setClients(cloudClients as ClientProfile[]);
-                localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(cloudClients));
               }
-            } catch (err) {
-              handleSupabaseError(err, OperationType.GET, `clients[userId=${uid}]`);
+            )
+            .subscribe();
+          activeChannels.push(presetsChannel);
+
+          // 4. Load Clients and attach realtime listener
+          try {
+            const { data: cloudClients } = await supabase
+              .from('clients')
+              .select('*')
+              .eq('userId', uid);
+            if (cloudClients && cloudClients.length > 0) {
+              setClients(cloudClients as ClientProfile[]);
+              localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(cloudClients));
             }
+          } catch (err) {
+            handleSupabaseError(err, OperationType.GET, `clients[userId=${uid}]`);
+          }
 
-            const clientsChannel = supabase
-              .channel(`clients:${uid}:${Date.now()}`)
-              .on(
-                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'clients', filter: `userId=eq.${uid}` },
-                async () => {
-                  try {
-                    const { data } = await supabase
-                      .from('clients')
-                      .select('*')
-                      .eq('userId', uid);
-                    if (data) {
-                      setClients(data as ClientProfile[]);
-                      localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(data));
-                    }
-                  } catch (err) {
-                    console.warn("Error in realtime client sync:", String(err));
+          const clientsChannel = supabase
+            .channel(`clients:${uid}:${Date.now()}`)
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'clients', filter: `userId=eq.${uid}` },
+              async () => {
+                try {
+                  const { data } = await supabase
+                    .from('clients')
+                    .select('*')
+                    .eq('userId', uid);
+                  if (data) {
+                    setClients(data as ClientProfile[]);
+                    localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(data));
                   }
+                } catch (err) {
+                  console.warn("Error in realtime client sync:", String(err));
                 }
-              )
-              .subscribe();
-            activeChannels.push(clientsChannel);
-
-            // 5. Load Expenses and attach realtime listener
-            try {
-              const { data: cloudExpenses } = await supabase
-                .from('expenses')
-                .select('*')
-                .eq('userId', uid);
-              if (cloudExpenses) {
-                setExpenses(cloudExpenses as Expense[]);
-                localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(cloudExpenses));
               }
-            } catch (err) {
-              handleSupabaseError(err, OperationType.GET, `expenses[userId=${uid}]`);
+            )
+            .subscribe();
+          activeChannels.push(clientsChannel);
+
+          // 5. Load Expenses and attach realtime listener
+          try {
+            const { data: cloudExpenses } = await supabase
+              .from('expenses')
+              .select('*')
+              .eq('userId', uid);
+            if (cloudExpenses) {
+              setExpenses(cloudExpenses as Expense[]);
+              localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(cloudExpenses));
             }
+          } catch (err) {
+            handleSupabaseError(err, OperationType.GET, `expenses[userId=${uid}]`);
+          }
 
-            const expensesChannel = supabase
-              .channel(`expenses:${uid}:${Date.now()}`)
-              .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'expenses', filter: `userId=eq.${uid}` },
-                async () => {
-                  try {
-                    const { data } = await supabase
-                      .from('expenses')
-                      .select('*')
-                      .eq('userId', uid);
-                    if (data) {
-                      setExpenses(data as Expense[]);
-                      localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(data));
-                    }
-                  } catch (err) {
-                    console.warn("Error in realtime expense sync:", String(err));
+          const expensesChannel = supabase
+            .channel(`expenses:${uid}:${Date.now()}`)
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'expenses', filter: `userId=eq.${uid}` },
+              async () => {
+                try {
+                  const { data } = await supabase
+                    .from('expenses')
+                    .select('*')
+                    .eq('userId', uid);
+                  if (data) {
+                    setExpenses(data as Expense[]);
+                    localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(data));
                   }
+                } catch (err) {
+                  console.warn("Error in realtime expense sync:", String(err));
                 }
-              )
-              .subscribe();
-            activeChannels.push(expensesChannel);
+              }
+            )
+            .subscribe();
+          activeChannels.push(expensesChannel);
 
-            // 6. Load Custom Templates from Storage and attach realtime listener
-            try {
-              const { data, error } = await supabase.storage
-                .from('CompanyLogo')
-                .download(`${uid}/custom_templates.json`);
-              
-              if (data) {
-                const text = await data.text();
-                const cloudTemplates = JSON.parse(text);
-                if (cloudTemplates && Array.isArray(cloudTemplates) && cloudTemplates.length > 0) {
-                  const localData = localStorage.getItem('makbills_custom_templates');
-                  let localTemplates: any[] = [];
-                  if (localData) {
-                    try { localTemplates = JSON.parse(localData); } catch (e) {}
-                  }
+          // 6. Load Custom Templates from Storage and attach realtime listener
+          try {
+            const { data } = await supabase.storage
+              .from('CompanyLogo')
+              .download(`${uid}/custom_templates.json`);
+            
+            if (data) {
+              const text = await data.text();
+              const cloudTemplates = JSON.parse(text);
+              if (cloudTemplates && Array.isArray(cloudTemplates) && cloudTemplates.length > 0) {
+                const localData = localStorage.getItem('makbills_custom_templates');
+                let localTemplates: any[] = [];
+                if (localData) {
+                  try { localTemplates = JSON.parse(localData); } catch (e) {}
+                }
 
-                  const mergedMap = new Map<string, any>();
-                  cloudTemplates.forEach((ct: any) => { if (ct && ct.id) mergedMap.set(ct.id, ct); });
-                  let needsUpload = false;
-                  localTemplates.forEach((lt: any) => {
-                    if (!lt || !lt.id) return;
-                    const existing = mergedMap.get(lt.id);
-                    if (!existing || (lt.updatedAt && lt.updatedAt > (existing.updatedAt || 0))) {
-                      mergedMap.set(lt.id, lt);
-                      needsUpload = true;
-                    }
-                  });
+                const mergedMap = new Map<string, any>();
+                cloudTemplates.forEach((ct: any) => { if (ct && ct.id) mergedMap.set(ct.id, ct); });
+                let needsUpload = false;
+                localTemplates.forEach((lt: any) => {
+                  if (!lt || !lt.id) return;
+                  const existing = mergedMap.get(lt.id);
+                  if (!existing || (lt.updatedAt && lt.updatedAt > (existing.updatedAt || 0))) {
+                    mergedMap.set(lt.id, lt);
+                    needsUpload = true;
+                  }
+                });
 
-                  const finalTemplates = Array.from(mergedMap.values());
-                  setCustomTemplates(finalTemplates);
-                  localStorage.setItem('makbills_custom_templates', JSON.stringify(finalTemplates));
-                  window.dispatchEvent(new Event('custom_templates_updated_from_cloud'));
+                const finalTemplates = Array.from(mergedMap.values());
+                setCustomTemplates(finalTemplates);
+                localStorage.setItem('makbills_custom_templates', JSON.stringify(finalTemplates));
+                window.dispatchEvent(new Event('custom_templates_updated_from_cloud'));
 
-                  if (needsUpload) {
-                    try {
-                      await supabase.storage
-                        .from('CompanyLogo')
-                        .upload(`${uid}/custom_templates.json`, JSON.stringify(finalTemplates), {
-                          cacheControl: '0',
-                          upsert: true,
-                          contentType: 'application/json'
-                        });
-                    } catch (e) {}
-                  }
-                } else {
-                  const localData = localStorage.getItem('makbills_custom_templates');
-                  let localTemplates: any[] = [];
-                  if (localData) {
-                    try { localTemplates = JSON.parse(localData); } catch (e) {}
-                  }
-                  if (localTemplates && localTemplates.length > 0) {
-                    setCustomTemplates(localTemplates);
-                    try {
-                      await supabase.storage
-                        .from('CompanyLogo')
-                        .upload(`${uid}/custom_templates.json`, JSON.stringify(localTemplates), {
-                          cacheControl: '0',
-                          upsert: true,
-                          contentType: 'application/json'
-                        });
-                    } catch (e) {}
-                  } else {
-                    setCustomTemplates([]);
-                  }
+                if (needsUpload) {
+                  try {
+                    await supabase.storage
+                      .from('CompanyLogo')
+                      .upload(`${uid}/custom_templates.json`, JSON.stringify(finalTemplates), {
+                        cacheControl: '0',
+                        upsert: true,
+                        contentType: 'application/json'
+                      });
+                  } catch (e) {}
                 }
               } else {
-                // Cloud is empty or missing. If we have stranded local templates, push them!
                 const localData = localStorage.getItem('makbills_custom_templates');
+                let localTemplates: any[] = [];
                 if (localData) {
+                  try { localTemplates = JSON.parse(localData); } catch (e) {}
+                }
+                if (localTemplates && localTemplates.length > 0) {
+                  setCustomTemplates(localTemplates);
                   try {
-                    const templates = JSON.parse(localData);
-                    if (templates && templates.length > 0) {
-                      await supabase.storage
-                        .from('CompanyLogo')
-                        .upload(`${uid}/custom_templates.json`, localData, {
-                          cacheControl: '0',
-                          upsert: true,
-                          contentType: 'application/json'
-                        });
-                      setCustomTemplates(templates);
+                    await supabase.storage
+                      .from('CompanyLogo')
+                      .upload(`${uid}/custom_templates.json`, JSON.stringify(localTemplates), {
+                        cacheControl: '0',
+                        upsert: true,
+                        contentType: 'application/json'
+                      });
+                  } catch (e) {}
+                } else {
+                  setCustomTemplates([]);
+                }
+              }
+            } else {
+              const localData = localStorage.getItem('makbills_custom_templates');
+              if (localData) {
+                try {
+                  const templates = JSON.parse(localData);
+                  if (templates && templates.length > 0) {
+                    await supabase.storage
+                      .from('CompanyLogo')
+                      .upload(`${uid}/custom_templates.json`, localData, {
+                        cacheControl: '0',
+                        upsert: true,
+                        contentType: 'application/json'
+                      });
+                    setCustomTemplates(templates);
+                  }
+                } catch (e) {
+                  console.warn("Failed to migrate stranded templates to storage", e);
+                }
+              }
+            }
+          } catch (err) {
+            console.warn('Error loading custom templates from storage', err);
+          }
+
+          const templatesChannel = supabase
+            .channel(`custom_templates:${uid}`)
+            .on(
+              'broadcast',
+              { event: 'templates_updated' },
+              (payload) => {
+                try {
+                  if (payload.payload && payload.payload.templates) {
+                    const parsedTemplates = payload.payload.templates;
+                    setCustomTemplates(parsedTemplates);
+                    localStorage.setItem('makbills_custom_templates', JSON.stringify(parsedTemplates));
+                    window.dispatchEvent(new Event('custom_templates_updated_from_cloud'));
+                  }
+                } catch (err) {
+                  console.warn("Error in realtime templates sync:", String(err));
+                }
+              }
+            )
+            .subscribe();
+          activeChannels.push(templatesChannel);
+
+          // 8. Listen to Security PIN Updates in Realtime
+          const securityChannel = supabase
+            .channel(`security_updates:${uid}`)
+            .on(
+              'broadcast',
+              { event: 'security_changed' },
+              (payload) => {
+                const enable = payload.payload?.isPinLockEnabled;
+                if (enable !== undefined) {
+                  const currentSec = getSecuritySettings();
+                  if (currentSec.isPinLockEnabled !== enable) {
+                    const newSec = { ...currentSec, isPinLockEnabled: enable };
+                    if (enable) {
+                      setIsUnlocked(false);
                     }
-                  } catch (e) {
-                    console.warn("Failed to migrate stranded templates to storage", e);
+                    saveSecuritySettings(newSec);
+                    setSecuritySettings(newSec);
                   }
                 }
               }
-            } catch (err) {
-              console.warn('Error loading custom templates from storage', err);
-            }
-
-            const templatesChannel = supabase
-              .channel(`custom_templates:${uid}`)
-              .on(
-                'broadcast',
-                { event: 'templates_updated' },
-                (payload) => {
-                  try {
-                    if (payload.payload && payload.payload.templates) {
-                      const parsedTemplates = payload.payload.templates;
-                      setCustomTemplates(parsedTemplates);
-                      localStorage.setItem('makbills_custom_templates', JSON.stringify(parsedTemplates));
-                      window.dispatchEvent(new Event('custom_templates_updated_from_cloud'));
-                    }
-                  } catch (err) {
-                    console.warn("Error in realtime templates sync:", String(err));
-                  }
-                }
-              )
-              .subscribe();
-            activeChannels.push(templatesChannel);
-
-            // 8. Listen to Security PIN Updates in Realtime
-            const securityChannel = supabase
-              .channel(`security_updates:${uid}`)
-              .on(
-                'broadcast',
-                { event: 'security_changed' },
-                (payload) => {
-                  const enable = payload.payload?.isPinLockEnabled;
-                  if (enable !== undefined) {
-                    const currentSec = getSecuritySettings();
-                    if (currentSec.isPinLockEnabled !== enable) {
-                      const newSec = { ...currentSec, isPinLockEnabled: enable };
-                      if (enable) {
-                        setIsUnlocked(false);
-                      }
-                      saveSecuritySettings(newSec);
-                      setSecuritySettings(newSec);
-                    }
-                  }
-                }
-              )
-              .subscribe();
-            activeChannels.push(securityChannel);
-            setIsAuthLoading(false);
-          }
+            )
+            .subscribe();
+          activeChannels.push(securityChannel);
+          setIsAuthLoading(false);
         } else {
-          // If no user, clear everything
           setUser(null);
           setUserEmail(null);
           setInvoices([]);
@@ -1144,13 +1121,18 @@ export default function App() {
             updatedAt: new Date().toISOString()
           });
           setPresets([]);
-          if (event !== 'INITIAL_SESSION') {
-            setIsAuthLoading(false);
-          }
+          setIsAuthLoading(false);
         }
-        } catch (globalAuthErr) {
-          console.warn("Unhandled error in auth state change listener:", String(globalAuthErr));
-        }
+      } catch (globalAuthErr) {
+        console.warn("Unhandled error in syncUserData:", String(globalAuthErr));
+        setIsAuthLoading(false);
+      }
+    };
+
+    // Setup Auth State Listener — runs unconditionally so login always works
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        await syncUserData(session?.user ?? null, event);
       }
     );
 
@@ -1166,9 +1148,7 @@ export default function App() {
         if (!session) {
           setIsAuthLoading(false);
         } else if (session.user) {
-          setUser(session.user);
-          setUserEmail(session.user.email ?? session.user.phone ?? null);
-          setIsAuthLoading(false);
+          await syncUserData(session.user, 'INITIAL_GET_SESSION');
         }
       } catch (err) {
         setIsAuthLoading(false);
