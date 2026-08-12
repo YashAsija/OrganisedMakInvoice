@@ -796,67 +796,26 @@ export default function App() {
                 .in('userId', uidsToQuery)
                 .order('date', { ascending: false });
 
-              const parsedCloudInvoices = (cloudInvoices || []).map(inv => {
-                if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
-                  try {
-                    const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
-                    inv.embeddedTemplate = embeddedTemplate;
-                    inv.selectedCustomTemplateId = embeddedTemplate?.id;
-                    for (const key of Object.keys(embeddedTemplate)) {
-                      if ((inv as any)[key] === undefined) {
-                        (inv as any)[key] = embeddedTemplate[key];
-                      }
-                    }
-                  } catch (e) {}
-                }
-                return inv;
-              });
-
-              // Zero-Data-Loss Non-Destructive 3-Way Merge on Reload
-              const invoiceMap = new Map<string, Invoice>();
-              parsedCloudInvoices.forEach(c => { if (c && c.id) invoiceMap.set(c.id, c); });
-
-              const localSources = [
-                localStorage.getItem(`invoice_maker_invoices${suffix}`),
-                localStorage.getItem('invoice_maker_invoices')
-              ];
-
-              localSources.forEach(raw => {
-                if (raw) {
-                  try {
-                    const list: Invoice[] = JSON.parse(raw);
-                    if (Array.isArray(list)) {
-                      list.forEach(loc => {
-                        if (loc && loc.id) {
-                          const existing = invoiceMap.get(loc.id);
-                          if (!existing) {
-                            invoiceMap.set(loc.id, loc);
-                          } else if (loc.updatedAt && existing.updatedAt && loc.updatedAt > existing.updatedAt) {
-                            invoiceMap.set(loc.id, { ...existing, ...loc });
-                          }
+              const parsedCloudInvoices = (cloudInvoices || [])
+                .filter(inv => inv && inv.id && String(inv.id).trim() !== '')
+                .map(inv => {
+                  if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
+                    try {
+                      const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
+                      inv.embeddedTemplate = embeddedTemplate;
+                      inv.selectedCustomTemplateId = embeddedTemplate?.id;
+                      for (const key of Object.keys(embeddedTemplate)) {
+                        if ((inv as any)[key] === undefined) {
+                          (inv as any)[key] = embeddedTemplate[key];
                         }
-                      });
-                    }
-                  } catch (e) {}
-                }
-              });
+                      }
+                    } catch (e) {}
+                  }
+                  return inv;
+                });
 
-              const mergedInvoices = Array.from(invoiceMap.values());
-              setInvoices(mergedInvoices);
-              localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(mergedInvoices));
-              localStorage.setItem('invoice_maker_invoices', JSON.stringify(mergedInvoices));
-
-              // Auto-sync & normalize all documents back to Supabase Cloud under current persistent user ID (uid)
-              if (uid && mergedInvoices.length > 0) {
-                const toSync = mergedInvoices
-                  .filter(inv => inv && inv.id)
-                  .map(inv => sanitizeInvoiceForSync({ ...inv, userId: uid }));
-                try {
-                  await supabase.from('invoices').upsert(toSync);
-                } catch (syncErr) {
-                  console.warn('[AutoSync] Error upserting merged invoices on reload:', syncErr);
-                }
-              }
+              setInvoices(parsedCloudInvoices);
+              localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsedCloudInvoices));
             } catch (err) {
               handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
             }
@@ -884,55 +843,28 @@ export default function App() {
                       .select('*')
                       .in('userId', uidsToWatch)
                       .order('date', { ascending: false });
+
                     if (data) {
-                      const parsedCloudInvoices2 = (data as Invoice[]).map(inv => {
-                        if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
-                          try {
-                            const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
-                            inv.embeddedTemplate = embeddedTemplate;
-                            inv.selectedCustomTemplateId = embeddedTemplate?.id;
-                            for (const key of Object.keys(embeddedTemplate)) {
-                              if ((inv as any)[key] === undefined) {
-                                (inv as any)[key] = embeddedTemplate[key];
-                              }
-                            }
-                          } catch (e) { }
-                        }
-                        return inv;
-                      });
-
-                      const invoiceMap2 = new Map<string, Invoice>();
-                      parsedCloudInvoices2.forEach(c => { if (c && c.id) invoiceMap2.set(c.id, c); });
-
-                      const localSources2 = [
-                        localStorage.getItem(`invoice_maker_invoices${suffix}`),
-                        localStorage.getItem('invoice_maker_invoices')
-                      ];
-
-                      localSources2.forEach(raw => {
-                        if (raw) {
-                          try {
-                            const list: Invoice[] = JSON.parse(raw);
-                            if (Array.isArray(list)) {
-                              list.forEach(loc => {
-                                if (loc && loc.id) {
-                                  const existing = invoiceMap2.get(loc.id);
-                                  if (!existing) {
-                                    invoiceMap2.set(loc.id, loc);
-                                  } else if (loc.updatedAt && existing.updatedAt && loc.updatedAt > existing.updatedAt) {
-                                    invoiceMap2.set(loc.id, { ...existing, ...loc });
-                                  }
+                      const parsedCloudInvoices2 = (data as Invoice[])
+                        .filter(inv => inv && inv.id && String(inv.id).trim() !== '')
+                        .map(inv => {
+                          if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
+                            try {
+                              const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
+                              inv.embeddedTemplate = embeddedTemplate;
+                              inv.selectedCustomTemplateId = embeddedTemplate?.id;
+                              for (const key of Object.keys(embeddedTemplate)) {
+                                if ((inv as any)[key] === undefined) {
+                                  (inv as any)[key] = embeddedTemplate[key];
                                 }
-                              });
-                            }
-                          } catch (e) {}
-                        }
-                      });
+                              }
+                            } catch (e) { }
+                          }
+                          return inv;
+                        });
 
-                      const merged2 = Array.from(invoiceMap2.values());
-                      setInvoices(merged2);
-                      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(merged2));
-                      localStorage.setItem('invoice_maker_invoices', JSON.stringify(merged2));
+                      setInvoices(parsedCloudInvoices2);
+                      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsedCloudInvoices2));
                     }
                   } catch (err) {
                     console.warn("Error in realtime invoice sync:", String(err));
