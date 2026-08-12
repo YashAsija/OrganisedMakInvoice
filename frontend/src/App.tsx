@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PinSetupModal } from './components/PinSetupModal';
 import type { User } from '@supabase/supabase-js';
 import { supabase, handleSupabaseError, OperationType, isSupabaseConfigured } from './lib/supabase';
@@ -197,6 +197,7 @@ export default function App() {
   });
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const isCloudLoadedRef = useRef<boolean>(false);
   const [presets, setPresets] = useState<PresetItem[]>([]);
   const [clients, setClients] = useState<ClientProfile[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -440,6 +441,10 @@ export default function App() {
 
   // --- LOCAL CACHING LOAD MECHANISM (OFFLINE CAPABILITIES) ---
   const loadLocalData = (emailParam?: string | null) => {
+    if (isCloudLoadedRef.current) {
+      console.log('[loadLocalData] Skipping offline sync because cloud data is already loaded and active.');
+      return;
+    }
     const activeEmail = emailParam !== undefined ? emailParam : userEmail;
     const suffix = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
 
@@ -604,6 +609,7 @@ export default function App() {
           }
           if (activeEmail && typeof window !== 'undefined') {
             localStorage.setItem('makbills_last_user', activeEmail);
+            localStorage.setItem('makbills_custom_email', activeEmail);
           }
 
           setUser(currentUser);
@@ -801,6 +807,7 @@ export default function App() {
             });
 
             setInvoices(parsedCloudInvoices);
+            isCloudLoadedRef.current = true;
             localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsedCloudInvoices));
           } catch (err) {
             console.warn('[SUPABASE GET INVOICES EXCEPTION]:', err);
@@ -1388,6 +1395,7 @@ export default function App() {
 
       setUser(null);
       setUserEmail(null);
+      isCloudLoadedRef.current = false;
       // Data falls back to default local storage
       loadLocalData();
     } catch (e) {
