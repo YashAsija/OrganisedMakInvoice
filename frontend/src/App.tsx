@@ -2499,6 +2499,7 @@ export default function App() {
         isOpen={isInvoiceEditorOpen}
         onClose={() => setIsInvoiceEditorOpen(false)}
         onSave={handleSaveInvoice}
+        userId={user?.id || null}
       />
 
       {/* PIN Setup Modal */}

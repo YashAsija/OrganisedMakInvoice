@@ -26,6 +26,7 @@ interface InvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (inv: Invoice) => void;
+  userId?: string | null;
 }
 
 export const getFinancialYearShort = (dateInput?: string | Date): string => {
@@ -107,7 +108,8 @@ export default function InvoiceModal({
   defaultTaxRate,
   isOpen,
   onClose,
-  onSave
+  onSave,
+  userId
 }: InvoiceModalProps) {
   // GUI Preview and Form Edit State
   const [activeMode, setActiveMode] = useState<'edit' | 'preview' | 'editable'>('editable');
@@ -1247,9 +1249,15 @@ export default function InvoiceModal({
   // If we're editing an existing invoice, use its ID; otherwise generate a new one.
   const draftIdRef = useRef<string>((invoice?.id || '').trim() !== '' ? invoice!.id : `inv_draft_${Math.random().toString(36).substr(2, 9)}`);
 
-  // Tracks the real authenticated userId — updated whenever the session is available.
+  // Tracks the real authenticated userId — updated whenever the session is available or passed as prop.
   // Used by buildAndSave() so sendBeacon payloads always carry the correct userId.
-  const userIdRef = useRef<string | null>(null);
+  const userIdRef = useRef<string | null>(userId || null);
+  useEffect(() => {
+    if (userId) {
+      userIdRef.current = userId;
+    }
+  }, [userId]);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user?.id) userIdRef.current = data.session.user.id;
