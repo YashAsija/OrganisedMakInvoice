@@ -749,18 +749,12 @@ export default function App() {
 
           // 2. Load Invoices directly from Supabase Database (Single Source of Truth)
           try {
-            const uidsToQuery = Array.from(new Set([
-              uid,
-              activeEmail,
-              activeEmail ? `user_${activeEmail.trim().toLowerCase().replace(/[^a-z0-9]/g, '_')}` : ''
-            ].filter(Boolean)));
-
-            console.log('[AUTH] Syncing data for:', activeEmail, '| UID:', uid, '| Querying user IDs:', uidsToQuery);
+            console.log('[AUTH] Syncing data for:', activeEmail, '| UID:', uid);
 
             const { data: cloudInvoices, error: fetchErr } = await supabase
               .from('invoices')
               .select('*')
-              .in('userId', uidsToQuery)
+              .eq('userId', uid)
               .order('date', { ascending: false });
 
             if (fetchErr) {
@@ -804,12 +798,6 @@ export default function App() {
             handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
           }
 
-          const uidsToWatch = Array.from(new Set([
-            uid,
-            activeEmail,
-            activeEmail ? `user_${activeEmail.trim().toLowerCase().replace(/[^a-z0-9]/g, '_')}` : ''
-          ].filter(Boolean)));
-
           const invoicesChannel = supabase
             .channel(`invoices:${uid}:${Date.now()}`)
             .on(
@@ -819,13 +807,13 @@ export default function App() {
                 try {
                   const newRec = payload.new || {};
                   const oldRec = payload.old || {};
-                  const matchesUser = uidsToWatch.includes(newRec.userId) || uidsToWatch.includes(oldRec.userId);
+                  const matchesUser = newRec.userId === uid || oldRec.userId === uid;
                   if (!matchesUser && (Object.keys(newRec).length > 0 || Object.keys(oldRec).length > 0)) return;
 
                   const { data } = await supabase
                     .from('invoices')
                     .select('*')
-                    .in('userId', uidsToWatch)
+                    .eq('userId', uid)
                     .order('date', { ascending: false });
 
                   if (data) {
