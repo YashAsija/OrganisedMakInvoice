@@ -767,7 +767,23 @@ export default function App() {
             }
 
             // 2. Load Invoices and attach realtime listener
+            // 2. Load Invoices directly from Supabase Database (Single Source of Truth)
             try {
+              // One-time migration of any legacy guest local storage invoices
+              const legacyLocalRaw = localStorage.getItem('invoice_maker_invoices');
+              if (legacyLocalRaw) {
+                try {
+                  const legacyList: Invoice[] = JSON.parse(legacyLocalRaw);
+                  if (Array.isArray(legacyList) && legacyList.length > 0) {
+                    const toMigrate = legacyList
+                      .filter(i => i && i.id)
+                      .map(i => sanitizeInvoiceForSync({ ...i, userId: uid }));
+                    await supabase.from('invoices').upsert(toMigrate);
+                    localStorage.removeItem('invoice_maker_invoices');
+                  }
+                } catch (e) {}
+              }
+
               const { data: cloudInvoices } = await supabase
                 .from('invoices')
                 .select('*')
@@ -775,7 +791,6 @@ export default function App() {
                 .order('date', { ascending: false });
 
               if (cloudInvoices) {
-                // Merge: 3-way non-destructive merge combining cloud, suffixed local, and guest local storage
                 const parsedCloudInvoices = (cloudInvoices as Invoice[]).map(inv => {
                   if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
                     try {
@@ -792,50 +807,8 @@ export default function App() {
                   return inv;
                 });
 
-                const invoiceMap = new Map<string, Invoice>();
-                parsedCloudInvoices.forEach(c => { if (c && c.id) invoiceMap.set(c.id, c); });
-
-                const localSources = [
-                  localStorage.getItem(`invoice_maker_invoices${suffix}`),
-                  localStorage.getItem('invoice_maker_invoices')
-                ];
-
-                localSources.forEach(raw => {
-                  if (raw) {
-                    try {
-                      const list: Invoice[] = JSON.parse(raw);
-                      if (Array.isArray(list)) {
-                        list.forEach(loc => {
-                          if (loc && loc.id) {
-                            const existing = invoiceMap.get(loc.id);
-                            if (!existing) {
-                              invoiceMap.set(loc.id, loc);
-                            } else if (loc.updatedAt && existing.updatedAt && loc.updatedAt > existing.updatedAt) {
-                              invoiceMap.set(loc.id, { ...existing, ...loc });
-                            }
-                          }
-                        });
-                      }
-                    } catch (e) {}
-                  }
-                });
-
-                const merged = Array.from(invoiceMap.values());
-                setInvoices(merged);
-                localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(merged));
-                localStorage.setItem('invoice_maker_invoices', JSON.stringify(merged));
-
-                // Auto-sync any local unsynced invoices to Cloud with current userId so all devices stay in sync
-                if (uid && merged.length > 0) {
-                  const unsyncedToPush = merged
-                    .filter(inv => inv && inv.id)
-                    .map(inv => sanitizeInvoiceForSync({ ...inv, userId: uid }));
-                  try {
-                    await supabase.from('invoices').upsert(unsyncedToPush);
-                  } catch (syncErr) {
-                    console.warn('Auto multi-device cloud sync warn:', syncErr);
-                  }
-                }
+                setInvoices(parsedCloudInvoices);
+                localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsedCloudInvoices));
               }
             } catch (err) {
               handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
@@ -875,37 +848,8 @@ export default function App() {
                         return inv;
                       });
 
-                      const invoiceMap2 = new Map<string, Invoice>();
-                      parsedCloudInvoices2.forEach(c => { if (c && c.id) invoiceMap2.set(c.id, c); });
-
-                      const localSources2 = [
-                        localStorage.getItem(`invoice_maker_invoices${suffix}`),
-                        localStorage.getItem('invoice_maker_invoices')
-                      ];
-
-                      localSources2.forEach(raw => {
-                        if (raw) {
-                          try {
-                            const list: Invoice[] = JSON.parse(raw);
-                            if (Array.isArray(list)) {
-                              list.forEach(loc => {
-                                if (loc && loc.id) {
-                                  const existing = invoiceMap2.get(loc.id);
-                                  if (!existing) {
-                                    invoiceMap2.set(loc.id, loc);
-                                  } else if (loc.updatedAt && existing.updatedAt && loc.updatedAt > existing.updatedAt) {
-                                    invoiceMap2.set(loc.id, { ...existing, ...loc });
-                                  }
-                                }
-                              });
-                            }
-                          } catch (e) {}
-                        }
-                      });
-
-                      const merged2 = Array.from(invoiceMap2.values());
-                      setInvoices(merged2);
-                      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(merged2));
+                      setInvoices(parsedCloudInvoices2);
+                      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsedCloudInvoices2));
                     }
                   } catch (err) {
                     console.warn("Error in realtime invoice sync:", String(err));
@@ -1679,11 +1623,35 @@ export default function App() {
     }
 
     if (activeUid) {
-      // Propagate directly to Cloud
+      // Propagate directly to Cloud and refresh state directly from database
       const dataToSync = sanitizeInvoiceForSync({ ...invoice, userId: activeUid });
       const path = `invoices[id=${invoice.id}]`;
       try {
         await supabase.from('invoices').upsert(dataToSync);
+        const { data: latestData } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('userId', activeUid)
+          .order('date', { ascending: false });
+        if (latestData) {
+          const parsed = (latestData as Invoice[]).map(inv => {
+            if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
+              try {
+                const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
+                inv.embeddedTemplate = embeddedTemplate;
+                inv.selectedCustomTemplateId = embeddedTemplate?.id;
+                for (const key of Object.keys(embeddedTemplate)) {
+                  if ((inv as any)[key] === undefined) {
+                    (inv as any)[key] = embeddedTemplate[key];
+                  }
+                }
+              } catch (e) {}
+            }
+            return inv;
+          });
+          setInvoices(parsed);
+          localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsed));
+        }
       } catch (error) {
         handleSupabaseError(error, OperationType.WRITE, path);
       }
