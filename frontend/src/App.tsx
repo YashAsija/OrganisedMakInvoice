@@ -769,32 +769,23 @@ export default function App() {
             // 2. Load Invoices and attach realtime listener
             // 2. Load Invoices directly from Supabase Database (Single Source of Truth)
             try {
-              // One-time migration of any legacy guest local storage invoices
-              const legacyLocalRaw = localStorage.getItem('invoice_maker_invoices');
-              if (legacyLocalRaw) {
-                try {
-                  const legacyList: Invoice[] = JSON.parse(legacyLocalRaw);
-                  if (Array.isArray(legacyList) && legacyList.length > 0) {
-                    const toMigrate = legacyList
-                      .filter(i => i && i.id)
-                      .map(i => sanitizeInvoiceForSync({ ...i, userId: uid }));
-                    await supabase.from('invoices').upsert(toMigrate);
-                    localStorage.removeItem('invoice_maker_invoices');
-                  }
-                } catch (e) {}
-              }
-
               const uidsToQuery = Array.from(new Set([
                 uid,
                 activeEmail,
                 activeEmail ? `user_${activeEmail.trim().toLowerCase().replace(/[^a-z0-9]/g, '_')}` : ''
               ].filter(Boolean)));
 
-              const { data: cloudInvoices } = await supabase
+              console.log('[AUTH] Logged in as:', activeEmail, '| UID:', uid, '| Querying user IDs:', uidsToQuery);
+
+              const { data: cloudInvoices, error: fetchErr } = await supabase
                 .from('invoices')
                 .select('*')
                 .in('userId', uidsToQuery)
                 .order('date', { ascending: false });
+
+              if (fetchErr) {
+                console.error('[SUPABASE INVOICES FETCH ERROR]:', fetchErr);
+              }
 
               const parsedCloudInvoices = (cloudInvoices || [])
                 .filter(inv => inv && inv.id && String(inv.id).trim() !== '')
@@ -814,9 +805,17 @@ export default function App() {
                   return inv;
                 });
 
+              console.log('[SUPABASE INVOICES FETCHED]', {
+                uid,
+                email: activeEmail,
+                count: parsedCloudInvoices.length,
+                firstFew: parsedCloudInvoices.slice(0, 5).map(i => ({ id: i.id, invoiceNumber: i.invoiceNumber, clientName: i.clientName }))
+              });
+
               setInvoices(parsedCloudInvoices);
               localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsedCloudInvoices));
             } catch (err) {
+              console.error('[SUPABASE GET INVOICES EXCEPTION]:', err);
               handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
             }
 
