@@ -784,10 +784,16 @@ export default function App() {
                 } catch (e) {}
               }
 
+              const uidsToQuery = Array.from(new Set([
+                uid,
+                activeEmail,
+                activeEmail ? `user_${activeEmail.trim().toLowerCase().replace(/[^a-z0-9]/g, '_')}` : ''
+              ].filter(Boolean)));
+
               const { data: cloudInvoices } = await supabase
                 .from('invoices')
                 .select('*')
-                .eq('userId', uid)
+                .in('userId', uidsToQuery)
                 .order('date', { ascending: false });
 
               const parsedCloudInvoices = (cloudInvoices || []).map(inv => {
@@ -840,7 +846,7 @@ export default function App() {
               localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(mergedInvoices));
               localStorage.setItem('invoice_maker_invoices', JSON.stringify(mergedInvoices));
 
-              // Auto-sync any unsynced local documents back to Supabase Cloud under current user ID
+              // Auto-sync & normalize all documents back to Supabase Cloud under current persistent user ID (uid)
               if (uid && mergedInvoices.length > 0) {
                 const toSync = mergedInvoices
                   .filter(inv => inv && inv.id)
@@ -855,6 +861,12 @@ export default function App() {
               handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
             }
 
+            const uidsToWatch = Array.from(new Set([
+              uid,
+              activeEmail,
+              activeEmail ? `user_${activeEmail.trim().toLowerCase().replace(/[^a-z0-9]/g, '_')}` : ''
+            ].filter(Boolean)));
+
             const invoicesChannel = supabase
               .channel(`invoices:${uid}:${Date.now()}`)
               .on(
@@ -864,13 +876,13 @@ export default function App() {
                   try {
                     const newRec = payload.new || {};
                     const oldRec = payload.old || {};
-                    const matchesUser = newRec.userId === uid || oldRec.userId === uid;
+                    const matchesUser = uidsToWatch.includes(newRec.userId) || uidsToWatch.includes(oldRec.userId);
                     if (!matchesUser && (Object.keys(newRec).length > 0 || Object.keys(oldRec).length > 0)) return;
 
                     const { data } = await supabase
                       .from('invoices')
                       .select('*')
-                      .eq('userId', uid)
+                      .in('userId', uidsToWatch)
                       .order('date', { ascending: false });
                     if (data) {
                       const parsedCloudInvoices2 = (data as Invoice[]).map(inv => {
