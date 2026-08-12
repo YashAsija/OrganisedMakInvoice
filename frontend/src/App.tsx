@@ -764,7 +764,12 @@ export default function App() {
               .order('date', { ascending: false });
 
             if (fetchErr) {
-              console.error('[SUPABASE INVOICES FETCH ERROR]:', fetchErr);
+              console.error('[SUPABASE INVOICES FETCH ERROR] Details:', {
+                message: fetchErr.message,
+                code: fetchErr.code,
+                details: fetchErr.details,
+                hint: fetchErr.hint
+              });
             }
 
             const parsedCloudInvoices = (cloudInvoices || [])
