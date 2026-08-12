@@ -760,15 +760,11 @@ export default function App() {
 
           // 2. Load Invoices directly from Supabase Database (Single Source of Truth)
           try {
-            console.log('[AUTH] Syncing data for:', activeEmail, '| UID:', uid);
-
             const { data: cloudInvoices, error: fetchErr } = await supabase
               .from('invoices')
               .select('*')
               .eq('userId', uid)
               .order('date', { ascending: false });
-
-            console.log('[SUPABASE FETCHED INVOICES]', { count: cloudInvoices?.length, error: fetchErr });
 
             if (fetchErr) {
               console.warn('[SUPABASE INVOICES FETCH ERROR] Details:', {
@@ -796,15 +792,6 @@ export default function App() {
                 }
                 return inv;
               });
-
-            console.log('[PARSED INVOICES]', parsedCloudInvoices.map(i => ({ id: i.id, type: i.invoiceType, invoiceNumber: i.invoiceNumber, status: i.status })));
-
-            console.log('[SUPABASE INVOICES LOADED]', {
-              uid,
-              email: activeEmail,
-              count: parsedCloudInvoices.length,
-              firstFew: parsedCloudInvoices.slice(0, 5).map(i => ({ id: i.id, invoiceNumber: i.invoiceNumber, clientName: i.clientName }))
-            });
 
             setInvoices(parsedCloudInvoices);
             isCloudLoadedRef.current = true;
