@@ -20,7 +20,9 @@ const ALLOWED_SUPABASE_COLUMNS = [
   'placeOfSupply', 'grRrNo', 'transport', 'vehicleNo', 'driverMobile',
   'station', 'ewayBillNo', 'shippedToName', 'shippedToPhone', 'shippedToEmail',
   'shippedToPan', 'shippedToState', 'shippedToCountry', 'shippedToGstin',
-  'shippedToAddress', 'clientGstin', 'clientPan', 'embeddedTemplate'
+  'shippedToAddress', 'clientGstin', 'clientPan', 'embeddedTemplate',
+  'isDeleted', 'deletedAt', 'paidAmount', 'freightCharges', 'isFreightAdded',
+  'deliveryNote', 'clientCompany', 'shippedToCompany'
 ];
 
 
@@ -995,14 +997,22 @@ export default function App() {
             const parsedCloudInvoices = (cloudInvoices || [])
               .filter(inv => inv && inv.id && String(inv.id).trim() !== '')
               .map(inv => {
-                if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
+                // Hydrate embeddedTemplate from the DB column (object form)
+                if (inv.embeddedTemplate && typeof inv.embeddedTemplate === 'object') {
+                  inv.selectedCustomTemplateId = (inv.embeddedTemplate as any)?.id;
+                } else if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
+                  // Legacy: some old records stored embeddedTemplate serialized into selectedTemplateStyle
                   try {
-                    const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
-                    inv.embeddedTemplate = embeddedTemplate;
-                    inv.selectedCustomTemplateId = embeddedTemplate?.id;
-                    for (const key of Object.keys(embeddedTemplate)) {
-                      if ((inv as any)[key] === undefined) {
-                        (inv as any)[key] = embeddedTemplate[key];
+                    const legacyBlob = JSON.parse(inv.selectedTemplateStyle);
+                    // Only hydrate non-soft-delete fields from the blob — real columns take priority
+                    if (legacyBlob && typeof legacyBlob === 'object') {
+                      inv.embeddedTemplate = legacyBlob;
+                      inv.selectedCustomTemplateId = legacyBlob?.id;
+                      for (const key of Object.keys(legacyBlob)) {
+                        // Never override real top-level DB columns from the blob
+                        if (key !== 'isDeleted' && key !== 'deletedAt' && (inv as any)[key] === undefined) {
+                          (inv as any)[key] = legacyBlob[key];
+                        }
                       }
                     }
                   } catch (e) {}
@@ -1040,14 +1050,18 @@ export default function App() {
                     const parsedCloudInvoices2 = (data as Invoice[])
                       .filter(inv => inv && inv.id && String(inv.id).trim() !== '')
                       .map(inv => {
-                        if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
+                        if (inv.embeddedTemplate && typeof inv.embeddedTemplate === 'object') {
+                          inv.selectedCustomTemplateId = (inv.embeddedTemplate as any)?.id;
+                        } else if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
                           try {
-                            const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
-                            inv.embeddedTemplate = embeddedTemplate;
-                            inv.selectedCustomTemplateId = embeddedTemplate?.id;
-                            for (const key of Object.keys(embeddedTemplate)) {
-                              if ((inv as any)[key] === undefined) {
-                                (inv as any)[key] = embeddedTemplate[key];
+                            const legacyBlob = JSON.parse(inv.selectedTemplateStyle);
+                            if (legacyBlob && typeof legacyBlob === 'object') {
+                              inv.embeddedTemplate = legacyBlob;
+                              inv.selectedCustomTemplateId = legacyBlob?.id;
+                              for (const key of Object.keys(legacyBlob)) {
+                                if (key !== 'isDeleted' && key !== 'deletedAt' && (inv as any)[key] === undefined) {
+                                  (inv as any)[key] = legacyBlob[key];
+                                }
                               }
                             }
                           } catch (e) { }
@@ -1634,6 +1648,9 @@ export default function App() {
 
     const dataToSync: any = { ...inv };
     delete dataToSync.user_id;
+    // Remove local-only tracking flags — never send to DB
+    delete dataToSync._pendingSync;
+    delete dataToSync._pendingDelete;
     
     if (targetUid) {
       dataToSync.userId = targetUid;
@@ -1641,28 +1658,30 @@ export default function App() {
       delete dataToSync.userId;
     }
 
+    // Preserve the real embeddedTemplate object from the invoice
     const embeddedTemplate = { ...(dataToSync.embeddedTemplate || {}) };
 
+    // Strip any field that is NOT in the allowed DB column list
+    // (except embeddedTemplate itself, which we handle below)
     for (const key of Object.keys(dataToSync)) {
       if (!ALLOWED_SUPABASE_COLUMNS.includes(key) && key !== 'embeddedTemplate') {
-        embeddedTemplate[key] = dataToSync[key];
         delete dataToSync[key];
       }
     }
 
-    if (inv.isDeleted === undefined) {
-      delete embeddedTemplate.isDeleted;
-      delete embeddedTemplate.deletedAt;
-    } else {
-      dataToSync.isDeleted = inv.isDeleted;
-      embeddedTemplate.isDeleted = inv.isDeleted;
-    }
+    // Serialize the real embeddedTemplate object into the column,
+    // but ONLY if it has actual template content (id, name, sections, etc.)
+    // — never let isDeleted/deletedAt leak into this blob (they're now
+    //   top-level columns handled by ALLOWED_SUPABASE_COLUMNS above).
+    delete embeddedTemplate.isDeleted;
+    delete embeddedTemplate.deletedAt;
 
     if (Object.keys(embeddedTemplate).length > 0) {
-      dataToSync.selectedTemplateStyle = JSON.stringify(embeddedTemplate);
+      dataToSync.embeddedTemplate = embeddedTemplate;
+    } else {
+      delete dataToSync.embeddedTemplate;
     }
     
-    delete dataToSync.embeddedTemplate;
     delete dataToSync.selectedCustomTemplateId;
     
     return dataToSync;
@@ -2025,7 +2044,7 @@ export default function App() {
         const invToUpdate = updated.find(i => i.id === invoiceId);
         if (invToUpdate) {
            const dataToSync = sanitizeInvoiceForSync(invToUpdate, activeUid);
-           dataToSync.isDeleted = false;
+           // isDeleted: false is already included via ALLOWED_SUPABASE_COLUMNS — no override needed
            const { error } = await supabase.from('invoices').upsert(dataToSync);
            if (error) {
              markInvoicePendingSync(invoiceId);
