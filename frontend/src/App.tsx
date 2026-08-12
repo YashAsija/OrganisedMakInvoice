@@ -107,6 +107,29 @@ const pathToTab: Record<string, string> = Object.entries(tabToPath).reduce(
 
 export default function App() {
   const { confirm } = useConfirm();
+
+  const showToast = (title: string, message: string, type: 'success' | 'warning' | 'error' | 'info' = 'info') => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('mak_notification', {
+        detail: { title, message, type }
+      }));
+    }
+  };
+
+  const resolveSessionUid = async (): Promise<string | null> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const uid = session?.user?.id || user?.id;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uid && uuidRegex.test(uid)) {
+        return uid;
+      }
+    } catch (e) {
+      console.warn('[resolveSessionUid] Error retrieving session:', e);
+    }
+    return null;
+  };
+
   // Theme & Network states
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const cached = localStorage.getItem('invoice_maker_theme');
@@ -180,6 +203,197 @@ export default function App() {
   });
 
   const suffix = userEmail ? `_${encodeURIComponent(userEmail)}` : '';
+
+  const markInvoicePendingSync = (id: string) => {
+    setInvoices(prev => {
+      const updated = prev.map(inv => inv.id === id ? { ...inv, _pendingSync: true } : inv);
+      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
+      localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const markClientPendingSync = (id: string) => {
+    setClients(prev => {
+      const updated = prev.map(c => c.id === id ? { ...c, _pendingSync: true } : c);
+      localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const markExpensePendingSync = (id: string) => {
+    setExpenses(prev => {
+      const updated = prev.map(e => e.id === id ? { ...e, _pendingSync: true } : e);
+      localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const markInvoicePendingDelete = (id: string) => {
+    try {
+      const raw = localStorage.getItem(`invoice_maker_invoices${suffix}`) || '[]';
+      const parsed: Invoice[] = JSON.parse(raw);
+      const updated = parsed.map(inv => inv.id === id ? { ...inv, _pendingDelete: true } : inv);
+      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
+      localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  const markClientPendingDelete = (id: string) => {
+    try {
+      const raw = localStorage.getItem(`invoice_maker_clients${suffix}`) || '[]';
+      const parsed: ClientProfile[] = JSON.parse(raw);
+      const updated = parsed.map(c => c.id === id ? { ...c, _pendingDelete: true } : c);
+      localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  const markExpensePendingDelete = (id: string) => {
+    try {
+      const raw = localStorage.getItem(`invoice_maker_expenses${suffix}`) || '[]';
+      const parsed: Expense[] = JSON.parse(raw);
+      const updated = parsed.map(ex => ex.id === id ? { ...ex, _pendingDelete: true } : ex);
+      localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  const sanitizeClientForSync = (client: ClientProfile, authUid: string): any => {
+    const copy = { ...client, userId: authUid };
+    delete (copy as any)._pendingSync;
+    delete (copy as any)._pendingDelete;
+    return copy;
+  };
+
+  const sanitizeExpenseForSync = (expense: Expense, authUid: string): any => {
+    const copy = { ...expense, userId: authUid };
+    delete (copy as any)._pendingSync;
+    delete (copy as any)._pendingDelete;
+    return copy;
+  };
+
+  const isSyncingRef = useRef(false);
+  const triggerBackgroundSync = async () => {
+    if (isSyncingRef.current) return;
+    const activeUid = await resolveSessionUid();
+    if (!activeUid) return;
+
+    isSyncingRef.current = true;
+    let syncCount = 0;
+
+    try {
+      // 1. Sync Invoices
+      const rawInvoices = localStorage.getItem(`invoice_maker_invoices${suffix}`) || '[]';
+      const parsedInvoices: Invoice[] = JSON.parse(rawInvoices);
+      let updatedInvoicesList = [...parsedInvoices];
+      let invoicesChanged = false;
+
+      for (const inv of parsedInvoices) {
+        if (inv._pendingDelete) {
+          const { error } = await supabase.from('invoices').delete().eq('id', inv.id).eq('userId', activeUid);
+          if (!error) {
+            updatedInvoicesList = updatedInvoicesList.filter(i => i.id !== inv.id);
+            invoicesChanged = true;
+            syncCount++;
+          }
+        } else if (inv._pendingSync) {
+          const dataToSync = sanitizeInvoiceForSync(inv, activeUid);
+          const { error } = await supabase.from('invoices').upsert(dataToSync);
+          if (!error) {
+            updatedInvoicesList = updatedInvoicesList.map(i => i.id === inv.id ? { ...i, _pendingSync: undefined } : i);
+            invoicesChanged = true;
+            syncCount++;
+          }
+        }
+      }
+
+      if (invoicesChanged) {
+        setInvoices(updatedInvoicesList.filter(inv => !inv._pendingDelete));
+        localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updatedInvoicesList));
+        localStorage.setItem('invoice_maker_invoices', JSON.stringify(updatedInvoicesList));
+      }
+
+      // 2. Sync Clients
+      const rawClients = localStorage.getItem(`invoice_maker_clients${suffix}`) || '[]';
+      const parsedClients: ClientProfile[] = JSON.parse(rawClients);
+      let updatedClientsList = [...parsedClients];
+      let clientsChanged = false;
+
+      for (const c of parsedClients) {
+        if (c._pendingDelete) {
+          const { error } = await supabase.from('clients').delete().eq('id', c.id).eq('userId', activeUid);
+          if (!error) {
+            updatedClientsList = updatedClientsList.filter(item => item.id !== c.id);
+            clientsChanged = true;
+            syncCount++;
+          }
+        } else if (c._pendingSync) {
+          const clientWithUser = sanitizeClientForSync(c, activeUid);
+          const { error } = await supabase.from('clients').upsert(clientWithUser);
+          if (!error) {
+            updatedClientsList = updatedClientsList.map(item => item.id === c.id ? { ...item, _pendingSync: undefined } : item);
+            clientsChanged = true;
+            syncCount++;
+          }
+        }
+      }
+
+      if (clientsChanged) {
+        setClients(updatedClientsList.filter(c => !c._pendingDelete));
+        localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(updatedClientsList));
+      }
+
+      // 3. Sync Expenses
+      const rawExpenses = localStorage.getItem(`invoice_maker_expenses${suffix}`) || '[]';
+      const parsedExpenses: Expense[] = JSON.parse(rawExpenses);
+      let updatedExpensesList = [...parsedExpenses];
+      let expensesChanged = false;
+
+      for (const ex of parsedExpenses) {
+        if (ex._pendingDelete) {
+          const { error } = await supabase.from('expenses').delete().eq('id', ex.id).eq('userId', activeUid);
+          if (!error) {
+            updatedExpensesList = updatedExpensesList.filter(item => item.id !== ex.id);
+            expensesChanged = true;
+            syncCount++;
+          }
+        } else if (ex._pendingSync) {
+          const expenseWithUser = sanitizeExpenseForSync(ex, activeUid);
+          const { error } = await supabase.from('expenses').upsert(expenseWithUser);
+          if (!error) {
+            updatedExpensesList = updatedExpensesList.map(item => item.id === ex.id ? { ...item, _pendingSync: undefined } : item);
+            expensesChanged = true;
+            syncCount++;
+          }
+        }
+      }
+
+      if (expensesChanged) {
+        setExpenses(updatedExpensesList.filter(ex => !ex._pendingDelete));
+        localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(updatedExpensesList));
+      }
+
+      if (syncCount > 0) {
+        showToast('Sync Successful', `Successfully synced ${syncCount} pending update(s) to the cloud!`, 'success');
+      }
+    } catch (e) {
+      console.warn('[triggerBackgroundSync] Sync failed:', e);
+    } finally {
+      isSyncingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', triggerBackgroundSync);
+      return () => window.removeEventListener('online', triggerBackgroundSync);
+    }
+  }, [suffix]);
+
+  useEffect(() => {
+    if (userEmail) {
+      triggerBackgroundSync();
+    }
+  }, [userEmail, user]);
 
   // Main Business state
   const [profile, setProfile] = useState<BusinessProfile>({
@@ -503,7 +717,8 @@ export default function App() {
     });
 
     const initialInvoicesList = Array.from(localMap.values());
-    setInvoices(initialInvoicesList);
+    const visibleInvoicesList = initialInvoicesList.filter((inv: any) => !inv._pendingDelete);
+    setInvoices(visibleInvoicesList);
     if (initialInvoicesList.length > 0) {
       localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(initialInvoicesList));
       localStorage.setItem('invoice_maker_invoices', JSON.stringify(initialInvoicesList));
@@ -535,7 +750,9 @@ export default function App() {
     const localClients = localStorage.getItem(`invoice_maker_clients${suffix}`);
     if (localClients) {
       try {
-        setClients(JSON.parse(localClients));
+        const parsedClients = JSON.parse(localClients);
+        const visibleClients = parsedClients.filter((c: any) => !c._pendingDelete);
+        setClients(visibleClients);
       } catch (e) {
         console.warn('Failed to parse local clients', e);
       }
@@ -547,7 +764,9 @@ export default function App() {
     const localExpenses = localStorage.getItem(`invoice_maker_expenses${suffix}`);
     if (localExpenses) {
       try {
-        setExpenses(JSON.parse(localExpenses));
+        const parsedExpenses = JSON.parse(localExpenses);
+        const visibleExpenses = parsedExpenses.filter((ex: any) => !ex._pendingDelete);
+        setExpenses(visibleExpenses);
       } catch (e) {
         console.warn('Failed to parse local expenses', e);
       }
@@ -1127,6 +1346,9 @@ export default function App() {
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         await syncUserData(session?.user ?? null, event);
+        if (session?.user?.id) {
+          triggerBackgroundSync();
+        }
       }
     );
 
@@ -1143,6 +1365,7 @@ export default function App() {
           setIsAuthLoading(false);
         } else if (session.user) {
           await syncUserData(session.user, 'INITIAL_GET_SESSION');
+          triggerBackgroundSync();
         }
       } catch (err) {
         setIsAuthLoading(false);
@@ -1397,26 +1620,24 @@ export default function App() {
     return '';
   };
 
-  const sanitizeInvoiceForSync = (inv: Invoice): any => {
-    let targetUid = inv.userId || (inv as any).user_id;
-    if (user?.id) {
-      targetUid = user.id;
-    } else {
-      const activeUid = getActiveUserId(user, userEmail);
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(targetUid || '') && uuidRegex.test(activeUid)) {
-        targetUid = activeUid;
+  const sanitizeInvoiceForSync = (inv: Invoice, authUid?: string): any => {
+    let targetUid = authUid;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    if (!targetUid || !uuidRegex.test(targetUid)) {
+      if (user?.id && uuidRegex.test(user.id)) {
+        targetUid = user.id;
+      } else {
+        targetUid = undefined;
       }
     }
 
     const dataToSync: any = { ...inv };
     delete dataToSync.user_id;
     
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (targetUid && uuidRegex.test(targetUid)) {
+    if (targetUid) {
       dataToSync.userId = targetUid;
     } else {
-      console.warn('[sanitizeInvoiceForSync] Omitting invalid non-UUID userId:', targetUid);
       delete dataToSync.userId;
     }
 
@@ -1627,61 +1848,61 @@ export default function App() {
       window.dispatchEvent(new CustomEvent('invoice_updated', { detail: invoice }));
     }
 
-    let activeUid = getActiveUserId(user, userEmail);
-    if (!activeUid) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        activeUid = session?.user?.id || getActiveUserId(null, userEmail);
-      } catch (e) {}
-    }
+    const activeUid = await resolveSessionUid();
 
     if (activeUid) {
       // Propagate directly to Cloud and refresh state directly from database
-      const dataToSync = sanitizeInvoiceForSync({ ...invoice, userId: activeUid });
-      const path = `invoices[id=${invoice.id}]`;
+      const dataToSync = sanitizeInvoiceForSync({ ...invoice, userId: activeUid }, activeUid);
       try {
         const { error: upsertError } = await supabase.from('invoices').upsert(dataToSync);
         if (upsertError) {
           console.error('[handleSaveInvoice] Supabase upsert error:', upsertError);
-        }
+          markInvoicePendingSync(invoice.id);
+          showToast('Sync Offline', 'Saved locally. It will auto-sync to cloud when connection is restored.', 'warning');
+        } else {
+          const { data: latestData } = await supabase
+            .from('invoices')
+            .select('*')
+            .eq('userId', activeUid)
+            .order('date', { ascending: false });
 
-        const { data: latestData } = await supabase
-          .from('invoices')
-          .select('*')
-          .eq('userId', activeUid)
-          .order('date', { ascending: false });
-
-        if (latestData) {
-          const parsed = (latestData as Invoice[]).map(inv => {
-            if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
-              try {
-                const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
-                inv.embeddedTemplate = embeddedTemplate;
-                inv.selectedCustomTemplateId = embeddedTemplate?.id;
-                for (const key of Object.keys(embeddedTemplate)) {
-                  if ((inv as any)[key] === undefined) {
-                    (inv as any)[key] = embeddedTemplate[key];
+          if (latestData) {
+            const parsed = (latestData as Invoice[]).map(inv => {
+              if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
+                try {
+                  const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
+                  inv.embeddedTemplate = embeddedTemplate;
+                  inv.selectedCustomTemplateId = embeddedTemplate?.id;
+                  for (const key of Object.keys(embeddedTemplate)) {
+                    if ((inv as any)[key] === undefined) {
+                      (inv as any)[key] = embeddedTemplate[key];
+                    }
                   }
-                }
-              } catch (e) {}
-            }
-            return inv;
-          });
+                } catch (e) {}
+              }
+              return inv;
+            });
 
-          // Ensure the newly saved invoice is guaranteed to remain in state
-          const invMap = new Map<string, Invoice>();
-          parsed.forEach(p => invMap.set(p.id, p));
-          if (!invMap.has(invoice.id)) {
-            invMap.set(invoice.id, invoice);
+            // Ensure the newly saved invoice is guaranteed to remain in state and mark it as successfully synced
+            const invMap = new Map<string, Invoice>();
+            parsed.forEach(p => invMap.set(p.id, p));
+            if (!invMap.has(invoice.id)) {
+              invMap.set(invoice.id, { ...invoice, _pendingSync: undefined });
+            }
+            const finalMerged = Array.from(invMap.values()).map(inv => inv.id === invoice.id ? { ...inv, _pendingSync: undefined } : inv);
+            setInvoices(finalMerged);
+            localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(finalMerged));
+            localStorage.setItem('invoice_maker_invoices', JSON.stringify(finalMerged));
           }
-          const finalMerged = Array.from(invMap.values());
-          setInvoices(finalMerged);
-          localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(finalMerged));
-          localStorage.setItem('invoice_maker_invoices', JSON.stringify(finalMerged));
         }
       } catch (error) {
         console.warn('[handleSaveInvoice] Error during sync:', error);
+        markInvoicePendingSync(invoice.id);
+        showToast('Sync Offline', 'Saved locally. It will auto-sync to cloud when connection is restored.', 'warning');
       }
+    } else {
+      markInvoicePendingSync(invoice.id);
+      showToast('Offline Mode', 'Saved locally. Please connect or sign in to sync with the cloud.', 'info');
     }
   };
 
@@ -1704,13 +1925,19 @@ export default function App() {
       localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
       localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
 
-      if (user) {
-        const path = `invoices[id=${invoiceId}]`;
+      const activeUid = await resolveSessionUid();
+      if (activeUid) {
         try {
-          await supabase.from('invoices').delete().eq('id', invoiceId).eq('userId', user.id);
-        } catch (error) {
-          handleSupabaseError(error, OperationType.DELETE, path);
+          const { error } = await supabase.from('invoices').delete().eq('id', invoiceId).eq('userId', activeUid);
+          if (error) {
+            console.error('Delete failed:', error);
+            markInvoicePendingDelete(invoiceId);
+          }
+        } catch (e) {
+          markInvoicePendingDelete(invoiceId);
         }
+      } else {
+        markInvoicePendingDelete(invoiceId);
       }
     } else {
       // Soft delete
@@ -1724,20 +1951,26 @@ export default function App() {
       const updated = invoices.map(inv => 
         inv.id === invoiceId ? { ...inv, isDeleted: true, deletedAt: new Date().toISOString() } : inv
       );
-      setInvoices(updated);
+      setInvoices(updated.filter(inv => inv.id !== invoiceId || !inv.isDeleted)); // filter out of visible list
       localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
       localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
 
-      if (user) {
-        const path = `invoices[id=${invoiceId}]`;
+      const activeUid = await resolveSessionUid();
+      if (activeUid) {
         try {
           const invToUpdate = updated.find(i => i.id === invoiceId);
           if (invToUpdate) {
-             await supabase.from('invoices').upsert(sanitizeInvoiceForSync(invToUpdate));
+             const dataToSync = sanitizeInvoiceForSync(invToUpdate, activeUid);
+             const { error } = await supabase.from('invoices').upsert(dataToSync);
+             if (error) {
+               markInvoicePendingSync(invoiceId);
+             }
           }
         } catch (error) {
-          handleSupabaseError(error, OperationType.WRITE, path);
+          markInvoicePendingSync(invoiceId);
         }
+      } else {
+        markInvoicePendingSync(invoiceId);
       }
     }
   };
@@ -1755,13 +1988,18 @@ export default function App() {
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
     localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
 
-    if (user) {
-      const path = `invoices[id=${invoiceId}]`;
+    const activeUid = await resolveSessionUid();
+    if (activeUid) {
       try {
-        await supabase.from('invoices').delete().eq('id', invoiceId).eq('userId', user.id);
+        const { error } = await supabase.from('invoices').delete().eq('id', invoiceId).eq('userId', activeUid);
+        if (error) {
+          markInvoicePendingDelete(invoiceId);
+        }
       } catch (error) {
-        handleSupabaseError(error, OperationType.DELETE, path);
+        markInvoicePendingDelete(invoiceId);
       }
+    } else {
+      markInvoicePendingDelete(invoiceId);
     }
   };
 
@@ -1781,17 +2019,23 @@ export default function App() {
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
     localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
 
-    if (user) {
+    const activeUid = await resolveSessionUid();
+    if (activeUid) {
       try {
         const invToUpdate = updated.find(i => i.id === invoiceId);
         if (invToUpdate) {
-           const dataToSync = sanitizeInvoiceForSync(invToUpdate);
+           const dataToSync = sanitizeInvoiceForSync(invToUpdate, activeUid);
            dataToSync.isDeleted = false;
-           await supabase.from('invoices').upsert(dataToSync);
+           const { error } = await supabase.from('invoices').upsert(dataToSync);
+           if (error) {
+             markInvoicePendingSync(invoiceId);
+           }
         }
       } catch (error) {
-        console.error('Failed to restore invoice:', error);
+        markInvoicePendingSync(invoiceId);
       }
+    } else {
+      markInvoicePendingSync(invoiceId);
     }
   };
 
@@ -1820,22 +2064,34 @@ export default function App() {
         return inv;
       }).filter(inv => !draftsToDelete.includes(inv.id));
 
-      setInvoices(updated);
+      setInvoices(updated.filter(inv => !inv.isDeleted)); // filter out of visible list
       localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
       localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
 
-      if (user) {
+      const activeUid = await resolveSessionUid();
+      if (activeUid) {
         try {
           if (draftsToDelete.length > 0) {
-            await supabase.from('invoices').delete().in('id', draftsToDelete).eq('userId', user.id);
+            const { error } = await supabase.from('invoices').delete().in('id', draftsToDelete).eq('userId', activeUid);
+            if (error) {
+              draftsToDelete.forEach(id => markInvoicePendingDelete(id));
+            }
           }
           const toSoftDelete = updated.filter(inv => invoiceIds.includes(inv.id) && inv.isDeleted);
           if (toSoftDelete.length > 0) {
-            await supabase.from('invoices').upsert(toSoftDelete.map(sanitizeInvoiceForSync));
+            const sanitized = toSoftDelete.map(inv => sanitizeInvoiceForSync(inv, activeUid));
+            const { error } = await supabase.from('invoices').upsert(sanitized);
+            if (error) {
+              toSoftDelete.forEach(inv => markInvoicePendingSync(inv.id));
+            }
           }
         } catch (error) {
-          console.error('Failed to bulk process invoices:', error);
+          draftsToDelete.forEach(id => markInvoicePendingDelete(id));
+          updated.filter(inv => invoiceIds.includes(inv.id) && inv.isDeleted).forEach(inv => markInvoicePendingSync(inv.id));
         }
+      } else {
+        draftsToDelete.forEach(id => markInvoicePendingDelete(id));
+        updated.filter(inv => invoiceIds.includes(inv.id) && inv.isDeleted).forEach(inv => markInvoicePendingSync(inv.id));
       }
     } else {
       // Only drafts
@@ -1851,12 +2107,18 @@ export default function App() {
       localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
       localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
 
-      if (user) {
+      const activeUid = await resolveSessionUid();
+      if (activeUid) {
         try {
-          await supabase.from('invoices').delete().in('id', invoiceIds).eq('userId', user.id);
+          const { error } = await supabase.from('invoices').delete().in('id', invoiceIds).eq('userId', activeUid);
+          if (error) {
+            invoiceIds.forEach(id => markInvoicePendingDelete(id));
+          }
         } catch (error) {
-          console.error('Failed to bulk delete invoices:', error);
+          invoiceIds.forEach(id => markInvoicePendingDelete(id));
         }
+      } else {
+        invoiceIds.forEach(id => markInvoicePendingDelete(id));
       }
     }
   };
@@ -1868,7 +2130,7 @@ export default function App() {
       if (invoiceIds.includes(inv.id)) {
         const paidDateUpdate: { paidDate?: string } = status === 'paid' && !inv.paidDate ? { paidDate: new Date().toISOString().split('T')[0] } : {};
         if (status !== 'paid') {
-            paidDateUpdate.paidDate = undefined; // clear paid date if status changed from paid
+            paidDateUpdate.paidDate = undefined;
         }
         return { ...inv, status, updatedAt: new Date().toISOString(), ...paidDateUpdate };
       }
@@ -1878,16 +2140,23 @@ export default function App() {
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
     localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
 
-    if (user) {
+    const activeUid = await resolveSessionUid();
+    if (activeUid) {
       try {
         const bulkUpdates = invoiceIds.map(invoiceId => {
-          const inv = invoices.find(i => i.id === invoiceId);
-          return { ...inv, status, userId: user.id, updatedAt: new Date().toISOString() };
+          const inv = updated.find(i => i.id === invoiceId);
+          if (!inv) return null;
+          return sanitizeInvoiceForSync(inv, activeUid);
         }).filter(Boolean);
-        await supabase.from('invoices').upsert(bulkUpdates);
+        const { error } = await supabase.from('invoices').upsert(bulkUpdates);
+        if (error) {
+          invoiceIds.forEach(id => markInvoicePendingSync(id));
+        }
       } catch (error) {
-        console.error('Failed to bulk update invoices status:', error);
+        invoiceIds.forEach(id => markInvoicePendingSync(id));
       }
+    } else {
+      invoiceIds.forEach(id => markInvoicePendingSync(id));
     }
   };
 
@@ -1896,13 +2165,20 @@ export default function App() {
     setInvoices(updated);
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
     localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
-    if (user) {
+    
+    const activeUid = await resolveSessionUid();
+    if (activeUid) {
       try {
-        const dataToSync = sanitizeInvoiceForSync(updatedInv);
-        await supabase.from('invoices').upsert(dataToSync);
+        const dataToSync = sanitizeInvoiceForSync(updatedInv, activeUid);
+        const { error } = await supabase.from('invoices').upsert(dataToSync);
+        if (error) {
+          markInvoicePendingSync(updatedInv.id);
+        }
       } catch (error) {
-        console.error('Failed to update invoice:', error);
+        markInvoicePendingSync(updatedInv.id);
       }
+    } else {
+      markInvoicePendingSync(updatedInv.id);
     }
   };
 
@@ -2081,13 +2357,19 @@ export default function App() {
     setClients(updated);
     localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(updated));
 
-    if (user) {
-      const clientWithUser = { ...client, userId: user.id };
+    const activeUid = await resolveSessionUid();
+    if (activeUid) {
+      const clientWithUser = { ...client, userId: activeUid };
       try {
-        await supabase.from('clients').upsert(clientWithUser);
+        const { error } = await supabase.from('clients').upsert(clientWithUser);
+        if (error) {
+          markClientPendingSync(client.id);
+        }
       } catch (err) {
-        console.error('Failed to sync client profile:', err);
+        markClientPendingSync(client.id);
       }
+    } else {
+      markClientPendingSync(client.id);
     }
   };
 
@@ -2109,13 +2391,18 @@ export default function App() {
     setClients(remaining);
     localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(remaining));
 
-    if (user) {
+    const activeUid = await resolveSessionUid();
+    if (activeUid) {
       try {
-        // Delete all duplicate rows by name matching case-insensitively in Supabase
-        await supabase.from('clients').delete().eq('userId', user.id).ilike('name', clientToDelete.name.trim());
+        const { error } = await supabase.from('clients').delete().eq('userId', activeUid).ilike('name', clientToDelete.name.trim());
+        if (error) {
+          markClientPendingDelete(clientId);
+        }
       } catch (err) {
-        console.error('Failed to delete client profile:', err);
+        markClientPendingDelete(clientId);
       }
+    } else {
+      markClientPendingDelete(clientId);
     }
   };
 
@@ -2126,13 +2413,19 @@ export default function App() {
     setExpenses(updated);
     localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(updated));
 
-    if (user) {
-      const expenseWithUser = { ...expense, userId: user.id };
+    const activeUid = await resolveSessionUid();
+    if (activeUid) {
+      const expenseWithUser = { ...expense, userId: activeUid };
       try {
-        await supabase.from('expenses').upsert(expenseWithUser);
+        const { error } = await supabase.from('expenses').upsert(expenseWithUser);
+        if (error) {
+          markExpensePendingSync(expense.id);
+        }
       } catch (err) {
-        console.error('Failed to sync business expense:', err);
+        markExpensePendingSync(expense.id);
       }
+    } else {
+      markExpensePendingSync(expense.id);
     }
   };
 
@@ -2148,12 +2441,18 @@ export default function App() {
     setExpenses(remaining);
     localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(remaining));
 
-    if (user) {
+    const activeUid = await resolveSessionUid();
+    if (activeUid) {
       try {
-        await supabase.from('expenses').delete().eq('id', expenseId).eq('userId', user.id);
+        const { error } = await supabase.from('expenses').delete().eq('id', expenseId).eq('userId', activeUid);
+        if (error) {
+          markExpensePendingDelete(expenseId);
+        }
       } catch (err) {
-        console.error('Failed to delete business expense:', err);
+        markExpensePendingDelete(expenseId);
       }
+    } else {
+      markExpensePendingDelete(expenseId);
     }
   };
 

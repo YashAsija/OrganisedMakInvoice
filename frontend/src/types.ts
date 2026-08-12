@@ -98,6 +98,8 @@ export interface Invoice {
   shippedToCompany?: string;
   isDeleted?: boolean;
   deletedAt?: string;
+  _pendingSync?: boolean;
+  _pendingDelete?: boolean;
 }
 
 export interface ClientProfile {
@@ -110,6 +112,8 @@ export interface ClientProfile {
   phone: string;
   createdAt: string;
   updatedAt: string;
+  _pendingSync?: boolean;
+  _pendingDelete?: boolean;
 }
 
 export interface Expense {
@@ -120,6 +124,8 @@ export interface Expense {
   date: string;
   description?: string;
   createdAt: string;
+  _pendingSync?: boolean;
+  _pendingDelete?: boolean;
 }
 
 export interface BusinessProfile {
