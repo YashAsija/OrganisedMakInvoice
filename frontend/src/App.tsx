@@ -1470,8 +1470,17 @@ export default function App() {
     }
   };
 
+  const getActiveUserId = (u?: User | null, emailVal?: string | null): string => {
+    if (u?.id) return u.id;
+    const effEmail = emailVal || userEmail || (typeof window !== 'undefined' ? localStorage.getItem('makbills_custom_email') : null);
+    if (effEmail && effEmail.trim()) {
+      return `user_${effEmail.trim().toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+    }
+    return '';
+  };
+
   const sanitizeInvoiceForSync = (inv: Invoice): any => {
-    const targetUid = inv.userId || (inv as any).user_id || user?.id || '';
+    const targetUid = inv.userId || (inv as any).user_id || getActiveUserId(user, userEmail);
     const dataToSync: any = { ...inv };
     delete dataToSync.user_id;
     if (targetUid) {
@@ -1685,11 +1694,11 @@ export default function App() {
       window.dispatchEvent(new CustomEvent('invoice_updated', { detail: invoice }));
     }
 
-    let activeUid = user?.id;
+    let activeUid = getActiveUserId(user, userEmail);
     if (!activeUid) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        activeUid = session?.user?.id;
+        activeUid = session?.user?.id || getActiveUserId(null, userEmail);
       } catch (e) {}
     }
 
