@@ -8,7 +8,7 @@ import { getSecuritySettings, saveSecuritySettings, SecuritySettings, hashPin, h
 import type { PinSetupSecQPayload } from './components/PinSetupModal';
 
 const ALLOWED_SUPABASE_COLUMNS = [
-  'id', 'userId', 'invoiceType', 'invoiceNumber', 'referenceNumber',
+  'id', 'userId', 'user_id', 'invoiceType', 'invoiceNumber', 'referenceNumber',
   'poNumber', 'date', 'dueDate', 'clientName', 'clientEmail',
   'clientPhone', 'clientAddress', 'notes', 'subtotal', 'discountType',
   'discountValue', 'discountTotal', 'taxTotal', 'grandTotal', 'status',
@@ -771,7 +771,7 @@ export default function App() {
               const { data: cloudInvoices } = await supabase
                 .from('invoices')
                 .select('*')
-                .eq('userId', uid)
+                .or(`userId.eq.${uid},user_id.eq.${uid}`)
                 .order('date', { ascending: false });
 
               if (cloudInvoices) {
@@ -845,13 +845,18 @@ export default function App() {
               .channel(`invoices:${uid}:${Date.now()}`)
               .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'invoices', filter: `userId=eq.${uid}` },
-                async () => {
+                { event: '*', schema: 'public', table: 'invoices' },
+                async (payload: any) => {
                   try {
+                    const newRec = payload.new || {};
+                    const oldRec = payload.old || {};
+                    const matchesUser = newRec.userId === uid || newRec.user_id === uid || oldRec.userId === uid || oldRec.user_id === uid;
+                    if (!matchesUser && (Object.keys(newRec).length > 0 || Object.keys(oldRec).length > 0)) return;
+
                     const { data } = await supabase
                       .from('invoices')
                       .select('*')
-                      .eq('userId', uid)
+                      .or(`userId.eq.${uid},user_id.eq.${uid}`)
                       .order('date', { ascending: false });
                     if (data) {
                       const parsedCloudInvoices2 = (data as Invoice[]).map(inv => {
@@ -1451,10 +1456,11 @@ export default function App() {
   };
 
   const sanitizeInvoiceForSync = (inv: Invoice): any => {
-    const targetUid = inv.userId || user?.id || '';
+    const targetUid = inv.userId || (inv as any).user_id || user?.id || '';
     const dataToSync: any = { ...inv };
     if (targetUid) {
       dataToSync.userId = targetUid;
+      dataToSync.user_id = targetUid;
     }
 
     const embeddedTemplate = { ...(dataToSync.embeddedTemplate || {}) };
@@ -1664,9 +1670,17 @@ export default function App() {
       window.dispatchEvent(new CustomEvent('invoice_updated', { detail: invoice }));
     }
 
-    if (user) {
+    let activeUid = user?.id;
+    if (!activeUid) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        activeUid = session?.user?.id;
+      } catch (e) {}
+    }
+
+    if (activeUid) {
       // Propagate directly to Cloud
-      const dataToSync = sanitizeInvoiceForSync(invoice);
+      const dataToSync = sanitizeInvoiceForSync({ ...invoice, userId: activeUid });
       const path = `invoices[id=${invoice.id}]`;
       try {
         await supabase.from('invoices').upsert(dataToSync);
