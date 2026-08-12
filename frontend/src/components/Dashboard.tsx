@@ -4977,6 +4977,13 @@ export default function Dashboard({
 
 
   const sectionInvoices = useMemo(() => {
+    console.log('[DASHBOARD sectionInvoices calc] inputs:', {
+      invoicesCount: invoices.length,
+      activeTab,
+      ledgerSection,
+      purchaseLedgerSection,
+      showBinView
+    });
     let filtered = [];
     if (activeTab === 'purchases') {
       filtered = invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === purchaseLedgerSection);
@@ -4984,10 +4991,9 @@ export default function Dashboard({
       // Exclude drafts from ledger listings — drafts belong exclusively to the Drafts page
       filtered = invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === ledgerSection);
     }
-    if (showBinView) {
-      return filtered.filter(inv => inv.isDeleted);
-    }
-    return filtered.filter(inv => !inv.isDeleted);
+    const result = showBinView ? filtered.filter(inv => inv.isDeleted) : filtered.filter(inv => !inv.isDeleted);
+    console.log('[DASHBOARD sectionInvoices calc] result count:', result.length, 'types:', result.map(r => r.invoiceType));
+    return result;
   }, [invoices, ledgerSection, purchaseLedgerSection, activeTab, showBinView]);
 
 

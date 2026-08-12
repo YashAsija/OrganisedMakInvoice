@@ -762,6 +762,8 @@ export default function App() {
               .eq('userId', uid)
               .order('date', { ascending: false });
 
+            console.log('[SUPABASE FETCHED INVOICES]', { count: cloudInvoices?.length, error: fetchErr });
+
             if (fetchErr) {
               console.warn('[SUPABASE INVOICES FETCH ERROR] Details:', {
                 message: fetchErr.message,
@@ -788,6 +790,8 @@ export default function App() {
                 }
                 return inv;
               });
+
+            console.log('[PARSED INVOICES]', parsedCloudInvoices.map(i => ({ id: i.id, type: i.invoiceType, invoiceNumber: i.invoiceNumber, status: i.status })));
 
             console.log('[SUPABASE INVOICES LOADED]', {
               uid,
