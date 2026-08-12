@@ -8,7 +8,7 @@ import { getSecuritySettings, saveSecuritySettings, SecuritySettings, hashPin, h
 import type { PinSetupSecQPayload } from './components/PinSetupModal';
 
 const ALLOWED_SUPABASE_COLUMNS = [
-  'id', 'userId', 'user_id', 'invoiceType', 'invoiceNumber', 'referenceNumber',
+  'id', 'userId', 'invoiceType', 'invoiceNumber', 'referenceNumber',
   'poNumber', 'date', 'dueDate', 'clientName', 'clientEmail',
   'clientPhone', 'clientAddress', 'notes', 'subtotal', 'discountType',
   'discountValue', 'discountTotal', 'taxTotal', 'grandTotal', 'status',
@@ -771,7 +771,7 @@ export default function App() {
               const { data: cloudInvoices } = await supabase
                 .from('invoices')
                 .select('*')
-                .or(`userId.eq.${uid},user_id.eq.${uid}`)
+                .eq('userId', uid)
                 .order('date', { ascending: false });
 
               if (cloudInvoices) {
@@ -810,7 +810,7 @@ export default function App() {
                             const existing = invoiceMap.get(loc.id);
                             if (!existing) {
                               invoiceMap.set(loc.id, loc);
-                            } else {
+                            } else if (loc.updatedAt && existing.updatedAt && loc.updatedAt > existing.updatedAt) {
                               invoiceMap.set(loc.id, { ...existing, ...loc });
                             }
                           }
@@ -850,13 +850,13 @@ export default function App() {
                   try {
                     const newRec = payload.new || {};
                     const oldRec = payload.old || {};
-                    const matchesUser = newRec.userId === uid || newRec.user_id === uid || oldRec.userId === uid || oldRec.user_id === uid;
+                    const matchesUser = newRec.userId === uid || oldRec.userId === uid;
                     if (!matchesUser && (Object.keys(newRec).length > 0 || Object.keys(oldRec).length > 0)) return;
 
                     const { data } = await supabase
                       .from('invoices')
                       .select('*')
-                      .or(`userId.eq.${uid},user_id.eq.${uid}`)
+                      .eq('userId', uid)
                       .order('date', { ascending: false });
                     if (data) {
                       const parsedCloudInvoices2 = (data as Invoice[]).map(inv => {
@@ -893,7 +893,7 @@ export default function App() {
                                   const existing = invoiceMap2.get(loc.id);
                                   if (!existing) {
                                     invoiceMap2.set(loc.id, loc);
-                                  } else {
+                                  } else if (loc.updatedAt && existing.updatedAt && loc.updatedAt > existing.updatedAt) {
                                     invoiceMap2.set(loc.id, { ...existing, ...loc });
                                   }
                                 }
@@ -1458,9 +1458,9 @@ export default function App() {
   const sanitizeInvoiceForSync = (inv: Invoice): any => {
     const targetUid = inv.userId || (inv as any).user_id || user?.id || '';
     const dataToSync: any = { ...inv };
+    delete dataToSync.user_id;
     if (targetUid) {
       dataToSync.userId = targetUid;
-      dataToSync.user_id = targetUid;
     }
 
     const embeddedTemplate = { ...(dataToSync.embeddedTemplate || {}) };
