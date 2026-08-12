@@ -1627,12 +1627,17 @@ export default function App() {
       const dataToSync = sanitizeInvoiceForSync({ ...invoice, userId: activeUid });
       const path = `invoices[id=${invoice.id}]`;
       try {
-        await supabase.from('invoices').upsert(dataToSync);
+        const { error: upsertError } = await supabase.from('invoices').upsert(dataToSync);
+        if (upsertError) {
+          console.error('[handleSaveInvoice] Supabase upsert error:', upsertError);
+        }
+
         const { data: latestData } = await supabase
           .from('invoices')
           .select('*')
           .eq('userId', activeUid)
           .order('date', { ascending: false });
+
         if (latestData) {
           const parsed = (latestData as Invoice[]).map(inv => {
             if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
@@ -1649,11 +1654,20 @@ export default function App() {
             }
             return inv;
           });
-          setInvoices(parsed);
-          localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsed));
+
+          // Ensure the newly saved invoice is guaranteed to remain in state
+          const invMap = new Map<string, Invoice>();
+          parsed.forEach(p => invMap.set(p.id, p));
+          if (!invMap.has(invoice.id)) {
+            invMap.set(invoice.id, invoice);
+          }
+          const finalMerged = Array.from(invMap.values());
+          setInvoices(finalMerged);
+          localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(finalMerged));
+          localStorage.setItem('invoice_maker_invoices', JSON.stringify(finalMerged));
         }
       } catch (error) {
-        handleSupabaseError(error, OperationType.WRITE, path);
+        console.warn('[handleSaveInvoice] Error during sync:', error);
       }
     }
   };
