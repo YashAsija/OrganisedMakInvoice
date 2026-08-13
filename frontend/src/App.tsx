@@ -1130,7 +1130,13 @@ export default function App() {
                 }
               }
             )
-            .subscribe();
+            .subscribe((status, err) => {
+              if (status === 'SUBSCRIBED') {
+                console.log('[Realtime] invoices channel subscribed');
+              } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                console.error('[Realtime] invoices channel failed:', status, err);
+              }
+            });
           activeChannels.push(invoicesChannel);
 
           // 3. Load Presets and attach realtime listener
@@ -1167,7 +1173,13 @@ export default function App() {
                 }
               }
             )
-            .subscribe();
+            .subscribe((status, err) => {
+              if (status === 'SUBSCRIBED') {
+                console.log('[Realtime] presets channel subscribed');
+              } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                console.error('[Realtime] presets channel failed:', status, err);
+              }
+            });
           activeChannels.push(presetsChannel);
 
           // 4. Load Clients and attach realtime listener
@@ -1204,7 +1216,13 @@ export default function App() {
                 }
               }
             )
-            .subscribe();
+            .subscribe((status, err) => {
+              if (status === 'SUBSCRIBED') {
+                console.log('[Realtime] clients channel subscribed');
+              } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                console.error('[Realtime] clients channel failed:', status, err);
+              }
+            });
           activeChannels.push(clientsChannel);
 
           // 5. Load Expenses and attach realtime listener
@@ -1241,7 +1259,13 @@ export default function App() {
                 }
               }
             )
-            .subscribe();
+            .subscribe((status, err) => {
+              if (status === 'SUBSCRIBED') {
+                console.log('[Realtime] expenses channel subscribed');
+              } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                console.error('[Realtime] expenses channel failed:', status, err);
+              }
+            });
           activeChannels.push(expensesChannel);
 
           // 6. Load Custom Templates from Storage and attach realtime listener
