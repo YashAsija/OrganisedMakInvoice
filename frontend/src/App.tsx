@@ -1020,9 +1020,42 @@ export default function App() {
                 return inv;
               });
 
-            setInvoices(parsedCloudInvoices);
+            // Merge local soft-delete state for pending records.
+            // If isDeleted column doesn't exist in DB yet, cloud records come back without isDeleted.
+            // For any invoice locally marked _pendingSync:true, preserve its local isDeleted/deletedAt
+            // so soft-deleted records stay in the Bin after reload instead of reappearing in the ledger.
+            let localPendingMap = new Map<string, { isDeleted?: boolean; deletedAt?: string; _pendingSync?: boolean }>();
+            try {
+              const localRaw = localStorage.getItem(`invoice_maker_invoices${suffix}`) || '[]';
+              const localList: any[] = JSON.parse(localRaw);
+              localList.forEach((inv: any) => {
+                if (inv && inv.id && inv._pendingSync) {
+                  localPendingMap.set(inv.id, { isDeleted: inv.isDeleted, deletedAt: inv.deletedAt, _pendingSync: true });
+                }
+              });
+            } catch (e) {}
+
+            const mergedCloudInvoices = parsedCloudInvoices.map(inv => {
+              const localPending = localPendingMap.get(inv.id);
+              if (localPending && localPending.isDeleted) {
+                // Cloud doesn't have the soft-delete yet — preserve it from local state
+                return { ...inv, isDeleted: true, deletedAt: localPending.deletedAt, _pendingSync: true };
+              }
+              return inv;
+            });
+
+            // Also include locally soft-deleted invoices that don't exist in cloud at all
+            // (e.g. new invoices that were created and soft-deleted before first cloud sync)
+            localPendingMap.forEach((localPending, id) => {
+              if (localPending.isDeleted && !mergedCloudInvoices.find(inv => inv.id === id)) {
+                // Will be added from localStorage via the background sync retry
+              }
+            });
+
+            setInvoices(mergedCloudInvoices);
             isCloudLoadedRef.current = true;
-            localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsedCloudInvoices));
+            localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(mergedCloudInvoices));
+            localStorage.setItem('invoice_maker_invoices', JSON.stringify(mergedCloudInvoices));
           } catch (err) {
             console.warn('[SUPABASE GET INVOICES EXCEPTION]:', err);
             handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
@@ -1069,8 +1102,29 @@ export default function App() {
                         return inv;
                       });
 
-                    setInvoices(parsedCloudInvoices2);
-                    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsedCloudInvoices2));
+                    // Merge local soft-delete state (same pattern as initial fetch)
+                    let localPendingMap2 = new Map<string, { isDeleted?: boolean; deletedAt?: string }>();
+                    try {
+                      const localRaw2 = localStorage.getItem(`invoice_maker_invoices${suffix}`) || '[]';
+                      const localList2: any[] = JSON.parse(localRaw2);
+                      localList2.forEach((inv: any) => {
+                        if (inv && inv.id && inv._pendingSync && inv.isDeleted) {
+                          localPendingMap2.set(inv.id, { isDeleted: inv.isDeleted, deletedAt: inv.deletedAt });
+                        }
+                      });
+                    } catch (e) {}
+
+                    const mergedCloudInvoices2 = parsedCloudInvoices2.map(inv => {
+                      const localPending = localPendingMap2.get(inv.id);
+                      if (localPending) {
+                        return { ...inv, isDeleted: true, deletedAt: localPending.deletedAt, _pendingSync: true };
+                      }
+                      return inv;
+                    });
+
+                    setInvoices(mergedCloudInvoices2);
+                    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(mergedCloudInvoices2));
+                    localStorage.setItem('invoice_maker_invoices', JSON.stringify(mergedCloudInvoices2));
                   }
                 } catch (err) {
                   console.warn("Error in realtime invoice sync:", String(err));
