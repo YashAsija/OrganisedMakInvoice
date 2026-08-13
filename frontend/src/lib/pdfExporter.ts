@@ -518,17 +518,17 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
           pdf.addPage();
         }
         const pageDataUrl = await Promise.race([
-          toPng(pages[i], { quality: 1, pixelRatio: 2, skipFonts: true, cacheBust: false }),
+          toPng(pages[i], { quality: 0.92, pixelRatio: 2, skipFonts: true, cacheBust: false }),
           new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 20000))
         ]);
-        pdf.addImage(pageDataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.addImage(pageDataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
       }
     } else {
       const dataUrl = await Promise.race([
-        toPng(container, { quality: 1, pixelRatio: 2, skipFonts: true, cacheBust: false }),
+        toPng(container, { quality: 0.92, pixelRatio: 2, skipFonts: true, cacheBust: false }),
         new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 20000))
       ]);
-      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
     }
 
     root.unmount();
@@ -537,8 +537,14 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
     }
 
     if (action === 'save') {
-      pdf.save(`${invoice.invoiceNumber}.pdf`);
-      emitNotification('PDF Downloaded', `${invoice.invoiceNumber}.pdf downloaded successfully.`, 'success');
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${invoice.invoiceNumber}.pdf`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      emitNotification('PDF Downloaded', `invoice-${invoice.invoiceNumber}.pdf downloaded successfully.`, 'success');
     } else if (action === 'datauri') {
       return pdf.output('datauristring');
     } else if (action === 'blob') {

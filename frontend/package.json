@@ -14,6 +14,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@google/genai": "^2.12.0",
     "@paddle/paddle-js": "^1.6.4",
+    "@react-pdf/renderer": "^4.6.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.0",
     "country-state-city": "^3.2.1",

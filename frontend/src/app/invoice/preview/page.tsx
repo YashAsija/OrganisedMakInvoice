@@ -290,36 +290,39 @@ function InvoicePreviewContent() {
     };
   }, [id]);
 
+  const logoBase64Ref = React.useRef<string | null>(null);
+  const signatureBase64Ref = React.useRef<string | null>(null);
+
+  useEffect(() => {
+    const imageToBase64 = async (url: string): Promise<string> => {
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      } catch (e) {
+        return url;
+      }
+    };
+
+    if (profile?.logoUrl || (profile as any)?.companyLogo) {
+      imageToBase64(profile?.logoUrl || (profile as any)?.companyLogo).then(b64 => { logoBase64Ref.current = b64; });
+    }
+    if ((profile as any)?.signatureUrl || profile?.signature) {
+      imageToBase64((profile as any)?.signatureUrl || profile?.signature || '').then(b64 => { signatureBase64Ref.current = b64; });
+    }
+  }, [profile]);
+
   // Auto-trigger print dialog when ?print=1 is in the URL
   useEffect(() => {
     if (autoPrint && invoice && !loading && profile) {
-      const triggerPrint = async () => {
-        try {
-          const pdfBlob = await exportInvoicePDFAsync(invoice, profile, 'blob', invoice.embeddedTemplate || undefined);
-          if (pdfBlob instanceof Blob) {
-            const blobUrl = URL.createObjectURL(pdfBlob);
-            const iframe = document.createElement('iframe');
-            iframe.style.position = 'fixed';
-            iframe.style.width = '0';
-            iframe.style.height = '0';
-            iframe.style.border = 'none';
-            iframe.style.visibility = 'hidden';
-            iframe.onload = () => {
-              try {
-                iframe.contentWindow?.focus();
-                iframe.contentWindow?.print();
-              } catch (e) {
-                window.open(blobUrl, '_blank');
-              }
-            };
-            iframe.src = blobUrl;
-            document.body.appendChild(iframe);
-          }
-        } catch (err) {
-          console.error('Auto print failed:', err);
-        }
+      const triggerPrint = () => {
+        window.print();
       };
-      const timer = setTimeout(triggerPrint, 600);
+      const timer = setTimeout(triggerPrint, 300);
       return () => clearTimeout(timer);
     }
   }, [autoPrint, invoice, loading, profile]);
@@ -359,7 +362,27 @@ function InvoicePreviewContent() {
           <button
             onClick={async () => {
               try {
-                await exportInvoicePDFAsync(invoice, (profile ?? {}) as BusinessProfile, 'save', invoice.embeddedTemplate || undefined);
+                const { pdf } = await import('@react-pdf/renderer');
+                const { getPDFTemplate } = await import('../../../components/PDFTemplates');
+                const PDFTemplate = getPDFTemplate(invoice.selectedTemplateStyle || (invoice.embeddedTemplate?.style));
+                
+                const blob = await pdf(
+                  <PDFTemplate 
+                    invoice={invoice}
+                    profile={(profile ?? {}) as BusinessProfile}
+                    logo={logoBase64Ref.current}
+                    signature={signatureBase64Ref.current}
+                  />
+                ).toBlob();
+                
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `invoice-${invoice.invoiceNumber}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
               } catch (err: any) {
                 alert('Failed to export PDF: ' + (err.message || err.toString()));
               }
@@ -369,30 +392,30 @@ function InvoicePreviewContent() {
             Download PDF
           </button>
           <button
-            onClick={async () => {
+            onClick={() => {
               try {
-                const pdfBlob = await exportInvoicePDFAsync(invoice, (profile ?? {}) as BusinessProfile, 'blob', invoice.embeddedTemplate || undefined);
-                if (pdfBlob instanceof Blob) {
-                  const blobUrl = URL.createObjectURL(pdfBlob);
-                  const iframe = document.createElement('iframe');
-                  iframe.style.position = 'fixed';
-                  iframe.style.width = '0';
-                  iframe.style.height = '0';
-                  iframe.style.border = 'none';
-                  iframe.style.visibility = 'hidden';
-                  iframe.onload = () => {
-                    try {
-                      iframe.contentWindow?.focus();
-                      iframe.contentWindow?.print();
-                    } catch (e) {
-                      window.open(blobUrl, '_blank');
+                const styleId = 'preview-print-style';
+                let styleEl = document.getElementById(styleId);
+                if (!styleEl) {
+                  styleEl = document.createElement('style');
+                  styleEl.id = styleId;
+                  styleEl.innerHTML = `
+                    @media print {
+                      body > *:not(.invoice-print-sheet) { display: none !important; }
+                      .invoice-print-sheet { display: block !important; position: static !important; transform: none !important; }
+                      @page { size: A4; margin: 10mm; }
+                      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     }
-                  };
-                  iframe.src = blobUrl;
-                  document.body.appendChild(iframe);
+                  `;
+                  document.head.appendChild(styleEl);
                 }
+                window.onafterprint = () => {
+                  const injected = document.getElementById(styleId);
+                  if (injected) injected.remove();
+                };
+                window.print();
               } catch (err: any) {
-                alert('Failed to print PDF: ' + (err.message || err.toString()));
+                alert('Failed to print: ' + (err.message || err.toString()));
               }
             }}
             className="px-4 py-2 bg-slate-805 hover:bg-slate-750 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer active:scale-95"
