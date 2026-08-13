@@ -1735,6 +1735,20 @@ export default function App() {
       delete dataToSync.embeddedTemplate;
     }
     
+    // Ensure mandatory columns on Supabase 'invoices' table are never null/NaN
+    dataToSync.discountType = dataToSync.discountType || 'none';
+    dataToSync.discountValue = Number.isFinite(Number(dataToSync.discountValue)) ? Number(dataToSync.discountValue) : 0;
+    dataToSync.subtotal = Number.isFinite(Number(dataToSync.subtotal)) ? Number(dataToSync.subtotal) : 0;
+    dataToSync.discountTotal = Number.isFinite(Number(dataToSync.discountTotal)) ? Number(dataToSync.discountTotal) : 0;
+    dataToSync.taxTotal = Number.isFinite(Number(dataToSync.taxTotal)) ? Number(dataToSync.taxTotal) : 0;
+    dataToSync.grandTotal = Number.isFinite(Number(dataToSync.grandTotal)) ? Number(dataToSync.grandTotal) : 0;
+    dataToSync.freightCharges = Number.isFinite(Number(dataToSync.freightCharges)) ? Number(dataToSync.freightCharges) : 0;
+
+    dataToSync.clientName = (dataToSync.clientName && String(dataToSync.clientName).trim()) ? dataToSync.clientName : 'Unnamed Client / Draft';
+    dataToSync.invoiceNumber = (dataToSync.invoiceNumber && String(dataToSync.invoiceNumber).trim()) ? dataToSync.invoiceNumber : `DRAFT-${Date.now()}`;
+    dataToSync.date = dataToSync.date || new Date().toISOString();
+    dataToSync.dueDate = dataToSync.dueDate || dataToSync.date;
+
     delete dataToSync.selectedCustomTemplateId;
     
     return dataToSync;
@@ -1928,9 +1942,14 @@ export default function App() {
       try {
         const { error: upsertError } = await supabase.from('invoices').upsert(dataToSync);
         if (upsertError) {
-          console.error('[handleSaveInvoice] Supabase upsert error:', upsertError);
+          console.error('[handleSaveInvoice] Supabase upsert failed:', {
+            code: upsertError.code,
+            message: upsertError.message,
+            details: upsertError.details,
+            hint: upsertError.hint
+          });
           markInvoicePendingSync(invoice.id);
-          showToast('Sync Offline', 'Saved locally. It will auto-sync to cloud when connection is restored.', 'warning');
+          showToast('Sync Offline', `Saved locally. Cloud sync pending: ${upsertError.message || 'connection issue'}`, 'warning');
         } else {
           const { data: latestData } = await supabase
             .from('invoices')
