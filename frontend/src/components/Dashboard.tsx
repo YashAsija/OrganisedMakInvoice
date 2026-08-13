@@ -1740,7 +1740,7 @@ export default function Dashboard({
 
                   <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'invoices' ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269]'}`}>
 
-                    {invoices.filter(i => i.status !== 'draft').length}
+                    {invoices.filter(i => !i.isDeleted && i.status !== 'draft' && ['invoice', 'proforma', 'credit_note', 'estimate', 'quote'].includes(i.invoiceType || 'invoice')).length}
 
                   </span>
 
@@ -4938,14 +4938,10 @@ export default function Dashboard({
 
     const counts: Record<string, number> = { invoice: 0, proforma: 0, credit_note: 0, debit_note: 0, quote: 0, purchases: 0, purchase_order: 0, purchase_debit_note: 0 };
 
-    // Only count non-draft documents in the ledger tabs
-
-    invoices.filter(inv => inv.status !== 'draft').forEach(inv => {
-
+    // Only count non-draft, non-deleted documents in the ledger tabs
+    invoices.filter(inv => !inv.isDeleted && inv.status !== 'draft').forEach(inv => {
       const docType = getInvoiceDocumentType(inv);
-
       counts[docType] = (counts[docType] || 0) + 1;
-
     });
 
     return counts;

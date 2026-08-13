@@ -1135,7 +1135,7 @@ export default function App() {
               if (status === 'SUBSCRIBED') {
                 console.log('[Realtime] invoices channel subscribed');
               } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-                console.error('[Realtime] invoices channel failed:', status, err);
+                console.warn('[Realtime] invoices channel subscription status:', status, err);
               }
             });
           activeChannels.push(invoicesChannel);
@@ -1178,7 +1178,7 @@ export default function App() {
               if (status === 'SUBSCRIBED') {
                 console.log('[Realtime] presets channel subscribed');
               } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-                console.error('[Realtime] presets channel failed:', status, err);
+                console.warn('[Realtime] presets channel subscription status:', status, err);
               }
             });
           activeChannels.push(presetsChannel);
@@ -1221,7 +1221,7 @@ export default function App() {
               if (status === 'SUBSCRIBED') {
                 console.log('[Realtime] clients channel subscribed');
               } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-                console.error('[Realtime] clients channel failed:', status, err);
+                console.warn('[Realtime] clients channel subscription status:', status, err);
               }
             });
           activeChannels.push(clientsChannel);
@@ -1264,7 +1264,7 @@ export default function App() {
               if (status === 'SUBSCRIBED') {
                 console.log('[Realtime] expenses channel subscribed');
               } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-                console.error('[Realtime] expenses channel failed:', status, err);
+                console.warn('[Realtime] expenses channel subscription status:', status, err);
               }
             });
           activeChannels.push(expensesChannel);
