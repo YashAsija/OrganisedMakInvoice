@@ -1090,6 +1090,7 @@ export default function App() {
               });
             }
 
+            // Passive local cache: update state with authoritative cloud fetch reconciled with local pending items
             const finalInvoices = reconcileCloudInvoicesWithPending(cloudInvoices || [], suffix);
 
             setInvoices(finalInvoices);
