@@ -1397,7 +1397,29 @@ export default function InvoiceModal({
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          await supabase.from('invoices').upsert({ ...draftToSave, userId: session.user.id });
+          const ALLOWED_COLUMNS = [
+            'id', 'userId', 'invoiceType', 'invoiceNumber', 'referenceNumber', 'poNumber', 'date', 
+            'dueDate', 'clientName', 'clientEmail', 'clientPhone', 'clientAddress', 'clientCompany',
+            'clientGstin', 'clientPan', 'clientState', 'clientCountry', 'clientGST', 'notes', 
+            'invoiceTerms', 'terms', 'subtotal', 'discountType', 'discountValue', 'discountTotal', 
+            'taxTotal', 'taxAmount', 'grandTotal', 'totalAmount', 'discount', 'currency', 'status', 
+            'items', 'paidDate', 'recurringSettings', 'parentInvoiceId', 'selectedTemplateStyle',
+            'selectedCustomTemplateId', 'qrCodeTriggerUrl', 'companyState', 'companyCountry',
+            'customTaxCols', 'taxMode', 'customTaxName', 'customTaxPercentage', 'customTaxType',
+            'additionalTaxes', 'placeOfSupply', 'grRrNo', 'transport', 'vehicleNo', 'driverMobile',
+            'station', 'ewayBillNo', 'shippedToName', 'shippedToPhone', 'shippedToEmail', 
+            'shippedToPan', 'shippedToState', 'shippedToCountry', 'shippedToGstin', 
+            'shippedToAddress', 'embeddedTemplate', 'isDeleted', 'deletedAt', 'deliveryNote',
+            'invoiceDate', 'isBin', 'freightCharges', 'packagingCharges', 'otherCharges', 
+            'roundOff', 'bankDetails', 'signature', 'companyName', 'companyAddress', 'companyPhone',
+            'companyEmail', 'companyGstin', 'companyPan', 'companyLogo', 'updatedAt'
+          ];
+          const payload: any = { ...draftToSave, userId: session.user.id };
+          const cleanDraft: any = {};
+          for (const key of ALLOWED_COLUMNS) {
+            if (payload[key] !== undefined) cleanDraft[key] = payload[key];
+          }
+          await supabase.from('invoices').upsert(cleanDraft);
         }
       } catch (err) {
         console.warn('[draft] Supabase debounced save failed (offline?)', err);
