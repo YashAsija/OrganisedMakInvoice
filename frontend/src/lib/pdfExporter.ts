@@ -468,11 +468,13 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
       }
     }
 
-    // Re-render with calculated chunks and selected copies for PDF export / print
+    const effectiveSelectedCopies = (invoice as any)?.selectedCopies || { customer: true, transport: false, supplier: false, challan: false };
+
+    // Re-render with calculated chunks and effective copies for PDF export / print
     root.render(
       React.createElement(LivePreview, {
         template: activeTemplate,
-        invoiceData: { ...invoice, items: tempInvoice.items } as any,
+        invoiceData: { ...invoice, items: tempInvoice.items, selectedCopies: effectiveSelectedCopies } as any,
         businessProfile: profile,
         currencySymbol: currencySymbol,
         isInteractive: false,

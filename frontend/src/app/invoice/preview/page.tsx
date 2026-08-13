@@ -239,7 +239,10 @@ function InvoicePreviewContent() {
           if (data.invoice) {
             const cloudInv = data.invoice;
             // Merge local edits over cloud invoice so unsynced or fresh edits render immediately
-            const mergedInvoice = localMatch ? { ...cloudInv, ...localMatch } : cloudInv;
+            const mergedInvoice = {
+              ...(localMatch ? { ...cloudInv, ...localMatch } : cloudInv),
+              selectedCopies: { customer: true, transport: false, supplier: false, challan: false }
+            } as Invoice;
             const mergedProfile = data.profile || localProf || ({} as BusinessProfile);
             setInvoice(mergedInvoice);
             setProfile(mergedProfile);
@@ -254,7 +257,10 @@ function InvoicePreviewContent() {
 
       // If cloud fetch failed or invoice not found in cloud, fall back to local storage match
       if (localMatch) {
-        setInvoice(localMatch);
+        setInvoice({
+          ...localMatch,
+          selectedCopies: { customer: true, transport: false, supplier: false, challan: false }
+        } as Invoice);
         setProfile(localProf || ({} as BusinessProfile));
         setError(null);
         setLoading(false);
