@@ -1011,6 +1011,68 @@ export default function App() {
             console.warn('Error fetching/setting cloud profile:', String(err));
           }
 
+          const reconcileCloudInvoicesWithPending = (rawCloudList: any[], activeSuffix: string): Invoice[] => {
+            const parsedCloud = (rawCloudList || [])
+              .filter(inv => inv && inv.id && String(inv.id).trim() !== '')
+              .map(inv => {
+                if (inv.embeddedTemplate && typeof inv.embeddedTemplate === 'object') {
+                  inv.selectedCustomTemplateId = (inv.embeddedTemplate as any)?.id;
+                } else if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
+                  try {
+                    const legacyBlob = JSON.parse(inv.selectedTemplateStyle);
+                    if (legacyBlob && typeof legacyBlob === 'object') {
+                      inv.embeddedTemplate = legacyBlob;
+                      inv.selectedCustomTemplateId = legacyBlob?.id;
+                      for (const key of Object.keys(legacyBlob)) {
+                        if (key !== 'isDeleted' && key !== 'deletedAt' && (inv as any)[key] === undefined) {
+                          (inv as any)[key] = legacyBlob[key];
+                        }
+                      }
+                    }
+                  } catch (e) {}
+                }
+                return inv;
+              });
+
+            // Read local invoices to find pending items (_pendingSync or _pendingDelete)
+            const localMap = new Map<string, any>();
+            try {
+              const localRaw = localStorage.getItem(`invoice_maker_invoices${activeSuffix}`) || '[]';
+              const localList: any[] = JSON.parse(localRaw);
+              localList.forEach((inv: any) => {
+                if (inv && inv.id && (inv._pendingSync || inv._pendingDelete)) {
+                  localMap.set(inv.id, inv);
+                }
+              });
+            } catch (e) {}
+
+            // 1. Process cloud invoices: apply local pending modifications or filter out if pending delete
+            const mergedCloud: Invoice[] = [];
+            parsedCloud.forEach(inv => {
+              const localItem = localMap.get(inv.id);
+              if (localItem) {
+                if (localItem._pendingDelete) {
+                  // Skip adding to visible cloud list — it's pending delete
+                  return;
+                }
+                // Overlay local pending edits (e.g. pending soft delete, updated fields) over cloud record
+                mergedCloud.push({ ...inv, ...localItem });
+              } else {
+                mergedCloud.push(inv);
+              }
+            });
+
+            // 2. Add local pending records that do NOT exist in the cloud fetch at all (e.g., unsynced drafts/invoices)
+            const missingPending: Invoice[] = [];
+            localMap.forEach((localItem, id) => {
+              if (!localItem._pendingDelete && !mergedCloud.find(inv => inv.id === id)) {
+                missingPending.push(localItem);
+              }
+            });
+
+            return [...missingPending, ...mergedCloud];
+          };
+
           // 2. Load Invoices directly from Supabase Database (Single Source of Truth)
           try {
             const { data: cloudInvoices, error: fetchErr } = await supabase
@@ -1028,68 +1090,12 @@ export default function App() {
               });
             }
 
-            const parsedCloudInvoices = (cloudInvoices || [])
-              .filter(inv => inv && inv.id && String(inv.id).trim() !== '')
-              .map(inv => {
-                // Hydrate embeddedTemplate from the DB column (object form)
-                if (inv.embeddedTemplate && typeof inv.embeddedTemplate === 'object') {
-                  inv.selectedCustomTemplateId = (inv.embeddedTemplate as any)?.id;
-                } else if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
-                  // Legacy: some old records stored embeddedTemplate serialized into selectedTemplateStyle
-                  try {
-                    const legacyBlob = JSON.parse(inv.selectedTemplateStyle);
-                    // Only hydrate non-soft-delete fields from the blob — real columns take priority
-                    if (legacyBlob && typeof legacyBlob === 'object') {
-                      inv.embeddedTemplate = legacyBlob;
-                      inv.selectedCustomTemplateId = legacyBlob?.id;
-                      for (const key of Object.keys(legacyBlob)) {
-                        // Never override real top-level DB columns from the blob
-                        if (key !== 'isDeleted' && key !== 'deletedAt' && (inv as any)[key] === undefined) {
-                          (inv as any)[key] = legacyBlob[key];
-                        }
-                      }
-                    }
-                  } catch (e) {}
-                }
-                return inv;
-              });
+            const finalInvoices = reconcileCloudInvoicesWithPending(cloudInvoices || [], suffix);
 
-            // Merge local soft-delete state for pending records.
-            // If isDeleted column doesn't exist in DB yet, cloud records come back without isDeleted.
-            // For any invoice locally marked _pendingSync:true, preserve its local isDeleted/deletedAt
-            // so soft-deleted records stay in the Bin after reload instead of reappearing in the ledger.
-            let localPendingMap = new Map<string, { isDeleted?: boolean; deletedAt?: string; _pendingSync?: boolean }>();
-            try {
-              const localRaw = localStorage.getItem(`invoice_maker_invoices${suffix}`) || '[]';
-              const localList: any[] = JSON.parse(localRaw);
-              localList.forEach((inv: any) => {
-                if (inv && inv.id && inv._pendingSync) {
-                  localPendingMap.set(inv.id, { isDeleted: inv.isDeleted, deletedAt: inv.deletedAt, _pendingSync: true });
-                }
-              });
-            } catch (e) {}
-
-            const mergedCloudInvoices = parsedCloudInvoices.map(inv => {
-              const localPending = localPendingMap.get(inv.id);
-              if (localPending && localPending.isDeleted) {
-                // Cloud doesn't have the soft-delete yet — preserve it from local state
-                return { ...inv, isDeleted: true, deletedAt: localPending.deletedAt, _pendingSync: true };
-              }
-              return inv;
-            });
-
-            // Also include locally soft-deleted invoices that don't exist in cloud at all
-            // (e.g. new invoices that were created and soft-deleted before first cloud sync)
-            localPendingMap.forEach((localPending, id) => {
-              if (localPending.isDeleted && !mergedCloudInvoices.find(inv => inv.id === id)) {
-                // Will be added from localStorage via the background sync retry
-              }
-            });
-
-            setInvoices(mergedCloudInvoices);
+            setInvoices(finalInvoices);
             isCloudLoadedRef.current = true;
-            localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(mergedCloudInvoices));
-            localStorage.setItem('invoice_maker_invoices', JSON.stringify(mergedCloudInvoices));
+            localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(finalInvoices));
+            localStorage.setItem('invoice_maker_invoices', JSON.stringify(finalInvoices));
           } catch (err) {
             console.warn('[SUPABASE GET INVOICES EXCEPTION]:', err);
             handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
@@ -1114,51 +1120,10 @@ export default function App() {
                     .order('date', { ascending: false });
 
                   if (data) {
-                    const parsedCloudInvoices2 = (data as Invoice[])
-                      .filter(inv => inv && inv.id && String(inv.id).trim() !== '')
-                      .map(inv => {
-                        if (inv.embeddedTemplate && typeof inv.embeddedTemplate === 'object') {
-                          inv.selectedCustomTemplateId = (inv.embeddedTemplate as any)?.id;
-                        } else if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
-                          try {
-                            const legacyBlob = JSON.parse(inv.selectedTemplateStyle);
-                            if (legacyBlob && typeof legacyBlob === 'object') {
-                              inv.embeddedTemplate = legacyBlob;
-                              inv.selectedCustomTemplateId = legacyBlob?.id;
-                              for (const key of Object.keys(legacyBlob)) {
-                                if (key !== 'isDeleted' && key !== 'deletedAt' && (inv as any)[key] === undefined) {
-                                  (inv as any)[key] = legacyBlob[key];
-                                }
-                              }
-                            }
-                          } catch (e) { }
-                        }
-                        return inv;
-                      });
-
-                    // Merge local soft-delete state (same pattern as initial fetch)
-                    let localPendingMap2 = new Map<string, { isDeleted?: boolean; deletedAt?: string }>();
-                    try {
-                      const localRaw2 = localStorage.getItem(`invoice_maker_invoices${suffix}`) || '[]';
-                      const localList2: any[] = JSON.parse(localRaw2);
-                      localList2.forEach((inv: any) => {
-                        if (inv && inv.id && inv._pendingSync && inv.isDeleted) {
-                          localPendingMap2.set(inv.id, { isDeleted: inv.isDeleted, deletedAt: inv.deletedAt });
-                        }
-                      });
-                    } catch (e) {}
-
-                    const mergedCloudInvoices2 = parsedCloudInvoices2.map(inv => {
-                      const localPending = localPendingMap2.get(inv.id);
-                      if (localPending) {
-                        return { ...inv, isDeleted: true, deletedAt: localPending.deletedAt, _pendingSync: true };
-                      }
-                      return inv;
-                    });
-
-                    setInvoices(mergedCloudInvoices2);
-                    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(mergedCloudInvoices2));
-                    localStorage.setItem('invoice_maker_invoices', JSON.stringify(mergedCloudInvoices2));
+                    const finalInvoices2 = reconcileCloudInvoicesWithPending(data, suffix);
+                    setInvoices(finalInvoices2);
+                    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(finalInvoices2));
+                    localStorage.setItem('invoice_maker_invoices', JSON.stringify(finalInvoices2));
                   }
                 } catch (err) {
                   console.warn("Error in realtime invoice sync:", String(err));
