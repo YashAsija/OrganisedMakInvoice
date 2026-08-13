@@ -2578,17 +2578,31 @@ export default function InvoiceModal({
                                 setClientAddress(found.address || '');
                                 setClientPan((found as any).pan || (found as any).taxId || '');
                                 setClientGstin((found as any).gstin || '');
+                                setClientCountry((found as any).country || (found as any).clientCountry || '');
+                                setClientState((found as any).state || (found as any).clientState || '');
                               }
                             }}
                             className="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500"
                             defaultValue=""
                           >
                             <option value="" disabled>-- Select a pre-saved client profile --</option>
-                            {clients.map(c => (
-                              <option key={c.id} value={c.id}>
-                                {c.name} {c.companyName ? `(${c.companyName})` : ''}
-                              </option>
-                            ))}
+                            {[...clients]
+                              .sort((a, b) => {
+                                const compA = ((a as any).companyName || (a as any).company || '').toLowerCase();
+                                const compB = ((b as any).companyName || (b as any).company || '').toLowerCase();
+                                if (compA && compB && compA !== compB) return compA.localeCompare(compB);
+                                if (compA && !compB) return -1;
+                                if (!compA && compB) return 1;
+                                return (a.name || '').localeCompare(b.name || '');
+                              })
+                              .map(c => {
+                                const comp = (c as any).companyName || (c as any).company;
+                                return (
+                                  <option key={c.id} value={c.id}>
+                                    {comp ? `${comp} - ${c.name}` : c.name}
+                                  </option>
+                                );
+                              })}
                           </select>
                         </div>
                       )}
@@ -2751,6 +2765,50 @@ export default function InvoiceModal({
 
                       {activeTemplate.sections.shipTo?.visible !== false && (
                         <div className="space-y-3 pt-3 border-t border-slate-150 dark:border-slate-800">
+                          {clients && clients.length > 0 && (
+                            <div className="bg-sky-50/30 dark:bg-slate-950 p-2.5 rounded-2xl border border-sky-100/20 dark:border-slate-800/65">
+                              <label htmlFor="select-pre-client-shipto" className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-1">Populate from Clients:</label>
+                              <select
+                                id="select-pre-client-shipto"
+                                onChange={(e) => {
+                                  const selectedId = e.target.value;
+                                  const found = clients.find(c => c.id === selectedId);
+                                  if (found) {
+                                    setShippedToName(found.name);
+                                    setShippedToCompanyName((found as any).companyName || (found as any).company || '');
+                                    setShippedToEmail(found.email || '');
+                                    setShippedToPhone(found.phone || '');
+                                    setShippedToAddress(found.address || '');
+                                    setShippedToPan((found as any).pan || (found as any).taxId || '');
+                                    setShippedToGstin((found as any).gstin || '');
+                                    setShippedToCountry((found as any).country || (found as any).clientCountry || '');
+                                    setShippedToState((found as any).state || (found as any).clientState || '');
+                                  }
+                                }}
+                                className="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500"
+                                defaultValue=""
+                              >
+                                <option value="" disabled>-- Select a pre-saved client profile --</option>
+                                {[...clients]
+                                  .sort((a, b) => {
+                                    const compA = ((a as any).companyName || (a as any).company || '').toLowerCase();
+                                    const compB = ((b as any).companyName || (b as any).company || '').toLowerCase();
+                                    if (compA && compB && compA !== compB) return compA.localeCompare(compB);
+                                    if (compA && !compB) return -1;
+                                    if (!compA && compB) return 1;
+                                    return (a.name || '').localeCompare(b.name || '');
+                                  })
+                                  .map(c => {
+                                    const comp = (c as any).companyName || (c as any).company;
+                                    return (
+                                      <option key={c.id} value={c.id}>
+                                        {comp ? `${comp} - ${c.name}` : c.name}
+                                      </option>
+                                    );
+                                  })}
+                              </select>
+                            </div>
+                          )}
                           <div className="flex items-center justify-between">
                             <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
                               Shipped To Details
@@ -3532,6 +3590,9 @@ export default function InvoiceModal({
                             setClientName(val);
                             const matched = registryClients.find(c => c.name?.trim().toLowerCase() === val.trim().toLowerCase() || c.company?.trim().toLowerCase() === val.trim().toLowerCase() || c.companyName?.trim().toLowerCase() === val.trim().toLowerCase());
                             if (matched) {
+                              if ((matched as any).companyName || (matched as any).company) {
+                                setClientCompanyName((matched as any).companyName || (matched as any).company);
+                              }
                               if (matched.email) setClientEmail(matched.email);
                               if (matched.phone) setClientPhone(matched.phone);
                               if (matched.address) setClientAddress(matched.address);
@@ -3559,6 +3620,9 @@ export default function InvoiceModal({
                             setShippedToName(val);
                             const matched = registryClients.find(c => c.name?.trim().toLowerCase() === val.trim().toLowerCase() || c.company?.trim().toLowerCase() === val.trim().toLowerCase() || c.companyName?.trim().toLowerCase() === val.trim().toLowerCase());
                             if (matched) {
+                              if ((matched as any).companyName || (matched as any).company) {
+                                setShippedToCompanyName((matched as any).companyName || (matched as any).company);
+                              }
                               if (matched.email) setShippedToEmail(matched.email);
                               if (matched.phone) setShippedToPhone(matched.phone);
                               if (matched.address) setShippedToAddress(matched.address);
@@ -3622,6 +3686,7 @@ export default function InvoiceModal({
                           setItems(prev => prev.map(item => item.id === itemId ? { ...item, [field]: val } : item));
                         }}
                         onCopyBillingToShipping={() => {
+                          setShippedToCompanyName(clientCompanyName);
                           setShippedToName(clientName);
                           setShippedToPhone(clientPhone);
                           setShippedToEmail(clientEmail);
