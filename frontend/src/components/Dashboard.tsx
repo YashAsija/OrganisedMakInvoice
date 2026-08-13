@@ -4539,38 +4539,11 @@ export default function Dashboard({
 
 
 
-  // Sync selectedCopies from the invoice's embeddedTemplate when opening a new preview
-
+  // Reset selectedCopies to only Original (Customer) copy when opening a document preview
   useEffect(() => {
-
     if (activePreviewInvoice) {
-
-      const saved = (activePreviewInvoice as any).selectedCopies ||
-
-        activePreviewInvoice.embeddedTemplate?.selectedCopies;
-
-      if (saved) {
-
-        setSelectedCopies({
-
-          customer: !!saved.customer,
-
-          transport: !!saved.transport,
-
-          supplier: !!saved.supplier,
-
-          challan: !!saved.challan,
-
-        });
-
-      } else {
-
-        setSelectedCopies({ customer: true, transport: false, supplier: false, challan: false });
-
-      }
-
+      setSelectedCopies({ customer: true, transport: false, supplier: false, challan: false });
     }
-
   }, [activePreviewInvoice?.id]);
 
 

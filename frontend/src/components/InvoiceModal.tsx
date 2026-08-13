@@ -585,18 +585,8 @@ export default function InvoiceModal({
         setEndOption('indefinite');
       }
 
-      // Restore selectedCopies from embeddedTemplate if saved there
-      const savedCopies = (invoice as any).selectedCopies || invoice.embeddedTemplate?.selectedCopies;
-      if (savedCopies) {
-        setSelectedCopies({
-          customer: !!savedCopies.customer,
-          transport: !!savedCopies.transport,
-          supplier: !!savedCopies.supplier,
-          challan: !!savedCopies.challan,
-        });
-      } else {
-        setSelectedCopies({ customer: true, transport: false, supplier: false, challan: false });
-      }
+      // Always default to single original (Customer) copy when opening preview/editor
+      setSelectedCopies({ customer: true, transport: false, supplier: false, challan: false });
     } else {
       // Set default for new invoice
       const now = new Date();
