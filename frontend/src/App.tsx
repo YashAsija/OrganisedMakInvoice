@@ -9,7 +9,7 @@ import type { PinSetupSecQPayload } from './components/PinSetupModal';
 
 const ALLOWED_SUPABASE_COLUMNS = [
   'id', 'userId', 'invoiceType', 'invoiceNumber', 'referenceNumber', 'poNumber', 'date', 
-  'dueDate', 'clientName', 'clientEmail', 'clientPhone', 'clientAddress', 'clientCompany',
+  'dueDate', 'clientName', 'clientEmail', 'clientPhone', 'clientAddress', 'clientCompany', 'clientCompanyName',
   'clientGstin', 'clientPan', 'clientState', 'clientCountry', 'clientGST', 'notes', 
   'invoiceTerms', 'terms', 'subtotal', 'discountType', 'discountValue', 'discountTotal', 
   'taxTotal', 'taxAmount', 'grandTotal', 'totalAmount', 'discount', 'currency', 'status', 
@@ -17,7 +17,7 @@ const ALLOWED_SUPABASE_COLUMNS = [
   'selectedCustomTemplateId', 'qrCodeTriggerUrl', 'companyState', 'companyCountry',
   'customTaxCols', 'taxMode', 'customTaxName', 'customTaxPercentage', 'customTaxType',
   'additionalTaxes', 'placeOfSupply', 'grRrNo', 'transport', 'vehicleNo', 'driverMobile',
-  'station', 'ewayBillNo', 'shippedToName', 'shippedToPhone', 'shippedToEmail', 
+  'station', 'ewayBillNo', 'shippedToName', 'shippedToCompanyName', 'shippedToPhone', 'shippedToEmail', 
   'shippedToPan', 'shippedToState', 'shippedToCountry', 'shippedToGstin', 
   'shippedToAddress', 'embeddedTemplate', 'isDeleted', 'deletedAt', 'deliveryNote',
   'invoiceDate', 'isBin', 'freightCharges', 'packagingCharges', 'otherCharges', 
