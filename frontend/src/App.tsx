@@ -2034,27 +2034,29 @@ export default function App() {
       });
       if (!confirmed) return;
 
-      const remaining = invoices.filter(inv => inv.id !== invoiceId);
-      setInvoices(remaining);
-      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
-      localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
-
       const activeUid = await resolveSessionUid();
-      if (activeUid) {
-        try {
-          const { error } = await supabase.from('invoices').delete().eq('id', invoiceId).eq('userId', activeUid);
-          if (error) {
-            console.error('Delete failed:', error);
-            markInvoicePendingDelete(invoiceId);
-          }
-        } catch (e) {
-          markInvoicePendingDelete(invoiceId);
+      if (!activeUid) {
+        showToast('Authentication Error', 'You must be logged in to delete documents.', 'error');
+        return;
+      }
+
+      try {
+        const { error } = await supabase.from('invoices').delete().eq('id', invoiceId).eq('userId', activeUid);
+        if (error) {
+          console.error('Delete failed:', error);
+          showToast('Delete Failed', `Cloud delete failed: ${error.message}`, 'error');
+          return;
         }
-      } else {
-        markInvoicePendingDelete(invoiceId);
+        const remaining = invoices.filter(inv => inv.id !== invoiceId);
+        setInvoices(remaining);
+        localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
+        localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
+        showToast('Draft Deleted', 'Draft permanently deleted from cloud.', 'info');
+      } catch (e: any) {
+        showToast('Delete Error', e.message || 'Failed to delete draft.', 'error');
       }
     } else {
-      // Soft delete
+      // Soft delete (Move to Bin)
       const confirmed = await confirm({
         title: 'Move to Bin',
         message: 'Are you sure you want to move this document to the bin?',
@@ -2062,34 +2064,32 @@ export default function App() {
       });
       if (!confirmed) return;
 
-      const updated = invoices.map(inv => 
-        inv.id === invoiceId ? { ...inv, isDeleted: true, deletedAt: new Date().toISOString() } : inv
-      );
-      // Keep the invoice in React state with isDeleted:true so the Bin view can show it.
-      // Dashboard.tsx filters on !inv.isDeleted for main ledger and inv.isDeleted for Bin.
-      setInvoices(updated);
-      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
-      localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
-
       const activeUid = await resolveSessionUid();
-      if (activeUid) {
-        try {
-          const deletedAt = new Date().toISOString();
-          const { error } = await supabase.from('invoices')
-            .update({ isDeleted: true, deletedAt })
-            .eq('id', invoiceId)
-            .eq('userId', activeUid);
-          if (error) {
-            console.error('[SoftDelete] Failed to sync to cloud:', error.code, error.message, error.details);
-            showToast('Sync Failed', `Couldn't move document to Bin in cloud — will retry. (${error.message})`, 'error');
-            markInvoicePendingSync(invoiceId);
-          }
-        } catch (error) {
-          console.error('[SoftDelete] Exception:', error);
-          markInvoicePendingSync(invoiceId);
+      if (!activeUid) {
+        showToast('Authentication Error', 'You must be logged in to move documents to Bin.', 'error');
+        return;
+      }
+
+      try {
+        const deletedAt = new Date().toISOString();
+        const { error } = await supabase.from('invoices')
+          .update({ isDeleted: true, deletedAt })
+          .eq('id', invoiceId)
+          .eq('userId', activeUid);
+        if (error) {
+          console.error('[SoftDelete] Failed:', error);
+          showToast('Move to Bin Failed', `Couldn't move document to Bin in cloud: ${error.message}`, 'error');
+          return;
         }
-      } else {
-        markInvoicePendingSync(invoiceId);
+        const updated = invoices.map(inv => 
+          inv.id === invoiceId ? { ...inv, isDeleted: true, deletedAt } : inv
+        );
+        setInvoices(updated);
+        localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
+        localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
+        showToast('Moved to Bin', 'Document moved to Bin in cloud.', 'info');
+      } catch (error: any) {
+        showToast('Move to Bin Error', error.message || 'Failed to move document to Bin.', 'error');
       }
     }
   };
@@ -2102,60 +2102,63 @@ export default function App() {
     });
     if (!confirmed) return;
 
-    const remaining = invoices.filter(inv => inv.id !== invoiceId);
-    setInvoices(remaining);
-    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
-    localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
-
     const activeUid = await resolveSessionUid();
-    if (activeUid) {
-      try {
-        const { error } = await supabase.from('invoices').delete().eq('id', invoiceId).eq('userId', activeUid);
-        if (error) {
-          markInvoicePendingDelete(invoiceId);
-        }
-      } catch (error) {
-        markInvoicePendingDelete(invoiceId);
+    if (!activeUid) {
+      showToast('Authentication Error', 'You must be logged in to delete documents.', 'error');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('invoices').delete().eq('id', invoiceId).eq('userId', activeUid);
+      if (error) {
+        console.error('Hard delete failed:', error);
+        showToast('Delete Failed', `Cloud permanent delete failed: ${error.message}`, 'error');
+        return;
       }
-    } else {
-      markInvoicePendingDelete(invoiceId);
+      const remaining = invoices.filter(inv => inv.id !== invoiceId);
+      setInvoices(remaining);
+      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
+      localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
+      showToast('Permanently Deleted', 'Document deleted from cloud.', 'info');
+    } catch (error: any) {
+      showToast('Delete Error', error.message || 'Failed to permanently delete document.', 'error');
     }
   };
 
   const handleRestoreInvoice = async (invoiceId: string) => {
-    const updated = invoices.map(inv => {
-      if (inv.id === invoiceId) {
-        return {
-          ...inv,
-          isDeleted: false,
-          deletedAt: undefined,
-          updatedAt: new Date().toISOString()
-        } as Invoice;
-      }
-      return inv;
-    });
-    setInvoices(updated);
-    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
-    localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
-
     const activeUid = await resolveSessionUid();
-    if (activeUid) {
-      try {
-        const { error } = await supabase.from('invoices')
-          .update({ isDeleted: false, deletedAt: null })
-          .eq('id', invoiceId)
-          .eq('userId', activeUid);
-        if (error) {
-          console.error('[Restore] Failed to sync to cloud:', error.code, error.message, error.details);
-          showToast('Sync Failed', `Couldn't restore document in cloud — will retry. (${error.message})`, 'error');
-          markInvoicePendingSync(invoiceId);
-        }
-      } catch (error) {
-        console.error('[Restore] Exception:', error);
-        markInvoicePendingSync(invoiceId);
+    if (!activeUid) {
+      showToast('Authentication Error', 'You must be logged in to restore documents.', 'error');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('invoices')
+        .update({ isDeleted: false, deletedAt: null })
+        .eq('id', invoiceId)
+        .eq('userId', activeUid);
+      if (error) {
+        console.error('[Restore] Failed:', error);
+        showToast('Restore Failed', `Couldn't restore document in cloud: ${error.message}`, 'error');
+        return;
       }
-    } else {
-      markInvoicePendingSync(invoiceId);
+      const updated = invoices.map(inv => {
+        if (inv.id === invoiceId) {
+          return {
+            ...inv,
+            isDeleted: false,
+            deletedAt: undefined,
+            updatedAt: new Date().toISOString()
+          } as Invoice;
+        }
+        return inv;
+      });
+      setInvoices(updated);
+      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(updated));
+      localStorage.setItem('invoice_maker_invoices', JSON.stringify(updated));
+      showToast('Restored', 'Document restored in cloud.', 'success');
+    } catch (error: any) {
+      showToast('Restore Error', error.message || 'Failed to restore document.', 'error');
     }
   };
 

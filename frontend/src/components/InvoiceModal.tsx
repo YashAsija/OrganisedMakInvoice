@@ -1494,21 +1494,16 @@ export default function InvoiceModal({
   const handleSaveAsDraft = (e: React.MouseEvent) => {
     e.preventDefault();
 
-    const isClientNameVisible = activeTemplate.sections?.billTo?.visible !== false;
-    let currentName = clientName;
-    if (!isClientNameVisible && (!clientName || !clientName.trim())) {
-      currentName = `Guest_${invoiceNumber || Math.random().toString(36).substr(2, 6)}`;
-      setClientName(currentName);
-    } else if (isClientNameVisible && (!clientName || !clientName.trim())) {
-      setShowClientNameError(true);
-      emitNotification('Validation Error', 'Client Name is required to build the invoice.', 'error');
+    if (items.length === 0) {
+      setShowLineItemsError(true);
+      emitNotification('Validation Error', 'Please add at least one line item to save a draft.', 'error');
       return;
     }
 
-    if (items.length === 0) {
-      setShowLineItemsError(true);
-      emitNotification('Validation Error', 'Please add at least one line item to build the bill.', 'error');
-      return;
+    let currentName = clientName;
+    if (!currentName || !currentName.trim()) {
+      currentName = `Guest_${invoiceNumber || Math.random().toString(36).substr(2, 6)}`;
+      setClientName(currentName);
     }
 
     const draftInvoice = buildTempInvoice(true);
@@ -1730,21 +1725,16 @@ export default function InvoiceModal({
   const handleSaveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const isClientNameVisible = activeTemplate.sections?.billTo?.visible !== false;
-    let currentName = clientName;
-    if (!isClientNameVisible && (!clientName || !clientName.trim())) {
-      currentName = `Guest_${invoiceNumber || Math.random().toString(36).substr(2, 6)}`;
-      setClientName(currentName);
-    } else if (isClientNameVisible && (!clientName || !clientName.trim())) {
-      setShowClientNameError(true);
-      emitNotification('Validation Error', 'Client Name is required to build the invoice.', 'error');
+    if (items.length === 0) {
+      setShowLineItemsError(true);
+      emitNotification('Validation Error', 'Please add at least one line item to save.', 'error');
       return;
     }
 
-    if (items.length === 0) {
-      setShowLineItemsError(true);
-      emitNotification('Validation Error', 'Please add at least one line item to build the bill.', 'error');
-      return;
+    let currentName = clientName;
+    if (!currentName || !currentName.trim()) {
+      currentName = `Guest_${invoiceNumber || Math.random().toString(36).substr(2, 6)}`;
+      setClientName(currentName);
     }
 
     const suffix = activeProfile?.email ? `_${encodeURIComponent(activeProfile.email)}` : '';
