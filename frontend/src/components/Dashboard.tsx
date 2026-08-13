@@ -219,6 +219,9 @@ interface DashboardProps {
 
   isOnline: boolean;
 
+  /** Number of invoices/clients/expenses with pending cloud sync. Shows a badge when > 0. */
+  pendingSyncCount?: number;
+
   theme: 'light' | 'dark';
 
   toggleTheme: () => void;
@@ -279,6 +282,8 @@ export default function Dashboard({
   expenses,
 
   isOnline,
+
+  pendingSyncCount = 0,
 
   theme,
 
@@ -7279,7 +7284,16 @@ export default function Dashboard({
 
           <div className="w-px h-6 bg-[#bae6fd] dark:bg-[#223269] hidden sm:block"></div>
 
-
+          {/* Pending-sync indicator — shown when cloud writes are queued */}
+          {pendingSyncCount > 0 && (
+            <div
+              title={`${pendingSyncCount} item${pendingSyncCount > 1 ? 's' : ''} pending cloud sync — will retry automatically`}
+              className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-[11px] font-semibold cursor-default select-none"
+            >
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              {pendingSyncCount} pending
+            </div>
+          )}
 
           <div className="relative" id="profile-dropdown-container">
 

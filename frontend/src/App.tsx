@@ -296,14 +296,34 @@ export default function App() {
             updatedInvoicesList = updatedInvoicesList.filter(i => i.id !== inv.id);
             invoicesChanged = true;
             syncCount++;
+          } else {
+            console.warn('[BgSync] Hard-delete failed:', inv.id, error.code, error.message);
           }
         } else if (inv._pendingSync) {
-          const dataToSync = sanitizeInvoiceForSync(inv, activeUid);
-          const { error } = await supabase.from('invoices').upsert(dataToSync);
-          if (!error) {
-            updatedInvoicesList = updatedInvoicesList.map(i => i.id === inv.id ? { ...i, _pendingSync: undefined } : i);
-            invoicesChanged = true;
-            syncCount++;
+          if (inv.isDeleted) {
+            // Soft-delete retry: use targeted .update() to avoid NOT NULL upsert failure
+            const { error } = await supabase.from('invoices')
+              .update({ isDeleted: true, deletedAt: inv.deletedAt || new Date().toISOString() })
+              .eq('id', inv.id)
+              .eq('userId', activeUid);
+            if (!error) {
+              updatedInvoicesList = updatedInvoicesList.map(i => i.id === inv.id ? { ...i, _pendingSync: undefined } : i);
+              invoicesChanged = true;
+              syncCount++;
+            } else {
+              console.warn('[BgSync] Soft-delete retry failed:', inv.id, error.code, error.message);
+            }
+          } else {
+            // Normal save retry: full upsert with all fields
+            const dataToSync = sanitizeInvoiceForSync(inv, activeUid);
+            const { error } = await supabase.from('invoices').upsert(dataToSync);
+            if (!error) {
+              updatedInvoicesList = updatedInvoicesList.map(i => i.id === inv.id ? { ...i, _pendingSync: undefined } : i);
+              invoicesChanged = true;
+              syncCount++;
+            } else {
+              console.warn('[BgSync] Save retry failed:', inv.id, error.code, error.message);
+            }
           }
         }
       }
@@ -416,6 +436,20 @@ export default function App() {
   const [clients, setClients] = useState<ClientProfile[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [customTemplates, setCustomTemplates] = useState<InvoiceTemplate[]>([]);
+
+  // Periodic background sync every 90s when there are pending items
+  // (placed after state declarations so invoices/clients/expenses are in scope)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const hasPending = invoices.some(i => i._pendingSync || i._pendingDelete)
+        || clients.some(c => c._pendingSync || c._pendingDelete)
+        || expenses.some(e => e._pendingSync || e._pendingDelete);
+      if (hasPending && userEmail) {
+        triggerBackgroundSync();
+      }
+    }, 90_000);
+    return () => clearInterval(interval);
+  }, [invoices, clients, expenses, userEmail]);
 
   // Modals active states
   const [isProfileOpen, setIsProfileOpen] = useState(() => {
@@ -2033,15 +2067,18 @@ export default function App() {
       const activeUid = await resolveSessionUid();
       if (activeUid) {
         try {
-          const invToUpdate = updated.find(i => i.id === invoiceId);
-          if (invToUpdate) {
-             const dataToSync = sanitizeInvoiceForSync(invToUpdate, activeUid);
-             const { error } = await supabase.from('invoices').upsert(dataToSync);
-             if (error) {
-               markInvoicePendingSync(invoiceId);
-             }
+          const deletedAt = new Date().toISOString();
+          const { error } = await supabase.from('invoices')
+            .update({ isDeleted: true, deletedAt })
+            .eq('id', invoiceId)
+            .eq('userId', activeUid);
+          if (error) {
+            console.error('[SoftDelete] Failed to sync to cloud:', error.code, error.message, error.details);
+            showToast('Sync Failed', `Couldn't move document to Bin in cloud — will retry. (${error.message})`, 'error');
+            markInvoicePendingSync(invoiceId);
           }
         } catch (error) {
+          console.error('[SoftDelete] Exception:', error);
           markInvoicePendingSync(invoiceId);
         }
       } else {
@@ -2097,16 +2134,17 @@ export default function App() {
     const activeUid = await resolveSessionUid();
     if (activeUid) {
       try {
-        const invToUpdate = updated.find(i => i.id === invoiceId);
-        if (invToUpdate) {
-           const dataToSync = sanitizeInvoiceForSync(invToUpdate, activeUid);
-           // isDeleted: false is already included via ALLOWED_SUPABASE_COLUMNS — no override needed
-           const { error } = await supabase.from('invoices').upsert(dataToSync);
-           if (error) {
-             markInvoicePendingSync(invoiceId);
-           }
+        const { error } = await supabase.from('invoices')
+          .update({ isDeleted: false, deletedAt: null })
+          .eq('id', invoiceId)
+          .eq('userId', activeUid);
+        if (error) {
+          console.error('[Restore] Failed to sync to cloud:', error.code, error.message, error.details);
+          showToast('Sync Failed', `Couldn't restore document in cloud — will retry. (${error.message})`, 'error');
+          markInvoicePendingSync(invoiceId);
         }
       } catch (error) {
+        console.error('[Restore] Exception:', error);
         markInvoicePendingSync(invoiceId);
       }
     } else {
@@ -2151,18 +2189,27 @@ export default function App() {
           if (draftsToDelete.length > 0) {
             const { error } = await supabase.from('invoices').delete().in('id', draftsToDelete).eq('userId', activeUid);
             if (error) {
+              console.error('[BulkDelete] Draft hard-delete failed:', error.code, error.message);
               draftsToDelete.forEach(id => markInvoicePendingDelete(id));
             }
           }
-          const toSoftDelete = updated.filter(inv => invoiceIds.includes(inv.id) && inv.isDeleted);
-          if (toSoftDelete.length > 0) {
-            const sanitized = toSoftDelete.map(inv => sanitizeInvoiceForSync(inv, activeUid));
-            const { error } = await supabase.from('invoices').upsert(sanitized);
+          const toSoftDeleteIds = updated
+            .filter(inv => invoiceIds.includes(inv.id) && inv.isDeleted)
+            .map(inv => inv.id);
+          if (toSoftDeleteIds.length > 0) {
+            const deletedAt = new Date().toISOString();
+            const { error } = await supabase.from('invoices')
+              .update({ isDeleted: true, deletedAt })
+              .in('id', toSoftDeleteIds)
+              .eq('userId', activeUid);
             if (error) {
-              toSoftDelete.forEach(inv => markInvoicePendingSync(inv.id));
+              console.error('[BulkDelete] Soft-delete failed:', error.code, error.message, error.details);
+              showToast('Sync Failed', `Couldn't move ${toSoftDeleteIds.length} document(s) to Bin in cloud — will retry. (${error.message})`, 'error');
+              toSoftDeleteIds.forEach(id => markInvoicePendingSync(id));
             }
           }
         } catch (error) {
+          console.error('[BulkDelete] Exception:', error);
           draftsToDelete.forEach(id => markInvoicePendingDelete(id));
           updated.filter(inv => invoiceIds.includes(inv.id) && inv.isDeleted).forEach(inv => markInvoicePendingSync(inv.id));
         }
@@ -2827,6 +2874,11 @@ export default function App() {
         toggleTheme={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
         userEmail={userEmail}
         onLogin={handleLogin}
+        pendingSyncCount={
+          invoices.filter(i => i._pendingSync || i._pendingDelete).length
+          + clients.filter(c => c._pendingSync || c._pendingDelete).length
+          + expenses.filter(e => e._pendingSync || e._pendingDelete).length
+        }
         onLogout={handleLogout}
         onOpenProfile={() => setIsProfileOpen(true)}
         onOpenInvoiceEditor={handleOpenInvoiceEditor}
