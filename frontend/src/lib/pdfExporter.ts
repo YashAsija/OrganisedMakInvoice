@@ -468,11 +468,11 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
       }
     }
 
-    // Re-render with calculated chunks and force single copy (customer copy only) for PDF export
+    // Re-render with calculated chunks and selected copies for PDF export / print
     root.render(
       React.createElement(LivePreview, {
         template: activeTemplate,
-        invoiceData: { ...invoice, items: tempInvoice.items, selectedCopies: { customer: true } } as any,
+        invoiceData: { ...invoice, items: tempInvoice.items } as any,
         businessProfile: profile,
         currencySymbol: currencySymbol,
         isInteractive: false,
