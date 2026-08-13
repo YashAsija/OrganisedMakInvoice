@@ -1103,7 +1103,7 @@ export default function App() {
           }
 
           const invoicesChannel = supabase
-            .channel(`invoices:${uid}:${Date.now()}`)
+            .channel('invoices-realtime')
             .on(
               'postgres_changes',
               { event: '*', schema: 'public', table: 'invoices' },
@@ -1961,64 +1961,62 @@ export default function App() {
 
     const activeUid = await resolveSessionUid();
 
-    if (activeUid) {
-      // Propagate directly to Cloud and refresh state directly from database
-      const dataToSync = sanitizeInvoiceForSync({ ...invoice, userId: activeUid }, activeUid);
-      try {
-        const { error: upsertError } = await supabase.from('invoices').upsert(dataToSync);
-        if (upsertError) {
-          console.error('[handleSaveInvoice] Supabase upsert failed:', {
-            code: upsertError.code,
-            message: upsertError.message,
-            details: upsertError.details,
-            hint: upsertError.hint
-          });
-          markInvoicePendingSync(invoice.id);
-          showToast('Sync Offline', `Saved locally. Cloud sync pending: ${upsertError.message || 'connection issue'}`, 'warning');
-        } else {
-          const { data: latestData } = await supabase
-            .from('invoices')
-            .select('*')
-            .eq('userId', activeUid)
-            .order('date', { ascending: false });
+    if (!activeUid) {
+      const err = new Error('You must be signed in to save invoices.');
+      showToast('Authentication Error', err.message, 'error');
+      throw err;
+    }
 
-          if (latestData) {
-            const parsed = (latestData as Invoice[]).map(inv => {
-              if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
-                try {
-                  const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
-                  inv.embeddedTemplate = embeddedTemplate;
-                  inv.selectedCustomTemplateId = embeddedTemplate?.id;
-                  for (const key of Object.keys(embeddedTemplate)) {
-                    if ((inv as any)[key] === undefined) {
-                      (inv as any)[key] = embeddedTemplate[key];
-                    }
-                  }
-                } catch (e) {}
-              }
-              return inv;
-            });
-
-            // Ensure the newly saved invoice is guaranteed to remain in state and mark it as successfully synced
-            const invMap = new Map<string, Invoice>();
-            parsed.forEach(p => invMap.set(p.id, p));
-            if (!invMap.has(invoice.id)) {
-              invMap.set(invoice.id, { ...invoice, _pendingSync: undefined });
-            }
-            const finalMerged = Array.from(invMap.values()).map(inv => inv.id === invoice.id ? { ...inv, _pendingSync: undefined } : inv);
-            setInvoices(finalMerged);
-            localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(finalMerged));
-            localStorage.setItem('invoice_maker_invoices', JSON.stringify(finalMerged));
-          }
-        }
-      } catch (error) {
-        console.warn('[handleSaveInvoice] Error during sync:', error);
-        markInvoicePendingSync(invoice.id);
-        showToast('Sync Offline', 'Saved locally. It will auto-sync to cloud when connection is restored.', 'warning');
+    const dataToSync = sanitizeInvoiceForSync({ ...invoice, userId: activeUid }, activeUid);
+    try {
+      const { error: upsertError } = await supabase.from('invoices').upsert(dataToSync);
+      if (upsertError) {
+        console.error('[handleSaveInvoice] Supabase upsert failed:', upsertError);
+        showToast('Save Failed', `Cloud save failed: ${upsertError.message || 'Database error'}`, 'error');
+        throw upsertError;
       }
-    } else {
-      markInvoicePendingSync(invoice.id);
-      showToast('Offline Mode', 'Saved locally. Please connect or sign in to sync with the cloud.', 'info');
+
+      // Success path: fetch latest data and update state
+      const { data: latestData, error: fetchErr } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('userId', activeUid)
+        .order('date', { ascending: false });
+
+      if (fetchErr) {
+        console.error('[handleSaveInvoice] Error fetching updated invoices:', fetchErr);
+      } else if (latestData) {
+        const parsed = (latestData as Invoice[]).map(inv => {
+          if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
+            try {
+              const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
+              inv.embeddedTemplate = embeddedTemplate;
+              inv.selectedCustomTemplateId = embeddedTemplate?.id;
+              for (const key of Object.keys(embeddedTemplate)) {
+                if ((inv as any)[key] === undefined) {
+                  (inv as any)[key] = embeddedTemplate[key];
+                }
+              }
+            } catch (e) {}
+          }
+          return inv;
+        });
+
+        setInvoices(parsed);
+        localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsed));
+        localStorage.setItem('invoice_maker_invoices', JSON.stringify(parsed));
+      }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('invoice_updated', { detail: invoice }));
+      }
+
+      showToast('Saved Successfully', `${invoice.invoiceNumber || 'Document'} saved to cloud.`, 'success');
+    } catch (error: any) {
+      if (error?.message && !error?.message?.includes('Supabase upsert failed')) {
+        showToast('Save Error', error.message || 'Failed to save document to cloud.', 'error');
+      }
+      throw error;
     }
   };
 
