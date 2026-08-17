@@ -1607,27 +1607,38 @@ export default function InvoiceModal({
     window.location.href = mailto;
   };
 
-  const handleDirectPrint = (inv: Invoice) => {
+  const handleDirectPrint = async (inv: Invoice) => {
     try {
-      const styleId = 'invoice-modal-print-style';
-      let styleEl = document.getElementById(styleId);
-      if (!styleEl) {
-        styleEl = document.createElement('style');
-        styleEl.id = styleId;
-        styleEl.innerHTML = `
-          @media print {
-            body > *:not(.invoice-live-preview-container):not(#invoice-modal-container) { display: none !important; }
-            @page { size: A4; margin: 10mm; }
-            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          }
-        `;
-        document.head.appendChild(styleEl);
+      emitNotification('Preparing Print', 'Generating high-quality print document...', 'info');
+      const pdfBlob = await exportInvoicePDFAsync(inv, activeProfile, 'blob', inv.embeddedTemplate || activeTemplate);
+      if (pdfBlob instanceof Blob) {
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const existingFrame = document.getElementById('invoice-print-iframe');
+        if (existingFrame) existingFrame.remove();
+        
+        const iframe = document.createElement('iframe');
+        iframe.id = 'invoice-print-iframe';
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.src = blobUrl;
+        
+        iframe.onload = () => {
+          setTimeout(() => {
+            try {
+              iframe.contentWindow?.focus();
+              iframe.contentWindow?.print();
+            } catch (e) {
+              window.open(blobUrl, '_blank');
+            }
+          }, 300);
+        };
+        
+        document.body.appendChild(iframe);
       }
-      window.onafterprint = () => {
-        const injected = document.getElementById(styleId);
-        if (injected) injected.remove();
-      };
-      window.print();
     } catch (err: any) {
       alert('Failed to trigger print: ' + (err.message || err.toString()));
     }
@@ -3870,33 +3881,7 @@ export default function InvoiceModal({
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={async () => {
-                          try {
-                            const { pdf } = await import('@react-pdf/renderer');
-                            const { getPDFTemplate } = await import('./PDFTemplates');
-                            const PDFTemplate = getPDFTemplate(savedInvoiceForPreview.selectedTemplateStyle || selectedTemplateStyle);
-                            
-                            const blob = await pdf(
-                              <PDFTemplate 
-                                invoice={savedInvoiceForPreview}
-                                profile={activeProfile}
-                                logo={logoBase64Ref.current}
-                                signature={signatureBase64Ref.current}
-                              />
-                            ).toBlob();
-                            
-                            const url = URL.createObjectURL(blob);
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = `invoice-${savedInvoiceForPreview.invoiceNumber}.pdf`;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            setTimeout(() => URL.revokeObjectURL(url), 1000);
-                          } catch (err: any) {
-                            alert('Failed to export PDF: ' + (err.message || err.toString()));
-                          }
-                        }}
+                        onClick={() => exportInvoicePDFAsync(savedInvoiceForPreview, activeProfile, 'save', savedInvoiceForPreview.embeddedTemplate || activeTemplate)}
                         className="flex items-center justify-center gap-1.5 p-2.5 bg-[#f4f9ff] dark:bg-[#111a36] text-[#0f172a] dark:text-white hover:bg-[#e0f2fe]/40 dark:hover:bg-[#1b264f]/40 rounded-xl text-xs font-bold cursor-pointer transition-all border border-[#bae6fd] dark:border-[#223269]/50"
                       >
                         <FileDown className="w-4 h-4 text-rose-500 shrink-0" />
@@ -3998,7 +3983,7 @@ export default function InvoiceModal({
                         }}
                       >
                         <LivePreview
-                          template={activeTemplate}
+                          template={savedInvoiceForPreview.embeddedTemplate || activeTemplate}
                           invoiceData={savedInvoiceForPreview}
                           businessProfile={activeProfile}
                           currencySymbol={currencySymbol}

@@ -4972,9 +4972,11 @@ export default function Dashboard({
 
     const list = sectionInvoices.filter(inv => {
 
-      const matchesSearch = (inv.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-
-                            (inv.invoiceNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = !searchTerm ||
+                            (inv.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (inv.invoiceNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            ((inv as any).clientCompanyName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            ((inv as any).clientCompany || '').toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesFilter = statusFilter === 'all' || inv.status === statusFilter;
 
@@ -8726,9 +8728,16 @@ export default function Dashboard({
 
                           <td className="px-4 py-3.5">
 
-                            <div className="font-black text-[#0f172a] dark:text-white uppercase truncate max-w-[150px]">{inv.clientName || 'Draft Profile'}</div>
+                            <div className="flex items-center gap-1.5 max-w-[200px] flex-wrap">
+                              <span className="font-black text-[#0f172a] dark:text-white uppercase truncate max-w-[140px]">{inv.clientName || 'Draft Profile'}</span>
+                              {((inv as any).clientCompanyName || (inv as any).clientCompany) && (
+                                <span className="text-[9px] font-semibold text-[#0284c7]/80 dark:text-[#38bdf8]/70 bg-[#e0f2fe]/60 dark:bg-[#1b264f]/60 px-1.5 py-0.5 rounded truncate max-w-[100px] border border-[#bae6fd]/40 dark:border-[#223269]/40 leading-tight whitespace-nowrap">
+                                  {(inv as any).clientCompanyName || (inv as any).clientCompany}
+                                </span>
+                              )}
+                            </div>
 
-                            {inv.clientEmail && <span className="text-[9.5px] text-[#64748b]/80 block truncate max-w-[155px] font-mono mt-0.5">{inv.clientEmail}</span>}
+                            {inv.clientEmail && <span className="text-[9.5px] text-[#64748b]/80 block truncate max-w-[200px] font-mono mt-0.5">{inv.clientEmail}</span>}
 
                           </td>
 
