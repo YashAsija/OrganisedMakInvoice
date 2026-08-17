@@ -8002,7 +8002,14 @@ export default function Dashboard({
 
                             </div>
 
-                            <h4 className="text-xs font-black text-[#0f172a] dark:text-white mt-1 uppercase truncate">{inv.clientName || 'Draft Profile'}</h4>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              <h4 className="text-xs font-black text-[#0f172a] dark:text-white uppercase truncate max-w-[150px]">{inv.clientName || 'Draft Profile'}</h4>
+                              {((inv as any).clientCompanyName || (inv as any).clientCompany) && (
+                                <span className="text-[8.5px] font-semibold text-[#0284c7]/80 dark:text-[#38bdf8]/70 bg-[#e0f2fe]/60 dark:bg-[#1b264f]/60 px-1.5 py-0.5 rounded truncate max-w-[110px] border border-[#bae6fd]/40 dark:border-[#223269]/40 leading-tight whitespace-nowrap">
+                                  {(inv as any).clientCompanyName || (inv as any).clientCompany}
+                                </span>
+                              )}
+                            </div>
 
                             <div className="flex items-center gap-1.5 mt-0.5 text-[9px] text-[#64748b]/80 font-semibold font-mono flex-wrap">
 
