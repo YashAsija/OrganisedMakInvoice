@@ -11034,21 +11034,21 @@ export default function Dashboard({
 
             {/* Income and Expense Analytics report */}
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
 
               {/* Gross Profit Card */}
 
-              <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-emerald-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
+              <div className="bg-white/80 dark:bg-[#111a36]/90 backdrop-blur-md border-l-4 border-l-emerald-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative flex flex-col justify-between min-h-[155px] group">
 
-                <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-2">
+                <div className="flex justify-between items-start gap-2">
 
-                  <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-[#ECFDF5] text-[#10B981] border border-[#A7F3D0] flex items-center justify-center font-black text-xs sm:text-sm">
+                  <div className="w-8.5 h-8.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80 flex items-center justify-center font-black text-sm group-hover:scale-110 transition-transform duration-200 shadow-xs">
 
-                    ₹
+                    {currencySymbol}
 
                   </div>
 
-                  <span className="text-[8px] sm:text-[9px] font-black text-[#10B981] bg-[#ECFDF5] border border-[#A7F3D0] px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
 
                     Cleared
 
@@ -11056,31 +11056,33 @@ export default function Dashboard({
 
                 </div>
 
-                <div className="mt-2 min-w-0">
+                <div className="mt-3 min-w-0">
 
-                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block truncate">Gross Profit</span>
+                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Gross Profit</span>
 
-                  <span className="text-sm sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono truncate">
+                  <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
 
                     {currencySymbol}{formatNum(reportedIncomePaid)}
 
                   </span>
 
+                  <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Settled Invoices Revenue</span>
+
                 </div>
 
                 {/* Sparkline bars */}
 
-                <div className="flex items-end gap-1 h-6 self-start mt-2">
+                <div className="flex items-end gap-1 h-5 self-start mt-2">
 
-                  <div className="w-1 bg-emerald-200 rounded-t-sm h-2" />
+                  <div className="w-1 bg-emerald-300 dark:bg-emerald-700 rounded-t-sm h-2" />
 
-                  <div className="w-1 bg-emerald-300 rounded-t-sm h-3" />
+                  <div className="w-1 bg-emerald-400 dark:bg-emerald-600 rounded-t-sm h-3" />
 
-                  <div className="w-1 bg-emerald-400 rounded-t-sm h-5" />
+                  <div className="w-1 bg-emerald-500 dark:bg-emerald-500 rounded-t-sm h-5" />
 
-                  <div className="w-1 bg-emerald-300 rounded-t-sm h-3" />
+                  <div className="w-1 bg-emerald-400 dark:bg-emerald-600 rounded-t-sm h-3" />
 
-                  <div className="w-1 bg-emerald-500 rounded-t-sm h-6" />
+                  <div className="w-1 bg-emerald-600 dark:bg-emerald-400 rounded-t-sm h-6" />
 
                 </div>
 
@@ -11090,49 +11092,51 @@ export default function Dashboard({
 
               {/* Business Expenses Card */}
 
-              <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-rose-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
+              <div className="bg-white/80 dark:bg-[#111a36]/90 backdrop-blur-md border-l-4 border-l-rose-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative flex flex-col justify-between min-h-[155px] group">
 
-                <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-2">
+                <div className="flex justify-between items-start gap-2">
 
-                  <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-[#FEF2F2] text-[#EF4444] border border-[#FEE2E2] flex items-center justify-center">
+                  <div className="w-8.5 h-8.5 rounded-xl bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-xs">
 
-                    <MinusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <MinusCircle className="w-4 h-4" />
 
                   </div>
 
-                  <span className="text-[8px] sm:text-[9px] font-black text-[#EF4444] bg-[#FEF2F2] border border-[#FEE2E2] px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="text-[9px] font-black text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-800 px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
 
-                    Expenses
+                    Outflow
 
                   </span>
 
                 </div>
 
-                <div className="mt-2 min-w-0">
+                <div className="mt-3 min-w-0">
 
-                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block truncate">Business Expenses</span>
+                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Business Expenses</span>
 
-                  <span className="text-sm sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono truncate">
+                  <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
 
-                    {currencySymbol}{formatNum(totalReportedExpenses)}
+                    {currencySymbol}{formatNum(expenseStats.totalExpenses)}
 
                   </span>
+
+                  <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Purchases & Direct Overhead</span>
 
                 </div>
 
                 {/* Sparkline bars */}
 
-                <div className="flex items-end gap-1 h-6 self-start mt-2">
+                <div className="flex items-end gap-1 h-5 self-start mt-2">
 
-                  <div className="w-1 bg-rose-200 rounded-t-sm h-3" />
+                  <div className="w-1 bg-rose-300 dark:bg-rose-700 rounded-t-sm h-4" />
 
-                  <div className="w-1 bg-rose-300 rounded-t-sm h-4" />
+                  <div className="w-1 bg-rose-400 dark:bg-rose-600 rounded-t-sm h-2" />
 
-                  <div className="w-1 bg-rose-450 h-2" />
+                  <div className="w-1 bg-rose-500 dark:bg-rose-500 rounded-t-sm h-5" />
 
-                  <div className="w-1 bg-rose-400 rounded-t-sm h-5" />
+                  <div className="w-1 bg-rose-400 dark:bg-rose-600 rounded-t-sm h-3" />
 
-                  <div className="w-1 bg-rose-500 rounded-t-sm h-6" />
+                  <div className="w-1 bg-rose-600 dark:bg-rose-400 rounded-t-sm h-6" />
 
                 </div>
 
@@ -11140,103 +11144,107 @@ export default function Dashboard({
 
 
 
-              {/* Pending Receivables Card */}
+              {/* Operating Margin Card */}
 
-              <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-amber-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
+              <div className="bg-white/80 dark:bg-[#111a36]/90 backdrop-blur-md border-l-4 border-l-blue-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative flex flex-col justify-between min-h-[155px] group">
 
-                <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-2">
+                <div className="flex justify-between items-start gap-2">
 
-                  <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-[#FFFBEB] text-[#F59E0B] border border-[#FEF3C7] flex items-center justify-center">
+                  <div className="w-8.5 h-8.5 rounded-xl bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-xs">
 
-                    <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <TrendingUp className="w-4 h-4" />
 
                   </div>
 
-                  <span className="text-[8px] sm:text-[9px] font-black text-[#F59E0B] bg-[#FFFBEB] border border-[#FEF3C7] px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="text-[9px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
 
-                    Unpaid
+                    Margin
 
                   </span>
 
                 </div>
 
-                <div className="mt-2 min-w-0">
+                <div className="mt-3 min-w-0">
 
-                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block truncate">Pending Receivables</span>
+                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Net Profit Margin</span>
 
-                  <span className="text-sm sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono truncate">
+                  <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
+
+                    {totalSalesAmount > 0 ? (((totalBilled - expenseStats.totalExpenses) / totalSalesAmount) * 100).toFixed(1) + '%' : '0%'}
+
+                  </span>
+
+                  <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">(Profit / Total Sales) Ratio</span>
+
+                </div>
+
+                {/* Sparkline bars */}
+
+                <div className="flex items-end gap-1 h-5 self-start mt-2">
+
+                  <div className="w-1 bg-blue-300 dark:bg-blue-700 rounded-t-sm h-3" />
+
+                  <div className="w-1 bg-blue-400 dark:bg-blue-600 rounded-t-sm h-4" />
+
+                  <div className="w-1 bg-blue-500 dark:bg-blue-500 rounded-t-sm h-6" />
+
+                  <div className="w-1 bg-blue-400 dark:bg-blue-600 rounded-t-sm h-5" />
+
+                  <div className="w-1 bg-blue-600 dark:bg-blue-400 rounded-t-sm h-4" />
+
+                </div>
+
+              </div>
+
+
+
+              {/* Outstanding Receivables Card */}
+
+              <div className="bg-white/80 dark:bg-[#111a36]/90 backdrop-blur-md border-l-4 border-l-amber-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative flex flex-col justify-between min-h-[155px] group">
+
+                <div className="flex justify-between items-start gap-2">
+
+                  <div className="w-8.5 h-8.5 rounded-xl bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-xs">
+
+                    <CheckSquare className="w-4 h-4" />
+
+                  </div>
+
+                  <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/80 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
+
+                    Pending
+
+                  </span>
+
+                </div>
+
+                <div className="mt-3 min-w-0">
+
+                  <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Uncollected Revenue</span>
+
+                  <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
 
                     {currencySymbol}{formatNum(reportedOutstanding)}
 
                   </span>
 
-                </div>
-
-                {/* Sparkline bars */}
-
-                <div className="flex items-end gap-1 h-6 self-start mt-2">
-
-                  <div className="w-1 bg-amber-200 rounded-t-sm h-4" />
-
-                  <div className="w-1 bg-amber-300 rounded-t-sm h-2" />
-
-                  <div className="w-1 bg-amber-400 rounded-t-sm h-5" />
-
-                  <div className="w-1 bg-amber-500 rounded-t-sm h-6" />
-
-                  <div className="w-1 bg-amber-300 rounded-t-sm h-3" />
-
-                </div>
-
-              </div>
-
-
-
-              {/* Tax Calculations Card */}
-
-              <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-sky-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3.5 sm:p-5 shadow-xs relative flex flex-col justify-between h-[145px] sm:h-[155px]">
-
-                <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-2">
-
-                  <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-[#F0F9FF] text-[#0284C7] border border-[#BAE6FD] flex items-center justify-center">
-
-                    <Percent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-
-                  </div>
-
-                  <span className="text-[8px] sm:text-[9px] font-black text-[#0284C7] bg-[#F0F9FF] border border-[#BAE6FD] px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider">
-
-                    TAX/GST
-
-                  </span>
-
-                </div>
-
-                <div className="mt-2 min-w-0">
-
-                  <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 block truncate">Tax Liabilities</span>
-
-                  <span className="text-sm sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono truncate">
-
-                    {currencySymbol}{formatNum(reportedTaxTotal)}
-
-                  </span>
+                  <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Unpaid Invoices Total</span>
 
                 </div>
 
                 {/* Sparkline bars */}
 
-                <div className="flex items-end gap-1 h-6 self-start mt-2">
+                <div className="flex items-end gap-1 h-5 self-start mt-2">
 
-                  <div className="w-1 bg-sky-200 rounded-t-sm h-3" />
+                  <div className="w-1 bg-amber-300 dark:bg-amber-700 rounded-t-sm h-5" />
 
-                  <div className="w-1 bg-sky-300 rounded-t-sm h-5" />
+                  <div className="w-1 bg-amber-400 dark:bg-amber-600 rounded-t-sm h-3" />
 
-                  <div className="w-1 bg-sky-400 rounded-t-sm h-2" />
+                  <div className="w-1 bg-amber-500 dark:bg-amber-500 rounded-t-sm h-6" />
 
-                  <div className="w-1 bg-sky-500 rounded-t-sm h-6" />
+                  <div className="w-1 bg-amber-400 dark:bg-amber-600 rounded-t-sm h-2" />
 
-                  <div className="w-1 bg-sky-300 rounded-t-sm h-4" />
+                  <div className="w-1 bg-amber-600 dark:bg-amber-400 rounded-t-sm h-4" />
 
                 </div>
 
