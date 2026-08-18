@@ -12858,21 +12858,21 @@ export default function Dashboard({
 
               {/* KPI Cards — Top Row (Total Sales -> Total Purchases -> Stock -> Tax Liabilities) */}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
 
                 {/* 1. Total Sales */}
 
-                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-indigo-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[160px] h-full overflow-hidden">
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-indigo-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[140px] sm:min-h-[160px] h-full overflow-hidden">
 
                   <div className="flex justify-between items-start">
 
-                    <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950/80 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950/80 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
 
-                      <TrendingUp className="w-4 h-4" />
+                      <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 
                     </div>
 
-                    <span className="text-[9px] sm:text-[10px] font-black text-indigo-600 bg-indigo-50 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[8px] sm:text-[10px] font-black text-indigo-600 bg-indigo-50 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 px-1.5 sm:px-2 py-0.5 rounded-full font-mono">
 
                       LIVE
 
@@ -12880,23 +12880,23 @@ export default function Dashboard({
 
                   </div>
 
-                  <div className="mt-2.5">
+                  <div className="mt-2 sm:mt-2.5">
 
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Total Sales</span>
+                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Total Sales</span>
 
-                    <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
+                    <span className="text-base sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
 
                       {currencySymbol}{formatNum(totalSalesAmount)}
 
                     </span>
 
-                    <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Tax Invoices Total</span>
+                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Tax Invoices Total</span>
 
                   </div>
 
                   {/* Sparkline bars */}
 
-                  <div className="flex items-end gap-1 h-5 self-start mt-2">
+                  <div className="flex items-end gap-1 h-4 sm:h-5 self-start mt-1.5 sm:mt-2">
 
                     {totalSalesSparklineHeights.map((h, idx) => (
 
@@ -12906,7 +12906,7 @@ export default function Dashboard({
 
                         className={`w-1 rounded-t-sm ${idx === totalSalesSparklineHeights.length - 1 ? 'bg-indigo-500 dark:bg-indigo-400' : idx % 2 === 0 ? 'bg-indigo-400 dark:bg-indigo-500' : 'bg-indigo-300 dark:bg-indigo-700'}`}
 
-                        style={{ height: `${h}px` }}
+                        style={{ height: `${Math.max(4, h * 0.8)}px` }}
 
                       />
 
@@ -12920,17 +12920,17 @@ export default function Dashboard({
 
                 {/* 2. Total Purchases */}
 
-                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-rose-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[160px] h-full overflow-hidden">
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-rose-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[140px] sm:min-h-[160px] h-full overflow-hidden">
 
                   <div className="flex justify-between items-start">
 
-                    <div className="w-8 h-8 rounded-full bg-[#FEF2F2] text-[#EF4444] border border-[#FEE2E2] flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#FEF2F2] text-[#EF4444] border border-[#FEE2E2] flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
 
-                      <MinusCircle className="w-4 h-4" />
+                      <MinusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 
                     </div>
 
-                    <span className="text-[9px] sm:text-[10px] font-black text-[#EF4444] bg-[#FEF2F2] border border-[#FEE2E2] px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[8px] sm:text-[10px] font-black text-[#EF4444] bg-[#FEF2F2] border border-[#FEE2E2] px-1.5 sm:px-2 py-0.5 rounded-full font-mono">
 
                       {purchasesPct}
 
@@ -12938,23 +12938,23 @@ export default function Dashboard({
 
                   </div>
 
-                  <div className="mt-2.5">
+                  <div className="mt-2 sm:mt-2.5">
 
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Total Purchases</span>
+                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Total Purchases</span>
 
-                    <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
+                    <span className="text-base sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
 
                       {currencySymbol}{formatNum(totalPurchaseAmount)}
 
                     </span>
 
-                    <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Purchase Bills Value</span>
+                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Purchase Bills Value</span>
 
                   </div>
 
                   {/* Sparkline bars */}
 
-                  <div className="flex items-end gap-1 h-5 self-start mt-2">
+                  <div className="flex items-end gap-1 h-4 sm:h-5 self-start mt-1.5 sm:mt-2">
 
                     {purchaseSparklineHeights.map((h, idx) => (
 
@@ -12964,7 +12964,7 @@ export default function Dashboard({
 
                         className={`w-1 rounded-t-sm ${idx === purchaseSparklineHeights.length - 1 ? 'bg-rose-500 dark:bg-rose-500' : idx % 2 === 0 ? 'bg-rose-400 dark:bg-rose-600' : 'bg-rose-300 dark:bg-rose-700'}`}
 
-                        style={{ height: `${h}px` }}
+                        style={{ height: `${Math.max(4, h * 0.8)}px` }}
 
                       />
 
@@ -12978,17 +12978,17 @@ export default function Dashboard({
 
                 {/* 3. Stock */}
 
-                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-teal-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[160px] h-full overflow-hidden">
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-teal-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[140px] sm:min-h-[160px] h-full overflow-hidden">
 
                   <div className="flex justify-between items-start">
 
-                    <div className="w-8 h-8 rounded-full bg-teal-50 text-teal-600 dark:bg-teal-950/80 dark:text-teal-400 border border-teal-200 dark:border-teal-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-teal-50 text-teal-600 dark:bg-teal-950/80 dark:text-teal-400 border border-teal-200 dark:border-teal-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
 
-                      <Package className="w-4 h-4" />
+                      <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 
                     </div>
 
-                    <span className="text-[9px] sm:text-[10px] font-black text-teal-600 bg-teal-50 dark:bg-teal-950 dark:text-teal-300 border border-teal-200 dark:border-teal-800 px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[8px] sm:text-[10px] font-black text-teal-600 bg-teal-50 dark:bg-teal-950 dark:text-teal-300 border border-teal-200 dark:border-teal-800 px-1.5 sm:px-2 py-0.5 rounded-full font-mono">
 
                       {stockNetPct}
 
@@ -12996,23 +12996,23 @@ export default function Dashboard({
 
                   </div>
 
-                  <div className="mt-2.5">
+                  <div className="mt-2 sm:mt-2.5">
 
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Stock</span>
+                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Stock</span>
 
-                    <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
+                    <span className="text-base sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
 
                       {stockAnalyticsValue < 0 ? '-' : ''}{currencySymbol}{formatNum(Math.abs(stockAnalyticsValue))}
 
                     </span>
 
-                    <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Purchases − Sales</span>
+                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Purchases − Sales</span>
 
                   </div>
 
                   {/* Sparkline bars */}
 
-                  <div className="flex items-end gap-1 h-5 self-start mt-2">
+                  <div className="flex items-end gap-1 h-4 sm:h-5 self-start mt-1.5 sm:mt-2">
 
                     {stockSparklineHeights.map((h, idx) => (
 
@@ -13022,7 +13022,7 @@ export default function Dashboard({
 
                         className={`w-1 rounded-t-sm ${idx === stockSparklineHeights.length - 1 ? 'bg-teal-500 dark:bg-teal-400' : idx % 2 === 0 ? 'bg-teal-400 dark:bg-teal-500' : 'bg-teal-300 dark:bg-teal-700'}`}
 
-                        style={{ height: `${h}px` }}
+                        style={{ height: `${Math.max(4, h * 0.8)}px` }}
 
                       />
 
@@ -13036,17 +13036,17 @@ export default function Dashboard({
 
                 {/* 4. Tax Liabilities */}
 
-                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-sky-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[160px] h-full overflow-hidden">
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-sky-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[140px] sm:min-h-[160px] h-full overflow-hidden">
 
                   <div className="flex justify-between items-start">
 
-                    <div className="w-8 h-8 rounded-full bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-400 border border-sky-200 dark:border-sky-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-400 border border-sky-200 dark:border-sky-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
 
-                      <Percent className="w-4 h-4" />
+                      <Percent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 
                     </div>
 
-                    <span className="text-[9px] sm:text-[10px] font-black text-sky-600 bg-sky-50 dark:bg-sky-950 dark:text-sky-300 border border-sky-200 dark:border-sky-800 px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[8px] sm:text-[10px] font-black text-sky-600 bg-sky-50 dark:bg-sky-950 dark:text-sky-300 border border-sky-200 dark:border-sky-800 px-1.5 sm:px-2 py-0.5 rounded-full font-mono">
 
                       {taxPct}
 
@@ -13054,29 +13054,29 @@ export default function Dashboard({
 
                   </div>
 
-                  <div className="mt-2.5">
+                  <div className="mt-2 sm:mt-2.5">
 
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Tax Liabilities</span>
+                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Tax Liabilities</span>
 
-                    <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
+                    <span className="text-base sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
 
                       {currencySymbol}{formatNum(netTaxLiability)}
 
                     </span>
 
-                    <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Net GST (after ITC)</span>
+                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Net GST (after ITC)</span>
 
                   </div>
 
                   {/* Sparkline bars */}
 
-                  <div className="flex items-end gap-1 h-5 self-start mt-2">
+                  <div className="flex items-end gap-1 h-4 sm:h-5 self-start mt-1.5 sm:mt-2">
 
                     <div className="w-1 bg-sky-200 dark:bg-sky-800 rounded-t-sm h-3" />
 
                     <div className="w-1 bg-sky-400 dark:bg-sky-600 rounded-t-sm h-2" />
 
-                    <div className="w-1 bg-sky-500 dark:bg-sky-500 rounded-t-sm h-6" />
+                    <div className="w-1 bg-sky-500 dark:bg-sky-500 rounded-t-sm h-5" />
 
                     <div className="w-1 bg-sky-300 dark:bg-sky-700 rounded-t-sm h-4" />
 
@@ -13090,21 +13090,21 @@ export default function Dashboard({
 
               {/* KPI Cards — Next Line (Settled Earnings -> Pending Receivables -> Expenses) */}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
 
                 {/* 1. Settled Earnings */}
 
-                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-emerald-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[160px] h-full overflow-hidden">
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-emerald-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3.5 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[140px] sm:min-h-[160px] h-full overflow-hidden">
 
                   <div className="flex justify-between items-start">
 
-                    <div className="w-8 h-8 rounded-full bg-[#ECFDF5] text-[#10B981] border border-[#A7F3D0] flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#ECFDF5] text-[#10B981] border border-[#A7F3D0] flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
 
-                      <Banknote className="w-4 h-4" />
+                      <Banknote className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 
                     </div>
 
-                    <span className="text-[9px] sm:text-[10px] font-black text-[#10B981] bg-[#ECFDF5] border border-[#A7F3D0] px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[8px] sm:text-[10px] font-black text-[#10B981] bg-[#ECFDF5] border border-[#A7F3D0] px-1.5 sm:px-2 py-0.5 rounded-full font-mono">
 
                       {earningsPct}
 
@@ -13112,23 +13112,23 @@ export default function Dashboard({
 
                   </div>
 
-                  <div className="mt-2.5">
+                  <div className="mt-2 sm:mt-2.5">
 
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Settled Earnings</span>
+                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Settled Earnings</span>
 
-                    <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
+                    <span className="text-base sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
 
                       {currencySymbol}{formatNum(totalBilled)}
 
                     </span>
 
-                    <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Tax Invoices Paid</span>
+                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Tax Invoices Paid</span>
 
                   </div>
 
                   {/* Sparkline bars */}
 
-                  <div className="flex items-end gap-1 h-5 self-start mt-2">
+                  <div className="flex items-end gap-1 h-4 sm:h-5 self-start mt-1.5 sm:mt-2">
 
                     <div className="w-1 bg-emerald-200 dark:bg-emerald-800 rounded-t-sm h-2" />
 
@@ -13148,17 +13148,17 @@ export default function Dashboard({
 
                 {/* 2. Pending Receivables */}
 
-                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-amber-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[160px] h-full overflow-hidden">
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-amber-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3.5 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[140px] sm:min-h-[160px] h-full overflow-hidden">
 
                   <div className="flex justify-between items-start">
 
-                    <div className="w-8 h-8 rounded-full bg-[#FFFBEB] text-[#F59E0B] border border-[#FEF3C7] flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#FFFBEB] text-[#F59E0B] border border-[#FEF3C7] flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
 
-                      <CheckSquare className="w-4 h-4" />
+                      <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 
                     </div>
 
-                    <span className="text-[9px] sm:text-[10px] font-black text-[#F59E0B] bg-[#FFFBEB] border border-[#FEF3C7] px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[8px] sm:text-[10px] font-black text-[#F59E0B] bg-[#FFFBEB] border border-[#FEF3C7] px-1.5 sm:px-2 py-0.5 rounded-full font-mono">
 
                       {receivablesPct}
 
@@ -13166,23 +13166,23 @@ export default function Dashboard({
 
                   </div>
 
-                  <div className="mt-2.5">
+                  <div className="mt-2 sm:mt-2.5">
 
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Pending Receivables</span>
+                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Pending Receivables</span>
 
-                    <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
+                    <span className="text-base sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
 
                       {currencySymbol}{formatNum(totalOutstanding)}
 
                     </span>
 
-                    <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Unpaid Invoices</span>
+                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Unpaid Invoices</span>
 
                   </div>
 
                   {/* Sparkline bars */}
 
-                  <div className="flex items-end gap-1 h-5 self-start mt-2">
+                  <div className="flex items-end gap-1 h-4 sm:h-5 self-start mt-1.5 sm:mt-2">
 
                     <div className="w-1 bg-amber-200 dark:bg-amber-800 rounded-t-sm h-4" />
 
@@ -13202,17 +13202,17 @@ export default function Dashboard({
 
                 {/* 3. Expenses */}
 
-                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-purple-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[160px] h-full overflow-hidden">
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-purple-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3.5 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[140px] sm:min-h-[160px] h-full overflow-hidden">
 
                   <div className="flex justify-between items-start">
 
-                    <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-950/80 dark:text-purple-400 border border-purple-200 dark:border-purple-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-950/80 dark:text-purple-400 border border-purple-200 dark:border-purple-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
 
-                      <ReceiptText className="w-4 h-4" />
+                      <ReceiptText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 
                     </div>
 
-                    <span className="text-[9px] sm:text-[10px] font-black text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800 px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[8px] sm:text-[10px] font-black text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800 px-1.5 sm:px-2 py-0.5 rounded-full font-mono">
 
                       {overheadPct}
 
@@ -13220,23 +13220,23 @@ export default function Dashboard({
 
                   </div>
 
-                  <div className="mt-2.5">
+                  <div className="mt-2 sm:mt-2.5">
 
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Expenses</span>
+                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Expenses</span>
 
-                    <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
+                    <span className="text-base sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
 
                       {currencySymbol}{formatNum(expenseStats.totalExpenses)}
 
                     </span>
 
-                    <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Direct Operational Overhead</span>
+                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Direct Operational Overhead</span>
 
                   </div>
 
                   {/* Sparkline bars */}
 
-                  <div className="flex items-end gap-1 h-5 self-start mt-2">
+                  <div className="flex items-end gap-1 h-4 sm:h-5 self-start mt-1.5 sm:mt-2">
 
                     {expenseSparklineHeights.map((h, idx) => (
 
@@ -13246,7 +13246,7 @@ export default function Dashboard({
 
                         className={`w-1 rounded-t-sm ${idx === expenseSparklineHeights.length - 1 ? 'bg-purple-500 dark:bg-purple-400' : idx % 2 === 0 ? 'bg-purple-400 dark:bg-purple-500' : 'bg-purple-300 dark:bg-purple-700'}`}
 
-                        style={{ height: `${h}px` }}
+                        style={{ height: `${Math.max(4, h * 0.8)}px` }}
 
                       />
 
@@ -13262,31 +13262,31 @@ export default function Dashboard({
 
               {/* Bento Grid Middle Row: Revenue Intelligence & Purchases Intelligence */}
 
-              <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 sm:gap-6">
 
                 {/* Revenue Intelligence Line Chart */}
 
-                <div className="order-1 lg:order-1 lg:col-span-3 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                <div className="order-1 lg:order-1 lg:col-span-3 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-6 shadow-xs flex flex-col justify-between">
 
-                  <div className="flex flex-wrap justify-between items-center gap-2">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
 
                     <div>
 
                       <div className="flex items-center gap-2">
 
-                        <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Revenue Intelligence</h3>
+                        <h3 className="text-xs sm:text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Revenue Intelligence</h3>
 
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#ECFDF5] text-[#10B981] dark:bg-emerald-950 dark:text-emerald-400 border border-[#A7F3D0] dark:border-emerald-800">Live</span>
+                        <span className="px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider bg-[#ECFDF5] text-[#10B981] dark:bg-emerald-950 dark:text-emerald-400 border border-[#A7F3D0] dark:border-emerald-800">Live</span>
 
                       </div>
 
-                      <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">Real-time earnings, pending receivables, and direct expense tracking</p>
+                      <p className="text-[9px] sm:text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">Real-time earnings, pending receivables, and direct expense tracking</p>
 
                     </div>
 
 
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
 
                       <select 
 
@@ -13294,7 +13294,7 @@ export default function Dashboard({
 
                         onChange={(e) => setDashboardChartRange(e.target.value as any)}
 
-                        className="bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white border border-[#bae6fd] dark:border-[#223269] text-[10px] font-bold rounded-lg px-2.5 py-1 focus:outline-none focus:border-[#0284c7] cursor-pointer transition-colors"
+                        className="bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white border border-[#bae6fd] dark:border-[#223269] text-[9px] sm:text-[10px] font-bold rounded-lg px-2 sm:px-2.5 py-1 focus:outline-none focus:border-[#0284c7] cursor-pointer transition-colors"
 
                       >
 
@@ -13314,23 +13314,23 @@ export default function Dashboard({
 
 
 
-                      <div className="flex items-center gap-2 text-[9px] font-black tracking-wider text-[#64748b] dark:text-zinc-400">
+                      <div className="flex items-center gap-1.5 sm:gap-2 text-[8px] sm:text-[9px] font-black tracking-wider text-[#64748b] dark:text-zinc-400">
 
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex items-center gap-1">
 
-                          <span className="w-2.5 h-0.5" style={{ backgroundColor: theme === 'dark' ? '#38bdf8' : '#0284c7' }} /> EARNINGS
-
-                        </span>
-
-                        <span className="flex items-center gap-1.5">
-
-                          <span className="w-2.5 h-0.5 border-t border-dashed" style={{ borderColor: theme === 'dark' ? '#60a5fa' : '#2563eb' }} /> RECEIVABLES
+                          <span className="w-2 h-0.5" style={{ backgroundColor: theme === 'dark' ? '#38bdf8' : '#0284c7' }} /> EARN
 
                         </span>
 
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex items-center gap-1">
 
-                          <span className="w-2.5 h-0.5 border-t border-dotted" style={{ borderColor: '#A855F7' }} /> EXPENSES
+                          <span className="w-2 h-0.5 border-t border-dashed" style={{ borderColor: theme === 'dark' ? '#60a5fa' : '#2563eb' }} /> DUE
+
+                        </span>
+
+                        <span className="flex items-center gap-1">
+
+                          <span className="w-2 h-0.5 border-t border-dotted" style={{ borderColor: '#A855F7' }} /> EXP
 
                         </span>
 
@@ -13711,16 +13711,16 @@ export default function Dashboard({
                   const purPathGst    = purPtsGst.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
                   return (
-                    <div className="order-2 lg:order-2 lg:col-span-3 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
-                      <div className="flex justify-between items-start pb-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex-wrap gap-2">
+                    <div className="order-2 lg:order-2 lg:col-span-3 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-6 shadow-xs flex flex-col justify-between">
+                      <div className="flex justify-between items-start pb-3 sm:pb-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex-wrap gap-2">
                         <div>
-                          <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Purchases Intelligence</h3>
-                          <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5">Comparative analysis of purchase spend vs GST paid (Input Tax Credit)</span>
+                          <h3 className="text-xs sm:text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Purchases Intelligence</h3>
+                          <span className="text-[9px] sm:text-[10px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5">Comparative analysis of purchase spend vs GST paid (Input Tax Credit)</span>
                           <div className="mt-2 w-fit">
                             <select
                               value={purchasesChartRange}
                               onChange={(e) => { setPurchasesChartRange(e.target.value as any); setHoveredPurchasesChartIndex(null); }}
-                              className="px-3.5 py-1.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd] hover:border-[#0284c7] dark:border-[#223269] dark:hover:border-[#38bdf8] focus:border-[#0f172a] dark:focus:border-zinc-500 rounded-lg text-[10px] font-black uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 focus:outline-none cursor-pointer transition-colors duration-150"
+                              className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd] hover:border-[#0284c7] dark:border-[#223269] dark:hover:border-[#38bdf8] focus:border-[#0f172a] dark:focus:border-zinc-500 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 focus:outline-none cursor-pointer transition-colors duration-150"
                               style={{ boxShadow: 'inset 0 1px 3px rgba(2,132,199,0.08)' }}
                             >
                               <option value="7d">7 Days</option>
@@ -13732,12 +13732,12 @@ export default function Dashboard({
                             </select>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400 mt-1 font-mono">
-                          <span className="flex items-center gap-1.5">
-                            <span className="w-2.5 h-0.5 inline-block" style={{ backgroundColor: '#F43F5E' }} /> PURCHASES
+                        <div className="flex items-center gap-2.5 sm:gap-4 text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400 mt-1 font-mono">
+                          <span className="flex items-center gap-1 sm:gap-1.5">
+                            <span className="w-2 sm:w-2.5 h-0.5 inline-block" style={{ backgroundColor: '#F43F5E' }} /> SPEND
                           </span>
-                          <span className="flex items-center gap-1.5">
-                            <span className="w-2.5 h-0.5 inline-block border-t border-dashed" style={{ borderColor: '#F97316' }} /> GST PAID
+                          <span className="flex items-center gap-1 sm:gap-1.5">
+                            <span className="w-2 sm:w-2.5 h-0.5 inline-block border-t border-dashed" style={{ borderColor: '#F97316' }} /> GST
                           </span>
                         </div>
                       </div>
@@ -13831,11 +13831,11 @@ export default function Dashboard({
 
                 {/* Revenue Segments Donut (Mobile: 3rd [after Purchases], Desktop: Row 2 Middle 33.3%) */}
 
-                <div className="order-3 lg:order-4 lg:col-span-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                <div className="order-3 lg:order-4 lg:col-span-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-6 shadow-xs flex flex-col justify-between">
 
                   <div>
 
-                    <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Revenue Segments</h3>
+                    <h3 className="text-xs sm:text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Revenue Segments</h3>
 
                   </div>
 
@@ -14041,7 +14041,7 @@ export default function Dashboard({
 
                 {/* Recent Billing Table / Recent Expenses (Mobile: 4th, Desktop: Row 2 Left 66.7% / Full span) */}
 
-                <div className="order-4 lg:order-3 lg:col-span-4 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                <div className="order-4 lg:order-3 lg:col-span-4 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-6 shadow-xs flex flex-col justify-between">
 
                   <div className="flex justify-between items-center pb-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
 
