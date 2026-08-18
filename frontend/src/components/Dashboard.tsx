@@ -14039,9 +14039,9 @@ export default function Dashboard({
 
                 </div>
 
-                {/* Recent Billing Table / Recent Expenses (Mobile: 4th, Desktop: Row 2 Left 33.3%) */}
+                {/* Recent Billing Table / Recent Expenses (Mobile: 4th, Desktop: Row 2 Left 66.7% / Full span) */}
 
-                <div className="order-4 lg:order-3 lg:col-span-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                <div className="order-4 lg:order-3 lg:col-span-4 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
 
                   <div className="flex justify-between items-center pb-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
 
@@ -14284,72 +14284,6 @@ export default function Dashboard({
                       )
 
                     )}
-
-                  </div>
-
-                </div>
-
-                {/* Dark Card: Billing Protocol (Mobile: 5th, Desktop: Row 2 Right 33.3%) */}
-
-                <div className="order-5 lg:order-5 lg:col-span-2 bg-gradient-to-br from-[#111a36] to-[#0b1329] text-[#f8fafc] border border-[#223269]/60 shadow-[0_4px_20px_rgba(0,0,0,0.25)] rounded-2xl p-6 flex flex-col justify-between h-full min-h-[250px]">
-
-                  <div className="space-y-4">
-
-                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#60a5fa]" style={{ fontFamily: "'Fraunces', serif" }}>
-
-                      <Info className="w-4.5 h-4.5 text-[#38bdf8]" />
-
-                      <span>Billing Protocol</span>
-
-                    </div>
-
-                    
-
-                    <div className="space-y-3 pt-2">
-
-                      <div className="flex items-start gap-2.5 text-xs">
-
-                        <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400 shrink-0 mt-0.5" />
-
-                        <span className="font-semibold text-zinc-300">Ensure GSTR-1 compliance before EOM.</span>
-
-                      </div>
-
-                      <div className="flex items-start gap-2.5 text-xs">
-
-                        <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400 shrink-0 mt-0.5" />
-
-                        <span className="font-semibold text-zinc-300">Validate HSN codes for industrial goods.</span>
-
-                      </div>
-
-                      <div className="flex items-start gap-2.5 text-xs">
-
-                        <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400 shrink-0 mt-0.5" />
-
-                        <span className="font-semibold text-zinc-300">Maintain Net-30 payment intervals.</span>
-
-                      </div>
-
-                    </div>
-
-                  </div>
-
-
-
-                  <div className="mt-6">
-
-                    <button 
-
-                      onClick={() => setActiveTab('learn')}
-
-                      className="w-full py-2.5 bg-[#0284c7] dark:bg-[#38bdf8] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer hover:shadow-[0_4px_12px_rgba(2,132,199,0.15)]"
-
-                    >
-
-                      View Compliance Docs
-
-                    </button>
 
                   </div>
 
