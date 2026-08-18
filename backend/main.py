@@ -1,16 +1,21 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-from contextlib import asynccontextmanager
+import os
 import asyncio
+from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+
+# Load primary backend .env and fallback to frontend .env.local
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(backend_dir, ".env"))
+load_dotenv(os.path.join(backend_dir, "..", "frontend", ".env.local"))
+
 from app.api import ai_routes
 from app.api import pin_routes
 from app.api import admin_routes
 from app.api import ticket_routes
 from app.services.scheduler import scheduler_loop
 from app.services import admin_db
-
-load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

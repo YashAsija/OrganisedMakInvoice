@@ -6,10 +6,15 @@ import json
 import base64
 import logging
 from collections import defaultdict
+from dotenv import load_dotenv
 from fastapi import Request, HTTPException, Response
 
 # Setup logger
 logger = logging.getLogger("admin_auth")
+
+_backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv(os.path.join(_backend_dir, ".env"))
+load_dotenv(os.path.join(_backend_dir, "..", "frontend", ".env.local"))
 
 # Admin credentials from environment
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@makinvoices.com")

@@ -3,9 +3,15 @@ import time
 import httpx
 import logging
 from typing import List, Optional
+from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
+
+# Load environment variables
+_backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv(os.path.join(_backend_dir, ".env"))
+load_dotenv(os.path.join(_backend_dir, "..", "frontend", ".env.local"))
 
 from app.middleware.admin_auth import (
     ADMIN_EMAIL,
@@ -24,8 +30,10 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Helper to build headers and URL for Supabase API requests
 def _supabase_admin_client():
-    url = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL", "")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or ""
+    url = (os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL") or "").strip()
+    if url and not (url.startswith("http://") or url.startswith("https://")):
+        url = f"https://{url}"
+    key = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
     headers = {
         "apikey": key,
         "Authorization": f"Bearer {key}",
@@ -548,55 +556,125 @@ async def get_users(
     """Retrieve list of all registered users with search capabilities."""
     from app.services import admin_db
     base_url, headers = _supabase_admin_client()
+    if not base_url:
+        logger.error("SUPABASE_URL is missing or unconfigured.")
+        raise HTTPException(status_code=500, detail="Supabase connection URL is unconfigured.")
+        
     offset = (page - 1) * limit
     
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        # Build query for public.users
-        params = ["order=updatedAt.desc"]
-        if search:
-            params.append(f"or=(email.ilike.*{search}*,name.ilike.*{search}*)")
-            
-        params.append(f"limit={limit}")
-        params.append(f"offset={offset}")
-        
-        query_str = "&".join(params)
-        url = f"{base_url}/rest/v1/users?{query_str}"
-        
-        headers_with_count = headers.copy()
-        headers_with_count["Prefer"] = "count=exact"
-        
-        res = await client.get(url, headers=headers_with_count)
-        data = res.json() if res.status_code in (200, 206) else []
-
-        # If public.users is completely empty on page 1 with no search filter, auto-sync from Supabase Auth
-        if not data and page == 1 and not search:
-            await _ensure_users_synced(client, base_url, headers)
-            res = await client.get(url, headers=headers_with_count)
-            data = res.json() if res.status_code in (200, 206) else []
-
-        # Extract total count from PostgREST content-range header
-        content_range = res.headers.get("content-range", "")
-        total_count = len(data)
-        if "/" in content_range:
-            try:
-                total_count = int(content_range.split("/")[-1])
-            except ValueError:
-                total_count = len(data)
-
-        # Map admin notes & fallback timestamps
-        for u in data:
-            u.pop("pin_hash", None)
-            u["created_at"] = u.get("created_at") or u.get("updatedAt")
-            u["updated_at"] = u.get("updatedAt") or u.get("created_at")
-            if not u.get("admin_notes"):
-                u["admin_notes"] = await admin_db.get_user_admin_notes(u["uid"])
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Build query for public.users
+            params = ["order=updatedAt.desc"]
+            if search:
+                params.append(f"or=(email.ilike.*{search}*,name.ilike.*{search}*)")
                 
-    return {
-        "users": data,
-        "total": total_count,
-        "page": page,
-        "limit": limit
-    }
+            params.append(f"limit={limit}")
+            params.append(f"offset={offset}")
+            
+            query_str = "&".join(params)
+            url = f"{base_url}/rest/v1/users?{query_str}"
+            
+            headers_with_count = headers.copy()
+            headers_with_count["Prefer"] = "count=exact"
+            
+            data = []
+            total_count = 0
+            
+            try:
+                res = await client.get(url, headers=headers_with_count)
+                if res.status_code in (200, 206):
+                    res_json = res.json()
+                    if isinstance(res_json, list):
+                        data = res_json
+                        content_range = res.headers.get("content-range", "")
+                        if "/" in content_range:
+                            try:
+                                total_count = int(content_range.split("/")[-1])
+                            except ValueError:
+                                total_count = len(data)
+                        else:
+                            total_count = len(data)
+            except Exception as ex:
+                logger.warning(f"Failed fetching public.users: {ex}")
+
+            # If public.users is empty or failed on page 1 without search, attempt auto-sync
+            if not data and page == 1 and not search:
+                try:
+                    await _ensure_users_synced(client, base_url, headers)
+                    res = await client.get(url, headers=headers_with_count)
+                    if res.status_code in (200, 206):
+                        res_json = res.json()
+                        if isinstance(res_json, list):
+                            data = res_json
+                            total_count = len(data)
+                except Exception as ex:
+                    logger.warning(f"Ensure users synced error: {ex}")
+
+            # Ultimate Fallback: build users list directly from Supabase Auth admin API if public.users returns empty/error
+            if not data:
+                try:
+                    auth_res = await client.get(f"{base_url}/auth/v1/admin/users?per_page=1000", headers=headers)
+                    if auth_res.status_code == 200:
+                        raw_auth_users = auth_res.json().get("users", [])
+                        
+                        if search:
+                            search_lower = search.lower()
+                            raw_auth_users = [
+                                u for u in raw_auth_users
+                                if search_lower in (u.get("email") or "").lower()
+                                or search_lower in (u.get("user_metadata", {}).get("full_name") or u.get("user_metadata", {}).get("name") or "").lower()
+                            ]
+                        
+                        total_count = len(raw_auth_users)
+                        paged_users = raw_auth_users[offset : offset + limit]
+                        
+                        data = []
+                        for au in paged_users:
+                            meta = au.get("user_metadata") or {}
+                            email = au.get("email") or ""
+                            full_name = meta.get("full_name") or meta.get("name") or (email.split("@")[0] if "@" in email else "Member")
+                            data.append({
+                                "uid": au.get("id"),
+                                "name": meta.get("company_name") or full_name,
+                                "email": email,
+                                "phone": au.get("phone") or meta.get("phone") or "",
+                                "address": "",
+                                "taxId": "",
+                                "currency": "INR",
+                                "defaultTaxRate": 18,
+                                "created_at": au.get("created_at"),
+                                "updated_at": au.get("updated_at") or au.get("created_at"),
+                                "last_sign_in_at": au.get("last_sign_in_at"),
+                                "provider": au.get("app_metadata", {}).get("provider", "email"),
+                                "email_verified": au.get("email_confirmed_at") is not None or meta.get("email_verified") is True,
+                                "admin_notes": ""
+                            })
+                except Exception as ex:
+                    logger.error(f"Supabase Auth admin fallback error: {ex}")
+
+            # Normalize & map admin notes safely
+            for u in data:
+                if isinstance(u, dict):
+                    u.pop("pin_hash", None)
+                    u["created_at"] = u.get("created_at") or u.get("updatedAt")
+                    u["updated_at"] = u.get("updatedAt") or u.get("created_at")
+                    uid = u.get("uid")
+                    if uid and not u.get("admin_notes"):
+                        try:
+                            u["admin_notes"] = await admin_db.get_user_admin_notes(uid)
+                        except Exception:
+                            u["admin_notes"] = ""
+                    
+        return {
+            "users": data if isinstance(data, list) else [],
+            "total": total_count if isinstance(total_count, int) else 0,
+            "page": page,
+            "limit": limit
+        }
+    except Exception as e:
+        logger.error(f"Error fetching users: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch users: {str(e)}")
 
 @router.get("/users/{user_id}")
 async def get_user_details(user_id: str, payload: dict = Depends(verify_admin_token)):

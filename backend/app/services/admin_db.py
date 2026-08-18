@@ -5,8 +5,13 @@ import uuid
 import logging
 from datetime import datetime
 from typing import List, Optional, Tuple, Dict, Any
+from dotenv import load_dotenv
 
 logger = logging.getLogger("admin_db")
+
+_backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv(os.path.join(_backend_dir, ".env"))
+load_dotenv(os.path.join(_backend_dir, "..", "frontend", ".env.local"))
 
 # Path to the fallback SQLite database file in the backend directory
 SQLITE_DB_PATH = os.path.join(
@@ -86,8 +91,10 @@ init_sqlite_db()
 
 def _get_supabase_client() -> Tuple[str, Dict[str, str]]:
     """Helper to retrieve Supabase URL and service role headers."""
-    url = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL", "")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or ""
+    url = (os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL") or "").strip()
+    if url and not (url.startswith("http://") or url.startswith("https://")):
+        url = f"https://{url}"
+    key = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
     headers = {
         "apikey": key,
         "Authorization": f"Bearer {key}",
@@ -679,8 +686,23 @@ async def get_user_admin_notes(user_id: str) -> str:
 
 async def save_user_admin_notes(user_id: str, notes: str) -> bool:
     """
-    Saves private administrative notes for a user in local SQLite.
+    Saves private administrative notes for a user in local SQLite and Supabase if column exists.
     """
+    use_supabase = await check_table_exists("users")
+    if use_supabase:
+        url, headers = _get_supabase_client()
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                res = await client.patch(
+                    f"{url}/rest/v1/users?uid=eq.{user_id}",
+                    json={"admin_notes": notes},
+                    headers=headers
+                )
+                if res.status_code in (200, 204):
+                    return True
+        except Exception as e:
+            logger.error(f"Supabase save notes failed: {str(e)}")
+
     try:
         conn = sqlite3.connect(SQLITE_DB_PATH)
         cursor = conn.cursor()
@@ -704,40 +726,6 @@ async def save_user_admin_notes(user_id: str, notes: str) -> bool:
     except Exception as e:
         logger.error(f"Failed to save user admin notes for {user_id}: {str(e)}")
         return False
-            
-    if use_supabase:
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                res = await client.patch(
-                    f"{url}/rest/v1/users?uid=eq.{user_id}",
-                    json={"admin_notes": notes},
-                    headers=headers
-                )
-                if res.status_code in (200, 204):
-                    return True
-        except Exception as e:
-            logger.error(f"Supabase save notes failed: {str(e)}")
-            
-    # Local SQLite Fallback
-    conn = sqlite3.connect(SQLITE_DB_PATH)
-    cursor = conn.cursor()
-    now_str = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-    try:
-        cursor.execute("""
-        INSERT INTO user_admin_notes (user_id, notes, updated_at)
-        VALUES (?, ?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET notes = excluded.notes, updated_at = excluded.updated_at
-        """, (user_id, notes, now_str))
-        conn.commit()
-        success = True
-    except Exception as e:
-        conn.rollback()
-        success = False
-        logger.error(f"Local SQLite save notes failed: {str(e)}")
-    finally:
-        conn.close()
-        
-    return success
 
 
 def clear_table_cache():

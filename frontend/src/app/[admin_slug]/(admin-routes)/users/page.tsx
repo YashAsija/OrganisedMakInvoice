@@ -103,10 +103,13 @@ export default function UsersAdminPage() {
         window.location.href = `/${slug}`;
         return;
       }
-      if (!res.ok) throw new Error("Could not retrieve users list");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Could not retrieve users list");
+      }
       const data = await res.json();
-      setUsers(data.users || []);
-      setTotal(data.total || 0);
+      setUsers(Array.isArray(data.users) ? data.users : []);
+      setTotal(typeof data.total === "number" ? data.total : 0);
     } catch (err: any) {
       setError(err.message || "An error occurred fetching users");
     } finally {
