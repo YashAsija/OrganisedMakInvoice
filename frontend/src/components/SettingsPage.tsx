@@ -97,15 +97,15 @@ export default function SettingsPage({
 
         {/* Sidebar navigation */}
         <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xs p-3 h-fit">
-          <p className="text-[9px] font-black uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8] px-3 mb-2">Settings</p>
-          <nav className="space-y-0.5">
+          <p className="text-[9px] font-black uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8] px-3 mb-2 hidden lg:block">Settings</p>
+          <nav className="flex flex-row lg:flex-col overflow-x-auto lg:overflow-visible gap-1 pb-1 lg:pb-0 scrollbar-none">
             {sections.map(sec => (
               <button
                 key={sec.id}
                 onClick={() => setActiveSection(sec.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-left transition-all cursor-pointer ${
+                className={`flex-shrink-0 lg:w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-left transition-all cursor-pointer whitespace-nowrap ${
                   activeSection === sec.id
-                    ? 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border-r-2 border-[#0284c7] dark:border-[#38bdf8]'
+                    ? 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border-b-2 lg:border-b-0 lg:border-r-2 border-[#0284c7] dark:border-[#38bdf8]'
                     : 'text-[#64748b]/80 dark:text-zinc-400 hover:bg-[#f4f9ff] dark:hover:bg-[#1b264f]/50 hover:text-[#0284c7] dark:hover:text-[#38bdf8]'
                 }`}
               >

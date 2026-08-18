@@ -182,7 +182,7 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({ currencySymbol = 'â‚
       </div>
 
       {/* STATS BAR */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         {/* Total Expenses */}
         <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-purple-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between min-h-[140px]">
           <div className="flex justify-between items-start">

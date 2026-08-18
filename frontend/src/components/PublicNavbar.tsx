@@ -50,8 +50,8 @@ export default function PublicNavbar({ theme, onNavigate, activePath }: PublicNa
           {langNotice}
         </div>
       )}
-      {/* Embedded Navigation Bar (Desktop) */}
-      <nav className="fixed top-0 left-0 right-0 z-50 hidden sm:flex border-b border-slate-200/40 dark:border-neutral-800/35 bg-white/70 dark:bg-neutral-955/75 backdrop-blur-md transition-all duration-300 w-full">
+      {/* Embedded Navigation Bar (Desktop & iPad Landscape) */}
+      <nav className="fixed top-0 left-0 right-0 z-50 hidden lg:flex border-b border-slate-200/40 dark:border-neutral-800/35 bg-white/70 dark:bg-neutral-955/75 backdrop-blur-md transition-all duration-300 w-full">
         <div className="max-w-[1550px] mx-auto px-2 sm:px-4 lg:px-6 py-4 flex items-center justify-between gap-4 w-full">
           
           {/* Logo Brand */}
@@ -145,8 +145,8 @@ export default function PublicNavbar({ theme, onNavigate, activePath }: PublicNa
         </div>
       </nav>
 
-      {/* Embedded Navigation Bar (Mobile) */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex sm:hidden border-b border-slate-200/40 dark:border-neutral-800/35 bg-white/75 dark:bg-neutral-950/85 backdrop-blur-md transition-all duration-300 w-full">
+      {/* Embedded Navigation Bar (Mobile & iPad Portrait) */}
+      <nav className="fixed top-0 left-0 right-0 z-50 flex lg:hidden border-b border-slate-200/40 dark:border-neutral-800/35 bg-white/75 dark:bg-neutral-950/85 backdrop-blur-md transition-all duration-300 w-full">
         <div className="max-w-[1550px] mx-auto px-4 py-3 flex items-center justify-between w-full">
           {/* Logo Brand */}
           <div className="flex items-center gap-1.5 cursor-pointer select-none" onClick={() => onNavigate('/')}>

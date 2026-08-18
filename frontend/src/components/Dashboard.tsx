@@ -460,14 +460,30 @@ export default function Dashboard({
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [showBinView, setShowBinView] = useState(false);
 
-  const [isDesktopSidebarExpanded, setIsDesktopSidebarExpanded] = useState(true);
+  const [isDesktopSidebarExpanded, setIsDesktopSidebarExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1280;
+    }
+    return false;
+  });
+
+  // Automatically collapse desktop sidebar on tablets/iPads (< 1280px) for optimal workspace width
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      if (window.innerWidth < 1280) {
+        setIsDesktopSidebarExpanded(false);
+      }
+    };
+    // Initial check
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const [isSalesLedgerExpanded, setIsSalesLedgerExpanded] = useState(false);
-
   const [isMasterExpanded, setIsMasterExpanded] = useState(true);
-
   const [isCatalogExpanded, setIsCatalogExpanded] = useState(true);
-
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   
@@ -7076,17 +7092,11 @@ export default function Dashboard({
           <div className="w-px h-6 bg-[#bae6fd] dark:bg-[#223269] hidden sm:block"></div>
 
           <button
-
             onClick={() => setIsMobileDrawerOpen(true)}
-
             aria-label="Toggle structural sidebar menu drawer"
-
-            className="md:hidden p-2 -ml-2 text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0369a1] dark:hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f]"
-
+            className="xl:hidden p-2 -ml-2 text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0369a1] dark:hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f]"
           >
-
             <Menu className="w-5 h-5" />
-
           </button>
 
 
@@ -7745,14 +7755,10 @@ export default function Dashboard({
 
 
       {/* Dynamic Main Responsive Workspace - Grid layout turns dual-column on desktop */}
-
-      <main className="w-full max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4 pt-1.5 md:pt-3 space-y-4 md:space-y-0 md:flex md:gap-6 lg:gap-8 md:items-start overflow-hidden">
-
+      <main className="w-full max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4 pt-1.5 md:pt-3 space-y-4 xl:space-y-0 xl:flex xl:gap-6 xl:items-start overflow-hidden">
         
-
-        {/* DESKTOP BRANDING & CONTROL SIDEBAR - Visible only on md screens and larger */}
-
-        <div className="hidden md:block relative shrink-0">
+        {/* DESKTOP BRANDING & CONTROL SIDEBAR - Visible on xl screens (1280px+) */}
+        <div className="hidden xl:block relative shrink-0">
 
           <aside className={`flex flex-col bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/70 rounded-[1.75rem] shadow-[0_8px_30px_rgba(2,132,199,0.08)] h-[calc(100vh-110px)] overflow-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
 
@@ -15031,9 +15037,8 @@ export default function Dashboard({
 
 
 
-      {/* -------------------- OVERLAY MODAL 0: SLIDING DRAWER MENU FOR MOBILE DEVICE -------------------- */}
-
-      <div className={`fixed inset-0 z-[60] md:hidden transition-opacity duration-300 ${isMobileDrawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+      {/* -------------------- OVERLAY MODAL 0: SLIDING DRAWER MENU FOR MOBILE DEVICE & TABLET/IPAD -------------------- */}
+      <div className={`fixed inset-0 z-[60] xl:hidden transition-opacity duration-300 ${isMobileDrawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
 
         {/* Backdrop screen */}
 
