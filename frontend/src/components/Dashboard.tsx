@@ -13262,7 +13262,7 @@ export default function Dashboard({
 
               {/* Bento Grid Middle Row: Revenue Intelligence & Purchases Intelligence */}
 
-              <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 sm:gap-6 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 sm:gap-6">
 
                 {/* Revenue Intelligence Line Chart */}
 
@@ -14041,7 +14041,7 @@ export default function Dashboard({
 
                 {/* Recent Billing Table / Recent Expenses (Mobile: 4th, Desktop: Row 2 Left 66.7% / Full span) */}
 
-                <div className="order-4 lg:order-3 lg:col-span-4 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-start">
+                <div className="order-4 lg:order-3 lg:col-span-4 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3 sm:p-4 pb-2 sm:pb-3 shadow-xs flex flex-col justify-start">
 
                   <div className="flex justify-between items-center pb-2 border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
 
