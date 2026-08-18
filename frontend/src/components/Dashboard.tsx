@@ -13262,7 +13262,7 @@ export default function Dashboard({
 
               {/* Bento Grid Middle Row: Revenue Intelligence & Purchases Intelligence */}
 
-              <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 sm:gap-6 items-start">
 
                 {/* Revenue Intelligence Line Chart */}
 
