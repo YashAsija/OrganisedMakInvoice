@@ -14041,9 +14041,9 @@ export default function Dashboard({
 
                 {/* Recent Billing Table / Recent Expenses (Mobile: 4th, Desktop: Row 2 Left 66.7% / Full span) */}
 
-                <div className="order-4 lg:order-3 lg:col-span-4 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-6 shadow-xs flex flex-col justify-between">
+                <div className="order-4 lg:order-3 lg:col-span-4 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-6 shadow-xs flex flex-col">
 
-                  <div className="flex justify-between items-center pb-2.5 sm:pb-3 border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
+                  <div className="flex justify-between items-center pb-2 border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
 
                     <div className="flex items-center gap-2">
 
@@ -14111,7 +14111,7 @@ export default function Dashboard({
 
 
 
-                  <div className="w-full overflow-x-auto mt-1">
+                  <div className="w-full overflow-x-auto mt-0.5">
 
                     {recentView === 'invoices' ? (
 
@@ -14131,17 +14131,17 @@ export default function Dashboard({
 
                             <tr className="text-[10px] font-black uppercase text-[#64748b]/60 dark:text-zinc-400 tracking-wider border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
 
-                              <th className="py-2.5 pr-3 font-black whitespace-nowrap">INV ID</th>
+                              <th className="py-2 pr-3 font-black whitespace-nowrap">INV ID</th>
 
-                              <th className="py-2.5 px-3 font-black whitespace-nowrap">CLIENT NAME</th>
+                              <th className="py-2 px-3 font-black whitespace-nowrap">CLIENT NAME</th>
 
-                              <th className="py-2.5 px-3 font-black whitespace-nowrap">DUE DATE</th>
+                              <th className="py-2 px-3 font-black whitespace-nowrap">DUE DATE</th>
 
-                              <th className="py-2.5 px-3 font-black whitespace-nowrap">AMOUNT</th>
+                              <th className="py-2 px-3 font-black whitespace-nowrap">AMOUNT</th>
 
-                              <th className="py-2.5 px-3 font-black whitespace-nowrap">STATUS</th>
+                              <th className="py-2 px-3 font-black whitespace-nowrap">STATUS</th>
 
-                              <th className="py-2.5 pl-2"></th>
+                              <th className="py-2 pl-2"></th>
 
                             </tr>
 
@@ -14149,19 +14149,19 @@ export default function Dashboard({
 
                           <tbody>
 
-                            {invoices.slice(0, 3).map(inv => (
+                            {invoices.slice(0, 4).map(inv => (
 
                               <tr key={inv.id} className="border-b border-[#bae6fd]/20 dark:border-[#223269]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 transition-colors">
 
-                                <td className="py-3.5 pr-3 font-extrabold text-[#0f172a] dark:text-white font-mono whitespace-nowrap">{inv.invoiceNumber}</td>
+                                <td className="py-2.5 pr-3 font-extrabold text-[#0f172a] dark:text-white font-mono whitespace-nowrap">{inv.invoiceNumber}</td>
 
-                                <td className="py-3.5 px-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[140px]">{inv.clientName}</td>
+                                <td className="py-2.5 px-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[140px]">{inv.clientName}</td>
 
-                                <td className="py-3.5 px-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans whitespace-nowrap">{inv.dueDate || inv.date}</td>
+                                <td className="py-2.5 px-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans whitespace-nowrap">{inv.dueDate || inv.date}</td>
 
-                                <td className="py-3.5 px-3 font-extrabold font-mono text-[#0f172a] dark:text-white whitespace-nowrap">{currencySymbol}{formatNum(inv.grandTotal)}</td>
+                                <td className="py-2.5 px-3 font-extrabold font-mono text-[#0f172a] dark:text-white whitespace-nowrap">{currencySymbol}{formatNum(inv.grandTotal)}</td>
 
-                                <td className="py-3.5 px-3 whitespace-nowrap">
+                                <td className="py-2.5 px-3 whitespace-nowrap">
 
                                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
 
@@ -14171,7 +14171,7 @@ export default function Dashboard({
 
                                 </td>
 
-                                <td className="py-3.5 pl-2 text-right">
+                                <td className="py-2.5 pl-2 text-right">
 
                                   <button 
 
@@ -14215,15 +14215,15 @@ export default function Dashboard({
 
                             <tr className="text-[10px] font-black uppercase text-[#64748b]/60 dark:text-zinc-400 tracking-wider border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
 
-                              <th className="py-2.5 pr-3 font-black whitespace-nowrap">DATE</th>
+                              <th className="py-2 pr-3 font-black whitespace-nowrap">DATE</th>
 
-                              <th className="py-2.5 px-3 font-black whitespace-nowrap">CATEGORY</th>
+                              <th className="py-2 px-3 font-black whitespace-nowrap">CATEGORY</th>
 
-                              <th className="py-2.5 px-3 font-black whitespace-nowrap">VENDOR</th>
+                              <th className="py-2 px-3 font-black whitespace-nowrap">VENDOR</th>
 
-                              <th className="py-2.5 px-3 font-black whitespace-nowrap">AMOUNT</th>
+                              <th className="py-2 px-3 font-black whitespace-nowrap">AMOUNT</th>
 
-                              <th className="py-2.5 px-3 font-black whitespace-nowrap">STATUS</th>
+                              <th className="py-2 px-3 font-black whitespace-nowrap">STATUS</th>
 
                             </tr>
 
@@ -14231,13 +14231,13 @@ export default function Dashboard({
 
                           <tbody>
 
-                            {supabaseExpenses.slice(0, 3).map(exp => (
+                            {supabaseExpenses.slice(0, 4).map(exp => (
 
                               <tr key={exp.id} className="border-b border-[#bae6fd]/20 dark:border-[#223269]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 transition-colors">
 
-                                <td className="py-3.5 pr-3 font-mono text-[11px] text-[#0f172a] dark:text-white font-bold whitespace-nowrap">{exp.expense_date}</td>
+                                <td className="py-2.5 pr-3 font-mono text-[11px] text-[#0f172a] dark:text-white font-bold whitespace-nowrap">{exp.expense_date}</td>
 
-                                <td className="py-3.5 px-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[110px]">
+                                <td className="py-2.5 px-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[110px]">
 
                                   <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 text-[9.5px] font-bold">
 
@@ -14247,11 +14247,11 @@ export default function Dashboard({
 
                                 </td>
 
-                                <td className="py-3.5 px-3 font-bold text-[#0f172a] dark:text-white truncate max-w-[130px]">{exp.vendor}</td>
+                                <td className="py-2.5 px-3 font-bold text-[#0f172a] dark:text-white truncate max-w-[130px]">{exp.vendor}</td>
 
-                                <td className="py-3.5 px-3 font-extrabold font-mono text-[#0f172a] dark:text-white whitespace-nowrap">{currencySymbol}{formatNum(exp.amount)}</td>
+                                <td className="py-2.5 px-3 font-extrabold font-mono text-[#0f172a] dark:text-white whitespace-nowrap">{currencySymbol}{formatNum(exp.amount)}</td>
 
-                                <td className="py-3.5 px-3 whitespace-nowrap">
+                                <td className="py-2.5 px-3 whitespace-nowrap">
 
                                   {exp.status === 'paid' ? (
 
