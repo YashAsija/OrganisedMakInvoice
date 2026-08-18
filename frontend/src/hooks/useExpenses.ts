@@ -89,6 +89,42 @@ export function useExpenses() {
 
   useEffect(() => {
     fetchExpenses();
+
+    // Custom window event listener for instant cross-hook sync
+    const handleCustomEvent = () => {
+      fetchExpenses();
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('expenses_updated', handleCustomEvent);
+    }
+
+    // Supabase real-time subscription for instant database updates
+    const channelTopic = `expenses_realtime_${Math.random().toString(36).substring(2, 7)}`;
+    let channel: any = null;
+
+    try {
+      channel = supabase
+        .channel(channelTopic)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => {
+          fetchExpenses();
+        });
+      channel.subscribe();
+    } catch (e) {
+      console.warn('[useExpenses] Realtime channel subscription warning:', e);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('expenses_updated', handleCustomEvent);
+      }
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch (e) {
+          // Ignore cleanup error if already removed
+        }
+      }
+    };
   }, [fetchExpenses]);
 
   const createExpense = async (payload: Omit<Expense, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'userId' | 'date' | 'createdAt'>) => {
@@ -108,7 +144,7 @@ export function useExpenses() {
       expense_date: payload.expense_date,
       category: payload.category,
       vendor: payload.vendor,
-      description: payload.description || null,
+      description: payload.description || payload.vendor || '',
       amount: Number(payload.amount),
       payment_mode: payload.payment_mode,
       reference_number: payload.reference_number || null,
@@ -153,13 +189,14 @@ export function useExpenses() {
     }
 
     if (lastError && !resultData) {
-      // Minimal fallback insert with id, userId, date, category, amount
+      // Minimal fallback insert with id, userId, date, category, amount, description
       const minPayload: any = {
         id: generatedId,
         userId: user.id,
         date: payload.expense_date,
         category: payload.category,
         amount: Number(payload.amount),
+        description: payload.description || payload.vendor || '',
       };
       const minRes = await supabase.from('expenses').insert(minPayload).select().single();
       if (!minRes.error) {
@@ -170,6 +207,9 @@ export function useExpenses() {
     }
 
     await fetchExpenses();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('expenses_updated'));
+    }
     return resultData as Expense;
   };
 
@@ -186,7 +226,7 @@ export function useExpenses() {
     }
     if (payload.category) currentPayload.category = payload.category;
     if (payload.vendor) currentPayload.vendor = payload.vendor;
-    if (payload.description !== undefined) currentPayload.description = payload.description;
+    if (payload.description !== undefined) currentPayload.description = payload.description || payload.vendor || '';
     if (payload.amount !== undefined) currentPayload.amount = Number(payload.amount);
     if (payload.payment_mode) currentPayload.payment_mode = payload.payment_mode;
     if (payload.reference_number) currentPayload.reference_number = payload.reference_number;
@@ -227,6 +267,9 @@ export function useExpenses() {
 
     if (lastError && !resultData) throw lastError;
     await fetchExpenses();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('expenses_updated'));
+    }
     return resultData as Expense;
   };
 
@@ -241,6 +284,9 @@ export function useExpenses() {
 
     if (deleteErr) throw deleteErr;
     await fetchExpenses();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('expenses_updated'));
+    }
   };
 
   // Compute summary stats
