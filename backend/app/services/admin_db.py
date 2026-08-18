@@ -663,52 +663,47 @@ async def get_audit_logs(page: int = 1, limit: int = 20) -> Dict[str, Any]:
 
 async def get_user_admin_notes(user_id: str) -> str:
     """
-    Fetches private administrative notes for a specific user ID.
-    Looks in Supabase public.users column first, then falls back to local SQLite.
+    Fetches private administrative notes for a specific user ID from local SQLite database.
     """
-    use_supabase = False
-    # Check if table exists AND contains admin_notes column
-    url, headers = _get_supabase_client()
-    if url and headers.get("apikey"):
-        try:
-            async with httpx.AsyncClient(timeout=4.0) as client:
-                res = await client.get(f"{url}/rest/v1/users?select=uid,admin_notes&limit=1", headers=headers)
-                use_supabase = (res.status_code == 200 or res.status_code == 204)
-        except Exception:
-            use_supabase = False
-            
-    if use_supabase:
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                res = await client.get(f"{url}/rest/v1/users?uid=eq.{user_id}&select=admin_notes", headers=headers)
-                if res.status_code == 200 and res.json():
-                    return res.json()[0].get("admin_notes") or ""
-        except Exception as e:
-            logger.error(f"Supabase user notes fetch failed: {str(e)}")
-            
-    # Local SQLite Fallback
-    conn = sqlite3.connect(SQLITE_DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT notes FROM user_admin_notes WHERE user_id = ?", (user_id,))
-    row = cursor.fetchone()
-    notes = row[0] if row else ""
-    conn.close()
-    return notes
+    try:
+        conn = sqlite3.connect(SQLITE_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT notes FROM user_admin_notes WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        notes = row[0] if row else ""
+        conn.close()
+        return notes
+    except Exception as e:
+        logger.error(f"Failed to fetch user admin notes for {user_id}: {str(e)}")
+        return ""
 
 async def save_user_admin_notes(user_id: str, notes: str) -> bool:
     """
-    Saves private administrative notes for a user.
-    Attempts to update Supabase public.users first, then falls back to SQLite.
+    Saves private administrative notes for a user in local SQLite.
     """
-    url, headers = _get_supabase_client()
-    use_supabase = False
-    if url and headers.get("apikey"):
-        try:
-            async with httpx.AsyncClient(timeout=4.0) as client:
-                res = await client.get(f"{url}/rest/v1/users?select=uid,admin_notes&limit=1", headers=headers)
-                use_supabase = (res.status_code == 200 or res.status_code == 204)
-        except Exception:
-            use_supabase = False
+    try:
+        conn = sqlite3.connect(SQLITE_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_admin_notes (
+                user_id TEXT PRIMARY KEY,
+                notes TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("""
+            INSERT INTO user_admin_notes (user_id, notes, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+                notes = excluded.notes,
+                updated_at = CURRENT_TIMESTAMP
+        """, (user_id, notes))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save user admin notes for {user_id}: {str(e)}")
+        return False
             
     if use_supabase:
         try:

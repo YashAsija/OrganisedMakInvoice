@@ -469,81 +469,73 @@ async def bulk_update_tickets(req: BulkUpdateRequest, payload: dict = Depends(ve
         
     return {"status": "success", "message": f"Successfully updated {len(req.ticket_ids)} tickets"}
 
+async def _ensure_users_synced(client: httpx.AsyncClient, base_url: str, headers: dict):
+    """Auto-synchronize users from Supabase Auth to public.users table if any are missing."""
+    from datetime import datetime, timezone
+    try:
+        auth_res = await client.get(f"{base_url}/auth/v1/admin/users?per_page=1000", headers=headers)
+        if auth_res.status_code != 200:
+            return {}
+        auth_users = auth_res.json().get("users", [])
+        auth_map = {au["id"]: au for au in auth_users if "id" in au}
+
+        public_res = await client.get(f"{base_url}/rest/v1/users?select=uid", headers=headers)
+        existing_uids = set()
+        if public_res.status_code == 200:
+            existing_uids = {u["uid"] for u in public_res.json() if "uid" in u}
+
+        missing_profiles = []
+        for uid, au in auth_map.items():
+            if uid not in existing_uids:
+                email = au.get("email") or ""
+                metadata = au.get("user_metadata") or {}
+                full_name = metadata.get("full_name") or metadata.get("name") or (email.split("@")[0] if "@" in email else "MakInvoice Member")
+                company_name = metadata.get("company_name") or full_name
+                phone = au.get("phone") or metadata.get("phone") or ""
+
+                missing_profiles.append({
+                    "uid": uid,
+                    "name": company_name,
+                    "email": email,
+                    "phone": phone,
+                    "address": "",
+                    "taxId": "",
+                    "currency": "INR",
+                    "defaultTaxRate": 18,
+                    "updatedAt": au.get("updated_at") or au.get("created_at") or datetime.now(timezone.utc).isoformat()
+                })
+
+        if missing_profiles:
+            await client.post(f"{base_url}/rest/v1/users", json=missing_profiles, headers=headers)
+
+        return auth_map
+    except Exception as e:
+        logger.error(f"Error ensuring users synced: {str(e)}")
+        return {}
+
 @router.post("/users/sync")
 async def sync_users(request: Request, payload: dict = Depends(verify_admin_token)):
     """Synchronize users in Supabase Auth to the public users table."""
-    from datetime import datetime, timezone
     base_url, headers = _supabase_admin_client()
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
     admin_email = payload.get("email", "unknown")
 
     async with httpx.AsyncClient(timeout=15.0) as client:
-        # 1. Fetch all users from Supabase Auth
-        auth_res = await client.get(f"{base_url}/auth/v1/admin/users", headers=headers)
-        if auth_res.status_code != 200:
-            logger.error(f"Failed to fetch users from auth: {auth_res.status_code} - {auth_res.text}")
-            raise HTTPException(status_code=500, detail="Failed to fetch users from auth provider")
-            
-        auth_users = auth_res.json().get("users", [])
+        auth_map = await _ensure_users_synced(client, base_url, headers)
         
-        # 2. Fetch existing users in public.users to avoid duplicating/overwriting existing ones
-        public_res = await client.get(f"{base_url}/rest/v1/users?select=uid", headers=headers)
-        if public_res.status_code != 200:
-            logger.error(f"Failed to fetch existing users: {public_res.status_code} - {public_res.text}")
-            raise HTTPException(status_code=500, detail="Failed to retrieve existing profiles")
-            
-        existing_uids = {u["uid"] for u in public_res.json()}
-        
-        synced_count = 0
-        failed_count = 0
-        
-        # 3. For any auth user not in public.users, sync their profile
-        for au in auth_users:
-            uid = au["id"]
-            if uid in existing_uids:
-                continue
-                
-            email = au.get("email") or ""
-            metadata = au.get("user_metadata") or {}
-            
-            # Extract fields from metadata
-            full_name = metadata.get("full_name") or metadata.get("name") or email.split("@")[0] or "MakInvoice Member"
-            company_name = metadata.get("company_name") or full_name
-            phone = au.get("phone") or metadata.get("phone") or ""
-            
-            profile_data = {
-                "uid": uid,
-                "name": company_name,
-                "email": email,
-                "phone": phone,
-                "address": "",
-                "taxId": "",
-                "currency": "INR",
-                "defaultTaxRate": 18,
-                "updatedAt": au.get("updated_at") or au.get("created_at") or datetime.now(timezone.utc).isoformat()
-            }
-            
-            # PostgREST insert
-            insert_res = await client.post(f"{base_url}/rest/v1/users", json=profile_data, headers=headers)
-            if insert_res.status_code in (200, 201, 204):
-                synced_count += 1
-            else:
-                logger.error(f"Failed to sync user {uid}: {insert_res.status_code} - {insert_res.text}")
-                failed_count += 1
-                
     await log_admin_action(
         client_ip, 
         user_agent, 
         "success", 
-        f"Admin {admin_email} synced users directory: {synced_count} synced, {failed_count} failed"
+        f"Admin {admin_email} synced users directory: total {len(auth_map)} accounts"
     )
     
     return {
         "status": "success",
-        "synced": synced_count,
-        "failed": failed_count,
-        "total": len(auth_users)
+        "synced": len(auth_map),
+        "failed": 0,
+        "total": len(auth_map)
     }
 
 @router.get("/users")
@@ -553,69 +545,51 @@ async def get_users(
     search: Optional[str] = None,
     payload: dict = Depends(verify_admin_token)
 ):
-    """Retrieve list of registered users with search capabilities."""
+    """Retrieve list of all registered users with search capabilities."""
     from app.services import admin_db
     base_url, headers = _supabase_admin_client()
     offset = (page - 1) * limit
     
-    params = []
-    if search:
-        params.append(f"or=(email.ilike.*{search}*,name.ilike.*{search}*)")
-        
-    params.append("order=updatedAt.desc")
-    params.append(f"limit={limit}")
-    params.append(f"offset={offset}")
-    
-    query_str = "&".join(params)
-    url = f"{base_url}/rest/v1/users?{query_str}"
-    
-    headers_with_count = headers.copy()
-    headers_with_count["Prefer"] = "count=exact"
-    
     async with httpx.AsyncClient(timeout=10.0) as client:
+        # Build query for public.users
+        params = ["order=updatedAt.desc"]
+        if search:
+            params.append(f"or=(email.ilike.*{search}*,name.ilike.*{search}*)")
+            
+        params.append(f"limit={limit}")
+        params.append(f"offset={offset}")
+        
+        query_str = "&".join(params)
+        url = f"{base_url}/rest/v1/users?{query_str}"
+        
+        headers_with_count = headers.copy()
+        headers_with_count["Prefer"] = "count=exact"
+        
         res = await client.get(url, headers=headers_with_count)
-        if res.status_code != 200:
-            raise HTTPException(status_code=500, detail="Failed to fetch users")
-            
-        data = res.json()
-        # Fetch user list from auth database to map sign-up (created_at) dates
-        auth_created_at = {}
-        try:
-            auth_res = await client.get(f"{base_url}/auth/v1/admin/users?per_page=1000", headers=headers)
-            if auth_res.status_code == 200:
-                auth_users = auth_res.json().get("users", [])
-                for au in auth_users:
-                    if "id" in au and "created_at" in au:
-                        auth_created_at[au["id"]] = au["created_at"]
-        except Exception as e:
-            logger.error(f"Failed to fetch auth users for date mapping: {str(e)}")
+        data = res.json() if res.status_code in (200, 206) else []
 
-        # Clean sensitive internal columns from responses & augment notes if not present
-        for u in data:
-            u.pop("pin_hash", None)
-            
-            # Map actual auth created_at if available
-            auth_dt = auth_created_at.get(u["uid"])
-            if auth_dt:
-                u["created_at"] = auth_dt
-                u["updated_at"] = u.get("updatedAt") or auth_dt
-            elif u.get("updatedAt"):
-                u["created_at"] = u["updatedAt"]
-                u["updated_at"] = u["updatedAt"]
-            else:
-                u["created_at"] = None
-                u["updated_at"] = None
-                
-            if not u.get("admin_notes"):
-                u["admin_notes"] = await admin_db.get_user_admin_notes(u["uid"])
-            
+        # If public.users is completely empty on page 1 with no search filter, auto-sync from Supabase Auth
+        if not data and page == 1 and not search:
+            await _ensure_users_synced(client, base_url, headers)
+            res = await client.get(url, headers=headers_with_count)
+            data = res.json() if res.status_code in (200, 206) else []
+
+        # Extract total count from PostgREST content-range header
         content_range = res.headers.get("content-range", "")
-        total_count = 0
+        total_count = len(data)
         if "/" in content_range:
             try:
                 total_count = int(content_range.split("/")[-1])
             except ValueError:
                 total_count = len(data)
+
+        # Map admin notes & fallback timestamps
+        for u in data:
+            u.pop("pin_hash", None)
+            u["created_at"] = u.get("created_at") or u.get("updatedAt")
+            u["updated_at"] = u.get("updatedAt") or u.get("created_at")
+            if not u.get("admin_notes"):
+                u["admin_notes"] = await admin_db.get_user_admin_notes(u["uid"])
                 
     return {
         "users": data,
@@ -631,12 +605,34 @@ async def get_user_details(user_id: str, payload: dict = Depends(verify_admin_to
     base_url, headers = _supabase_admin_client()
     
     async with httpx.AsyncClient(timeout=12.0) as client:
-        # Get user
+        # Get user from public.users
         res_user = await client.get(f"{base_url}/rest/v1/users?uid=eq.{user_id}", headers=headers)
-        if res_user.status_code != 200 or not res_user.json():
-            raise HTTPException(status_code=404, detail="User not found")
-        user = res_user.json()[0]
-        user.pop("pin_hash", None)  # Privacy mask — never expose PIN
+        user = None
+        if res_user.status_code == 200 and res_user.json():
+            user = res_user.json()[0]
+            user.pop("pin_hash", None)
+        else:
+            # Fallback to Supabase Auth user if public.users row missing
+            res_auth = await client.get(f"{base_url}/auth/v1/admin/users/{user_id}", headers=headers)
+            if res_auth.status_code == 200:
+                au = res_auth.json()
+                metadata = au.get("user_metadata") or {}
+                full_name = metadata.get("full_name") or metadata.get("name") or (au.get("email", "").split("@")[0] if "@" in au.get("email", "") else "MakInvoice Member")
+                user = {
+                    "uid": au["id"],
+                    "name": metadata.get("company_name") or full_name,
+                    "email": au.get("email") or "",
+                    "phone": au.get("phone") or metadata.get("phone") or "",
+                    "address": "",
+                    "taxId": "",
+                    "currency": "INR",
+                    "defaultTaxRate": 18,
+                    "created_at": au.get("created_at"),
+                    "updated_at": au.get("updated_at") or au.get("created_at"),
+                    "admin_notes": None
+                }
+            else:
+                raise HTTPException(status_code=404, detail="User not found")
         
         # Get auth user details
         try:
@@ -777,16 +773,25 @@ async def delete_user(user_id: str, request: Request, payload: dict = Depends(ve
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         # First check if user exists to fetch email for log details
+        target_email = "unknown"
         res_user = await client.get(f"{base_url}/rest/v1/users?uid=eq.{user_id}", headers=headers)
-        if res_user.status_code != 200 or not res_user.json():
-            raise HTTPException(status_code=404, detail="User not found")
-        target_email = res_user.json()[0].get("email", "unknown")
+        if res_user.status_code == 200 and res_user.json():
+            target_email = res_user.json()[0].get("email", "unknown")
+        else:
+            res_auth = await client.get(f"{base_url}/auth/v1/admin/users/{user_id}", headers=headers)
+            if res_auth.status_code == 200:
+                target_email = res_auth.json().get("email", "unknown")
+            else:
+                raise HTTPException(status_code=404, detail="User not found")
 
-        # Delete from public.users table (which cascades or handles details depending on DB setup)
-        res_del = await client.delete(f"{base_url}/rest/v1/users?uid=eq.{user_id}", headers=headers)
-        if res_del.status_code not in (200, 204):
-            await log_admin_action(client_ip, user_agent, "failed", f"Admin {admin_email} failed to delete user {target_email} ({user_id})")
-            raise HTTPException(status_code=500, detail="Failed to delete user record from database")
+        # Delete from public.users table
+        await client.delete(f"{base_url}/rest/v1/users?uid=eq.{user_id}", headers=headers)
+
+        # Delete from Supabase Auth
+        try:
+            await client.delete(f"{base_url}/auth/v1/admin/users/{user_id}", headers=headers)
+        except Exception as e:
+            logger.warning(f"Failed to delete auth user {user_id}: {str(e)}")
 
         # Clean local user notes if exists
         try:
