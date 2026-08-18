@@ -14043,7 +14043,7 @@ export default function Dashboard({
 
                 <div className="order-4 lg:order-3 lg:col-span-4 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-6 shadow-xs flex flex-col justify-between">
 
-                  <div className="flex justify-between items-center pb-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
+                  <div className="flex justify-between items-center pb-2.5 sm:pb-3 border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
 
                     <div className="flex items-center gap-2">
 
@@ -14111,7 +14111,7 @@ export default function Dashboard({
 
 
 
-                  <div className="w-full overflow-x-auto mt-3">
+                  <div className="w-full overflow-x-auto mt-1">
 
                     {recentView === 'invoices' ? (
 
