@@ -8170,11 +8170,13 @@ export default function Dashboard({
 
                             </div>
 
-                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                              <h4 className="text-xs font-black text-[#0f172a] dark:text-white uppercase truncate max-w-[150px]">{inv.clientName || 'Draft Profile'}</h4>
-                              {((inv as any).clientCompanyName || (inv as any).clientCompany) && (
+                             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              <h4 className="text-xs font-black text-[#0f172a] dark:text-white uppercase truncate max-w-[150px]">
+                                {((inv as any).clientCompanyName || (inv as any).clientCompany) || inv.clientName || 'Draft Profile'}
+                              </h4>
+                              {((inv as any).clientCompanyName || (inv as any).clientCompany) && inv.clientName && (
                                 <span className="text-[8.5px] font-semibold text-[#0284c7]/80 dark:text-[#38bdf8]/70 bg-[#e0f2fe]/60 dark:bg-[#1b264f]/60 px-1.5 py-0.5 rounded truncate max-w-[110px] border border-[#bae6fd]/40 dark:border-[#223269]/40 leading-tight whitespace-nowrap">
-                                  {(inv as any).clientCompanyName || (inv as any).clientCompany}
+                                  {inv.clientName}
                                 </span>
                               )}
                             </div>
@@ -8819,7 +8821,7 @@ export default function Dashboard({
 
                       <th className="px-4 py-3.5">Invoice / Type</th>
 
-                      <th className="px-4 py-3.5">Recipient Client Name</th>
+                      <th className="px-4 py-3.5">Company Name</th>
 
                       <th className="px-4 py-3.5">Billing Terms / Due</th>
 
@@ -8904,10 +8906,12 @@ export default function Dashboard({
                           <td className="px-4 py-3.5">
 
                             <div className="flex items-center gap-1.5 max-w-[200px] flex-wrap">
-                              <span className="font-black text-[#0f172a] dark:text-white uppercase truncate max-w-[140px]">{inv.clientName || 'Draft Profile'}</span>
-                              {((inv as any).clientCompanyName || (inv as any).clientCompany) && (
+                              <span className="font-black text-[#0f172a] dark:text-white uppercase truncate max-w-[140px]">
+                                {((inv as any).clientCompanyName || (inv as any).clientCompany) || inv.clientName || 'Draft Profile'}
+                              </span>
+                              {((inv as any).clientCompanyName || (inv as any).clientCompany) && inv.clientName && (
                                 <span className="text-[9px] font-semibold text-[#0284c7]/80 dark:text-[#38bdf8]/70 bg-[#e0f2fe]/60 dark:bg-[#1b264f]/60 px-1.5 py-0.5 rounded truncate max-w-[100px] border border-[#bae6fd]/40 dark:border-[#223269]/40 leading-tight whitespace-nowrap">
-                                  {(inv as any).clientCompanyName || (inv as any).clientCompany}
+                                  {inv.clientName}
                                 </span>
                               )}
                             </div>
@@ -10682,20 +10686,6 @@ export default function Dashboard({
 
                 </div>
 
-                <button
-
-                  onClick={() => setIsExpenseLoggerOpen(true)}
-
-                  className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-[#0284c7] dark:bg-[#38bdf8] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] hover:translate-y-[-1px] active:translate-y-0 active:scale-[0.98] text-white dark:text-[#0b1329] rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer"
-
-                >
-
-                  <Plus className="w-3.5 h-3.5" />
-
-                  <span>Log Expense</span>
-
-                </button>
-
               </div>
 
             </div>
@@ -11034,7 +11024,7 @@ export default function Dashboard({
 
             {/* Income and Expense Analytics report */}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
 
               {/* Gross Profit Card */}
 
@@ -11576,7 +11566,7 @@ export default function Dashboard({
 
                   <div
 
-                    className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl px-5 py-4 flex items-center gap-3 flex-wrap relative"
+                    className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl px-4 sm:px-5 py-3.5 sm:py-4 flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 relative"
 
                     style={{ boxShadow: '0 1px 3px rgba(2,132,199,0.06)' }}
 
@@ -11586,7 +11576,7 @@ export default function Dashboard({
 
                     <span className="text-[9px] font-black uppercase tracking-widest text-[#64748b]/60 dark:text-zinc-500 shrink-0">Trend Period</span>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none min-w-0">
 
                       {RANGE_OPTS.map(opt => {
 
@@ -11602,7 +11592,7 @@ export default function Dashboard({
 
                             onClick={() => setReportsChartRange(opt.key)}
 
-                            className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all duration-150 cursor-pointer ${
+                            className={`px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-[11px] font-bold transition-all duration-150 cursor-pointer shrink-0 whitespace-nowrap ${
 
                               isActive
 
@@ -12276,17 +12266,17 @@ export default function Dashboard({
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-              {/* List of outstanding invoices with due dates */}
+              {/* Box 1: Recent Tax Invoices */}
 
               <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs">
 
                 <div className="flex justify-between items-center pb-4 border-b border-[#bae6fd]/30 dark:border-zinc-800">
 
-                  <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Receivables Aging & Pending Bills</h3>
+                  <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Recent Tax Invoices</h3>
 
-                  <span className="text-[10px] font-mono font-black text-rose-500 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-lg border border-rose-200/50 dark:border-rose-900/30">
+                  <span className="text-[10px] font-mono font-black text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-lg border border-indigo-200/50 dark:border-indigo-900/30">
 
-                    {reportedInvoices.filter(i => i.status === 'pending').length} Pending
+                    {reportedInvoices.length} Invoices
 
                   </span>
 
@@ -12294,18 +12284,20 @@ export default function Dashboard({
 
                 <div className="w-full overflow-x-auto mt-3 text-sans">
 
-                  {reportedInvoices.filter(i => i.status === 'pending').length === 0 ? (
+                  {reportedInvoices.length === 0 ? (
 
                     <div className="py-8 text-center">
 
-                      <p className="text-xs text-[#64748b]/80 font-medium">No outstanding receivables in this filtered bracket.</p>
+                      <p className="text-xs text-[#64748b]/80 font-medium">No tax invoices recorded in this filtered period.</p>
 
                     </div>
 
                   ) : (
 
                     <>
+
                       {/* Desktop Table View */}
+
                       <table className="hidden sm:table w-full text-left text-xs border-collapse">
 
                         <thead>
@@ -12316,7 +12308,7 @@ export default function Dashboard({
 
                             <th className="py-2.5 font-black">CLIENT NAME</th>
 
-                            <th className="py-2.5 font-black">DUE DATE</th>
+                            <th className="py-2.5 font-black">DATE</th>
 
                             <th className="py-2.5 font-black">AMOUNT</th>
 
@@ -12330,65 +12322,47 @@ export default function Dashboard({
 
                         <tbody>
 
-                          {reportedInvoices.filter(i => i.status === 'pending').slice(0, 3).map(inv => (
+                          {reportedInvoices.slice(0, 2).map(inv => (
 
                             <tr key={inv.id} className="border-b border-[#bae6fd]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20">
 
-                              <td className="py-3 font-extrabold text-[#0f172a] dark:text-white">{inv.invoiceNumber}</td>
+                              <td className="py-3 font-extrabold text-[#0f172a] dark:text-white font-mono">{inv.invoiceNumber}</td>
 
-                              <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[150px]">{inv.clientName}</td>
+                              <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[140px]">{inv.clientName}</td>
 
-                              <td className="py-3 font-medium text-rose-500 font-sans">Due: {inv.dueDate || inv.date}</td>
-
+                              <td className="py-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans">{inv.date}</td>
                               <td className="py-3 font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{formatNum(inv.grandTotal)}</td>
-
                               <td className="py-3">
-
-                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-900/30 text-amber-600 dark:text-amber-400">
-
-                                  PENDING
-
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
+                                  {inv.status}
                                 </span>
-
                               </td>
-
                               <td className="py-3 text-right">
-
                                 <button 
-
                                   onClick={() => setActivePreviewInvoice(inv)}
-
                                   className="text-[#64748b] hover:text-[#0f172a] dark:hover:text-white p-1 cursor-pointer"
-
                                 >
-
                                   <MoreVertical className="w-4 h-4" />
-
                                 </button>
-
                               </td>
-
                             </tr>
-
                           ))}
-
                         </tbody>
-
                       </table>
 
                       {/* Mobile Card List View */}
                       <div className="block sm:hidden space-y-3">
-                        {reportedInvoices.filter(i => i.status === 'pending').slice(0, 3).map(inv => (
+                        {reportedInvoices.slice(0, 2).map(inv => (
                           <div key={inv.id} className="p-3 bg-slate-50 dark:bg-zinc-900/40 rounded-xl border border-[#bae6fd]/20 dark:border-zinc-800 space-y-2 relative">
                             <div className="flex justify-between items-center pr-6">
-                              <span className="font-extrabold text-[#0f172a] dark:text-white text-xs">{inv.invoiceNumber}</span>
-                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-900/30 text-amber-600 dark:text-amber-400">
-                                PENDING
+                              <span className="font-extrabold text-[#0f172a] dark:text-white text-xs font-mono">{inv.invoiceNumber}</span>
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
+                                {inv.status}
                               </span>
                             </div>
                             <div className="font-bold text-[#64748b] dark:text-zinc-300 text-xs pr-6">{inv.clientName}</div>
                             <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-100 dark:border-zinc-800">
-                              <span className="font-medium text-rose-500">Due: {inv.dueDate || inv.date}</span>
+                              <span className="font-medium text-[#64748b]/80 dark:text-zinc-400">{inv.date}</span>
                               <span className="font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{formatNum(inv.grandTotal)}</span>
                             </div>
                             <div className="absolute right-2 top-2">
@@ -12403,193 +12377,113 @@ export default function Dashboard({
                         ))}
                       </div>
                     </>
-
                   )}
 
-                  {reportedInvoices.filter(i => i.status === 'pending').length > 3 && (
-
+                  {reportedInvoices.length > 2 && (
                     <div className="mt-3 pt-3 border-t border-[#bae6fd]/30 dark:border-zinc-800 text-center">
-
                       <button 
-
                         onClick={() => setActiveTab('invoices')} 
-
-                        className="text-[9px] font-black uppercase tracking-wider text-rose-500 hover:text-rose-600 transition-colors"
-
+                        className="text-[9px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 hover:opacity-80 transition-opacity"
                       >
-
-                        See More Pending Bills &rarr;
-
+                        View All Tax Invoices &rarr;
                       </button>
-
                     </div>
-
                   )}
-
                 </div>
-
               </div>
 
-
-
-              {/* Business Expenses Ledger logged */}
-
+              {/* Box 2: Recent Purchase Bills */}
               <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs">
-
                 <div className="flex justify-between items-center pb-4 border-b border-[#bae6fd]/30 dark:border-zinc-800">
-
-                  <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Logged Expenditure Ledgers</h3>
-
+                  <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Recent Purchase Bills</h3>
                   <span className="text-[10px] font-mono font-black text-rose-500 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-lg border border-rose-200/50 dark:border-rose-900/30">
-
-                    {reportedExpenses.length} Expenses
-
+                    {purchaseInvoices.length} Bills
                   </span>
-
                 </div>
-
                 <div className="w-full overflow-x-auto mt-3 text-sans">
-
-                  {reportedExpenses.length === 0 ? (
-
+                  {purchaseInvoices.length === 0 ? (
                     <div className="py-8 text-center">
-
-                      <p className="text-xs text-[#64748b]/80 font-medium">No registered business expenses in this bracket. Use &apos;Log Expense&apos; above to enter write-offs.</p>
-
+                      <p className="text-xs text-[#64748b]/80 font-medium">No purchase bills recorded in this system.</p>
                     </div>
-
                   ) : (
-
                     <>
                       {/* Desktop Table View */}
                       <table className="hidden sm:table w-full text-left text-xs border-collapse">
-
                         <thead>
-
                           <tr className="text-[10px] font-black uppercase text-[#64748b]/60 tracking-wider border-b border-[#bae6fd]/30">
-
-                            <th className="py-2.5 font-black">CATEGORY</th>
-
-                            <th className="py-2.5 font-black">DESCRIPTION</th>
-
-                            <th className="py-2.5 font-black">CHARGED DATE</th>
-
+                            <th className="py-2.5 font-black">BILL ID</th>
+                            <th className="py-2.5 font-black">VENDOR NAME</th>
+                            <th className="py-2.5 font-black">DATE</th>
                             <th className="py-2.5 font-black">AMOUNT</th>
-
+                            <th className="py-2.5 font-black">STATUS</th>
                             <th className="py-2.5"></th>
-
                           </tr>
-
                         </thead>
-
                         <tbody>
-
-                          {(showAllExpenses ? reportedExpenses : reportedExpenses.slice(0, 3)).map(exp => (
-
-                            <tr key={exp.id} className="border-b border-[#bae6fd]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 group">
-
-                              <td className="py-3 font-extrabold text-[#0f172a] dark:text-white uppercase tracking-tight font-mono text-[10px]">{exp.category}</td>
-
-                              <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[200px]">{exp.description || 'General category expenditure'}</td>
-
-                              <td className="py-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans">{exp.date}</td>
-
-                              <td className="py-3 font-extrabold font-mono text-rose-500">-{currencySymbol}{formatNum(exp.amount)}</td>
-
-                              <td className="py-3 text-right">
-
-                                <button
-
-                                  onClick={() => onDeleteExpense(exp.id)}
-
-                                  className="text-[#64748b]/60 hover:text-rose-500 transition-opacity p-1 cursor-pointer rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20"
-
-                                  aria-label="Delete expense"
-
-                                >
-
-                                  <Trash2 className="w-3.5 h-3.5" />
-
-                                </button>
-
+                          {purchaseInvoices.slice(0, 2).map(pb => (
+                            <tr key={pb.id} className="border-b border-[#bae6fd]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20">
+                              <td className="py-3 font-extrabold text-[#0f172a] dark:text-white font-mono">{pb.invoiceNumber}</td>
+                              <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[140px]">{pb.clientName}</td>
+                              <td className="py-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans">{pb.date}</td>
+                              <td className="py-3 font-extrabold font-mono text-rose-500">-{currencySymbol}{formatNum(pb.grandTotal)}</td>
+                              <td className="py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(pb.status)}`}>
+                                  {pb.status}
+                                </span>
                               </td>
-
+                              <td className="py-3 text-right">
+                                <button 
+                                  onClick={() => setActivePreviewInvoice(pb)}
+                                  className="text-[#64748b] hover:text-[#0f172a] dark:hover:text-white p-1 cursor-pointer"
+                                >
+                                  <MoreVertical className="w-4 h-4" />
+                                </button>
+                              </td>
                             </tr>
-
                           ))}
-
                         </tbody>
-
                       </table>
 
                       {/* Mobile Card List View */}
                       <div className="block sm:hidden space-y-3">
-                        {(showAllExpenses ? reportedExpenses : reportedExpenses.slice(0, 3)).map(exp => (
-                          <div key={exp.id} className="p-3 bg-slate-50 dark:bg-zinc-900/40 rounded-xl border border-[#bae6fd]/20 dark:border-zinc-800 space-y-2 relative">
-                            <div className="flex justify-between items-center">
-                              <span className="font-extrabold text-[#0f172a] dark:text-white uppercase tracking-tight font-mono text-[9px]">{exp.category}</span>
-                              <span className="font-medium text-[#64748b]/80 dark:text-zinc-400 text-xs">{exp.date}</span>
+                        {purchaseInvoices.slice(0, 2).map(pb => (
+                          <div key={pb.id} className="p-3 bg-slate-50 dark:bg-zinc-900/40 rounded-xl border border-[#bae6fd]/20 dark:border-zinc-800 space-y-2 relative">
+                            <div className="flex justify-between items-center pr-6">
+                              <span className="font-extrabold text-[#0f172a] dark:text-white text-xs font-mono">{pb.invoiceNumber}</span>
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(pb.status)}`}>
+                                {pb.status}
+                              </span>
                             </div>
-                            <div className="font-bold text-[#64748b] dark:text-zinc-300 text-xs">{exp.description || 'General category expenditure'}</div>
+                            <div className="font-bold text-[#64748b] dark:text-zinc-300 text-xs pr-6">{pb.clientName}</div>
                             <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-100 dark:border-zinc-800">
-                              <span className="font-extrabold font-mono text-rose-500">-{currencySymbol}{formatNum(exp.amount)}</span>
-                              <button
-                                onClick={() => onDeleteExpense(exp.id)}
-                                className="text-[#64748b]/60 hover:text-rose-500 transition-opacity p-1 cursor-pointer rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20"
-                                aria-label="Delete expense"
+                              <span className="font-medium text-[#64748b]/80 dark:text-zinc-400">{pb.date}</span>
+                              <span className="font-extrabold font-mono text-rose-500">-{currencySymbol}{formatNum(pb.grandTotal)}</span>
+                            </div>
+                            <div className="absolute right-2 top-2">
+                              <button 
+                                onClick={() => setActivePreviewInvoice(pb)}
+                                className="text-[#64748b] hover:text-[#0f172a] dark:hover:text-white p-1 cursor-pointer"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <MoreVertical className="w-4 h-4" />
                               </button>
                             </div>
                           </div>
                         ))}
                       </div>
                     </>
-
                   )}
 
-                  {!showAllExpenses && reportedExpenses.length > 3 && (
-
+                  {purchaseInvoices.length > 2 && (
                     <div className="mt-3 pt-3 border-t border-[#bae6fd]/30 dark:border-zinc-800 text-center">
-
                       <button 
-
-                        onClick={() => setShowAllExpenses(true)} 
-
+                        onClick={() => setActiveTab('invoices')} 
                         className="text-[9px] font-black uppercase tracking-wider text-rose-500 hover:text-rose-600 transition-colors"
-
                       >
-
-                        See More Expenditures &rarr;
-
+                        View All Purchase Bills &rarr;
                       </button>
-
                     </div>
-
                   )}
-
-                  {showAllExpenses && reportedExpenses.length > 3 && (
-
-                    <div className="mt-3 pt-3 border-t border-[#bae6fd]/30 dark:border-zinc-800 text-center">
-
-                      <button 
-
-                        onClick={() => setShowAllExpenses(false)} 
-
-                        className="text-[9px] font-black uppercase tracking-wider text-[#64748b] hover:text-[#0f172a] transition-colors"
-
-                      >
-
-                        Collapse &uarr;
-
-                      </button>
-
-                    </div>
-
-                  )}
-
                 </div>
-
               </div>
 
             </div>
@@ -13268,7 +13162,7 @@ export default function Dashboard({
 
                 <div className="order-1 lg:order-1 lg:col-span-3 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-6 shadow-xs flex flex-col justify-between">
 
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="flex justify-between items-start pb-3 sm:pb-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex-wrap gap-2">
 
                     <div>
 
@@ -13282,59 +13176,59 @@ export default function Dashboard({
 
                       <p className="text-[9px] sm:text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">Real-time earnings, pending receivables, and direct expense tracking</p>
 
+                      <div className="mt-2 w-fit">
+
+                        <select 
+
+                          value={dashboardChartRange} 
+
+                          onChange={(e) => setDashboardChartRange(e.target.value as any)}
+
+                          className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd] hover:border-[#0284c7] dark:border-[#223269] dark:hover:border-[#38bdf8] focus:border-[#0f172a] dark:focus:border-zinc-500 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 focus:outline-none cursor-pointer transition-colors duration-150"
+
+                          style={{ boxShadow: 'inset 0 1px 3px rgba(2,132,199,0.08)' }}
+
+                        >
+
+                          <option value="7d">Last 7 Days</option>
+
+                          <option value="1m">Last Month</option>
+
+                          <option value="3m">Last 3 Months</option>
+
+                          <option value="6m">Last 6 Months</option>
+
+                          <option value="1y">Last 1 Year</option>
+
+                          <option value="all">All Time</option>
+
+                        </select>
+
+                      </div>
+
                     </div>
 
 
 
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                    <div className="flex items-center gap-2.5 sm:gap-4 text-[8px] sm:text-[9px] font-black tracking-wider text-[#64748b]/80 dark:text-zinc-400 mt-1 font-mono">
 
-                      <select 
+                      <span className="flex items-center gap-1 sm:gap-1.5">
 
-                        value={dashboardChartRange} 
+                        <span className="w-2 sm:w-2.5 h-0.5" style={{ backgroundColor: theme === 'dark' ? '#38bdf8' : '#0284c7' }} /> EARN
 
-                        onChange={(e) => setDashboardChartRange(e.target.value as any)}
+                      </span>
 
-                        className="bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white border border-[#bae6fd] dark:border-[#223269] text-[9px] sm:text-[10px] font-bold rounded-lg px-2 sm:px-2.5 py-1 focus:outline-none focus:border-[#0284c7] cursor-pointer transition-colors"
+                      <span className="flex items-center gap-1 sm:gap-1.5">
 
-                      >
+                        <span className="w-2 sm:w-2.5 h-0.5 border-t border-dashed" style={{ borderColor: theme === 'dark' ? '#60a5fa' : '#2563eb' }} /> DUE
 
-                        <option value="7d">Last 7 Days</option>
+                      </span>
 
-                        <option value="1m">Last Month</option>
+                      <span className="flex items-center gap-1 sm:gap-1.5">
 
-                        <option value="3m">Last 3 Months</option>
+                        <span className="w-2 sm:w-2.5 h-0.5 border-t border-dotted" style={{ borderColor: '#A855F7' }} /> EXP
 
-                        <option value="6m">Last 6 Months</option>
-
-                        <option value="1y">Last 1 Year</option>
-
-                        <option value="all">All Time</option>
-
-                      </select>
-
-
-
-                      <div className="flex items-center gap-1.5 sm:gap-2 text-[8px] sm:text-[9px] font-black tracking-wider text-[#64748b] dark:text-zinc-400">
-
-                        <span className="flex items-center gap-1">
-
-                          <span className="w-2 h-0.5" style={{ backgroundColor: theme === 'dark' ? '#38bdf8' : '#0284c7' }} /> EARN
-
-                        </span>
-
-                        <span className="flex items-center gap-1">
-
-                          <span className="w-2 h-0.5 border-t border-dashed" style={{ borderColor: theme === 'dark' ? '#60a5fa' : '#2563eb' }} /> DUE
-
-                        </span>
-
-                        <span className="flex items-center gap-1">
-
-                          <span className="w-2 h-0.5 border-t border-dotted" style={{ borderColor: '#A855F7' }} /> EXP
-
-                        </span>
-
-                      </div>
+                      </span>
 
                     </div>
 
@@ -13723,12 +13617,12 @@ export default function Dashboard({
                               className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd] hover:border-[#0284c7] dark:border-[#223269] dark:hover:border-[#38bdf8] focus:border-[#0f172a] dark:focus:border-zinc-500 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 focus:outline-none cursor-pointer transition-colors duration-150"
                               style={{ boxShadow: 'inset 0 1px 3px rgba(2,132,199,0.08)' }}
                             >
-                              <option value="7d">7 Days</option>
-                              <option value="1m">Monthly</option>
-                              <option value="3m">Quarterly</option>
-                              <option value="6m">Half Year</option>
-                              <option value="1y">Yearly</option>
-                              <option value="all">All Years</option>
+                              <option value="7d">Last 7 Days</option>
+                              <option value="1m">Last Month</option>
+                              <option value="3m">Last 3 Months</option>
+                              <option value="6m">Last 6 Months</option>
+                              <option value="1y">Last 1 Year</option>
+                              <option value="all">All Time</option>
                             </select>
                           </div>
                         </div>
@@ -13865,167 +13759,173 @@ export default function Dashboard({
 
                       <>
 
-                        <div className="flex flex-col items-center justify-center py-4 relative">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 py-2">
 
-                          <svg className="w-36 h-36" viewBox="0 0 200 200">
+                          {/* Pie / Donut Chart on Left */}
 
-                            {/* Base track */}
+                          <div className="flex flex-col items-center justify-center relative shrink-0">
 
-                            <circle cx="100" cy="100" r="70" fill="none" stroke={theme === 'dark' ? '#1b264f' : '#e0f2fe'} strokeWidth="18" />
+                            <svg className="w-32 h-32 sm:w-36 sm:h-36" viewBox="0 0 200 200">
 
-                            
+                              {/* Base track */}
 
-                            {/* Earnings — emerald */}
+                              <circle cx="100" cy="100" r="70" fill="none" stroke={theme === 'dark' ? '#1b264f' : '#e0f2fe'} strokeWidth="18" />
 
-                            <circle 
+                              
 
-                              cx="100" cy="100" r="70" fill="none" stroke="#10B981" strokeWidth="18" 
+                              {/* Earnings — emerald */}
 
-                              strokeDasharray={`${earnDash} ${c}`} strokeDashoffset="0" 
+                              <circle 
 
-                              strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
+                                cx="100" cy="100" r="70" fill="none" stroke="#10B981" strokeWidth="18" 
 
-                            />
+                                strokeDasharray={`${earnDash} ${c}`} strokeDashoffset="0" 
 
-                            
+                                strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
 
-                            {/* Receivables — amber */}
+                              />
 
-                            <circle 
+                              
 
-                              cx="100" cy="100" r="70" fill="none" stroke="#F59E0B" strokeWidth="18" 
+                              {/* Receivables — amber */}
 
-                              strokeDasharray={`${recvDash} ${c}`} strokeDashoffset={`-${earnDash}`} 
+                              <circle 
 
-                              strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
+                                cx="100" cy="100" r="70" fill="none" stroke="#F59E0B" strokeWidth="18" 
 
-                            />
+                                strokeDasharray={`${recvDash} ${c}`} strokeDashoffset={`-${earnDash}`} 
 
+                                strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
 
-
-                            {/* Stock (Purchases) — rose */}
-
-                            <circle 
-
-                              cx="100" cy="100" r="70" fill="none" stroke="#F43F5E" strokeWidth="18" 
-
-                              strokeDasharray={`${stockDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash}`} 
-
-                              strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
-
-                            />
+                              />
 
 
 
-                            {/* Expenses (Supabase) — purple */}
+                              {/* Stock (Purchases) — rose */}
 
-                            <circle 
+                              <circle 
 
-                              cx="100" cy="100" r="70" fill="none" stroke="#A855F7" strokeWidth="18" 
+                                cx="100" cy="100" r="70" fill="none" stroke="#F43F5E" strokeWidth="18" 
 
-                              strokeDasharray={`${expDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash + stockDash}`} 
+                                strokeDasharray={`${stockDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash}`} 
 
-                              strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
+                                strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
 
-                            />
-
-
-
-                            {/* Net Taxes — sky */}
-
-                            <circle 
-
-                              cx="100" cy="100" r="70" fill="none" stroke="#38BDF8" strokeWidth="18" 
-
-                              strokeDasharray={`${taxDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash + stockDash + expDash}`} 
-
-                              strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
-
-                            />
+                              />
 
 
 
-                            {/* Total Billed inside circle */}
+                              {/* Expenses (Supabase) — purple */}
 
-                            <text x="100" y="98" textAnchor="middle" className="text-[13px] font-black" fill={theme === 'dark' ? '#f8fafc' : '#0f172a'}>
+                              <circle 
 
-                              {currencySymbol}{(totalBilledCenter >= 1000 ? (totalBilledCenter / 1000).toFixed(1) + 'k' : (totalBilledCenter === 0 ? '0' : totalBilledCenter))}
+                                cx="100" cy="100" r="70" fill="none" stroke="#A855F7" strokeWidth="18" 
 
-                            </text>
+                                strokeDasharray={`${expDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash + stockDash}`} 
 
-                            <text x="100" y="116" textAnchor="middle" className="text-[9px] font-black uppercase tracking-wider" fill={theme === 'dark' ? '#94a3b8' : '#475569'}>
+                                strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
 
-                              BILLED
-
-                            </text>
-
-                          </svg>
-
-                        </div>
+                              />
 
 
 
-                        {/* Legend list */}
+                              {/* Net Taxes — sky */}
 
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-2.5 text-[10px] font-bold text-[#64748b]/90 dark:text-zinc-400 mt-2 px-1">
+                              <circle 
 
-                          <div className="flex items-center justify-between gap-1">
+                                cx="100" cy="100" r="70" fill="none" stroke="#38BDF8" strokeWidth="18" 
 
-                            <span className="flex items-center gap-1.5 whitespace-nowrap">
+                                strokeDasharray={`${taxDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash + stockDash + expDash}`} 
 
-                              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" /> Earnings
+                                strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
 
-                            </span>
+                              />
 
-                            <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((totalBilled / segTotal) * 100)}%</span>
+
+
+                              {/* Total Billed inside circle */}
+
+                              <text x="100" y="98" textAnchor="middle" className="text-[13px] font-black" fill={theme === 'dark' ? '#f8fafc' : '#0f172a'}>
+
+                                {currencySymbol}{(totalBilledCenter >= 1000 ? (totalBilledCenter / 1000).toFixed(1) + 'k' : (totalBilledCenter === 0 ? '0' : totalBilledCenter))}
+
+                              </text>
+
+                              <text x="100" y="116" textAnchor="middle" className="text-[9px] font-black uppercase tracking-wider" fill={theme === 'dark' ? '#94a3b8' : '#475569'}>
+
+                                BILLED
+
+                              </text>
+
+                            </svg>
 
                           </div>
 
-                          <div className="flex items-center justify-between gap-1">
 
-                            <span className="flex items-center gap-1.5 whitespace-nowrap">
 
-                              <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" /> Receivables
+                          {/* Legend List on Right */}
 
-                            </span>
+                          <div className="flex flex-col gap-1.5 w-full text-[10px] font-bold text-[#64748b]/90 dark:text-zinc-400">
 
-                            <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((totalOutstanding / segTotal) * 100)}%</span>
+                            <div className="flex items-center justify-between gap-2">
 
-                          </div>
+                              <span className="flex items-center gap-1.5 whitespace-nowrap">
 
-                          <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-[#bae6fd]/40 dark:border-[#223269]/40">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" /> Earnings
 
-                            <span className="flex items-center gap-1.5 whitespace-nowrap">
+                              </span>
 
-                              <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" /> Purchases
+                              <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((totalBilled / segTotal) * 100)}%</span>
 
-                            </span>
+                            </div>
 
-                            <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((totalPurchaseAmount / segTotal) * 100)}%</span>
+                            <div className="flex items-center justify-between gap-2">
 
-                          </div>
+                              <span className="flex items-center gap-1.5 whitespace-nowrap">
 
-                          <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-[#bae6fd]/40 dark:border-[#223269]/40">
+                                <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" /> Receivables
 
-                            <span className="flex items-center gap-1.5 whitespace-nowrap">
+                              </span>
 
-                              <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" /> Expenses
+                              <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((totalOutstanding / segTotal) * 100)}%</span>
 
-                            </span>
+                            </div>
 
-                            <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((expenseStats.totalExpenses / segTotal) * 100)}%</span>
+                            <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#bae6fd]/40 dark:border-[#223269]/40">
 
-                          </div>
+                              <span className="flex items-center gap-1.5 whitespace-nowrap">
 
-                          <div className="col-span-2 flex items-center justify-between gap-1 pt-1.5 border-t border-[#bae6fd]/40 dark:border-[#223269]/40">
+                                <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" /> Purchases
 
-                            <span className="flex items-center gap-1.5 whitespace-nowrap">
+                              </span>
 
-                              <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" /> Net GST
+                              <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((totalPurchaseAmount / segTotal) * 100)}%</span>
 
-                            </span>
+                            </div>
 
-                            <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((netTaxLiability / segTotal) * 100)}%</span>
+                            <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#bae6fd]/40 dark:border-[#223269]/40">
+
+                              <span className="flex items-center gap-1.5 whitespace-nowrap">
+
+                                <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" /> Expenses
+
+                              </span>
+
+                              <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((expenseStats.totalExpenses / segTotal) * 100)}%</span>
+
+                            </div>
+
+                            <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#bae6fd]/40 dark:border-[#223269]/40">
+
+                              <span className="flex items-center gap-1.5 whitespace-nowrap">
+
+                                <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" /> Net GST
+
+                              </span>
+
+                              <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((netTaxLiability / segTotal) * 100)}%</span>
+
+                            </div>
 
                           </div>
 
@@ -14041,9 +13941,9 @@ export default function Dashboard({
 
                 {/* Recent Billing Table / Recent Expenses (Mobile: 4th, Desktop: Row 2 Left 66.7% / Full span) */}
 
-                <div className="order-4 lg:order-3 lg:col-span-4 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3 sm:p-4 pb-2 sm:pb-3 shadow-xs flex flex-col justify-start">
+                <div className="order-4 lg:order-3 lg:col-span-4 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3 sm:p-4 pb-1 sm:pb-2 shadow-xs flex flex-col justify-start">
 
-                  <div className="flex justify-between items-center pb-2 border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
+                  <div className="flex justify-between items-center pb-1.5 border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
 
                     <div className="flex items-center gap-2">
 
@@ -14131,17 +14031,17 @@ export default function Dashboard({
 
                             <tr className="text-[10px] font-black uppercase text-[#64748b]/60 dark:text-zinc-400 tracking-wider border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
 
-                              <th className="py-2 pr-3 font-black whitespace-nowrap">INV ID</th>
+                              <th className="py-1.5 pr-3 font-black whitespace-nowrap">INV ID</th>
 
-                              <th className="py-2 px-3 font-black whitespace-nowrap">CLIENT NAME</th>
+                              <th className="py-1.5 px-3 font-black whitespace-nowrap">CLIENT NAME</th>
 
-                              <th className="py-2 px-3 font-black whitespace-nowrap">DUE DATE</th>
+                              <th className="py-1.5 px-3 font-black whitespace-nowrap">DUE DATE</th>
 
-                              <th className="py-2 px-3 font-black whitespace-nowrap">AMOUNT</th>
+                              <th className="py-1.5 px-3 font-black whitespace-nowrap">AMOUNT</th>
 
-                              <th className="py-2 px-3 font-black whitespace-nowrap">STATUS</th>
+                              <th className="py-1.5 px-3 font-black whitespace-nowrap">STATUS</th>
 
-                              <th className="py-2 pl-2"></th>
+                              <th className="py-1.5 pl-2"></th>
 
                             </tr>
 
@@ -14153,15 +14053,15 @@ export default function Dashboard({
 
                               <tr key={inv.id} className="border-b border-[#bae6fd]/20 dark:border-[#223269]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 transition-colors">
 
-                                <td className="py-2.5 pr-3 font-extrabold text-[#0f172a] dark:text-white font-mono whitespace-nowrap">{inv.invoiceNumber}</td>
+                                <td className="py-2 pr-3 font-extrabold text-[#0f172a] dark:text-white font-mono whitespace-nowrap">{inv.invoiceNumber}</td>
 
-                                <td className="py-2.5 px-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[140px]">{inv.clientName}</td>
+                                <td className="py-2 px-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[140px]">{inv.clientName}</td>
 
-                                <td className="py-2.5 px-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans whitespace-nowrap">{inv.dueDate || inv.date}</td>
+                                <td className="py-2 px-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans whitespace-nowrap">{inv.dueDate || inv.date}</td>
 
-                                <td className="py-2.5 px-3 font-extrabold font-mono text-[#0f172a] dark:text-white whitespace-nowrap">{currencySymbol}{formatNum(inv.grandTotal)}</td>
+                                <td className="py-2 px-3 font-extrabold font-mono text-[#0f172a] dark:text-white whitespace-nowrap">{currencySymbol}{formatNum(inv.grandTotal)}</td>
 
-                                <td className="py-2.5 px-3 whitespace-nowrap">
+                                <td className="py-2 px-3 whitespace-nowrap">
 
                                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
 
@@ -14171,7 +14071,7 @@ export default function Dashboard({
 
                                 </td>
 
-                                <td className="py-2.5 pl-2 text-right">
+                                <td className="py-2 pl-2 text-right">
 
                                   <button 
 
@@ -14215,15 +14115,15 @@ export default function Dashboard({
 
                             <tr className="text-[10px] font-black uppercase text-[#64748b]/60 dark:text-zinc-400 tracking-wider border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
 
-                              <th className="py-2 pr-3 font-black whitespace-nowrap">DATE</th>
+                              <th className="py-1.5 pr-3 font-black whitespace-nowrap">DATE</th>
 
-                              <th className="py-2 px-3 font-black whitespace-nowrap">CATEGORY</th>
+                              <th className="py-1.5 px-3 font-black whitespace-nowrap">CATEGORY</th>
 
-                              <th className="py-2 px-3 font-black whitespace-nowrap">VENDOR</th>
+                              <th className="py-1.5 px-3 font-black whitespace-nowrap">VENDOR</th>
 
-                              <th className="py-2 px-3 font-black whitespace-nowrap">AMOUNT</th>
+                              <th className="py-1.5 px-3 font-black whitespace-nowrap">AMOUNT</th>
 
-                              <th className="py-2 px-3 font-black whitespace-nowrap">STATUS</th>
+                              <th className="py-1.5 px-3 font-black whitespace-nowrap">STATUS</th>
 
                             </tr>
 
@@ -14235,9 +14135,9 @@ export default function Dashboard({
 
                               <tr key={exp.id} className="border-b border-[#bae6fd]/20 dark:border-[#223269]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 transition-colors">
 
-                                <td className="py-2.5 pr-3 font-mono text-[11px] text-[#0f172a] dark:text-white font-bold whitespace-nowrap">{exp.expense_date}</td>
+                                <td className="py-2 pr-3 font-mono text-[11px] text-[#0f172a] dark:text-white font-bold whitespace-nowrap">{exp.expense_date}</td>
 
-                                <td className="py-2.5 px-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[110px]">
+                                <td className="py-2 px-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[110px]">
 
                                   <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 text-[9.5px] font-bold">
 
@@ -14247,11 +14147,11 @@ export default function Dashboard({
 
                                 </td>
 
-                                <td className="py-2.5 px-3 font-bold text-[#0f172a] dark:text-white truncate max-w-[130px]">{exp.vendor}</td>
+                                <td className="py-2 px-3 font-bold text-[#0f172a] dark:text-white truncate max-w-[130px]">{exp.vendor}</td>
 
-                                <td className="py-2.5 px-3 font-extrabold font-mono text-[#0f172a] dark:text-white whitespace-nowrap">{currencySymbol}{formatNum(exp.amount)}</td>
+                                <td className="py-2 px-3 font-extrabold font-mono text-[#0f172a] dark:text-white whitespace-nowrap">{currencySymbol}{formatNum(exp.amount)}</td>
 
-                                <td className="py-2.5 px-3 whitespace-nowrap">
+                                <td className="py-2 px-3 whitespace-nowrap">
 
                                   {exp.status === 'paid' ? (
 
