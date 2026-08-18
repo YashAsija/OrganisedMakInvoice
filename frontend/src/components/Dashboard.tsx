@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getFinancialYearShort, getNextInvoiceNumber } from './InvoiceModal';
+import { useExpenses } from '../hooks/useExpenses';
+import { ExpensesPage } from './ExpensesPage';
 
 import * as XLSX from 'xlsx';
 
@@ -68,6 +70,12 @@ import {
   DollarSign,
 
   ArrowRight,
+
+  ReceiptText,
+
+  Package,
+
+  Wallet,
 
   TrendingDown,
 
@@ -331,6 +339,7 @@ export default function Dashboard({
 }: DashboardProps) {
 
   const { confirm } = useConfirm();
+  const { expenses: supabaseExpenses, stats: expenseStats } = useExpenses();
 
   const suffix = userEmail ? `_${encodeURIComponent(userEmail)}` : '';
 
@@ -341,6 +350,7 @@ export default function Dashboard({
   const activeTab = propActiveTab !== undefined ? propActiveTab : localActiveTab;
 
   const setActiveTab = onTabChange !== undefined ? onTabChange : setLocalActiveTab;
+  const [recentView, setRecentView] = useState<'invoices' | 'expenses'>('invoices');
 
   const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise'>(() => {
 
@@ -727,6 +737,8 @@ export default function Dashboard({
   const [hoveredReportsChartIndex2, setHoveredReportsChartIndex2] = useState<number | null>(null);
 
   const [dashboardChartRange, setDashboardChartRange] = useState<'7d' | '1m' | '3m' | '6m' | '1y' | 'all'>('6m');
+  const [purchasesChartRange, setPurchasesChartRange] = useState<'7d' | '1m' | '3m' | '6m' | '1y' | 'all'>('6m');
+  const [hoveredPurchasesChartIndex, setHoveredPurchasesChartIndex] = useState<number | null>(null);
 
   const [reportsChartRange, setReportsChartRange] = useState<'7d' | '1m' | '3m' | '6m' | '1y' | 'all'>('6m');
 
@@ -1963,6 +1975,48 @@ export default function Dashboard({
               )}
 
             </div>
+
+
+
+            {/* Expenses Sidebar Nav Item */}
+
+            <button
+
+              onClick={() => {
+
+                handleTabClick('expenses');
+
+                if (typeof window !== 'undefined') {
+
+                  window.history.pushState(null, '', '/expenses');
+
+                }
+
+              }}
+
+              className={navItemClass('expenses')}
+
+            >
+
+              <div className="flex items-center gap-2.5">
+
+                <div className={iconWrapper(activeTab === 'expenses', 'bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400')}>
+
+                  <ReceiptText className="w-3.5 h-3.5" />
+
+                </div>
+
+                <span>Expenses</span>
+
+              </div>
+
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'expenses' ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800'}`}>
+
+                {expenseStats.count}
+
+              </span>
+
+            </button>
 
 
 
@@ -3914,7 +3968,7 @@ export default function Dashboard({
 
     expenses.forEach(exp => {
 
-      const dateObj = new Date(exp.date);
+      const dateObj = new Date(exp.expense_date || exp.date || '');
 
       if (!isNaN(dateObj.getTime())) {
 
@@ -5054,20 +5108,122 @@ export default function Dashboard({
 
 
 
-  // Non-draft Tax Invoices only for Global Billing Ledger totals & Analytics
-
+  // Non-draft, non-deleted Tax Invoices only for Global Sales Ledger totals & Analytics
   const allLedgerInvoices = useMemo(() => {
     return invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === 'invoice' && !inv.isDeleted);
   }, [invoices]);
 
   const totalBilled = allLedgerInvoices
+    .filter(inv => inv.status !== 'cancelled')
     .reduce((sum, inv) => sum + (inv.status === 'paid' ? (inv.paidAmount ?? inv.grandTotal) : (inv.paidAmount ?? 0)), 0);
 
   const totalOutstanding = allLedgerInvoices
+    .filter(inv => inv.status !== 'cancelled')
     .reduce((sum, inv) => sum + (inv.status === 'paid' ? 0 : Math.max(0, inv.grandTotal - (inv.paidAmount ?? 0))), 0);
 
   const totalTax = allLedgerInvoices
+    .filter(inv => inv.status !== 'cancelled')
     .reduce((sum, inv) => sum + (inv.taxTotal || 0), 0);
+
+  // Purchase Bills Analytics — strictly active purchase bills ('purchases') only
+  const allPurchaseBills = useMemo(() =>
+    invoices.filter(inv =>
+      inv.status !== 'draft' &&
+      inv.status !== 'cancelled' &&
+      !inv.isDeleted &&
+      getInvoiceDocumentType(inv) === 'purchases'
+    ),
+    [invoices]
+  );
+
+  const totalPurchaseAmount = allPurchaseBills.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
+  const totalPurchaseGst    = allPurchaseBills.reduce((sum, inv) => sum + (inv.taxTotal || 0), 0);
+  // Net Tax Liability = GST Collected on Sales − Input Tax Credit from Purchases (floor at 0)
+  const netTaxLiability     = Math.max(0, totalTax - totalPurchaseGst);
+
+  // Total Sales Analytics — sum of all active Tax Invoices grandTotal (irrespective of due or paid)
+  const totalSalesAmount = useMemo(() => {
+    return allLedgerInvoices
+      .filter(inv => inv.status !== 'cancelled')
+      .reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
+  }, [allLedgerInvoices]);
+
+  // Stock Analytics Value = Purchases (Purchase Bills grandTotal) − Sales (Tax Invoices grandTotal)
+  const stockAnalyticsValue = totalPurchaseAmount - totalSalesAmount;
+
+  // Dynamic sparkline heights (px, 2–24 range) based on last 5 months of Total Sales
+  const totalSalesSparklineHeights = useMemo(() => {
+    const now = new Date();
+    const months: number[] = [];
+    for (let i = 4; i >= 0; i--) {
+      const y = new Date(now.getFullYear(), now.getMonth() - i, 1).getFullYear();
+      const m = new Date(now.getFullYear(), now.getMonth() - i, 1).getMonth();
+      const total = allLedgerInvoices
+        .filter(inv => {
+          if (inv.status === 'cancelled') return false;
+          const d = new Date(inv.date);
+          return d.getFullYear() === y && d.getMonth() === m;
+        })
+        .reduce((s, inv) => s + (inv.grandTotal || 0), 0);
+      months.push(total);
+    }
+    const maxM = Math.max(...months, 1);
+    return months.map(v => Math.max(2, Math.round((v / maxM) * 24)));
+  }, [allLedgerInvoices]);
+
+  // Dynamic sparkline heights (px, 2–24 range) based on last 5 months of Stock Net Value (|Purchases - Sales|)
+  const stockSparklineHeights = useMemo(() => {
+    const now = new Date();
+    const months: number[] = [];
+    for (let i = 4; i >= 0; i--) {
+      const y = new Date(now.getFullYear(), now.getMonth() - i, 1).getFullYear();
+      const m = new Date(now.getFullYear(), now.getMonth() - i, 1).getMonth();
+      const pur = allPurchaseBills
+        .filter(inv => { const d = new Date(inv.date); return d.getFullYear() === y && d.getMonth() === m; })
+        .reduce((s, inv) => s + (inv.grandTotal || 0), 0);
+      const sal = allLedgerInvoices
+        .filter(inv => { const d = new Date(inv.date); return d.getFullYear() === y && d.getMonth() === m; })
+        .reduce((s, inv) => s + (inv.grandTotal || 0), 0);
+      months.push(Math.abs(pur - sal));
+    }
+    const maxM = Math.max(...months, 1);
+    return months.map(v => Math.max(2, Math.round((v / maxM) * 24)));
+  }, [allPurchaseBills, allLedgerInvoices]);
+
+  // Dynamic sparkline heights (px, 2–24 range) based on last 5 months of purchase amounts
+  const purchaseSparklineHeights = useMemo(() => {
+    const now = new Date();
+    const months: number[] = [];
+    for (let i = 4; i >= 0; i--) {
+      const y = new Date(now.getFullYear(), now.getMonth() - i, 1).getFullYear();
+      const m = new Date(now.getFullYear(), now.getMonth() - i, 1).getMonth();
+      const total = allPurchaseBills
+        .filter(inv => { const d = new Date(inv.date); return d.getFullYear() === y && d.getMonth() === m; })
+        .reduce((s, inv) => s + (inv.grandTotal || 0), 0);
+      months.push(total);
+    }
+    const maxM = Math.max(...months, 1);
+    return months.map(v => Math.max(2, Math.round((v / maxM) * 24)));
+  }, [allPurchaseBills]);
+
+  // Dynamic sparkline heights (px, 2–24 range) based on last 5 months of Supabase expenses
+  const expenseSparklineHeights = useMemo(() => {
+    const now = new Date();
+    const months: number[] = [];
+    for (let i = 4; i >= 0; i--) {
+      const y = new Date(now.getFullYear(), now.getMonth() - i, 1).getFullYear();
+      const m = new Date(now.getFullYear(), now.getMonth() - i, 1).getMonth();
+      const total = supabaseExpenses
+        .filter(exp => {
+          const d = new Date(exp.expense_date);
+          return d.getFullYear() === y && d.getMonth() === m;
+        })
+        .reduce((s, exp) => s + (Number(exp.amount) || 0), 0);
+      months.push(total);
+    }
+    const maxM = Math.max(...months, 1);
+    return months.map(v => Math.max(2, Math.round((v / maxM) * 24)));
+  }, [supabaseExpenses]);
 
   const totalDraft = invoices
     .filter(inv => inv.status === 'draft' && !inv.isDeleted)
@@ -6663,11 +6819,21 @@ export default function Dashboard({
 
       id: `exp_${Math.random().toString(36).substr(2, 9)}`,
 
-      userId: 'local',
+      user_id: 'local',
+
+      expense_date: expenseDate,
 
       category: expenseCategory === 'Custom' ? (customExpenseCategory.trim() || 'Other') : expenseCategory,
 
+      vendor: 'General Payee',
+
       amount: amountVal,
+
+      payment_mode: 'Cash',
+
+      status: 'paid',
+
+      userId: 'local',
 
       date: expenseDate,
 
@@ -6717,9 +6883,11 @@ export default function Dashboard({
 
   const reportedExpenses = expenses.filter(exp => {
 
-    if (reportStartDate && exp.date < reportStartDate) return false;
+    const expD = exp.expense_date || exp.date || '';
 
-    if (reportEndDate && exp.date > reportEndDate) return false;
+    if (reportStartDate && expD < reportStartDate) return false;
+
+    if (reportEndDate && expD > reportEndDate) return false;
 
     return true;
 
@@ -11150,7 +11318,7 @@ export default function Dashboard({
 
                 reportedExpenses.forEach(exp => {
 
-                  const d = new Date(exp.date);
+                  const d = new Date(exp.expense_date || exp.date || '');
 
                   if (isNaN(d.getTime())) return;
 
@@ -11202,7 +11370,7 @@ export default function Dashboard({
 
                 reportedExpenses.forEach(exp => {
 
-                  const d = new Date(exp.date);
+                  const d = new Date(exp.expense_date || exp.date || '');
 
                   if (isNaN(d.getTime())) return;
 
@@ -11220,7 +11388,7 @@ export default function Dashboard({
 
                 const minYearInv = reportedInvoices.length > 0 ? Math.min(...reportedInvoices.map(i => new Date(i.date).getFullYear())) : now.getFullYear();
 
-                const minYearExp = reportedExpenses.length > 0 ? Math.min(...reportedExpenses.map(e => new Date(e.date).getFullYear())) : now.getFullYear();
+                const minYearExp = reportedExpenses.length > 0 ? Math.min(...reportedExpenses.map(e => new Date(e.expense_date || e.date || '').getFullYear())) : now.getFullYear();
 
                 const startYear = Math.min(minYearInv, minYearExp, now.getFullYear());
 
@@ -11262,7 +11430,7 @@ export default function Dashboard({
 
                 reportedExpenses.forEach(exp => {
 
-                  const d = new Date(exp.date);
+                  const d = new Date(exp.expense_date || exp.date || '');
 
                   if (isNaN(d.getTime())) return;
 
@@ -11310,7 +11478,7 @@ export default function Dashboard({
 
                 reportedExpenses.forEach(exp => {
 
-                  const d = new Date(exp.date);
+                  const d = new Date(exp.expense_date || exp.date || '');
 
                   if (isNaN(d.getTime())) return;
 
@@ -12428,7 +12596,7 @@ export default function Dashboard({
 
         {activeTab === 'dashboard' && (() => {
 
-          const records: { label: string; income: number; receivables: number }[] = [];
+          const records: { label: string; income: number; receivables: number; expenses: number }[] = [];
 
           const now = new Date();
 
@@ -12440,11 +12608,11 @@ export default function Dashboard({
 
               const d = new Date(now); d.setDate(now.getDate() - i);
 
-              records.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, income: 0, receivables: 0 });
+              records.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, income: 0, receivables: 0, expenses: 0 });
 
             }
 
-            invoices.forEach(inv => {
+            allLedgerInvoices.filter(inv => inv.status !== 'cancelled').forEach(inv => {
 
               const d = new Date(inv.date); if (isNaN(d.getTime())) return;
 
@@ -12462,6 +12630,18 @@ export default function Dashboard({
 
             });
 
+            supabaseExpenses.forEach(exp => {
+
+              const d = new Date(exp.expense_date); if (isNaN(d.getTime())) return;
+
+              const lbl = `${d.getDate()}/${d.getMonth() + 1}`;
+
+              const match = records.find(r => r.label === lbl);
+
+              if (match) match.expenses += Number(exp.amount) || 0;
+
+            });
+
           } else if (dashboardChartRange === '1m') {
 
             for (let i = 3; i >= 0; i--) {
@@ -12470,11 +12650,11 @@ export default function Dashboard({
 
               const wStart = new Date(wEnd); wStart.setDate(wEnd.getDate() - 6);
 
-              records.push({ label: `W${4 - i}`, income: 0, receivables: 0, _start: wStart, _end: wEnd } as any);
+              records.push({ label: `W${4 - i}`, income: 0, receivables: 0, expenses: 0, _start: wStart, _end: wEnd } as any);
 
             }
 
-            invoices.forEach(inv => {
+            allLedgerInvoices.filter(inv => inv.status !== 'cancelled').forEach(inv => {
 
               const d = new Date(inv.date); if (isNaN(d.getTime())) return;
 
@@ -12490,9 +12670,19 @@ export default function Dashboard({
 
             });
 
+            supabaseExpenses.forEach(exp => {
+
+              const d = new Date(exp.expense_date); if (isNaN(d.getTime())) return;
+
+              const match = (records as any[]).find(r => d >= r._start && d <= r._end);
+
+              if (match) match.expenses += Number(exp.amount) || 0;
+
+            });
+
           } else if (dashboardChartRange === 'all') {
 
-            const minYearInv = invoices.length > 0 ? Math.min(...invoices.map(i => new Date(i.date).getFullYear())) : now.getFullYear();
+            const minYearInv = allLedgerInvoices.length > 0 ? Math.min(...allLedgerInvoices.map(i => new Date(i.date).getFullYear())) : now.getFullYear();
 
             const startYear = Math.min(minYearInv, now.getFullYear());
 
@@ -12502,11 +12692,11 @@ export default function Dashboard({
 
             for (let y = adjustedStart; y <= endYear; y++) {
 
-              records.push({ label: y.toString(), income: 0, receivables: 0, _year: y } as any);
+              records.push({ label: y.toString(), income: 0, receivables: 0, expenses: 0, _year: y } as any);
 
             }
 
-            invoices.forEach(inv => {
+            allLedgerInvoices.filter(inv => inv.status !== 'cancelled').forEach(inv => {
 
               const d = new Date(inv.date); if (isNaN(d.getTime())) return;
 
@@ -12522,6 +12712,16 @@ export default function Dashboard({
 
             });
 
+            supabaseExpenses.forEach(exp => {
+
+              const d = new Date(exp.expense_date); if (isNaN(d.getTime())) return;
+
+              const match = (records as any[]).find(r => r._year === d.getFullYear());
+
+              if (match) match.expenses += Number(exp.amount) || 0;
+
+            });
+
           } else {
 
             const monthCount = dashboardChartRange === '3m' ? 3 : dashboardChartRange === '6m' ? 6 : 12;
@@ -12532,11 +12732,11 @@ export default function Dashboard({
 
               const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
 
-              records.push({ label: monthsShort[d.getMonth()], income: 0, receivables: 0, _month: d.getMonth(), _year: d.getFullYear() } as any);
+              records.push({ label: monthsShort[d.getMonth()], income: 0, receivables: 0, expenses: 0, _month: d.getMonth(), _year: d.getFullYear() } as any);
 
             }
 
-            invoices.forEach(inv => {
+            allLedgerInvoices.filter(inv => inv.status !== 'cancelled').forEach(inv => {
 
               const d = new Date(inv.date); if (isNaN(d.getTime())) return;
 
@@ -12552,13 +12752,23 @@ export default function Dashboard({
 
             });
 
+            supabaseExpenses.forEach(exp => {
+
+              const d = new Date(exp.expense_date); if (isNaN(d.getTime())) return;
+
+              const match = (records as any[]).find(r => r._month === d.getMonth() && r._year === d.getFullYear());
+
+              if (match) match.expenses += Number(exp.amount) || 0;
+
+            });
+
           }
 
 
 
           // SVG Line coordinates math
 
-          const maxVal = Math.max(...records.map(d => Math.max(d.income, d.receivables)), 10000);
+          const maxVal = Math.max(...records.map(d => Math.max(d.income, d.receivables, d.expenses)), 10000);
 
           const chartWidth = 500;
 
@@ -12594,9 +12804,21 @@ export default function Dashboard({
 
 
 
+          const pointsExpenses = records.map((r, i) => ({
+
+            x: paddingX + (i / (records.length - 1)) * usableWidth,
+
+            y: chartHeight - paddingY - (r.expenses / maxVal) * usableHeight
+
+          }));
+
+
+
           const pathEarnings = pointsEarnings.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
           const pathReceivables = pointsReceivables.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+          const pathExpenses = pointsExpenses.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
 
 
@@ -12610,9 +12832,13 @@ export default function Dashboard({
 
           const receivablesPct = totalInvoicedDash > 0 ? ((totalOutstanding / totalInvoicedDash) * 100).toFixed(1) + '%' : '0%';
 
-          const expensesPct = totalInvoicedDash > 0 ? ((totalReportedExpenses / totalInvoicedDash) * 100).toFixed(1) + '%' : '0%';
+          const purchasesPct = totalInvoicedDash > 0 ? ((totalPurchaseAmount / (totalInvoicedDash + totalPurchaseAmount)) * 100).toFixed(1) + '%' : '0%';
 
-          const taxPct = totalInvoicedDash > 0 ? ((totalTax / totalInvoicedDash) * 100).toFixed(1) + '%' : '0%';
+          const stockNetPct = totalPurchaseAmount > 0 ? (((totalPurchaseAmount - totalSalesAmount) / totalPurchaseAmount) * 100).toFixed(1) + '%' : '0%';
+
+          const overheadPct = totalInvoicedDash > 0 ? ((expenseStats.totalExpenses / totalInvoicedDash) * 100).toFixed(1) + '%' : '0%';
+
+          const taxPct = totalInvoicedDash > 0 ? ((netTaxLiability / totalInvoicedDash) * 100).toFixed(1) + '%' : '0%';
 
 
 
@@ -12622,23 +12848,255 @@ export default function Dashboard({
 
 
 
-              {/* KPI Cards Row */}
+              {/* KPI Cards — Top Row (Total Sales -> Total Purchases -> Stock -> Tax Liabilities) */}
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
 
-                {/* Settled Earnings */}
+                {/* 1. Total Sales */}
 
-                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-emerald-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-indigo-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[160px] h-full overflow-hidden">
 
                   <div className="flex justify-between items-start">
 
-                    <div className="w-8.5 h-8.5 rounded-full bg-[#ECFDF5] text-[#10B981] border border-[#A7F3D0] flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950/80 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
 
-                      <Banknote className="w-4.5 h-4.5" />
+                      <TrendingUp className="w-4 h-4" />
 
                     </div>
 
-                    <span className="text-[10px] font-black text-[#10B981] bg-[#ECFDF5] border border-[#A7F3D0] px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[9px] sm:text-[10px] font-black text-indigo-600 bg-indigo-50 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded-full font-mono">
+
+                      LIVE
+
+                    </span>
+
+                  </div>
+
+                  <div className="mt-2.5">
+
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Total Sales</span>
+
+                    <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
+
+                      {currencySymbol}{formatNum(totalSalesAmount)}
+
+                    </span>
+
+                    <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Tax Invoices Total</span>
+
+                  </div>
+
+                  {/* Sparkline bars */}
+
+                  <div className="flex items-end gap-1 h-5 self-start mt-2">
+
+                    {totalSalesSparklineHeights.map((h, idx) => (
+
+                      <div
+
+                        key={`tss-${idx}`}
+
+                        className={`w-1 rounded-t-sm ${idx === totalSalesSparklineHeights.length - 1 ? 'bg-indigo-500 dark:bg-indigo-400' : idx % 2 === 0 ? 'bg-indigo-400 dark:bg-indigo-500' : 'bg-indigo-300 dark:bg-indigo-700'}`}
+
+                        style={{ height: `${h}px` }}
+
+                      />
+
+                    ))}
+
+                  </div>
+
+                </div>
+
+
+
+                {/* 2. Total Purchases */}
+
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-rose-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[160px] h-full overflow-hidden">
+
+                  <div className="flex justify-between items-start">
+
+                    <div className="w-8 h-8 rounded-full bg-[#FEF2F2] text-[#EF4444] border border-[#FEE2E2] flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+
+                      <MinusCircle className="w-4 h-4" />
+
+                    </div>
+
+                    <span className="text-[9px] sm:text-[10px] font-black text-[#EF4444] bg-[#FEF2F2] border border-[#FEE2E2] px-2 py-0.5 rounded-full font-mono">
+
+                      {purchasesPct}
+
+                    </span>
+
+                  </div>
+
+                  <div className="mt-2.5">
+
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Total Purchases</span>
+
+                    <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
+
+                      {currencySymbol}{formatNum(totalPurchaseAmount)}
+
+                    </span>
+
+                    <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Purchase Bills Value</span>
+
+                  </div>
+
+                  {/* Sparkline bars */}
+
+                  <div className="flex items-end gap-1 h-5 self-start mt-2">
+
+                    {purchaseSparklineHeights.map((h, idx) => (
+
+                      <div
+
+                        key={`ps-${idx}`}
+
+                        className={`w-1 rounded-t-sm ${idx === purchaseSparklineHeights.length - 1 ? 'bg-rose-500 dark:bg-rose-500' : idx % 2 === 0 ? 'bg-rose-400 dark:bg-rose-600' : 'bg-rose-300 dark:bg-rose-700'}`}
+
+                        style={{ height: `${h}px` }}
+
+                      />
+
+                    ))}
+
+                  </div>
+
+                </div>
+
+
+
+                {/* 3. Stock */}
+
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-teal-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[160px] h-full overflow-hidden">
+
+                  <div className="flex justify-between items-start">
+
+                    <div className="w-8 h-8 rounded-full bg-teal-50 text-teal-600 dark:bg-teal-950/80 dark:text-teal-400 border border-teal-200 dark:border-teal-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+
+                      <Package className="w-4 h-4" />
+
+                    </div>
+
+                    <span className="text-[9px] sm:text-[10px] font-black text-teal-600 bg-teal-50 dark:bg-teal-950 dark:text-teal-300 border border-teal-200 dark:border-teal-800 px-2 py-0.5 rounded-full font-mono">
+
+                      {stockNetPct}
+
+                    </span>
+
+                  </div>
+
+                  <div className="mt-2.5">
+
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Stock</span>
+
+                    <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
+
+                      {stockAnalyticsValue < 0 ? '-' : ''}{currencySymbol}{formatNum(Math.abs(stockAnalyticsValue))}
+
+                    </span>
+
+                    <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Purchases − Sales</span>
+
+                  </div>
+
+                  {/* Sparkline bars */}
+
+                  <div className="flex items-end gap-1 h-5 self-start mt-2">
+
+                    {stockSparklineHeights.map((h, idx) => (
+
+                      <div
+
+                        key={`sks-${idx}`}
+
+                        className={`w-1 rounded-t-sm ${idx === stockSparklineHeights.length - 1 ? 'bg-teal-500 dark:bg-teal-400' : idx % 2 === 0 ? 'bg-teal-400 dark:bg-teal-500' : 'bg-teal-300 dark:bg-teal-700'}`}
+
+                        style={{ height: `${h}px` }}
+
+                      />
+
+                    ))}
+
+                  </div>
+
+                </div>
+
+
+
+                {/* 4. Tax Liabilities */}
+
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-sky-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[160px] h-full overflow-hidden">
+
+                  <div className="flex justify-between items-start">
+
+                    <div className="w-8 h-8 rounded-full bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-400 border border-sky-200 dark:border-sky-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+
+                      <Percent className="w-4 h-4" />
+
+                    </div>
+
+                    <span className="text-[9px] sm:text-[10px] font-black text-sky-600 bg-sky-50 dark:bg-sky-950 dark:text-sky-300 border border-sky-200 dark:border-sky-800 px-2 py-0.5 rounded-full font-mono">
+
+                      {taxPct}
+
+                    </span>
+
+                  </div>
+
+                  <div className="mt-2.5">
+
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Tax Liabilities</span>
+
+                    <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
+
+                      {currencySymbol}{formatNum(netTaxLiability)}
+
+                    </span>
+
+                    <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Net GST (after ITC)</span>
+
+                  </div>
+
+                  {/* Sparkline bars */}
+
+                  <div className="flex items-end gap-1 h-5 self-start mt-2">
+
+                    <div className="w-1 bg-sky-200 dark:bg-sky-800 rounded-t-sm h-3" />
+
+                    <div className="w-1 bg-sky-400 dark:bg-sky-600 rounded-t-sm h-2" />
+
+                    <div className="w-1 bg-sky-500 dark:bg-sky-500 rounded-t-sm h-6" />
+
+                    <div className="w-1 bg-sky-300 dark:bg-sky-700 rounded-t-sm h-4" />
+
+                  </div>
+
+                </div>
+
+              </div>
+
+
+
+              {/* KPI Cards — Next Line (Settled Earnings -> Pending Receivables -> Expenses) */}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+
+                {/* 1. Settled Earnings */}
+
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-emerald-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[160px] h-full overflow-hidden">
+
+                  <div className="flex justify-between items-start">
+
+                    <div className="w-8 h-8 rounded-full bg-[#ECFDF5] text-[#10B981] border border-[#A7F3D0] flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+
+                      <Banknote className="w-4 h-4" />
+
+                    </div>
+
+                    <span className="text-[9px] sm:text-[10px] font-black text-[#10B981] bg-[#ECFDF5] border border-[#A7F3D0] px-2 py-0.5 rounded-full font-mono">
 
                       {earningsPct}
 
@@ -12646,21 +13104,23 @@ export default function Dashboard({
 
                   </div>
 
-                  <div className="mt-3">
+                  <div className="mt-2.5">
 
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 dark:text-[#94a3b8]/80 block">Settled Earnings</span>
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Settled Earnings</span>
 
-                    <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
+                    <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
 
                       {currencySymbol}{formatNum(totalBilled)}
 
                     </span>
 
+                    <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Tax Invoices Paid</span>
+
                   </div>
 
                   {/* Sparkline bars */}
 
-                  <div className="flex items-end gap-1 h-6 self-start mt-2">
+                  <div className="flex items-end gap-1 h-5 self-start mt-2">
 
                     <div className="w-1 bg-emerald-200 dark:bg-emerald-800 rounded-t-sm h-2" />
 
@@ -12678,19 +13138,19 @@ export default function Dashboard({
 
 
 
-                {/* Pending Receivables */}
+                {/* 2. Pending Receivables */}
 
-                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-amber-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-amber-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[160px] h-full overflow-hidden">
 
                   <div className="flex justify-between items-start">
 
-                    <div className="w-8.5 h-8.5 rounded-full bg-[#FFFBEB] text-[#F59E0B] border border-[#FEF3C7] flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-[#FFFBEB] text-[#F59E0B] border border-[#FEF3C7] flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
 
                       <CheckSquare className="w-4 h-4" />
 
                     </div>
 
-                    <span className="text-[10px] font-black text-[#F59E0B] bg-[#FFFBEB] border border-[#FEF3C7] px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[9px] sm:text-[10px] font-black text-[#F59E0B] bg-[#FFFBEB] border border-[#FEF3C7] px-2 py-0.5 rounded-full font-mono">
 
                       {receivablesPct}
 
@@ -12698,21 +13158,23 @@ export default function Dashboard({
 
                   </div>
 
-                  <div className="mt-3">
+                  <div className="mt-2.5">
 
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 dark:text-[#94a3b8]/80 block">Pending Receivables</span>
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Pending Receivables</span>
 
-                    <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
+                    <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
 
                       {currencySymbol}{formatNum(totalOutstanding)}
 
                     </span>
 
+                    <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Unpaid Invoices</span>
+
                   </div>
 
                   {/* Sparkline bars */}
 
-                  <div className="flex items-end gap-1 h-6 self-start mt-2">
+                  <div className="flex items-end gap-1 h-5 self-start mt-2">
 
                     <div className="w-1 bg-amber-200 dark:bg-amber-800 rounded-t-sm h-4" />
 
@@ -12730,103 +13192,57 @@ export default function Dashboard({
 
 
 
-                {/* Operating Expenses */}
+                {/* 3. Expenses */}
 
-                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-rose-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-purple-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[160px] h-full overflow-hidden">
 
                   <div className="flex justify-between items-start">
 
-                    <div className="w-8.5 h-8.5 rounded-full bg-[#FEF2F2] text-[#EF4444] border border-[#FEE2E2] flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-950/80 dark:text-purple-400 border border-purple-200 dark:border-purple-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
 
-                      <MinusCircle className="w-4 h-4" />
+                      <ReceiptText className="w-4 h-4" />
 
                     </div>
 
-                    <span className="text-[10px] font-black text-[#EF4444] bg-[#FEF2F2] border border-[#FEE2E2] px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[9px] sm:text-[10px] font-black text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800 px-2 py-0.5 rounded-full font-mono">
 
-                      {expensesPct}
+                      {overheadPct}
 
                     </span>
 
                   </div>
 
-                  <div className="mt-3">
+                  <div className="mt-2.5">
 
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 dark:text-[#94a3b8]/80 block">Operating Expenses</span>
+                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Expenses</span>
 
-                    <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
+                    <span className="text-lg sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
 
-                      {currencySymbol}{formatNum(totalReportedExpenses)}
+                      {currencySymbol}{formatNum(expenseStats.totalExpenses)}
 
                     </span>
+
+                    <span className="text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Direct Operational Overhead</span>
 
                   </div>
 
                   {/* Sparkline bars */}
 
-                  <div className="flex items-end gap-1 h-6 self-start mt-2">
+                  <div className="flex items-end gap-1 h-5 self-start mt-2">
 
-                    <div className="w-1 bg-rose-500 dark:bg-rose-500 rounded-t-sm h-6" />
+                    {expenseSparklineHeights.map((h, idx) => (
 
-                    <div className="w-1 bg-rose-300 dark:bg-rose-700 rounded-t-sm h-3" />
+                      <div
 
-                    <div className="w-1 bg-rose-400 dark:bg-rose-600 rounded-t-sm h-5" />
+                        key={`es-${idx}`}
 
-                    <div className="w-1 bg-rose-200 dark:bg-rose-800 rounded-t-sm h-2" />
+                        className={`w-1 rounded-t-sm ${idx === expenseSparklineHeights.length - 1 ? 'bg-purple-500 dark:bg-purple-400' : idx % 2 === 0 ? 'bg-purple-400 dark:bg-purple-500' : 'bg-purple-300 dark:bg-purple-700'}`}
 
-                    <div className="w-1 bg-rose-400 dark:bg-rose-600 rounded-t-sm h-4" />
+                        style={{ height: `${h}px` }}
 
-                  </div>
+                      />
 
-                </div>
-
-
-
-                {/* Tax Liabilities */}
-
-                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-sky-400 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-5 shadow-xs relative flex flex-col justify-between h-[155px]">
-
-                  <div className="flex justify-between items-start">
-
-                    <div className="w-8.5 h-8.5 rounded-full bg-[#F0F9FF] text-[#0284C7] border border-[#BAE6FD] flex items-center justify-center">
-
-                      <Percent className="w-4 h-4" />
-
-                    </div>
-
-                    <span className="text-[10px] font-black text-[#0284C7] bg-[#F0F9FF] border border-[#BAE6FD] px-2 py-0.5 rounded-full font-mono">
-
-                      {taxPct}
-
-                    </span>
-
-                  </div>
-
-                  <div className="mt-3">
-
-                    <span className="text-[9px] uppercase font-black tracking-wider text-[#64748b]/80 dark:text-[#94a3b8]/80 block">Tax Liabilities</span>
-
-                    <span className="text-xl font-black text-[#0f172a] dark:text-white mt-1 block font-mono">
-
-                      {currencySymbol}{formatNum(totalTax)}
-
-                    </span>
-
-                  </div>
-
-                  {/* Sparkline bars */}
-
-                  <div className="flex items-end gap-1 h-6 self-start mt-2">
-
-                    <div className="w-1 bg-sky-200 dark:bg-sky-800 rounded-t-sm h-3" />
-
-                    <div className="w-1 bg-sky-300 dark:bg-sky-700 rounded-t-sm h-5" />
-
-                    <div className="w-1 bg-sky-400 dark:bg-sky-600 rounded-t-sm h-2" />
-
-                    <div className="w-1 bg-sky-500 dark:bg-sky-500 rounded-t-sm h-6" />
-
-                    <div className="w-1 bg-sky-300 dark:bg-sky-700 rounded-t-sm h-4" />
+                    ))}
 
                   </div>
 
@@ -12836,75 +13252,81 @@ export default function Dashboard({
 
 
 
-              {/* Chart & Donut Middle Grid */}
+              {/* Bento Grid Middle Row: Revenue Intelligence & Purchases Intelligence */}
 
-              <div className="grid grid-cols-1 lg:grid-cols-[1.72fr_1.28fr] gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
 
                 {/* Revenue Intelligence Line Chart */}
 
-                <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                <div className="order-1 lg:order-1 lg:col-span-3 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
 
-                  <div className="flex justify-between items-start pb-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex-wrap gap-2">
+                  <div className="flex flex-wrap justify-between items-center gap-2">
 
                     <div>
 
-                      <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Revenue Intelligence</h3>
+                      <div className="flex items-center gap-2">
 
-                      <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5">Comparative analysis of earnings vs unpaid receivables</span>
+                        <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Revenue Intelligence</h3>
 
-                      {/* Interval dropdown selector */}
-
-                      <div className="mt-2 w-fit">
-
-                        <select
-
-                          value={dashboardChartRange}
-
-                          onChange={(e) => {
-
-                            setDashboardChartRange(e.target.value as any);
-
-                            setHoveredDashboardChartIndex(null);
-
-                          }}
-
-                          className="px-3.5 py-1.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd] hover:border-[#0284c7] dark:border-[#223269] dark:hover:border-[#38bdf8] focus:border-[#0f172a] dark:focus:border-zinc-500 rounded-lg text-[10px] font-black uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 focus:outline-none cursor-pointer transition-colors duration-150"
-
-                          style={{ boxShadow: 'inset 0 1px 3px rgba(2,132,199,0.08)' }}
-
-                        >
-
-                          <option value="7d">7 Days</option>
-
-                          <option value="1m">Monthly</option>
-
-                          <option value="3m">Quarterly</option>
-
-                          <option value="6m">Half Year</option>
-
-                          <option value="1y">Yearly</option>
-
-                          <option value="all">All Years</option>
-
-                        </select>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#ECFDF5] text-[#10B981] dark:bg-emerald-950 dark:text-emerald-400 border border-[#A7F3D0] dark:border-emerald-800">Live</span>
 
                       </div>
 
+                      <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">Real-time earnings, pending receivables, and direct expense tracking</p>
+
                     </div>
 
-                    <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400 mt-1 font-mono">
 
-                      <span className="flex items-center gap-1.5">
 
-                        <span className="w-2.5 h-0.5" style={{ backgroundColor: theme === 'dark' ? '#38bdf8' : '#0284c7' }} /> EARNINGS
+                    <div className="flex items-center gap-3">
 
-                      </span>
+                      <select 
 
-                      <span className="flex items-center gap-1.5">
+                        value={dashboardChartRange} 
 
-                        <span className="w-2.5 h-0.5 border-t border-dashed" style={{ borderColor: theme === 'dark' ? '#60a5fa' : '#2563eb' }} /> RECEIVABLES
+                        onChange={(e) => setDashboardChartRange(e.target.value as any)}
 
-                      </span>
+                        className="bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white border border-[#bae6fd] dark:border-[#223269] text-[10px] font-bold rounded-lg px-2.5 py-1 focus:outline-none focus:border-[#0284c7] cursor-pointer transition-colors"
+
+                      >
+
+                        <option value="7d">Last 7 Days</option>
+
+                        <option value="1m">Last Month</option>
+
+                        <option value="3m">Last 3 Months</option>
+
+                        <option value="6m">Last 6 Months</option>
+
+                        <option value="1y">Last 1 Year</option>
+
+                        <option value="all">All Time</option>
+
+                      </select>
+
+
+
+                      <div className="flex items-center gap-2 text-[9px] font-black tracking-wider text-[#64748b] dark:text-zinc-400">
+
+                        <span className="flex items-center gap-1.5">
+
+                          <span className="w-2.5 h-0.5" style={{ backgroundColor: theme === 'dark' ? '#38bdf8' : '#0284c7' }} /> EARNINGS
+
+                        </span>
+
+                        <span className="flex items-center gap-1.5">
+
+                          <span className="w-2.5 h-0.5 border-t border-dashed" style={{ borderColor: theme === 'dark' ? '#60a5fa' : '#2563eb' }} /> RECEIVABLES
+
+                        </span>
+
+                        <span className="flex items-center gap-1.5">
+
+                          <span className="w-2.5 h-0.5 border-t border-dotted" style={{ borderColor: '#A855F7' }} /> EXPENSES
+
+                        </span>
+
+                      </div>
 
                     </div>
 
@@ -12978,6 +13400,8 @@ export default function Dashboard({
 
                       <path d={pathReceivables} fill="none" stroke={theme === 'dark' ? '#60a5fa' : '#2563eb'} strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
 
+                      <path d={pathExpenses} fill="none" stroke="#A855F7" strokeWidth="1.8" strokeDasharray="2 2" strokeLinecap="round" />
+
 
 
                       {/* Dot indicators */}
@@ -13019,6 +13443,30 @@ export default function Dashboard({
                           r={hoveredDashboardChartIndex === i ? "4.5" : "3"} 
 
                           fill={theme === 'dark' ? '#60a5fa' : '#2563eb'} 
+
+                          stroke="#fff" 
+
+                          strokeWidth={hoveredDashboardChartIndex === i ? "1.5" : "1"} 
+
+                          className="transition-all"
+
+                        />
+
+                      ))}
+
+                      {pointsExpenses.map((pts, i) => (
+
+                        <circle 
+
+                          key={`exp-dot-${i}`} 
+
+                          cx={pts.x} 
+
+                          cy={pts.y} 
+
+                          r={hoveredDashboardChartIndex === i ? "4.5" : "3"} 
+
+                          fill="#A855F7" 
 
                           stroke="#fff" 
 
@@ -13118,7 +13566,7 @@ export default function Dashboard({
 
                         const tooltipWidth = 115;
 
-                        const tooltipHeight = 44;
+                        const tooltipHeight = 54;
 
                         let tooltipX = pt.x - tooltipWidth / 2;
 
@@ -13127,8 +13575,6 @@ export default function Dashboard({
                         if (tooltipX + tooltipWidth > chartWidth - paddingX) tooltipX = chartWidth - paddingX - tooltipWidth;
 
                         const tooltipY = Math.max(paddingY - 5, pt.y - tooltipHeight - 8);
-
-
 
                         return (
 
@@ -13152,15 +13598,21 @@ export default function Dashboard({
 
                             <text x="8" y="12" fill="#e2e8f0" className="text-[8px] font-black uppercase tracking-wider font-mono">{rec.label}</text>
 
-                            <text x="8" y="24" fill="#10B981" className="text-[8px] font-bold font-mono">
+                            <text x="8" y="23" fill="#10B981" className="text-[8px] font-bold font-mono">
 
                               Earn: {currencySymbol}{formatNum(rec.income)}
 
                             </text>
 
-                            <text x="8" y="34" fill="#F59E0B" className="text-[8px] font-bold font-mono">
+                            <text x="8" y="33" fill="#F59E0B" className="text-[8px] font-bold font-mono">
 
                               Due: {currencySymbol}{formatNum(rec.receivables)}
+
+                            </text>
+
+                            <text x="8" y="43" fill="#A855F7" className="text-[8px] font-bold font-mono">
+
+                              Exp: {currencySymbol}{formatNum(rec.expenses)}
 
                             </text>
 
@@ -13176,11 +13628,202 @@ export default function Dashboard({
 
                 </div>
 
+                {/* Purchases Intelligence Line Chart (Mobile: 2nd, Desktop: Row 1 Right 50%) */}
 
+                {(() => {
+                  const purRecords: { label: string; amount: number; gst: number }[] = [];
+                  const nowP = new Date();
 
-                {/* Donut Chart: Revenue Segments */}
+                  if (purchasesChartRange === '7d') {
+                    for (let i = 6; i >= 0; i--) {
+                      const d = new Date(nowP); d.setDate(nowP.getDate() - i);
+                      purRecords.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, amount: 0, gst: 0 });
+                    }
+                    allPurchaseBills.forEach(inv => {
+                      const d = new Date(inv.date); if (isNaN(d.getTime())) return;
+                      const lbl = `${d.getDate()}/${d.getMonth() + 1}`;
+                      const match = purRecords.find(r => r.label === lbl);
+                      if (match) { match.amount += inv.grandTotal || 0; match.gst += inv.taxTotal || 0; }
+                    });
+                  } else if (purchasesChartRange === '1m') {
+                    for (let i = 3; i >= 0; i--) {
+                      const wEnd = new Date(nowP); wEnd.setDate(nowP.getDate() - i * 7);
+                      const wStart = new Date(wEnd); wStart.setDate(wEnd.getDate() - 6);
+                      purRecords.push({ label: `W${4 - i}`, amount: 0, gst: 0, _start: wStart, _end: wEnd } as any);
+                    }
+                    allPurchaseBills.forEach(inv => {
+                      const d = new Date(inv.date); if (isNaN(d.getTime())) return;
+                      const match = (purRecords as any[]).find(r => d >= r._start && d <= r._end);
+                      if (match) { match.amount += inv.grandTotal || 0; match.gst += inv.taxTotal || 0; }
+                    });
+                  } else if (purchasesChartRange === 'all') {
+                    const minYearPur = allPurchaseBills.length > 0 ? Math.min(...allPurchaseBills.map(i => new Date(i.date).getFullYear())) : nowP.getFullYear();
+                    const startYearP = Math.min(minYearPur, nowP.getFullYear());
+                    const endYearP   = nowP.getFullYear();
+                    const adjStartP  = (endYearP - startYearP < 2) ? endYearP - 2 : startYearP;
+                    for (let y = adjStartP; y <= endYearP; y++) {
+                      purRecords.push({ label: y.toString(), amount: 0, gst: 0, _year: y } as any);
+                    }
+                    allPurchaseBills.forEach(inv => {
+                      const d = new Date(inv.date); if (isNaN(d.getTime())) return;
+                      const match = (purRecords as any[]).find(r => r._year === d.getFullYear());
+                      if (match) { match.amount += inv.grandTotal || 0; match.gst += inv.taxTotal || 0; }
+                    });
+                  } else {
+                    const monthCountP  = purchasesChartRange === '3m' ? 3 : purchasesChartRange === '6m' ? 6 : 12;
+                    const monthsShortP = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                    for (let i = monthCountP - 1; i >= 0; i--) {
+                      const d = new Date(nowP.getFullYear(), nowP.getMonth() - i, 1);
+                      purRecords.push({ label: monthsShortP[d.getMonth()], amount: 0, gst: 0, _month: d.getMonth(), _year: d.getFullYear() } as any);
+                    }
+                    allPurchaseBills.forEach(inv => {
+                      const d = new Date(inv.date); if (isNaN(d.getTime())) return;
+                      const match = (purRecords as any[]).find(r => r._month === d.getMonth() && r._year === d.getFullYear());
+                      if (match) { match.amount += inv.grandTotal || 0; match.gst += inv.taxTotal || 0; }
+                    });
+                  }
 
-                <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                  const purChartWidth  = 500;
+                  const purChartHeight = 160;
+                  const purPaddingX    = 40;
+                  const purPaddingY    = 20;
+                  const purUsableW     = purChartWidth - purPaddingX * 2;
+                  const purUsableH     = purChartHeight - purPaddingY * 2;
+                  const purMaxVal      = Math.max(...purRecords.map(d => Math.max(d.amount, d.gst)), 10000);
+
+                  const purPtsAmount = purRecords.map((r, i) => ({
+                    x: purPaddingX + (i / Math.max(purRecords.length - 1, 1)) * purUsableW,
+                    y: purChartHeight - purPaddingY - (r.amount / purMaxVal) * purUsableH
+                  }));
+                  const purPtsGst = purRecords.map((r, i) => ({
+                    x: purPaddingX + (i / Math.max(purRecords.length - 1, 1)) * purUsableW,
+                    y: purChartHeight - purPaddingY - (r.gst / purMaxVal) * purUsableH
+                  }));
+                  const purPathAmount = purPtsAmount.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                  const purPathGst    = purPtsGst.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+                  return (
+                    <div className="order-2 lg:order-2 lg:col-span-3 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                      <div className="flex justify-between items-start pb-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex-wrap gap-2">
+                        <div>
+                          <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Purchases Intelligence</h3>
+                          <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5">Comparative analysis of purchase spend vs GST paid (Input Tax Credit)</span>
+                          <div className="mt-2 w-fit">
+                            <select
+                              value={purchasesChartRange}
+                              onChange={(e) => { setPurchasesChartRange(e.target.value as any); setHoveredPurchasesChartIndex(null); }}
+                              className="px-3.5 py-1.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd] hover:border-[#0284c7] dark:border-[#223269] dark:hover:border-[#38bdf8] focus:border-[#0f172a] dark:focus:border-zinc-500 rounded-lg text-[10px] font-black uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 focus:outline-none cursor-pointer transition-colors duration-150"
+                              style={{ boxShadow: 'inset 0 1px 3px rgba(2,132,199,0.08)' }}
+                            >
+                              <option value="7d">7 Days</option>
+                              <option value="1m">Monthly</option>
+                              <option value="3m">Quarterly</option>
+                              <option value="6m">Half Year</option>
+                              <option value="1y">Yearly</option>
+                              <option value="all">All Years</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400 mt-1 font-mono">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-0.5 inline-block" style={{ backgroundColor: '#F43F5E' }} /> PURCHASES
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-0.5 inline-block border-t border-dashed" style={{ borderColor: '#F97316' }} /> GST PAID
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="w-full select-none mt-2">
+                        <svg className="w-full" viewBox={`0 0 ${purChartWidth} ${purChartHeight}`} fill="none" preserveAspectRatio="xMidYMid meet">
+                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                            const y = purPaddingY + ratio * purUsableH;
+                            const labelValue = Math.round(purMaxVal - (ratio * purMaxVal));
+                            return (
+                              <g key={`pgrid-${i}`}>
+                                <line x1={purPaddingX} y1={y} x2={purChartWidth - purPaddingX} y2={y} stroke={theme === 'dark' ? '#223269' : '#bae6fd'} strokeWidth="0.5" strokeOpacity="0.4" />
+                                <text x={purPaddingX - 10} y={y + 3} textAnchor="end" className="text-[8px] font-mono fill-[#64748b]/70 dark:fill-zinc-400">
+                                  {labelValue >= 1000 ? `${(labelValue / 1000).toFixed(0)}k` : labelValue}
+                                </text>
+                              </g>
+                            );
+                          })}
+
+                          {hoveredPurchasesChartIndex !== null && purPtsAmount[hoveredPurchasesChartIndex] && (
+                            <line
+                              x1={purPtsAmount[hoveredPurchasesChartIndex].x} y1={purPaddingY}
+                              x2={purPtsAmount[hoveredPurchasesChartIndex].x} y2={purChartHeight - purPaddingY}
+                              stroke="#F43F5E" strokeWidth="1" strokeDasharray="2 2" className="opacity-75"
+                            />
+                          )}
+
+                          <path d={purPathAmount} fill="none" stroke="#F43F5E" strokeWidth="2.5" strokeLinecap="round" />
+                          <path d={purPathGst}    fill="none" stroke="#F97316" strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
+
+                          {purPtsAmount.map((pts, i) => (
+                            <circle key={`pur-amt-${i}`} cx={pts.x} cy={pts.y}
+                              r={hoveredPurchasesChartIndex === i ? "4.5" : "3"}
+                              fill="#F43F5E" stroke="#fff" strokeWidth={hoveredPurchasesChartIndex === i ? "1.5" : "1"} className="transition-all" />
+                          ))}
+                          {purPtsGst.map((pts, i) => (
+                            <circle key={`pur-gst-${i}`} cx={pts.x} cy={pts.y}
+                              r={hoveredPurchasesChartIndex === i ? "4.5" : "3"}
+                              fill="#F97316" stroke="#fff" strokeWidth={hoveredPurchasesChartIndex === i ? "1.5" : "1"} className="transition-all" />
+                          ))}
+
+                          {purRecords.map((r, i) => {
+                            const x = purPaddingX + (i / Math.max(purRecords.length - 1, 1)) * purUsableW;
+                            const isHov = hoveredPurchasesChartIndex === i;
+                            return (
+                              <text key={`pur-lbl-${i}`} x={x} y={purChartHeight - 4} textAnchor="middle"
+                                className={`text-[9px] font-mono transition-all ${isHov ? 'font-black fill-[#F43F5E]' : 'font-bold fill-[#64748b]/80 dark:fill-zinc-400'}`}>
+                                {r.label}
+                              </text>
+                            );
+                          })}
+
+                          {purRecords.map((_, i) => {
+                            const colW = purUsableW / Math.max(purRecords.length - 1, 1);
+                            const x    = purPaddingX + i * colW - colW / 2;
+                            return (
+                              <rect key={`pur-zone-${i}`}
+                                x={i === 0 ? purPaddingX : x} y={purPaddingY}
+                                width={i === 0 || i === purRecords.length - 1 ? colW / 2 : colW}
+                                height={purUsableH} fill="transparent" className="cursor-pointer"
+                                onMouseEnter={() => setHoveredPurchasesChartIndex(i)}
+                                onMouseLeave={() => setHoveredPurchasesChartIndex(null)}
+                                onTouchStart={() => setHoveredPurchasesChartIndex(i)}
+                                onClick={() => setHoveredPurchasesChartIndex(i)}
+                              />
+                            );
+                          })}
+
+                          {hoveredPurchasesChartIndex !== null && purRecords[hoveredPurchasesChartIndex] && (() => {
+                            const rec = purRecords[hoveredPurchasesChartIndex];
+                            const pt  = purPtsAmount[hoveredPurchasesChartIndex] || { x: 250, y: 80 };
+                            const ttW = 130; const ttH = 52;
+                            let ttX   = pt.x - ttW / 2;
+                            if (ttX < purPaddingX) ttX = purPaddingX;
+                            if (ttX + ttW > purChartWidth - purPaddingX) ttX = purChartWidth - purPaddingX - ttW;
+                            const ttY = Math.max(purPaddingY - 5, pt.y - ttH - 8);
+                            return (
+                              <g transform={`translate(${ttX}, ${ttY})`} className="pointer-events-none filter drop-shadow-[0_2px_4px_rgba(244,63,94,0.12)]">
+                                <rect width={ttW} height={ttH} rx="6" fill="rgba(11,19,41,0.95)" stroke="#F43F5E" strokeWidth="0.5" />
+                                <text x="8" y="12" fill="#e2e8f0" className="text-[8px] font-black uppercase tracking-wider font-mono">{rec.label}</text>
+                                <text x="8" y="26" fill="#F43F5E" className="text-[8px] font-bold font-mono">Spend: {currencySymbol}{formatNum(rec.amount)}</text>
+                                <text x="8" y="40" fill="#F97316" className="text-[8px] font-bold font-mono">GST: {currencySymbol}{formatNum(rec.gst)}</text>
+                              </g>
+                            );
+                          })()}
+                        </svg>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Revenue Segments Donut (Mobile: 3rd [after Purchases], Desktop: Row 2 Middle 33.3%) */}
+
+                <div className="order-3 lg:order-4 lg:col-span-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
 
                   <div>
 
@@ -13192,9 +13835,7 @@ export default function Dashboard({
 
                   {(() => {
 
-                    const totalExpensesVal = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-
-                    const segTotal = totalBilled + totalOutstanding + totalExpensesVal + totalTax || 1;
+                    const segTotal = (totalBilled + totalOutstanding + totalPurchaseAmount + expenseStats.totalExpenses + netTaxLiability) || 1;
 
                     const c = 440; // circumference
 
@@ -13202,9 +13843,13 @@ export default function Dashboard({
 
                     const recvDash = (totalOutstanding / segTotal) * c;
 
-                    const expDash = (totalExpensesVal / segTotal) * c;
+                    const stockDash = (totalPurchaseAmount / segTotal) * c;
 
-                    const taxDash = (totalTax / segTotal) * c;
+                    const expDash = (expenseStats.totalExpenses / segTotal) * c;
+
+                    const taxDash = (netTaxLiability / segTotal) * c;
+
+                    const totalBilledCenter = totalBilled + totalOutstanding;
 
 
 
@@ -13250,13 +13895,13 @@ export default function Dashboard({
 
 
 
-                            {/* Expenses — rose */}
+                            {/* Stock (Purchases) — rose */}
 
                             <circle 
 
                               cx="100" cy="100" r="70" fill="none" stroke="#F43F5E" strokeWidth="18" 
 
-                              strokeDasharray={`${expDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash}`} 
+                              strokeDasharray={`${stockDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash}`} 
 
                               strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
 
@@ -13264,13 +13909,27 @@ export default function Dashboard({
 
 
 
-                            {/* Taxes — sky */}
+                            {/* Expenses (Supabase) — purple */}
+
+                            <circle 
+
+                              cx="100" cy="100" r="70" fill="none" stroke="#A855F7" strokeWidth="18" 
+
+                              strokeDasharray={`${expDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash + stockDash}`} 
+
+                              strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
+
+                            />
+
+
+
+                            {/* Net Taxes — sky */}
 
                             <circle 
 
                               cx="100" cy="100" r="70" fill="none" stroke="#38BDF8" strokeWidth="18" 
 
-                              strokeDasharray={`${taxDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash + expDash}`} 
+                              strokeDasharray={`${taxDash} ${c}`} strokeDashoffset={`-${earnDash + recvDash + stockDash + expDash}`} 
 
                               strokeLinecap="round" className="transform -rotate-90 origin-center transition-all duration-500" 
 
@@ -13278,17 +13937,17 @@ export default function Dashboard({
 
 
 
-                            {/* Total inside circle */}
+                            {/* Total Billed inside circle */}
 
                             <text x="100" y="98" textAnchor="middle" className="text-[13px] font-black" fill={theme === 'dark' ? '#f8fafc' : '#0f172a'}>
 
-                              {currencySymbol}{(segTotal >= 1000 ? (segTotal / 1000).toFixed(1) + 'k' : (segTotal === 1 ? '0' : segTotal))}
+                              {currencySymbol}{(totalBilledCenter >= 1000 ? (totalBilledCenter / 1000).toFixed(1) + 'k' : (totalBilledCenter === 0 ? '0' : totalBilledCenter))}
 
                             </text>
 
                             <text x="100" y="116" textAnchor="middle" className="text-[9px] font-black uppercase tracking-wider" fill={theme === 'dark' ? '#94a3b8' : '#475569'}>
 
-                              TOTAL
+                              BILLED
 
                             </text>
 
@@ -13300,9 +13959,9 @@ export default function Dashboard({
 
                         {/* Legend list */}
 
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-3 text-[10px] font-bold text-[#64748b]/90 dark:text-zinc-400 mt-2 px-2">
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-2.5 text-[10px] font-bold text-[#64748b]/90 dark:text-zinc-400 mt-2 px-1">
 
-                          <div className="flex items-center justify-between gap-1.5">
+                          <div className="flex items-center justify-between gap-1">
 
                             <span className="flex items-center gap-1.5 whitespace-nowrap">
 
@@ -13314,7 +13973,7 @@ export default function Dashboard({
 
                           </div>
 
-                          <div className="flex items-center justify-between gap-1.5">
+                          <div className="flex items-center justify-between gap-1">
 
                             <span className="flex items-center gap-1.5 whitespace-nowrap">
 
@@ -13326,27 +13985,39 @@ export default function Dashboard({
 
                           </div>
 
-                          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-[#bae6fd]/40 dark:border-[#223269]/40">
+                          <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-[#bae6fd]/40 dark:border-[#223269]/40">
 
                             <span className="flex items-center gap-1.5 whitespace-nowrap">
 
-                              <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" /> Expenses
+                              <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" /> Purchases
 
                             </span>
 
-                            <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((totalExpensesVal / segTotal) * 100)}%</span>
+                            <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((totalPurchaseAmount / segTotal) * 100)}%</span>
 
                           </div>
 
-                          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-[#bae6fd]/40 dark:border-[#223269]/40">
+                          <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-[#bae6fd]/40 dark:border-[#223269]/40">
 
                             <span className="flex items-center gap-1.5 whitespace-nowrap">
 
-                              <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" /> Taxes
+                              <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" /> Expenses
 
                             </span>
 
-                            <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((totalTax / segTotal) * 100)}%</span>
+                            <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((expenseStats.totalExpenses / segTotal) * 100)}%</span>
+
+                          </div>
+
+                          <div className="col-span-2 flex items-center justify-between gap-1 pt-1.5 border-t border-[#bae6fd]/40 dark:border-[#223269]/40">
+
+                            <span className="flex items-center gap-1.5 whitespace-nowrap">
+
+                              <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" /> Net GST
+
+                            </span>
+
+                            <span className="font-extrabold text-[#0f172a] dark:text-white font-mono">{Math.round((netTaxLiability / segTotal) * 100)}%</span>
 
                           </div>
 
@@ -13360,31 +14031,71 @@ export default function Dashboard({
 
                 </div>
 
-              </div>
+                {/* Recent Billing Table / Recent Expenses (Mobile: 4th, Desktop: Row 2 Left 33.3%) */}
 
-
-
-              {/* Bottom Records Table & Compliance Protocol Grid */}
-
-              <div className="grid grid-cols-1 lg:grid-cols-[1.72fr_1.28fr] gap-6">
-
-                {/* Recent Billing Table */}
-
-                <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                <div className="order-4 lg:order-3 lg:col-span-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
 
                   <div className="flex justify-between items-center pb-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
 
-                    <h3 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Recent Billing Records</h3>
+                    <div className="flex items-center gap-2">
+
+                      <button
+
+                        onClick={() => setRecentView('invoices')}
+
+                        className={`text-xs font-black uppercase tracking-tight cursor-pointer transition-colors ${recentView === 'invoices' ? 'text-[#0f172a] dark:text-white border-b-2 border-[#0284c7] pb-0.5' : 'text-[#64748b] hover:text-[#0f172a] dark:hover:text-white'}`}
+
+                        style={{ fontFamily: "'Fraunces', serif" }}
+
+                      >
+
+                        Recent Invoices
+
+                      </button>
+
+                      <span className="text-[#64748b]/40 text-xs">|</span>
+
+                      <button
+
+                        onClick={() => setRecentView('expenses')}
+
+                        className={`text-xs font-black uppercase tracking-tight cursor-pointer transition-colors ${recentView === 'expenses' ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-500 pb-0.5' : 'text-[#64748b] hover:text-[#0f172a] dark:hover:text-white'}`}
+
+                        style={{ fontFamily: "'Fraunces', serif" }}
+
+                      >
+
+                        Recent Expenses ({expenseStats.count})
+
+                      </button>
+
+                    </div>
+
+
 
                     <button 
 
-                      onClick={() => setActiveTab('invoices')}
+                      onClick={() => {
+
+                        if (recentView === 'expenses') {
+
+                          setActiveTab('expenses');
+
+                          if (typeof window !== 'undefined') window.history.pushState(null, '', '/expenses');
+
+                        } else {
+
+                          setActiveTab('invoices');
+
+                        }
+
+                      }}
 
                       className="text-[10px] font-black text-[#0284c7] dark:text-[#38bdf8] hover:opacity-80 uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-opacity"
 
                     >
 
-                      View All Records →
+                      {recentView === 'expenses' ? 'View All Expenses →' : 'View All Invoices →'}
 
                     </button>
 
@@ -13394,85 +14105,175 @@ export default function Dashboard({
 
                   <div className="w-full overflow-x-auto mt-3">
 
-                    {invoices.length === 0 ? (
+                    {recentView === 'invoices' ? (
 
-                      <div className="py-12 text-center">
+                      invoices.length === 0 ? (
 
-                        <p className="text-xs text-[#64748b]/80 font-medium">Generate your first invoice to view records here!</p>
+                        <div className="py-12 text-center">
 
-                      </div>
+                          <p className="text-xs text-[#64748b]/80 font-medium">Generate your first invoice to view records here!</p>
 
-                    ) : (
+                        </div>
 
-                      <table className="w-full text-left text-xs border-collapse">
+                      ) : (
 
-                        <thead>
+                        <table className="w-full text-left text-xs border-collapse">
 
-                          <tr className="text-[10px] font-black uppercase text-[#64748b]/60 dark:text-zinc-400 tracking-wider border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
+                          <thead>
 
-                            <th className="py-2.5 font-black">INV ID</th>
+                            <tr className="text-[10px] font-black uppercase text-[#64748b]/60 dark:text-zinc-400 tracking-wider border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
 
-                            <th className="py-2.5 font-black">CLIENT NAME</th>
+                              <th className="py-2.5 font-black">INV ID</th>
 
-                            <th className="py-2.5 font-black">DUE DATE</th>
+                              <th className="py-2.5 font-black">CLIENT NAME</th>
 
-                            <th className="py-2.5 font-black">AMOUNT</th>
+                              <th className="py-2.5 font-black">DUE DATE</th>
 
-                            <th className="py-2.5 font-black">STATUS</th>
+                              <th className="py-2.5 font-black">AMOUNT</th>
 
-                            <th className="py-2.5"></th>
+                              <th className="py-2.5 font-black">STATUS</th>
 
-                          </tr>
-
-                        </thead>
-
-                        <tbody>
-
-                          {invoices.slice(0, 3).map(inv => (
-
-                            <tr key={inv.id} className="border-b border-[#bae6fd]/20 dark:border-[#223269]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 transition-colors">
-
-                              <td className="py-3 font-extrabold text-[#0f172a] dark:text-white font-mono">{inv.invoiceNumber}</td>
-
-                              <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[120px]">{inv.clientName}</td>
-
-                              <td className="py-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans">{inv.dueDate || inv.date}</td>
-
-                              <td className="py-3 font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{formatNum(inv.grandTotal)}</td>
-
-                              <td className="py-3">
-
-                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
-
-                                  {inv.status}
-
-                                </span>
-
-                              </td>
-
-                              <td className="py-3 text-right">
-
-                                <button 
-
-                                  onClick={() => setActivePreviewInvoice(inv)}
-
-                                  className="text-[#64748b] hover:text-[#0f172a] dark:hover:text-white p-1 cursor-pointer"
-
-                                >
-
-                                  <MoreVertical className="w-4 h-4" />
-
-                                </button>
-
-                              </td>
+                              <th className="py-2.5"></th>
 
                             </tr>
 
-                          ))}
+                          </thead>
 
-                        </tbody>
+                          <tbody>
 
-                      </table>
+                            {invoices.slice(0, 4).map(inv => (
+
+                              <tr key={inv.id} className="border-b border-[#bae6fd]/20 dark:border-[#223269]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 transition-colors">
+
+                                <td className="py-3 font-extrabold text-[#0f172a] dark:text-white font-mono">{inv.invoiceNumber}</td>
+
+                                <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[120px]">{inv.clientName}</td>
+
+                                <td className="py-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans">{inv.dueDate || inv.date}</td>
+
+                                <td className="py-3 font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{formatNum(inv.grandTotal)}</td>
+
+                                <td className="py-3">
+
+                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
+
+                                    {inv.status}
+
+                                  </span>
+
+                                </td>
+
+                                <td className="py-3 text-right">
+
+                                  <button 
+
+                                    onClick={() => setActivePreviewInvoice(inv)}
+
+                                    className="text-[#64748b] hover:text-[#0f172a] dark:hover:text-white p-1 cursor-pointer"
+
+                                  >
+
+                                    <MoreVertical className="w-4 h-4" />
+
+                                  </button>
+
+                                </td>
+
+                              </tr>
+
+                            ))}
+
+                          </tbody>
+
+                        </table>
+
+                      )
+
+                    ) : (
+
+                      supabaseExpenses.length === 0 ? (
+
+                        <div className="py-12 text-center">
+
+                          <p className="text-xs text-[#64748b]/80 font-medium">No business expenses recorded yet.</p>
+
+                        </div>
+
+                      ) : (
+
+                        <table className="w-full text-left text-xs border-collapse">
+
+                          <thead>
+
+                            <tr className="text-[10px] font-black uppercase text-[#64748b]/60 dark:text-zinc-400 tracking-wider border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
+
+                              <th className="py-2.5 font-black">DATE</th>
+
+                              <th className="py-2.5 font-black">CATEGORY</th>
+
+                              <th className="py-2.5 font-black">VENDOR</th>
+
+                              <th className="py-2.5 font-black">AMOUNT</th>
+
+                              <th className="py-2.5 font-black">STATUS</th>
+
+                            </tr>
+
+                          </thead>
+
+                          <tbody>
+
+                            {supabaseExpenses.slice(0, 4).map(exp => (
+
+                              <tr key={exp.id} className="border-b border-[#bae6fd]/20 dark:border-[#223269]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 transition-colors">
+
+                                <td className="py-3 font-mono text-[11px] text-[#0f172a] dark:text-white font-bold">{exp.expense_date}</td>
+
+                                <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[100px]">
+
+                                  <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 text-[9.5px] font-bold">
+
+                                    {exp.category}
+
+                                  </span>
+
+                                </td>
+
+                                <td className="py-3 font-bold text-[#0f172a] dark:text-white truncate max-w-[120px]">{exp.vendor}</td>
+
+                                <td className="py-3 font-extrabold font-mono text-[#0f172a] dark:text-white">{currencySymbol}{formatNum(exp.amount)}</td>
+
+                                <td className="py-3">
+
+                                  {exp.status === 'paid' ? (
+
+                                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+
+                                      Paid
+
+                                    </span>
+
+                                  ) : (
+
+                                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+
+                                      Pending
+
+                                    </span>
+
+                                  )}
+
+                                </td>
+
+                              </tr>
+
+                            ))}
+
+                          </tbody>
+
+                        </table>
+
+                      )
 
                     )}
 
@@ -13480,11 +14281,9 @@ export default function Dashboard({
 
                 </div>
 
+                {/* Dark Card: Billing Protocol (Mobile: 5th, Desktop: Row 2 Right 33.3%) */}
 
-
-                {/* Dark Card: Billing Protocol */}
-
-                <div className="bg-gradient-to-br from-[#111a36] to-[#0b1329] text-[#f8fafc] border border-[#223269]/60 shadow-[0_4px_20px_rgba(0,0,0,0.25)] rounded-2xl p-6 flex flex-col justify-between h-full min-h-[250px]">
+                <div className="order-5 lg:order-5 lg:col-span-2 bg-gradient-to-br from-[#111a36] to-[#0b1329] text-[#f8fafc] border border-[#223269]/60 shadow-[0_4px_20px_rgba(0,0,0,0.25)] rounded-2xl p-6 flex flex-col justify-between h-full min-h-[250px]">
 
                   <div className="space-y-4">
 
@@ -13555,6 +14354,16 @@ export default function Dashboard({
           );
 
         })()}
+
+
+
+        {/* ------------------ TAB: EXPENSES PAGE ------------------ */}
+
+        {activeTab === 'expenses' && (
+
+          <ExpensesPage currencySymbol={currencySymbol} />
+
+        )}
 
 
 

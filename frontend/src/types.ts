@@ -118,12 +118,20 @@ export interface ClientProfile {
 
 export interface Expense {
   id: string;
-  userId: string;
+  user_id: string;
+  expense_date: string;
   category: string;
+  vendor: string;
+  description?: string | null;
   amount: number;
-  date: string;
-  description?: string;
-  createdAt: string;
+  payment_mode: string;
+  reference_number?: string | null;
+  status: 'paid' | 'pending';
+  created_at?: string;
+  updated_at?: string;
+  userId?: string;
+  date?: string;
+  createdAt?: string;
   _pendingSync?: boolean;
   _pendingDelete?: boolean;
 }

@@ -100,6 +100,7 @@ const tabToPath: Record<string, string> = {
   support: '/support',
   'support-chat': '/support-chat',
   subscription: '/subscription',
+  expenses: '/expenses',
 };
 
 const pathToTab: Record<string, string> = Object.entries(tabToPath).reduce(
