@@ -383,8 +383,9 @@ export default function Dashboard({
   const [draftsOrigin, setDraftsOrigin] = useState<'sales' | 'purchases'>('sales');
 
   const [activeActionMenuId, setActiveActionMenuId] = useState<string | null>(null);
-
+  const [actionMenuPosition, setActionMenuPosition] = useState<'down' | 'up'>('down');
   const [activeSendMenuId, setActiveSendMenuId] = useState<string | null>(null);
+  const [sendMenuPosition, setSendMenuPosition] = useState<'down' | 'up'>('down');
 
 
 
@@ -8261,141 +8262,79 @@ export default function Dashboard({
                             <div className="relative">
 
                               <button
-
                                 onClick={(e) => {
-
                                   e.stopPropagation();
-
                                   setActiveActionMenuId(null);
-
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const spaceBelow = window.innerHeight - rect.bottom;
+                                  setSendMenuPosition(spaceBelow < 220 ? 'up' : 'down');
                                   setActiveSendMenuId(activeSendMenuId === inv.id ? null : inv.id);
-
                                 }}
-
                                 className="w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
-
                                 title="Send Document"
-
                               >
-
                                 <Send className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-
                               </button>
 
-
-
                               {activeSendMenuId === inv.id && (
-
                                 <div 
-
-                                  className="absolute right-0 bottom-10 z-[120] w-48 py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-150 text-left"
-
+                                  className={`absolute right-0 ${sendMenuPosition === 'up' ? 'bottom-10 slide-in-from-bottom-2' : 'top-10 slide-in-from-top-2'} z-[120] w-48 py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in duration-150 text-left`}
                                   onClick={(e) => e.stopPropagation()}
-
                                 >
-
                                   <button
-
                                     onClick={() => {
-
                                       setActiveSendMenuId(null);
-
                                       triggerWhatsAppShare(inv);
-
                                     }}
-
                                     className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
-
                                   >
-
                                     <span className="w-4 h-4 text-emerald-500 font-bold">💬</span>
-
                                     <span>Send to WhatsApp</span>
-
                                   </button>
 
-
-
                                   <button
-
                                     onClick={() => {
-
                                       setActiveSendMenuId(null);
-
                                       triggerEmailShare(inv);
-
                                     }}
-
                                     className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
-
                                   >
-
                                     <Mail className="w-3.5 h-3.5 text-sky-500" />
-
                                     <span>Send via Email</span>
-
                                   </button>
-
-
 
                                   <button
-
                                     onClick={() => {
-
                                       setActiveSendMenuId(null);
-
                                       handleCopyShareLink(inv);
-
                                     }}
-
                                     className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
-
                                   >
-
                                     <LinkIcon className="w-3.5 h-3.5 text-amber-500" />
-
                                     <span>Copy Link</span>
-
                                   </button>
-
                                 </div>
-
                               )}
-
                             </div>
 
-
-
                             <button
-
                               onClick={(e) => {
-
                                 e.stopPropagation();
-
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const spaceBelow = window.innerHeight - rect.bottom;
+                                setActionMenuPosition(spaceBelow < 220 ? 'up' : 'down');
                                 setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id);
-
                               }}
-
                               className="w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
-
                               title="More Actions"
-
                             >
-
                               <MoreVertical className="w-4 h-4" />
-
                             </button>
 
-
-
                             {activeActionMenuId === inv.id && (
-
                               <div 
-
-                                className="absolute right-0 bottom-10 z-[120] w-52 py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-150 text-left"
-
+                                className={`absolute right-0 ${actionMenuPosition === 'up' ? 'bottom-10 slide-in-from-bottom-2' : 'top-10 slide-in-from-top-2'} z-[120] w-52 py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in duration-150 text-left`}
                                 onClick={(e) => e.stopPropagation()}
-
                               >
 
                                 
@@ -8988,139 +8927,78 @@ export default function Dashboard({
                                     e.stopPropagation();
 
                                     setActiveActionMenuId(null);
-
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const spaceBelow = window.innerHeight - rect.bottom;
+                                    setSendMenuPosition(spaceBelow < 220 ? 'up' : 'down');
                                     setActiveSendMenuId(activeSendMenuId === inv.id ? null : inv.id);
-
                                   }}
-
                                   className="w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
-
                                   title="Send Document"
-
                                 >
-
                                   <Send className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-
                                 </button>
 
-
-
                                 {activeSendMenuId === inv.id && (
-
                                   <div 
-
-                                    className="absolute right-0 top-10 z-[120] w-48 py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150 text-left"
-
+                                    className={`absolute right-0 ${sendMenuPosition === 'up' ? 'bottom-10 slide-in-from-bottom-2' : 'top-10 slide-in-from-top-2'} z-[120] w-48 py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in duration-150 text-left`}
                                     onClick={(e) => e.stopPropagation()}
-
                                   >
-
                                     <button
-
                                       onClick={() => {
-
                                         setActiveSendMenuId(null);
-
                                         triggerWhatsAppShare(inv);
-
                                       }}
-
                                       className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
-
                                     >
-
                                       <span className="w-4 h-4 text-emerald-500 font-bold">💬</span>
-
                                       <span>Send to WhatsApp</span>
-
                                     </button>
 
-
-
                                     <button
-
                                       onClick={() => {
-
                                         setActiveSendMenuId(null);
-
                                         triggerEmailShare(inv);
-
                                       }}
-
                                       className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
-
                                     >
-
                                       <Mail className="w-3.5 h-3.5 text-sky-500" />
-
                                       <span>Send via Email</span>
-
                                     </button>
-
-
 
                                     <button
-
                                       onClick={() => {
-
                                         setActiveSendMenuId(null);
-
                                         handleCopyShareLink(inv);
-
                                       }}
-
                                       className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
-
                                     >
-
                                       <LinkIcon className="w-3.5 h-3.5 text-amber-500" />
-
                                       <span>Copy Link</span>
-
                                     </button>
-
                                   </div>
-
                                 )}
-
                               </div>
 
-
-
                               <button
-
                                 onClick={(e) => {
-
                                   e.stopPropagation();
-
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const spaceBelow = window.innerHeight - rect.bottom;
+                                  setActionMenuPosition(spaceBelow < 220 ? 'up' : 'down');
                                   setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id);
-
                                 }}
-
                                 className="w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
-
                                 title="More Actions"
-
                               >
-
                                 <MoreVertical className="w-4 h-4" />
-
                               </button>
 
-
-
                               {activeActionMenuId === inv.id && (
-
                                 <div 
-
-                                  className="absolute right-4 top-10 z-[120] w-52 py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150 text-left"
-
+                                  className={`absolute right-4 ${actionMenuPosition === 'up' ? 'bottom-10 slide-in-from-bottom-2' : 'top-10 slide-in-from-top-2'} z-[120] w-52 py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in duration-150 text-left`}
                                   onClick={(e) => e.stopPropagation()}
-
                                 >
-
-                                  
-        {showBinView ? (
+                                  {showBinView ? (
           <>
             <button
               onClick={() => {
