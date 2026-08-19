@@ -7760,7 +7760,7 @@ export default function Dashboard({
         {/* DESKTOP BRANDING & CONTROL SIDEBAR - Visible on xl screens (1280px+) */}
         <div className="hidden xl:block relative shrink-0">
 
-          <aside className={`flex flex-col bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/70 rounded-[1.75rem] shadow-[0_8px_30px_rgba(2,132,199,0.08)] h-[calc(100vh-110px)] overflow-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
+          <aside className={`flex flex-col bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/70 rounded-[1.75rem] shadow-[0_8px_30px_rgba(2,132,199,0.08)] h-[calc(100dvh-92px)] xl:h-[calc(100vh-110px)] overflow-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
 
             <div className="w-full h-full">
 
@@ -7791,8 +7791,7 @@ export default function Dashboard({
 
 
         {/* RIGHT CENTRAL WORKSPACE PANEL */}
-
-        <div className="flex-1 min-w-0 w-full m-0 p-0 h-[calc(100vh-110px)] overflow-y-auto pr-1">
+        <div className="flex-1 min-w-0 w-full m-0 p-0 h-[calc(100dvh-92px)] xl:h-[calc(100vh-110px)] overflow-y-auto pr-1 pb-16 md:pb-12 pb-safe">
 
 
 
