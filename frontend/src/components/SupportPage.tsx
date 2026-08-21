@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { emitNotification } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
+import { MakLoader } from './MakLoader';
 
 type TicketCategory = 'billing' | 'technical' | 'account' | 'feature' | 'other';
 
@@ -1290,10 +1291,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
                 </div>
 
                 {ticketsListLoading ? (
-                  <div className="flex-1 flex flex-col items-center justify-center py-12 text-[#64748b]">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#0284c7]" />
-                    <span className="text-[10px] uppercase font-black tracking-widest mt-3">Loading tickets...</span>
-                  </div>
+                  <MakLoader variant="card" size="lg" label="Loading tickets..." className="flex-1 py-12" />
                 ) : ticketsList.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center py-16 text-center text-[#64748b]">
                     <MessageSquare className="w-12 h-12 mb-3 text-[#0284c7]/40 dark:text-[#38bdf8]/30 stroke-1" />
@@ -1369,10 +1367,7 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
             {ticketViewMode === 'chat' && (
               <div className="flex-1 flex flex-col min-h-[380px] justify-between">
                 {detailsLoading ? (
-                  <div className="flex-1 flex flex-col items-center justify-center py-12 text-[#64748b]">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#0284c7]" />
-                    <span className="text-[10px] uppercase font-black tracking-widest mt-3">Loading messages...</span>
-                  </div>
+                  <MakLoader variant="card" size="lg" label="Loading messages..." className="flex-1 py-12" />
                 ) : (
                   <div className="flex-1 flex flex-col h-full justify-between">
                     {/* Chat Bubble Thread */}

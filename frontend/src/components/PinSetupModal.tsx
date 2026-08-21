@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Lock, ShieldCheck, ShieldOff, Delete } from 'lucide-react';
 import type { SecurityQuestionsPayload } from '../lib/biometrics';
 import { SecurityQuestionsStep } from './SecurityQuestionsStep';
+import { MakLoader } from './MakLoader';
 
 /** Payload passed to onConfirm when mode === 'enable'.
  *  _rawA1 / _rawA2 carry the plain-text answers so App.tsx can hash them. */
@@ -281,8 +282,8 @@ export function PinSetupModal({
 
         {/* Loading overlay */}
         {isLoading && (
-          <div className="absolute inset-0 bg-white/70 dark:bg-zinc-900/70 flex items-center justify-center rounded-3xl">
-            <div className="w-8 h-8 border-3 border-sky-600 border-t-transparent rounded-full animate-spin" style={{ borderWidth: '3px' }} />
+          <div className="absolute inset-0 bg-white/85 dark:bg-zinc-900/85 flex items-center justify-center rounded-3xl z-20 backdrop-blur-xs">
+            <MakLoader variant="spinner" size="lg" />
           </div>
         )}
       </div>

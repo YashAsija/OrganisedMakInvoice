@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown, Loader2, ChevronDown, Smartphone, Mail, FileDown, Printer } from 'lucide-react';
+import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown, Loader2, ChevronDown, Smartphone, Mail, FileDown, Printer, Package } from 'lucide-react';
 import { Invoice, TaxClassification, InvoiceItem, InvoiceStatus, DiscountType, PresetItem, ClientProfile, RecurringInterval, BusinessProfile, InvoiceTemplate } from '../types';
 import { EditableField } from './EditableField';
 import { exportInvoicePDFAsync } from '../lib/pdfExporter';
@@ -835,6 +835,157 @@ export default function InvoiceModal({
     }
   }, [isOpen]);
 
+
+  // --- SEARCHABLE CLIENT DROPDOWN STATE & LOGIC ---
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  const [clientSearchQuery, setClientSearchQuery] = useState('');
+  const clientDropdownRef = useRef<HTMLDivElement>(null);
+
+  const [isShipClientDropdownOpen, setIsShipClientDropdownOpen] = useState(false);
+  const [shipClientSearchQuery, setShipClientSearchQuery] = useState('');
+  const shipClientDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close client dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (clientDropdownRef.current && !clientDropdownRef.current.contains(e.target as Node)) {
+        setIsClientDropdownOpen(false);
+      }
+      if (shipClientDropdownRef.current && !shipClientDropdownRef.current.contains(e.target as Node)) {
+        setIsShipClientDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter billing clients dynamically
+  const filteredClients = useMemo(() => {
+    if (!clients || clients.length === 0) return [];
+    const sorted = [...clients].sort((a, b) => {
+      const compA = ((a as any).companyName || (a as any).company || '').toLowerCase();
+      const compB = ((b as any).companyName || (b as any).company || '').toLowerCase();
+      if (compA && compB && compA !== compB) return compA.localeCompare(compB);
+      if (compA && !compB) return -1;
+      if (!compA && compB) return 1;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    if (!clientSearchQuery.trim()) return sorted;
+    const q = clientSearchQuery.toLowerCase();
+    return sorted.filter(c => {
+      const comp = ((c as any).companyName || (c as any).company || '').toLowerCase();
+      const name = (c.name || '').toLowerCase();
+      const email = (c.email || '').toLowerCase();
+      const phone = (c.phone || '').toLowerCase();
+      const gstin = ((c as any).gstin || '').toLowerCase();
+      return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q);
+    });
+  }, [clients, clientSearchQuery]);
+
+  // Filter shipping clients dynamically
+  const filteredShipClients = useMemo(() => {
+    if (!clients || clients.length === 0) return [];
+    const sorted = [...clients].sort((a, b) => {
+      const compA = ((a as any).companyName || (a as any).company || '').toLowerCase();
+      const compB = ((b as any).companyName || (b as any).company || '').toLowerCase();
+      if (compA && compB && compA !== compB) return compA.localeCompare(compB);
+      if (compA && !compB) return -1;
+      if (!compA && compB) return 1;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    if (!shipClientSearchQuery.trim()) return sorted;
+    const q = shipClientSearchQuery.toLowerCase();
+    return sorted.filter(c => {
+      const comp = ((c as any).companyName || (c as any).company || '').toLowerCase();
+      const name = (c.name || '').toLowerCase();
+      const email = (c.email || '').toLowerCase();
+      const phone = (c.phone || '').toLowerCase();
+      const gstin = ((c as any).gstin || '').toLowerCase();
+      return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q);
+    });
+  }, [clients, shipClientSearchQuery]);
+
+  // --- MATERIAL CATALOG DROPDOWN STATE & LOGIC ---
+  const [isCatalogDropdownOpen, setIsCatalogDropdownOpen] = useState(false);
+  const catalogDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close catalog dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (catalogDropdownRef.current && !catalogDropdownRef.current.contains(e.target as Node)) {
+        setIsCatalogDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Full Material Catalog options combining Presets & Past Invoice Line Items
+  const materialCatalogOptions = useMemo(() => {
+    const itemsMap = new Map<string, {
+      name: string;
+      rate?: number;
+      taxPercentage?: number;
+      description?: string;
+      hsnCode?: string;
+      quantityType?: string;
+      source: string;
+    }>();
+
+    // Add preset catalog items
+    if (presets && presets.length > 0) {
+      presets.forEach(p => {
+        if (p.name?.trim()) {
+          itemsMap.set(p.name.trim().toLowerCase(), {
+            name: p.name.trim(),
+            rate: p.rate,
+            taxPercentage: p.taxPercentage,
+            description: p.description || '',
+            hsnCode: (p as any).hsnCode || '',
+            quantityType: (p as any).quantityType || '',
+            source: 'Material Preset',
+          });
+        }
+      });
+    }
+
+    // Add past invoice line items
+    if (invoices && invoices.length > 0) {
+      invoices.forEach(inv => {
+        if (inv.items) {
+          inv.items.forEach(it => {
+            if (it.name?.trim()) {
+              const key = it.name.trim().toLowerCase();
+              if (!itemsMap.has(key)) {
+                itemsMap.set(key, {
+                  name: it.name.trim(),
+                  rate: it.rate,
+                  taxPercentage: it.taxPercentage,
+                  description: it.description || '',
+                  hsnCode: it.hsnCode || '',
+                  quantityType: it.quantityType || '',
+                  source: 'Past Item',
+                });
+              }
+            }
+          });
+        }
+      });
+    }
+
+    return Array.from(itemsMap.values());
+  }, [presets, invoices]);
+
+  // Filter catalog options dynamically based on text typed in product name
+  const filteredCatalogOptions = useMemo(() => {
+    if (!newItemName.trim()) return materialCatalogOptions;
+    const q = newItemName.toLowerCase();
+    return materialCatalogOptions.filter(
+      opt => opt.name.toLowerCase().includes(q) || (opt.hsnCode && opt.hsnCode.toLowerCase().includes(q))
+    );
+  }, [materialCatalogOptions, newItemName]);
 
   // --- DYNAMIC SELECTION LISTS FROM PAST DATA & PRESETS ---
   const pastNames = React.useMemo(() => {
@@ -2618,45 +2769,103 @@ export default function InvoiceModal({
                       {clients && clients.length > 0 && (
                         <div className="bg-sky-50/30 dark:bg-slate-950 p-2.5 rounded-2xl border border-sky-100/20 dark:border-slate-800/65">
                           <label htmlFor="select-pre-client" className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-1">Populate from Clients:</label>
-                          <select
-                            id="select-pre-client"
-                            onChange={(e) => {
-                              const selectedId = e.target.value;
-                              const found = clients.find(c => c.id === selectedId);
-                              if (found) {
-                                setClientName(found.name);
-                                setClientCompanyName((found as any).companyName || (found as any).company || '');
-                                setClientEmail(found.email || '');
-                                setClientPhone(found.phone || '');
-                                setClientAddress(found.address || '');
-                                setClientPan((found as any).pan || (found as any).taxId || '');
-                                setClientGstin((found as any).gstin || '');
-                                setClientCountry((found as any).country || (found as any).clientCountry || '');
-                                setClientState((found as any).state || (found as any).clientState || '');
-                              }
-                            }}
-                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500"
-                            defaultValue=""
-                          >
-                            <option value="" disabled>-- Select a pre-saved client profile --</option>
-                            {[...clients]
-                              .sort((a, b) => {
-                                const compA = ((a as any).companyName || (a as any).company || '').toLowerCase();
-                                const compB = ((b as any).companyName || (b as any).company || '').toLowerCase();
-                                if (compA && compB && compA !== compB) return compA.localeCompare(compB);
-                                if (compA && !compB) return -1;
-                                if (!compA && compB) return 1;
-                                return (a.name || '').localeCompare(b.name || '');
-                              })
-                              .map(c => {
-                                const comp = (c as any).companyName || (c as any).company;
-                                return (
-                                  <option key={c.id} value={c.id}>
-                                    {comp ? `${comp} - ${c.name}` : c.name}
-                                  </option>
-                                );
-                              })}
-                          </select>
+                          <div className="relative" ref={clientDropdownRef}>
+                            <div className="relative flex items-center">
+                              <input
+                                id="select-pre-client"
+                                type="text"
+                                value={clientSearchQuery}
+                                onChange={(e) => {
+                                  setClientSearchQuery(e.target.value);
+                                  setIsClientDropdownOpen(true);
+                                }}
+                                onFocus={() => setIsClientDropdownOpen(true)}
+                                placeholder="-- Select or type to search client profile --"
+                                className="w-full pl-3 pr-16 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 shadow-xs"
+                              />
+                              <div className="absolute right-1.5 flex items-center gap-1">
+                                {clientSearchQuery && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setClientSearchQuery('');
+                                      setIsClientDropdownOpen(false);
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                    title="Clear client filter"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
+                                  title="Toggle client list"
+                                  className="p-1 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 cursor-pointer"
+                                >
+                                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isClientDropdownOpen ? 'rotate-180 text-sky-500' : ''}`} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Dropdown Menu */}
+                            {isClientDropdownOpen && filteredClients.length > 0 && (
+                              <div className="absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 border border-sky-200 dark:border-slate-700 rounded-xl shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800">
+                                <div className="px-3 py-1 bg-sky-50/90 dark:bg-slate-800/90 flex items-center justify-between sticky top-0 backdrop-blur-xs z-10">
+                                  <span className="text-[10px] font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider">
+                                    Saved Clients ({filteredClients.length})
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsClientDropdownOpen(false)}
+                                    className="text-[9px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                  >
+                                    Close
+                                  </button>
+                                </div>
+                                {filteredClients.map((c) => {
+                                  const comp = (c as any).companyName || (c as any).company;
+                                  const displayName = comp ? `${comp} - ${c.name}` : c.name;
+                                  return (
+                                    <button
+                                      key={c.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setClientName(c.name);
+                                        setClientCompanyName((c as any).companyName || (c as any).company || '');
+                                        setClientEmail(c.email || '');
+                                        setClientPhone(c.phone || '');
+                                        setClientAddress(c.address || '');
+                                        setClientPan((c as any).pan || (c as any).taxId || '');
+                                        setClientGstin((c as any).gstin || '');
+                                        setClientCountry((c as any).country || (c as any).clientCountry || '');
+                                        setClientState((c as any).state || (c as any).clientState || '');
+                                        setClientSearchQuery(displayName);
+                                        setIsClientDropdownOpen(false);
+                                      }}
+                                      className="w-full px-3 py-2 text-left hover:bg-sky-50 dark:hover:bg-slate-800/90 transition-colors flex items-center justify-between gap-2 group cursor-pointer"
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400">
+                                          {displayName}
+                                        </div>
+                                        {(c.email || c.phone) && (
+                                          <div className="text-[10px] text-slate-400 truncate">
+                                            {[c.email, c.phone].filter(Boolean).join(' • ')}
+                                          </div>
+                                        )}
+                                      </div>
+                                      {(c as any).gstin && (
+                                        <span className="px-1.5 py-0.5 text-[9px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700 shrink-0">
+                                          GST: {(c as any).gstin}
+                                        </span>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
 
@@ -2821,45 +3030,103 @@ export default function InvoiceModal({
                           {clients && clients.length > 0 && (
                             <div className="bg-sky-50/30 dark:bg-slate-950 p-2.5 rounded-2xl border border-sky-100/20 dark:border-slate-800/65">
                               <label htmlFor="select-pre-client-shipto" className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-1">Populate from Clients:</label>
-                              <select
-                                id="select-pre-client-shipto"
-                                onChange={(e) => {
-                                  const selectedId = e.target.value;
-                                  const found = clients.find(c => c.id === selectedId);
-                                  if (found) {
-                                    setShippedToName(found.name);
-                                    setShippedToCompanyName((found as any).companyName || (found as any).company || '');
-                                    setShippedToEmail(found.email || '');
-                                    setShippedToPhone(found.phone || '');
-                                    setShippedToAddress(found.address || '');
-                                    setShippedToPan((found as any).pan || (found as any).taxId || '');
-                                    setShippedToGstin((found as any).gstin || '');
-                                    setShippedToCountry((found as any).country || (found as any).clientCountry || '');
-                                    setShippedToState((found as any).state || (found as any).clientState || '');
-                                  }
-                                }}
-                                className="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500"
-                                defaultValue=""
-                              >
-                                <option value="" disabled>-- Select a pre-saved client profile --</option>
-                                {[...clients]
-                                  .sort((a, b) => {
-                                    const compA = ((a as any).companyName || (a as any).company || '').toLowerCase();
-                                    const compB = ((b as any).companyName || (b as any).company || '').toLowerCase();
-                                    if (compA && compB && compA !== compB) return compA.localeCompare(compB);
-                                    if (compA && !compB) return -1;
-                                    if (!compA && compB) return 1;
-                                    return (a.name || '').localeCompare(b.name || '');
-                                  })
-                                  .map(c => {
-                                    const comp = (c as any).companyName || (c as any).company;
-                                    return (
-                                      <option key={c.id} value={c.id}>
-                                        {comp ? `${comp} - ${c.name}` : c.name}
-                                      </option>
-                                    );
-                                  })}
-                              </select>
+                              <div className="relative" ref={shipClientDropdownRef}>
+                                <div className="relative flex items-center">
+                                  <input
+                                    id="select-pre-client-shipto"
+                                    type="text"
+                                    value={shipClientSearchQuery}
+                                    onChange={(e) => {
+                                      setShipClientSearchQuery(e.target.value);
+                                      setIsShipClientDropdownOpen(true);
+                                    }}
+                                    onFocus={() => setIsShipClientDropdownOpen(true)}
+                                    placeholder="-- Select or type to search ship-to client profile --"
+                                    className="w-full pl-3 pr-16 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 shadow-xs"
+                                  />
+                                  <div className="absolute right-1.5 flex items-center gap-1">
+                                    {shipClientSearchQuery && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setShipClientSearchQuery('');
+                                          setIsShipClientDropdownOpen(false);
+                                        }}
+                                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                        title="Clear client filter"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => setIsShipClientDropdownOpen(!isShipClientDropdownOpen)}
+                                      title="Toggle client list"
+                                      className="p-1 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 cursor-pointer"
+                                    >
+                                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isShipClientDropdownOpen ? 'rotate-180 text-sky-500' : ''}`} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Dropdown Menu */}
+                                {isShipClientDropdownOpen && filteredShipClients.length > 0 && (
+                                  <div className="absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 border border-sky-200 dark:border-slate-700 rounded-xl shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800">
+                                    <div className="px-3 py-1 bg-sky-50/90 dark:bg-slate-800/90 flex items-center justify-between sticky top-0 backdrop-blur-xs z-10">
+                                      <span className="text-[10px] font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider">
+                                        Saved Clients ({filteredShipClients.length})
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setIsShipClientDropdownOpen(false)}
+                                        className="text-[9px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                      >
+                                        Close
+                                      </button>
+                                    </div>
+                                    {filteredShipClients.map((c) => {
+                                      const comp = (c as any).companyName || (c as any).company;
+                                      const displayName = comp ? `${comp} - ${c.name}` : c.name;
+                                      return (
+                                        <button
+                                          key={c.id}
+                                          type="button"
+                                          onClick={() => {
+                                            setShippedToName(c.name);
+                                            setShippedToCompanyName((c as any).companyName || (c as any).company || '');
+                                            setShippedToEmail(c.email || '');
+                                            setShippedToPhone(c.phone || '');
+                                            setShippedToAddress(c.address || '');
+                                            setShippedToPan((c as any).pan || (c as any).taxId || '');
+                                            setShippedToGstin((c as any).gstin || '');
+                                            setShippedToCountry((c as any).country || (c as any).clientCountry || '');
+                                            setShippedToState((c as any).state || (c as any).clientState || '');
+                                            setShipClientSearchQuery(displayName);
+                                            setIsShipClientDropdownOpen(false);
+                                          }}
+                                          className="w-full px-3 py-2 text-left hover:bg-sky-50 dark:hover:bg-slate-800/90 transition-colors flex items-center justify-between gap-2 group cursor-pointer"
+                                        >
+                                          <div className="min-w-0 flex-1">
+                                            <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400">
+                                              {displayName}
+                                            </div>
+                                            {(c.email || c.phone) && (
+                                              <div className="text-[10px] text-slate-400 truncate">
+                                                {[c.email, c.phone].filter(Boolean).join(' • ')}
+                                              </div>
+                                            )}
+                                          </div>
+                                          {(c as any).gstin && (
+                                            <span className="px-1.5 py-0.5 text-[9px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700 shrink-0">
+                                              GST: {(c as any).gstin}
+                                            </span>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
                           <div className="flex items-center justify-between">
@@ -3111,23 +3378,99 @@ export default function InvoiceModal({
                     </span>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Product/Line Item Name */}
-                      <div className="col-span-2">
-                        <label htmlFor="custom-item-name" className="block text-[10px] text-slate-500 font-medium uppercase mb-1">Product Name *</label>
-                        <input
-                          id="custom-item-name"
-                          type="text"
-                          value={newItemName}
-                          onChange={(e) => setNewItemName(e.target.value)}
-                          list="past-names"
-                          placeholder="e.g. Standard Software Consulting"
-                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 dark:text-white font-medium text-xs focus:outline-none focus:border-sky-500"
-                        />
-                        <datalist id="past-names">
-                          {pastNames.map(name => (
-                            <option key={name} value={name} />
-                          ))}
-                        </datalist>
+                      {/* Product/Line Item Name — Searchable Material Catalog Combobox */}
+                      <div className="col-span-2 relative" ref={catalogDropdownRef}>
+                        <div className="flex items-center justify-between mb-1">
+                          <label htmlFor="custom-item-name" className="block text-[10px] text-slate-500 font-medium uppercase">
+                            Product Name *
+                          </label>
+                          {materialCatalogOptions.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setIsCatalogDropdownOpen(!isCatalogDropdownOpen)}
+                              className="text-[9.5px] font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer flex items-center gap-0.5"
+                            >
+                              <Package className="w-3 h-3 text-sky-500" />
+                              <span>Catalog ({materialCatalogOptions.length})</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="relative flex items-center">
+                          <input
+                            id="custom-item-name"
+                            type="text"
+                            value={newItemName}
+                            onChange={(e) => {
+                              setNewItemName(e.target.value);
+                              setIsCatalogDropdownOpen(true);
+                            }}
+                            onFocus={() => setIsCatalogDropdownOpen(true)}
+                            placeholder="e.g. Standard Software Consulting or select from catalog..."
+                            className="w-full pl-3 pr-10 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 dark:text-white font-medium text-xs focus:outline-none focus:border-sky-500 shadow-xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setIsCatalogDropdownOpen(!isCatalogDropdownOpen)}
+                            title="Toggle Material Catalog Dropdown"
+                            className="absolute right-1.5 p-1.5 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 transition-colors cursor-pointer rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                          >
+                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isCatalogDropdownOpen ? 'rotate-180 text-sky-500' : ''}`} />
+                          </button>
+                        </div>
+
+                        {/* Material Catalog Searchable Dropdown Popup */}
+                        {isCatalogDropdownOpen && filteredCatalogOptions.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1.5 max-h-60 overflow-y-auto bg-white dark:bg-slate-900 border border-sky-200 dark:border-slate-700 rounded-xl shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800">
+                            <div className="px-3 py-1.5 bg-sky-50/90 dark:bg-slate-800/90 flex items-center justify-between sticky top-0 backdrop-blur-xs z-10">
+                              <span className="text-[10px] font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider flex items-center gap-1">
+                                <Package className="w-3.5 h-3.5 text-sky-500" /> Material Catalog
+                              </span>
+                              <span className="text-[9px] font-semibold text-slate-400 font-mono">
+                                {filteredCatalogOptions.length} item{filteredCatalogOptions.length === 1 ? '' : 's'}
+                              </span>
+                            </div>
+                            {filteredCatalogOptions.map((opt, idx) => (
+                              <button
+                                key={`${opt.name}_${idx}`}
+                                type="button"
+                                onClick={() => {
+                                  setNewItemName(opt.name);
+                                  if (opt.rate !== undefined) setNewItemRate(opt.rate);
+                                  if (opt.taxPercentage !== undefined) setNewItemTax(opt.taxPercentage);
+                                  if (opt.description) setNewItemDesc(opt.description);
+                                  if (opt.hsnCode) setNewItemHsnCode(opt.hsnCode);
+                                  if (opt.quantityType) setNewItemQtyType(opt.quantityType);
+                                  setIsCatalogDropdownOpen(false);
+                                }}
+                                className="w-full px-3 py-2 text-left hover:bg-sky-50 dark:hover:bg-slate-800/90 transition-colors flex items-center justify-between gap-2 group cursor-pointer"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400">
+                                    {opt.name}
+                                  </div>
+                                  {opt.description && (
+                                    <div className="text-[10px] text-slate-400 truncate">
+                                      {opt.description}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="text-right shrink-0">
+                                  {opt.rate !== undefined && (
+                                    <div className="text-xs font-extrabold font-mono text-slate-800 dark:text-slate-200">
+                                      {currencySymbol}{opt.rate.toLocaleString('en-IN')}
+                                    </div>
+                                  )}
+                                  {opt.hsnCode && (
+                                    <div className="text-[9.5px] text-slate-400 font-mono">
+                                      HSN: {opt.hsnCode}
+                                    </div>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {/* SAC & Product Size */}

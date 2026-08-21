@@ -9,6 +9,7 @@ import { getSecuritySettings, saveSecuritySettings, SecuritySettings, hashPin, h
 import type { PinSetupSecQPayload } from './components/PinSetupModal';
 import { getDeviceId } from './lib/sessionManager';
 import { emitNotification } from './lib/notifications';
+import { MakLoader } from './components/MakLoader';
 
 const ALLOWED_SUPABASE_COLUMNS = [
   'id', 'userId', 'invoiceType', 'invoiceNumber', 'referenceNumber', 'poNumber', 'date', 
@@ -1140,7 +1141,7 @@ export default function App() {
           }
 
           const invoicesChannel = supabase
-            .channel('invoices-realtime')
+            .channel(`invoices:${uid}:${Date.now()}`)
             .on(
               'postgres_changes',
               { event: '*', schema: 'public', table: 'invoices' },
@@ -3136,11 +3137,7 @@ export default function App() {
   }
 
   if (isAuthLoading || isUnlocked === null) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      </div>
-    );
+    return <MakLoader variant="full-screen" label="Loading MakInvoices Workspace..." />;
   }
 
   if (!userEmail) {

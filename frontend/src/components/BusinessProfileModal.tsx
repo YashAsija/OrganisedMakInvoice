@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Check, Trash2, Upload, CreditCard, ShieldCheck, Sparkles, Building2, Landmark, Sliders, Award, FileSpreadsheet, KeyRound, ArrowLeft, ArrowRight, Plus, AlertCircle, Lock, Banknote, SlidersHorizontal, Hash, FileText, HelpCircle, RefreshCw } from 'lucide-react';
+import { X, Check, Trash2, Upload, CreditCard, ShieldCheck, Sparkles, Building2, Landmark, Sliders, Award, FileSpreadsheet, KeyRound, ArrowLeft, ArrowRight, Plus, AlertCircle, Lock, Banknote, SlidersHorizontal, Hash, FileText, HelpCircle, RefreshCw, ChevronDown } from 'lucide-react';
 import { BusinessProfile } from '../types';
 import { Country, State } from 'country-state-city';
 import { supabase } from '../lib/supabase';
@@ -98,6 +98,56 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const [country, setCountry] = useState(() => isOnboarding ? '' : (profile.country || ''));
   const [currencySymbol, setCurrencySymbol] = useState(() => isOnboarding ? '' : (profile.currencySymbol || ''));
   const [mobile, setMobile] = useState(() => isOnboarding ? '' : (profile.mobile || ''));
+
+  // --- SEARCHABLE COUNTRY & STATE COMBOS ---
+  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
+  const [countrySearchQuery, setCountrySearchQuery] = useState(() => isOnboarding ? '' : (profile.country || ''));
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
+
+  const [isStateDropdownOpen, setIsStateDropdownOpen] = useState(false);
+  const [stateSearchQuery, setStateSearchQuery] = useState(() => isOnboarding ? '' : (profile.state || ''));
+  const stateDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Synchronize search queries if country or state state updates
+  useEffect(() => {
+    setCountrySearchQuery(country || '');
+  }, [country]);
+
+  useEffect(() => {
+    setStateSearchQuery(state || '');
+  }, [state]);
+
+  // Click outside to close country/state dropdowns
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (countryDropdownRef.current && !countryDropdownRef.current.contains(e.target as Node)) {
+        setIsCountryDropdownOpen(false);
+      }
+      if (stateDropdownRef.current && !stateDropdownRef.current.contains(e.target as Node)) {
+        setIsStateDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter countries dynamically
+  const filteredCountries = React.useMemo(() => {
+    const all = Country.getAllCountries();
+    if (!countrySearchQuery.trim()) return all;
+    const q = countrySearchQuery.toLowerCase();
+    return all.filter(c => c.name.toLowerCase().includes(q) || c.isoCode.toLowerCase().includes(q));
+  }, [countrySearchQuery]);
+
+  // Filter states dynamically based on selected country
+  const filteredStates = React.useMemo(() => {
+    const cCode = Country.getAllCountries().find(c => c.name === country)?.isoCode;
+    if (!cCode) return [];
+    const allStates = State.getStatesOfCountry(cCode);
+    if (!stateSearchQuery.trim()) return allStates;
+    const q = stateSearchQuery.toLowerCase();
+    return allStates.filter(s => s.name.toLowerCase().includes(q) || s.isoCode.toLowerCase().includes(q));
+  }, [country, stateSearchQuery]);
 
   // Banking
   const [bankName, setBankName] = useState(() => isOnboarding ? '' : (profile.bankName || ''));
@@ -2142,44 +2192,176 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 </div>
                 <div className="p-6 space-y-6">
                   <div className="grid md:grid-cols-3 gap-6">
-                    <div>
-                      <label htmlFor="company-country" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Country *</label>
-                      <select 
-                        id="company-country"
-                        required
-                        value={Country.getAllCountries().find(c => c.name === country)?.isoCode || ''}
-                        onChange={(e) => handleCountryChange(e.target.value)}
-                        className={`w-full px-3 py-2.5 rounded-xl border bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none shadow-sm transition-all font-medium cursor-pointer ${showErrors && !country.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[#bae6fd]/60 dark:border-[#223269]/60 focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15'}`}
-                      >
-                        <option value="" disabled className="bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Select Country</option>
-                        {Country.getAllCountries().map((c) => (
-                          <option key={c.isoCode} value={c.isoCode} className="bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white">{c.name}</option>
-                        ))}
-                      </select>
+                    {/* Country Searchable Combobox */}
+                    <div className="relative" ref={countryDropdownRef}>
+                      <label htmlFor="company-country" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">
+                        Country *
+                      </label>
+                      <div className="relative flex items-center">
+                        <input
+                          id="company-country"
+                          type="text"
+                          value={countrySearchQuery}
+                          onChange={(e) => {
+                            setCountrySearchQuery(e.target.value);
+                            setCountry(e.target.value);
+                            setIsCountryDropdownOpen(true);
+                          }}
+                          onFocus={() => setIsCountryDropdownOpen(true)}
+                          placeholder="Search or select country..."
+                          className={`w-full pl-3 pr-16 py-2.5 rounded-xl border bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none shadow-sm transition-all font-medium ${showErrors && !country.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[#bae6fd]/60 dark:border-[#223269]/60 focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15'}`}
+                        />
+                        <div className="absolute right-1.5 flex items-center gap-1">
+                          {countrySearchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCountrySearchQuery('');
+                                setCountry('');
+                                setState('');
+                                setStateCode('');
+                                setStateSearchQuery('');
+                                setIsCountryDropdownOpen(false);
+                              }}
+                              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                              title="Clear country"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
+                            title="Toggle countries list"
+                            className="p-1 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 cursor-pointer"
+                          >
+                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isCountryDropdownOpen ? 'rotate-180 text-sky-500' : ''}`} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Country Dropdown Popup */}
+                      {isCountryDropdownOpen && filteredCountries.length > 0 && (
+                        <div className="absolute left-0 right-0 top-full mt-1.5 max-h-56 overflow-y-auto bg-white dark:bg-[#0b1329] border border-sky-200 dark:border-slate-700 rounded-xl shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800">
+                          <div className="px-3 py-1 bg-sky-50/90 dark:bg-slate-800/90 flex items-center justify-between sticky top-0 backdrop-blur-xs z-10">
+                            <span className="text-[10px] font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider">
+                              Countries ({filteredCountries.length})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setIsCountryDropdownOpen(false)}
+                              className="text-[9px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            >
+                              Close
+                            </button>
+                          </div>
+                          {filteredCountries.map((c) => (
+                            <button
+                              key={c.isoCode}
+                              type="button"
+                              onClick={() => {
+                                handleCountryChange(c.isoCode);
+                                setCountrySearchQuery(c.name);
+                                setStateSearchQuery('');
+                                setIsCountryDropdownOpen(false);
+                              }}
+                              className="w-full px-3 py-2 text-left hover:bg-sky-50 dark:hover:bg-slate-800/90 transition-colors flex items-center justify-between gap-2 group cursor-pointer"
+                            >
+                              <span className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400">
+                                {c.name}
+                              </span>
+                              <span className="text-[9.5px] font-mono text-slate-400 shrink-0">
+                                {c.isoCode}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {showErrors && !country.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">Country is required</p>}
                     </div>
-                    <div>
-                      <label htmlFor="company-state" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">State *</label>
-                      <select 
-                        id="company-state"
-                        value={(() => {
-                          const cCode = Country.getAllCountries().find(c => c.name === country)?.isoCode;
-                          if (!cCode) return '';
-                          return State.getStatesOfCountry(cCode).find(s => s.name === state)?.isoCode || '';
-                        })()}
-                        onChange={(e) => handleStateChange(e.target.value, country)}
-                        className={`w-full px-3 py-2.5 rounded-xl border bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none shadow-sm transition-all font-medium cursor-pointer ${showErrors && !state.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[#bae6fd]/60 dark:border-[#223269]/60 focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15'}`}
-                        required
-                      >
-                        <option value="" disabled className="bg-white dark:bg-[#111a36] text-[#64748b]">Select State</option>
-                        {(() => {
-                          const cCode = Country.getAllCountries().find(c => c.name === country)?.isoCode;
-                          if (!cCode) return null;
-                          return State.getStatesOfCountry(cCode).map((st) => (
-                            <option key={st.isoCode} value={st.isoCode} className="bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white">{st.name}</option>
-                          ));
-                        })()}
-                      </select>
+
+                    {/* State Searchable Combobox */}
+                    <div className="relative" ref={stateDropdownRef}>
+                      <label htmlFor="company-state" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">
+                        State *
+                      </label>
+                      <div className="relative flex items-center">
+                        <input
+                          id="company-state"
+                          type="text"
+                          value={stateSearchQuery}
+                          onChange={(e) => {
+                            setStateSearchQuery(e.target.value);
+                            setState(e.target.value);
+                            setIsStateDropdownOpen(true);
+                          }}
+                          onFocus={() => setIsStateDropdownOpen(true)}
+                          placeholder="Search or select state..."
+                          className={`w-full pl-3 pr-16 py-2.5 rounded-xl border bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none shadow-sm transition-all font-medium ${showErrors && !state.trim() ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[#bae6fd]/60 dark:border-[#223269]/60 focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15'}`}
+                        />
+                        <div className="absolute right-1.5 flex items-center gap-1">
+                          {stateSearchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStateSearchQuery('');
+                                setState('');
+                                setStateCode('');
+                                setIsStateDropdownOpen(false);
+                              }}
+                              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                              title="Clear state"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setIsStateDropdownOpen(!isStateDropdownOpen)}
+                            title="Toggle state list"
+                            className="p-1 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 cursor-pointer"
+                          >
+                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isStateDropdownOpen ? 'rotate-180 text-sky-500' : ''}`} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* State Dropdown Popup */}
+                      {isStateDropdownOpen && filteredStates.length > 0 && (
+                        <div className="absolute left-0 right-0 top-full mt-1.5 max-h-56 overflow-y-auto bg-white dark:bg-[#0b1329] border border-sky-200 dark:border-slate-700 rounded-xl shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800">
+                          <div className="px-3 py-1 bg-sky-50/90 dark:bg-slate-800/90 flex items-center justify-between sticky top-0 backdrop-blur-xs z-10">
+                            <span className="text-[10px] font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider">
+                              States ({filteredStates.length})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setIsStateDropdownOpen(false)}
+                              className="text-[9px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            >
+                              Close
+                            </button>
+                          </div>
+                          {filteredStates.map((st) => (
+                            <button
+                              key={st.isoCode}
+                              type="button"
+                              onClick={() => {
+                                handleStateChange(st.isoCode, country);
+                                setStateSearchQuery(st.name);
+                                setIsStateDropdownOpen(false);
+                              }}
+                              className="w-full px-3 py-2 text-left hover:bg-sky-50 dark:hover:bg-slate-800/90 transition-colors flex items-center justify-between gap-2 group cursor-pointer"
+                            >
+                              <span className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400">
+                                {st.name}
+                              </span>
+                              <span className="text-[9.5px] font-mono text-slate-400 shrink-0">
+                                {st.isoCode}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {showErrors && !state.trim() && <p className="text-[10px] text-red-500 font-medium mt-1">State is required</p>}
                     </div>
                     <div>
@@ -2861,55 +3043,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                 </div>
               </div>
 
-              {/* Card 2: Permissions & Features */}
-              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
-                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
-                  Permissions & Features
-                </div>
-                <div className="p-6 space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <label htmlFor="billing-posted-edit" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Posted Invoice Edit</label>
-                      <select 
-                        id="billing-posted-edit"
-                        value={postedInvoiceEdit}
-                        onChange={(e) => setPostedInvoiceEdit(e.target.value as any)}
-                        className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium cursor-pointer"
-                      >
-                        <option value="Enabled" className="bg-white dark:bg-[#111a36] text-slate-805 dark:text-white">Enabled</option>
-                        <option value="Disabled" className="bg-white dark:bg-[#111a36] text-slate-805 dark:text-white">Disabled</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="billing-rate-edit" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Material Rate Edit</label>
-                      <select 
-                        id="billing-rate-edit"
-                        value={materialRateEdit}
-                        onChange={(e) => setMaterialRateEdit(e.target.value as any)}
-                        className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium cursor-pointer"
-                      >
-                        <option value="Enabled" className="bg-white dark:bg-[#111a36] text-slate-805 dark:text-white">Enabled</option>
-                        <option value="Disabled" className="bg-white dark:bg-[#111a36] text-slate-805 dark:text-white">Disabled</option>
-                      </select>
-                    </div>
-                  </div>
 
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <label htmlFor="billing-categ-edit" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Material Categorization</label>
-                      <select 
-                        id="billing-categ-edit"
-                        value={materialCategorization}
-                        onChange={(e) => setMaterialCategorization(e.target.value as any)}
-                        className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 font-medium cursor-pointer"
-                      >
-                        <option value="Optional" className="bg-white dark:bg-[#111a36] text-slate-805 dark:text-white">Optional</option>
-                        <option value="Required" className="bg-white dark:bg-[#111a36] text-slate-805 dark:text-white">Required</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               {/* Card 3: Default Text & Terms */}
               <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">

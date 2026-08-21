@@ -5,6 +5,7 @@ import { LivePreview } from '../../../components/TemplateBuilder/LivePreview';
 import { Invoice, BusinessProfile } from '../../../types';
 import { Loader2 } from 'lucide-react';
 import { exportInvoicePDFAsync, resolveTemplateForInvoice } from '../../../lib/pdfExporter';
+import { MakLoader } from '../../../components/MakLoader';
 
 function InvoicePreviewContent() {
   const searchParams = useSearchParams();
@@ -328,12 +329,7 @@ function InvoicePreviewContent() {
   }, [autoPrint, invoice, loading, profile]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-zinc-950">
-        <Loader2 className="w-8 h-8 text-sky-650 animate-spin" />
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mt-3">Loading document preview...</span>
-      </div>
-    );
+    return <MakLoader variant="full-screen" label="Preparing Document Preview..." />;
   }
 
   if (error || !invoice) {
@@ -512,12 +508,7 @@ function getDefaultTemplatePreset() {
 
 export default function InvoicePreviewPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-zinc-950">
-        <Loader2 className="w-8 h-8 text-sky-655 animate-spin" />
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mt-3">Loading portal...</span>
-      </div>
-    }>
+    <Suspense fallback={<MakLoader variant="full-screen" label="Loading portal..." />}>
       <InvoicePreviewContent />
     </Suspense>
   );
