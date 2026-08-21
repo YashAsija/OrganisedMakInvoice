@@ -216,21 +216,27 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
+      if (path === '/dashboard' || path === '/') {
+        return 'invoices';
+      }
       if (path.startsWith('/invoice-templates')) {
         return 'invoice_templates';
       }
       if (path.startsWith('/purchases')) {
         return 'purchases';
       }
-      return pathToTab[path] || 'dashboard';
+      if (path.startsWith('/invoices')) {
+        return 'invoices';
+      }
+      return pathToTab[path] || 'invoices';
     }
-    return 'dashboard';
+    return 'invoices';
   });
 
   const [publicPath, setPublicPath] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
-      return ['/pricing', '/guide', '/contact', '/security', '/terms', '/privacy', '/features', '/faq'].includes(path) ? path : '/';
+      return ['/pricing', '/guide', '/contact', '/security', '/terms', '/privacy', '/features', '/faq', '/login', '/signup'].includes(path) ? path : '/';
     }
     return '/';
   });
@@ -516,7 +522,7 @@ export default function App() {
       
       const path = window.location.pathname;
       if (userEmail) {
-        let expectedPath = tabToPath[activeTab] || '/dashboard';
+        let expectedPath = tabToPath[activeTab] || '/invoices';
         if (isInvoiceEditorOpen) {
           expectedPath = '/quick-bill';
         } else if (isProfileOpen) {
@@ -572,9 +578,9 @@ export default function App() {
             
             if (matchedTab) {
               setActiveTab(matchedTab);
-            } else if (path === '/') {
-              // If at root and logged in, default back to dashboard
-              setActiveTab('dashboard');
+            } else if (path === '/' || path === '/dashboard') {
+              // If at root or /dashboard on back navigation, default to invoices (Sales Ledger)
+              setActiveTab('invoices');
             }
           }
         } else {
@@ -3089,11 +3095,6 @@ export default function App() {
   };
 
   const handlePublicNavigate = (path: string) => {
-    // /signup and /login are real Next.js pages — do a hard navigation
-    if (path === '/signup' || path === '/login') {
-      window.location.href = path;
-      return;
-    }
     if (path.includes('#')) {
       const [base, hash] = path.split('#');
       setPublicPath(base || '/');
@@ -3191,12 +3192,20 @@ export default function App() {
       );
     }
 
-    if (publicPath === '/contact') {
+    if (publicPath === '/login') {
       return (
-        <ContactPage
-          theme={theme}
+        <AuthScreen
+          defaultMode="login"
           onNavigate={handlePublicNavigate}
-          onGoogleLogin={handleLogin}
+        />
+      );
+    }
+
+    if (publicPath === '/signup') {
+      return (
+        <AuthScreen
+          defaultMode="signup"
+          onNavigate={handlePublicNavigate}
         />
       );
     }

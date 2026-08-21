@@ -137,7 +137,6 @@ export interface SmartBillingSetters {
   setIsRecurring: (v: boolean) => void;
   setRecurringInterval: (v: RecurringInterval) => void;
   setAiExtraData: (fn: (prev: Record<string, any>) => Record<string, any>) => void;
-  setActiveTemplate?: (fn: (prev: InvoiceTemplate) => InvoiceTemplate) => void;
 }
 
 export interface SmartBillingExistingState {
@@ -630,65 +629,6 @@ export function applySmartBillingData(
 
   // Store any extra data for future template switches
   setters.setAiExtraData((prev) => ({ ...prev, ...extracted }));
-
-  // Dynamically update activeTemplate config & section visibility for populated fields so they are immediately visible in template layout & settings
-  if (setters.setActiveTemplate) {
-    setters.setActiveTemplate((prev) => {
-      if (!prev) return prev;
-      const config = { ...prev.config };
-      const sections = { ...prev.sections };
-
-      // Client fields
-      const clientFields = new Set(config.client?.fields || []);
-      if (extracted.clientName) clientFields.add('name');
-      if (extracted.clientEmail) clientFields.add('email');
-      if (extracted.clientPhone) clientFields.add('phone');
-      if (extracted.clientAddress) clientFields.add('address');
-      if (extracted.clientGstin) clientFields.add('gstin');
-      if (extracted.clientPan) clientFields.add('pan');
-      if (extracted.clientState) clientFields.add('state');
-      if (extracted.clientCountry) clientFields.add('country');
-      config.client = { ...config.client, fields: Array.from(clientFields) };
-
-      // Invoice info fields
-      const invFields = new Set(config.invoiceInfo?.fields || []);
-      if (extracted.invoiceNumber) invFields.add('invoiceNumber');
-      if (extracted.date) invFields.add('invoiceDate');
-      if (extracted.dueDate) invFields.add('dueDate');
-      if (extracted.poNumber) invFields.add('poNumber');
-      if (extracted.referenceNumber) invFields.add('referenceNumber');
-      if (extracted.deliveryNote) invFields.add('deliveryNote');
-      if (extracted.placeOfSupply) invFields.add('placeOfSupply');
-      config.invoiceInfo = { ...config.invoiceInfo, fields: Array.from(invFields) };
-
-      // Shipping fields & section visibility
-      const hasShipping = Boolean(
-        extracted.shippedToName || extracted.shippedToAddress || extracted.shippedToPhone ||
-        extracted.shippedToEmail || extracted.shippedToGstin || extracted.shippedToPan ||
-        extracted.shippedToState || extracted.shippedToCountry || extracted.copyBillingToShipping
-      );
-      if (hasShipping) {
-        const shipFields = new Set(config.shipping?.fields || []);
-        ['name', 'phone', 'email', 'address', 'gstin', 'pan', 'state', 'country'].forEach(f => shipFields.add(f));
-        config.shipping = { ...config.shipping, fields: Array.from(shipFields) };
-        sections.shipTo = { ...sections.shipTo, visible: true };
-      }
-
-      // Transport fields & section visibility
-      const hasTrans = Boolean(
-        extracted.transport || extracted.vehicleNo || (extracted as any).vehicleNumber ||
-        extracted.ewayBillNo || extracted.grRrNo || extracted.station || extracted.driverMobile
-      );
-      if (hasTrans) {
-        const transFields = new Set(config.transport?.fields || []);
-        ['mode', 'vehicleNo', 'driverMobile', 'ewayBillNo', 'grRrNo', 'station'].forEach(f => transFields.add(f));
-        config.transport = { ...config.transport, fields: Array.from(transFields) };
-        sections.transport = { ...sections.transport, visible: true };
-      }
-
-      return { ...prev, config, sections };
-    });
-  }
 
   console.log('[SmartBilling] Applied fields:', Array.from(filled));
   return filled;

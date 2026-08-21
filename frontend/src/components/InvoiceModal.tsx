@@ -2429,7 +2429,7 @@ export default function InvoiceModal({
               setTaxMode: (v: string) => setTaxMode(v as 'dynamic' | 'custom'),
               setCustomTaxName, setCustomTaxPercentage,
               setIsRecurring, setRecurringInterval: (v: string) => setRecurringInterval(v as RecurringInterval),
-              setAiExtraData, setActiveTemplate,
+              setAiExtraData,
             }}
             existingState={{
               clientName, clientEmail, clientPhone, clientAddress,

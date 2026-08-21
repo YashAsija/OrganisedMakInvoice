@@ -228,14 +228,14 @@ export default function PublicNavbar({ theme, onNavigate, activePath }: PublicNa
                   <div className="space-y-3 mt-auto pb-4">
                     <button
                       type="button"
-                      onClick={() => { window.location.href = '/login'; setIsMobileNavOpen(false); }}
+                      onClick={() => { onNavigate('/login'); setIsMobileNavOpen(false); }}
                       className="w-full py-3 text-center text-[13px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-white/10 border border-transparent hover:bg-slate-200 dark:hover:bg-white/20 rounded-xl cursor-pointer transition-colors"
                     >
                       Log In
                     </button>
                     <button
                       type="button"
-                      onClick={() => { window.location.href = '/signup'; setIsMobileNavOpen(false); }}
+                      onClick={() => { onNavigate('/signup'); setIsMobileNavOpen(false); }}
                       className="w-full py-3 text-center text-[13px] font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-md cursor-pointer transition-colors"
                     >
                       Sign Up

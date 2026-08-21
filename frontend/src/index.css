@@ -607,30 +607,36 @@ section::-webkit-scrollbar {
    =========================================================================== */
 .smart-billing-prompt-input {
   background-color: #ffffff !important;
-  color: #0f172a !important;
-  caret-color: #4f46e5 !important;
-  -webkit-text-fill-color: #0f172a !important;
+  color: #000000 !important;
+  caret-color: #0284c7 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
 }
 
 .smart-billing-prompt-input::placeholder {
   color: #64748b !important;
   -webkit-text-fill-color: #64748b !important;
-  opacity: 1 !important;
+  opacity: 0.55 !important;
+  font-weight: 400 !important;
 }
 
 .dark .smart-billing-prompt-input,
 [data-theme="dark"] .smart-billing-prompt-input {
   background-color: #0f172a !important;
   color: #ffffff !important;
-  caret-color: #818cf8 !important;
+  caret-color: #38bdf8 !important;
   -webkit-text-fill-color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
 }
 
 .dark .smart-billing-prompt-input::placeholder,
 [data-theme="dark"] .smart-billing-prompt-input::placeholder {
   color: #94a3b8 !important;
   -webkit-text-fill-color: #94a3b8 !important;
-  opacity: 1 !important;
+  opacity: 0.55 !important;
+  font-weight: 400 !important;
 }
 
 /* ===========================================================================

@@ -303,25 +303,36 @@ export function SmartBillingBox({ activeTemplate, setters, existingState }: Smar
         </p>
 
         {/* Input row */}
-        <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2">
+        <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2 items-start">
           <div className="relative flex-1 w-full">
-            <input
-              type="text"
+            <textarea
+              rows={2}
               value={prompt}
               onChange={(e) => { setPrompt(e.target.value); setLastFilledCount(null); }}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleGenerate(); } }}
-              placeholder="e.g. Bill Sharma Traders ₹45000 for 5 laptops HSN 84713, GST 18%, vehicle DL9SAK2211, due in 30 days..."
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleGenerate(false);
+                }
+              }}
+              placeholder="e.g. Bill Sharma Traders ₹45,000 for 5 laptops HSN 84713, GST 18%, vehicle DL9SAK2211, PO #9921, notes: Handle with care, due in 30 days..."
               disabled={isLoading}
-              className="smart-billing-prompt-input w-full pl-3 pr-7 py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl border border-[#bae6fd] dark:border-[#0284c7]/50 focus:outline-none focus:border-[#0284c7] focus:ring-2 focus:ring-[#0284c7]/30 disabled:opacity-60 transition-all shadow-xs"
+              className="smart-billing-prompt-input w-full pl-3 pr-7 py-2 text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl border border-[#bae6fd] dark:border-[#0284c7]/50 focus:outline-none focus:border-[#0284c7] focus:ring-2 focus:ring-[#0284c7]/30 disabled:opacity-60 transition-all shadow-xs resize-y min-h-[54px] max-h-[160px]"
             />
             {prompt && !isLoading && (
               <button
                 type="button"
                 onClick={() => { setPrompt(''); setLastFilledCount(null); }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                className="absolute right-2.5 top-2.5 z-20 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                title="Clear prompt"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
+            )}
+            {prompt.length > 50 && (
+              <span className="absolute right-3 bottom-1.5 text-[8.5px] font-mono text-slate-400 dark:text-slate-500 pointer-events-none">
+                {prompt.length} chars
+              </span>
             )}
           </div>
           <div className="flex items-center gap-1.5 w-full sm:w-auto shrink-0">

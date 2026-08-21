@@ -539,6 +539,13 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
     });
   }
 
+  const items = tempInvoice.items || [];
+  const N = items.length;
+
+  // Single-pass optimization for standard invoices (<= 6 line items)
+  const isStandardSinglePage = N <= 6;
+  const initialChunks = isStandardSinglePage ? [items] : undefined;
+
   const root = createRoot(container);
 
   // Render the template
@@ -549,12 +556,13 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
       businessProfile: profile,
       currencySymbol: currencySymbol,
       isInteractive: false,
-      isPrintMode: true
+      isPrintMode: true,
+      printPageChunks: initialChunks
     })
   );
 
-  // Wait for React first-render to complete so we can measure DOM elements
-  await new Promise(r => setTimeout(r, 1200));
+  // Fast micro-task wait for React DOM paint (60ms instead of 1200ms)
+  await new Promise(r => setTimeout(r, 60));
 
   try {
     const pageHeight = activeTemplate.layout.pageSize === 'A4' ? 1123 : 1056;
@@ -593,12 +601,10 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
       }
     }
 
-    const items = tempInvoice.items || [];
-    const N = items.length;
     const chunks: any[][] = [];
     const availablePageHeight = pageHeight - footerHeight - 20; // 20px bottom padding
     const page1Budget = availablePageHeight - tableTop - tableHeaderHeight;
-    const subsequentPageBudget = page1Budget; // Headers are now rendered on every page, so budget is same as page 1
+    const subsequentPageBudget = page1Budget;
 
     const totalRowsHeight = rowHeights.reduce((a, b) => a + b, 0);
     const singlePageBudget = page1Budget - totalsHeight;
@@ -664,21 +670,23 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
 
     const effectiveSelectedCopies = (invoice as any)?.selectedCopies || { customer: true, transport: false, supplier: false, challan: false };
 
-    // Re-render with calculated chunks and effective copies for PDF export / print
-    root.render(
-      React.createElement(LivePreview, {
-        template: activeTemplate,
-        invoiceData: { ...invoice, items: tempInvoice.items, selectedCopies: effectiveSelectedCopies } as any,
-        businessProfile: profile,
-        currencySymbol: currencySymbol,
-        isInteractive: false,
-        isPrintMode: true,
-        printPageChunks: chunks
-      })
-    );
+    // Re-render with calculated chunks if multi-page split was necessary or non-standard single page
+    if (!isStandardSinglePage || chunks.length > 1) {
+      root.render(
+        React.createElement(LivePreview, {
+          template: activeTemplate,
+          invoiceData: { ...invoice, items: tempInvoice.items, selectedCopies: effectiveSelectedCopies } as any,
+          businessProfile: profile,
+          currencySymbol: currencySymbol,
+          isInteractive: false,
+          isPrintMode: true,
+          printPageChunks: chunks
+        })
+      );
 
-    // Wait for the re-render to apply in DOM
-    await new Promise(r => setTimeout(r, 1200));
+      // Fast DOM re-render paint (60ms)
+      await new Promise(r => setTimeout(r, 60));
+    }
 
     // Patch CSSStyleSheet to ignore SecurityError from cross-origin stylesheets
     const originalCssRules = Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'cssRules');
@@ -712,15 +720,27 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
           pdf.addPage();
         }
         const pageDataUrl = await Promise.race([
-          toPng(pages[i], { quality: 0.92, pixelRatio: 2, skipFonts: true, cacheBust: false }),
-          new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 20000))
+          toPng(pages[i], {
+            quality: 0.9,
+            pixelRatio: 1.6,
+            skipFonts: true,
+            cacheBust: false,
+            filter: (node) => !(node instanceof HTMLScriptElement)
+          }),
+          new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 10000))
         ]);
         pdf.addImage(pageDataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
       }
     } else {
       const dataUrl = await Promise.race([
-        toPng(container, { quality: 0.92, pixelRatio: 2, skipFonts: true, cacheBust: false }),
-        new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 20000))
+        toPng(container, {
+          quality: 0.9,
+          pixelRatio: 1.6,
+          skipFonts: true,
+          cacheBust: false,
+          filter: (node) => !(node instanceof HTMLScriptElement)
+        }),
+        new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 10000))
       ]);
       pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
     }

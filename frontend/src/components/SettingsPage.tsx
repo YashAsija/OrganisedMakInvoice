@@ -324,29 +324,42 @@ export default function SettingsPage({
   );
 
   useEffect(() => {
+    const userEmail = profile.email || 'Active User';
+
     const refreshSessions = () => {
-      setActiveSessions(getLocalSessions());
+      setActiveSessions(getLocalSessions(userEmail));
     };
+
+    // Initialize initial sessions list
+    setActiveSessions(getLocalSessions(userEmail));
 
     window.addEventListener('storage', refreshSessions);
     window.addEventListener('mak_session_revoked', refreshSessions);
     window.addEventListener('mak_all_other_sessions_revoked', refreshSessions);
 
+    const handleForceLogout = () => {
+      emitNotification('Session Revoked', 'This device session has been signed out from another device.', 'warning');
+      if (onLogout) onLogout();
+    };
+
+    window.addEventListener('mak_session_force_logout', handleForceLogout);
+
     return () => {
       window.removeEventListener('storage', refreshSessions);
       window.removeEventListener('mak_session_revoked', refreshSessions);
       window.removeEventListener('mak_all_other_sessions_revoked', refreshSessions);
+      window.removeEventListener('mak_session_force_logout', handleForceLogout);
     };
-  }, []);
+  }, [profile.email, onLogout]);
 
   const handleRevokeSingleSession = (sessionId: string, deviceName: string) => {
-    const updated = revokeSession(sessionId);
+    const updated = revokeSession(sessionId, profile.email);
     setActiveSessions(updated);
     emitNotification('Session Revoked', `Successfully signed out ${deviceName}.`, 'info');
   };
 
   const handleRevokeAllOtherSessions = () => {
-    const updated = revokeAllOtherSessions();
+    const updated = revokeAllOtherSessions(profile.email);
     setActiveSessions(updated);
     emitNotification('All Other Sessions Signed Out', 'Signed out all active secondary device sessions.', 'success');
   };
@@ -1052,16 +1065,19 @@ export default function SettingsPage({
                 )}
 
                 {/* 6. Active Session Info */}
-                <div className="p-4 bg-[#f4f9ff] dark:bg-[#0b1329]/60 rounded-2xl border border-[#bae6fd]/40 dark:border-[#223269]/40 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8] block" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                      Active Workspace Sessions ({activeSessions.length})
-                    </span>
+                <div className="p-4 bg-[#f4f9ff] dark:bg-[#0b1329]/60 rounded-2xl border border-[#bae6fd]/40 dark:border-[#223269]/40 space-y-3.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8]" />
+                      <span className="text-[10px] uppercase font-extrabold text-[#0284c7] dark:text-[#38bdf8]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                        Active Workspace Sessions ({activeSessions.length})
+                      </span>
+                    </div>
                     {activeSessions.length > 1 && (
                       <button
                         type="button"
                         onClick={handleRevokeAllOtherSessions}
-                        className="text-[9.5px] font-bold text-rose-500 hover:text-rose-600 dark:text-rose-400 cursor-pointer underline flex items-center gap-1"
+                        className="text-[9.5px] font-extrabold text-rose-600 hover:text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 px-2.5 py-1 rounded-lg border border-rose-200 dark:border-rose-900/50 cursor-pointer transition-all flex items-center gap-1.5 self-start sm:self-auto"
                       >
                         <Trash2 className="w-3 h-3" />
                         <span>Sign Out Other Sessions</span>
@@ -1071,32 +1087,63 @@ export default function SettingsPage({
 
                   <div className="space-y-2.5">
                     {activeSessions.map((session) => {
-                      const isMobile = session.deviceName.toLowerCase().includes('ios') || session.deviceName.toLowerCase().includes('android');
+                      const deviceType = session.deviceType || (
+                        session.deviceName.toLowerCase().includes('iphone') || session.deviceName.toLowerCase().includes('android') || session.deviceName.toLowerCase().includes('ios')
+                          ? 'mobile'
+                          : session.deviceName.toLowerCase().includes('ipad') ? 'tablet' : 'desktop'
+                      );
+                      const isMobile = deviceType === 'mobile';
+                      const isTablet = deviceType === 'tablet';
+
                       return (
                         <div
                           key={session.sessionId}
-                          className="flex items-center justify-between p-3 bg-white/80 dark:bg-[#111a36]/80 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/50 gap-3"
+                          className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border transition-all gap-3 ${
+                            session.isCurrent
+                              ? 'bg-white dark:bg-[#111a36] border-[#0284c7]/40 dark:border-[#38bdf8]/40 shadow-sm'
+                              : 'bg-white/80 dark:bg-[#111a36]/70 border-[#bae6fd]/40 dark:border-[#223269]/50 hover:border-slate-300 dark:hover:border-zinc-700'
+                          }`}
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-[#e0f2fe] dark:bg-[#1b264f] border border-[#bae6fd]/60 dark:border-[#223269]/60 flex items-center justify-center shrink-0">
+                          <div className="flex items-start sm:items-center gap-3">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                              session.isCurrent
+                                ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800/60 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-[#e0f2fe] dark:bg-[#1b264f] border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#0284c7] dark:text-[#38bdf8]'
+                            }`}>
                               {isMobile ? (
-                                <Smartphone className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8]" />
+                                <Smartphone className="w-4 h-4" />
+                              ) : isTablet ? (
+                                <Smartphone className="w-4 h-4 rotate-90" />
                               ) : (
-                                <Monitor className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8]" />
+                                <Monitor className="w-4 h-4" />
                               )}
                             </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 block">{session.deviceName}</span>
-                                {session.isCurrent && (
-                                  <span className="text-[8.5px] font-extrabold text-emerald-600 dark:text-emerald-400 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-full border border-emerald-200 dark:border-emerald-800 uppercase tracking-wider">
+
+                            <div className="space-y-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-100 truncate">{session.deviceName}</span>
+                                {session.isCurrent ? (
+                                  <span className="text-[8px] font-black text-emerald-700 dark:text-emerald-300 px-2 py-0.5 bg-emerald-100/80 dark:bg-emerald-950/80 rounded-full border border-emerald-300 dark:border-emerald-700/60 uppercase tracking-wider">
                                     Current Device
+                                  </span>
+                                ) : (
+                                  <span className="text-[8px] font-bold text-sky-700 dark:text-sky-300 px-2 py-0.5 bg-sky-100/80 dark:bg-sky-950/80 rounded-full border border-sky-300 dark:border-sky-700/60 uppercase tracking-wider">
+                                    Active Session
                                   </span>
                                 )}
                               </div>
-                              <span className="text-[9.5px] text-[#64748b]/75 dark:text-zinc-500 font-mono block mt-0.5">
-                                {session.userEmail} • Active {session.lastActive}
-                              </span>
+
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9.5px] text-[#64748b] dark:text-zinc-400 font-mono">
+                                <span>{session.userEmail}</span>
+                                <span>•</span>
+                                <span>{session.lastActive}</span>
+                                {session.ipAddress && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-[#0284c7] dark:text-[#38bdf8]">{session.ipAddress}</span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
 
@@ -1104,7 +1151,7 @@ export default function SettingsPage({
                             <button
                               type="button"
                               onClick={() => handleRevokeSingleSession(session.sessionId, session.deviceName)}
-                              className="px-2.5 py-1 text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-lg border border-rose-200 dark:border-rose-900/50 transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                              className="px-3 py-1.5 text-[10px] font-extrabold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-lg border border-rose-200 dark:border-rose-900/50 transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 self-end sm:self-auto"
                             >
                               <Trash2 className="w-3 h-3" />
                               <span>Revoke</span>

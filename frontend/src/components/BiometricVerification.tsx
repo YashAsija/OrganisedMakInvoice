@@ -321,7 +321,7 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
             </div>
             <h1 className="text-2xl font-black text-white tracking-tight mb-2">Forgot PIN?</h1>
             <p className="text-sm text-white/60 leading-relaxed max-w-xs mx-auto">
-              This will remove your current PIN lock. You can set a new PIN from Profile Settings after logging in.
+              This will remove your current PIN lock. You can set a new PIN from Settings after logging in.
             </p>
           </div>
 

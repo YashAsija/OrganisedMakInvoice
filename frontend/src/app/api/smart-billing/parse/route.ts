@@ -122,17 +122,17 @@ export async function POST(request: Request) {
       }
     };
 
-    const allowedFieldsStr = allowed_fields && allowed_fields.length > 0
-      ? `\nCRITICAL CONSTRAINTS: Only extract values for these fields: ${allowed_fields.join(', ')}. If other data is present, ignore it. Do NOT add keys outside this list.`
-      : '';
-
     const currentInvoiceStr = current_invoice ? `\nCURRENT INVOICE STATE (Context):\n${JSON.stringify(current_invoice)}` : '';
 
-    const systemInstruction = `You are a high-fidelity bill parser. Interpret the user's natural language billing request and construct a valid JSON representation matching the schema.
-    Use standard fallback fields for today's date ${today} and a due date exactly 14 days later ${defaultDueDate}.
-    \nNote: If the user prompt DOES NOT mention any products, services, or items to add, leave the 'items' array blank/empty. Do not invent products.
-    \nCRITICAL RULE FOR ITEMS: In the 'items' array, ONLY return the products/services that are explicitly mentioned, added, or modified in the user's current prompt. Do NOT include other existing items from the current invoice state if they are not mentioned in the prompt. We will merge them on the frontend.
-    ${allowedFieldsStr}
+    const systemInstruction = `You are an exhaustive, high-fidelity AI bill parser. Interpret the user's natural language billing request and construct a valid JSON representation matching the schema.
+    
+    CRITICAL LONG PROMPT & DETAIL EXTRACTION RULES:
+    1. EXHAUSTIVE EXTRACTION: Read and parse the ENTIRE user prompt thoroughly, no matter how long or detailed it is. Extract EVERY piece of information provided into the matching JSON schema fields.
+    2. CAPTURE ALL NOTES & TERMS: If the prompt contains special comments, instructions, terms, PO numbers, reference numbers, or delivery notes, capture them completely in 'notes', 'invoiceTerms', 'poNumber', 'referenceNumber', or 'deliveryNote'.
+    3. ITEM DETAILS & DESCRIPTIONS: For each product or service mentioned, extract item name, rate, quantity, quantityType (e.g. pcs, box, kg, hrs), HSN code, tax percentage, and item description. Do NOT omit any line items or details.
+    4. TRANSPORT & SHIPPING: Extract transport carrier, vehicle number, GR/RR number, driver mobile, station, e-way bill number, and consignee/shipping details if present.
+    5. DEFAULT DATES: Use ${today} for invoice date and ${defaultDueDate} for due date if not explicitly specified.
+    6. CRITICAL RULE FOR ITEMS: Return ALL items explicitly mentioned or modified in the user's prompt. Do NOT truncate or drop any items mentioned in long prompts.
     ${currentInvoiceStr}`;
 
     let parsedResult: Record<string, any> = {};
@@ -144,7 +144,8 @@ export async function POST(request: Request) {
         config: {
           systemInstruction,
           responseMimeType: 'application/json',
-          responseSchema
+          responseSchema,
+          maxOutputTokens: 8192
         }
       });
 
@@ -159,7 +160,8 @@ export async function POST(request: Request) {
         config: {
           systemInstruction,
           responseMimeType: 'application/json',
-          responseSchema
+          responseSchema,
+          maxOutputTokens: 8192
         }
       });
       if (responseFallback.text) {

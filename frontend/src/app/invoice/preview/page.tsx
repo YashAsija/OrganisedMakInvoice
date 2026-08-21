@@ -40,7 +40,7 @@ function InvoicePreviewContent() {
     if (!invoice || !profile || !previewRef.current || printPageChunks !== null) return;
 
     const calculatePreviewChunks = async () => {
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 50));
       const container = previewRef.current;
       if (!container) return;
 

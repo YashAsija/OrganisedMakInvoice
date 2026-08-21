@@ -84,6 +84,7 @@ import {
   Printer,
 
   ChevronRight,
+  ChevronLeft,
 
   ChevronDown,
 
@@ -345,7 +346,7 @@ export default function Dashboard({
 
   // Navigation tabs: 'dashboard' | 'profile' | 'learn' | 'invoices' | 'clients' | 'reports' | 'master_vendor' ...
 
-  const [localActiveTab, setLocalActiveTab] = useState<string>('dashboard');
+  const [localActiveTab, setLocalActiveTab] = useState<string>('invoices');
 
   const activeTab = propActiveTab !== undefined ? propActiveTab : localActiveTab;
 
@@ -397,6 +398,10 @@ export default function Dashboard({
   const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isEditingTotalPaid, setIsEditingTotalPaid] = useState<boolean>(false);
   const [editTotalPaidAmount, setEditTotalPaidAmount] = useState<string>('');
+  const [selectedMonthlyPeriod, setSelectedMonthlyPeriod] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
 
 
 
@@ -1712,383 +1717,198 @@ export default function Dashboard({
           </div>
 
 
-
           {/* SETTINGS MENU */}
-
           <div className="space-y-1">
-
             <span className="text-[9px] uppercase font-extrabold tracking-widest block px-2 pb-1" style={{fontFamily: "'IBM Plex Mono', monospace", color: 'var(--nav-eyebrow-color, #0284c7)', opacity: 0.7}}>Financial Hub</span>
 
-            
-
-            <button onClick={() => handleTabClick('dashboard')} className={navItemClass('dashboard')}>
-
-              <div className="flex items-center gap-2.5">
-
-                <div className={iconWrapper(activeTab === 'dashboard', 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400')}><BarChart3 className="w-3.5 h-3.5" /></div>
-
-                <span>Billing Dashboard</span>
-
-              </div>
-
-            </button>
-
-
-
             {/* Sales Ledger Accordion Section */}
-
             <div className="space-y-0.5">
-
               <button
-
                 onClick={() => {
-
                   if (activeTab !== 'invoices') {
-
                     handleTabClick('invoices');
-
                   }
-
                   setIsSalesLedgerExpanded(!isSalesLedgerExpanded);
-
                 }}
-
                 className={navItemClass('invoices')}
-
               >
-
                 <div className="flex items-center gap-2.5">
-
                   <div className={iconWrapper(activeTab === 'invoices', 'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400')}><FileText className="w-3.5 h-3.5" /></div>
-
                   <span>Sales Ledger</span>
-
                 </div>
-
                 <div className="flex items-center gap-1.5">
-
                   <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'invoices' ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269]'}`}>
-
                     {invoices.filter(i => !i.isDeleted && i.status !== 'draft' && ['invoice', 'proforma', 'credit_note', 'estimate', 'quote'].includes(i.invoiceType || 'invoice')).length}
-
                   </span>
-
                   <ChevronDown className={`w-3.5 h-3.5 text-[#64748b]/70 transition-transform duration-200 ${isSalesLedgerExpanded ? 'rotate-180' : ''}`} />
-
                 </div>
-
               </button>
 
-
-
               {/* Accordion Sub-items */}
-
               {isSalesLedgerExpanded && (
-
                 <div className="pl-6 space-y-0.5 pt-0.5">
-
                   {[
-
                     { id: 'invoice', label: 'Tax Invoices', count: documentTypeCounts.invoice, activeBg: 'bg-[#0284c7] dark:bg-[#0284c7] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0284c7] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' },
-
                     { id: 'proforma', label: 'Proforma Invoice', count: documentTypeCounts.proforma, activeBg: 'bg-[#0369a1] dark:bg-[#0369a1] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0369a1] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' },
-
                     { id: 'credit_note', label: 'Credit Note', count: documentTypeCounts.credit_note, activeBg: 'bg-[#0284c7] dark:bg-[#0284c7] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0284c7] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' },
-
                     { id: 'quote', label: 'Quote / Estimate', count: documentTypeCounts.quote, activeBg: 'bg-[#0369a1] dark:bg-[#0369a1] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0369a1] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' }
-
                   ].map(sub => {
-
                     const isSubActive = activeTab === 'invoices' && ledgerSection === sub.id;
-
                     return (
-
                       <button
-
                         key={sub.id}
-
                         onClick={() => {
-
                           handleTabClick('invoices');
-
                           setLedgerSection(sub.id as any);
-
                           const pathMap: Record<string, string> = {
-
                             invoice: '/invoices/tax-invoices',
-
                             proforma: '/invoices/proforma-invoices',
-
                             credit_note: '/invoices/credit-notes',
-
                             quote: '/invoices/quotes-estimates'
-
                           };
-
                           if (typeof window !== 'undefined' && pathMap[sub.id]) {
-
                             window.history.pushState(null, '', pathMap[sub.id]);
-
                           }
-
                         }}
-
                         className={`w-full px-3 py-2 rounded-xl text-left text-[11px] font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
-
                           isSubActive
-
                             ? sub.activeBg
-
                             : `text-[#0f172a] dark:text-zinc-300 ${sub.color} hover:bg-[#e0f2fe]/60 dark:hover:bg-[#1b264f]/50`
-
                         }`}
-
                       >
-
                         <span className="truncate">{sub.label}</span>
-
                         <span className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-black ${isSubActive ? sub.activeBadge : sub.badge}`}>
-
                           {sub.count}
-
                         </span>
-
                       </button>
-
                     );
-
                   })}
-
                 </div>
-
               )}
-
             </div>
-
-
 
             {/* Purchases Ledger Accordion Section */}
-
             <div className="space-y-0.5">
-
               <button
-
                 onClick={() => {
-
                   if (activeTab !== 'purchases') {
-
                     handleTabClick('purchases');
-
                   }
-
                   setIsPurchasesLedgerExpanded(!isPurchasesLedgerExpanded);
-
                 }}
-
                 className={navItemClass('purchases')}
-
               >
-
                 <div className="flex items-center gap-2.5">
-
                   <div className={iconWrapper(activeTab === 'purchases', 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400')}><Briefcase className="w-3.5 h-3.5" /></div>
-
                   <span>Purchases Ledger</span>
-
                 </div>
-
                 <div className="flex items-center gap-1.5">
-
                   <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'purchases' ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269]'}`}>
-
                     {(documentTypeCounts.purchases || 0) + (documentTypeCounts.purchase_order || 0) + (documentTypeCounts.purchase_debit_note || 0)}
-
                   </span>
-
                   <ChevronDown className={`w-3.5 h-3.5 text-[#64748b]/70 transition-transform duration-200 ${isPurchasesLedgerExpanded ? 'rotate-180' : ''}`} />
-
                 </div>
-
               </button>
 
-
-
               {/* Accordion Sub-items */}
-
               {isPurchasesLedgerExpanded && (
-
                 <div className="pl-6 space-y-0.5 pt-0.5">
-
                   {[
-
                     { id: 'purchases', label: 'Purchases', count: documentTypeCounts.purchases || 0, activeBg: 'bg-[#0284c7] dark:bg-[#0284c7] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0284c7] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' },
-
                     { id: 'purchase_order', label: 'Purchase Order', count: documentTypeCounts.purchase_order || 0, activeBg: 'bg-[#0369a1] dark:bg-[#0369a1] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0369a1] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' },
-
                     { id: 'purchase_debit_note', label: 'Debit Note', count: documentTypeCounts.purchase_debit_note || 0, activeBg: 'bg-[#0284c7] dark:bg-[#0284c7] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0284c7] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' }
-
                   ].map(sub => {
-
                     const isSubActive = activeTab === 'purchases' && purchaseLedgerSection === sub.id;
-
                     return (
-
                       <button
-
                         key={sub.id}
-
                         onClick={() => {
-
                           handleTabClick('purchases');
-
                           setPurchaseLedgerSection(sub.id as any);
-
                           const pathMap: Record<string, string> = {
-
                             purchases: '/purchases/purchases',
-
                             purchase_order: '/purchases/purchase-order',
-
                             purchase_debit_note: '/purchases/debit-note'
-
                           };
-
                           if (typeof window !== 'undefined' && pathMap[sub.id]) {
-
                             window.history.pushState(null, '', pathMap[sub.id]);
-
                           }
-
                         }}
-
                         className={`w-full px-3 py-2 rounded-xl text-left text-[11px] font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
-
                           isSubActive
-
                             ? sub.activeBg
-
                             : `text-[#0f172a] dark:text-zinc-300 ${sub.color} hover:bg-[#e0f2fe]/60 dark:hover:bg-[#1b264f]/50`
-
                         }`}
-
                       >
-
                         <span className="truncate">{sub.label}</span>
-
                         <span className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-black ${isSubActive ? sub.activeBadge : sub.badge}`}>
-
                           {sub.count}
-
                         </span>
-
                       </button>
-
                     );
-
                   })}
-
                 </div>
-
               )}
-
             </div>
 
-
-
             {/* Expenses Sidebar Nav Item */}
-
             <button
-
               onClick={() => {
-
                 handleTabClick('expenses');
-
                 if (typeof window !== 'undefined') {
-
                   window.history.pushState(null, '', '/expenses');
-
                 }
-
               }}
-
               className={navItemClass('expenses')}
-
             >
-
               <div className="flex items-center gap-2.5">
-
                 <div className={iconWrapper(activeTab === 'expenses', 'bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400')}>
-
                   <ReceiptText className="w-3.5 h-3.5" />
-
                 </div>
-
                 <span>Expenses</span>
-
               </div>
-
               <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'expenses' ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800'}`}>
-
                 {expenseStats.count}
-
               </span>
-
             </button>
 
-
-
-            <button onClick={() => handleTabClick('clients')} className={navItemClass('clients')}>
-
+            {/* Billing Dashboard */}
+            <button onClick={() => handleTabClick('dashboard')} className={navItemClass('dashboard')}>
               <div className="flex items-center gap-2.5">
-
-                <div className={iconWrapper(activeTab === 'clients', 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400')}><Users2 className="w-3.5 h-3.5" /></div>
-
-                <span>Billed Clients</span>
-
+                <div className={iconWrapper(activeTab === 'dashboard', 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400')}><BarChart3 className="w-3.5 h-3.5" /></div>
+                <span>Billing Dashboard</span>
               </div>
-
-              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'clients' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
-
-                {billedClientsFiltered.length}
-
-              </span>
-
             </button>
 
-
-
-            <button onClick={() => handleTabClick('purchasers')} className={navItemClass('purchasers')}>
-
-              <div className="flex items-center gap-2.5">
-
-                <div className={iconWrapper(activeTab === 'purchasers', 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400')}><Users2 className="w-3.5 h-3.5" /></div>
-
-                <span>Billed Vendors</span>
-
-              </div>
-
-              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'purchasers' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
-
-                {purchasersFiltered.length}
-
-              </span>
-
-            </button>
-
-
-
+            {/* Accounting Summary */}
             <button onClick={() => handleTabClick('reports')} className={navItemClass('reports')}>
-
               <div className="flex items-center gap-2.5">
-
                 <div className={iconWrapper(activeTab === 'reports', 'bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400')}><TrendingUp className="w-3.5 h-3.5" /></div>
-
                 <span>Accounting Summary</span>
-
               </div>
-
             </button>
 
+            {/* Billed Clients */}
+            <button onClick={() => handleTabClick('clients')} className={navItemClass('clients')}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'clients', 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400')}><Users2 className="w-3.5 h-3.5" /></div>
+                <span>Billed Clients</span>
+              </div>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'clients' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
+                {billedClientsFiltered.length}
+              </span>
+            </button>
+
+            {/* Billed Vendors */}
+            <button onClick={() => handleTabClick('purchasers')} className={navItemClass('purchasers')}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'purchasers', 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400')}><Users2 className="w-3.5 h-3.5" /></div>
+                <span>Billed Vendors</span>
+              </div>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'purchasers' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-[#f8fafc] text-[#64748b] group-hover:bg-white'}`}>
+                {purchasersFiltered.length}
+              </span>
+            </button>
           </div>
 
 
@@ -2239,7 +2059,7 @@ export default function Dashboard({
 
               <div className={smallIconWrapper(activeTab === 'settings', 'bg-slate-50 text-slate-650 dark:bg-zinc-800 dark:text-zinc-300')}><Settings className="w-3 h-3" /></div>
 
-              <span>Preferences</span>
+              <span>Settings</span>
 
             </div>
 
@@ -7572,7 +7392,7 @@ export default function Dashboard({
 
                   <User className="w-4 h-4 text-[#64748b]" />
 
-                  <span>Profile Settings</span>
+                  <span>Profile</span>
 
                 </button>
 
@@ -7594,7 +7414,7 @@ export default function Dashboard({
 
                   <Layout className="w-4 h-4 text-[#64748b]" />
 
-                  <span>Preferences</span>
+                  <span>Settings</span>
 
                 </button>
 
@@ -12581,277 +12401,357 @@ export default function Dashboard({
 
 
           const pointsExpenses = records.map((r, i) => ({
-
             x: paddingX + (i / (records.length - 1)) * usableWidth,
-
             y: chartHeight - paddingY - (r.expenses / maxVal) * usableHeight
-
           }));
 
-
-
           const pathEarnings = pointsEarnings.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-
           const pathReceivables = pointsReceivables.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-
           const pathExpenses = pointsExpenses.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
-
-
           const initials = profile.name ? profile.name.slice(0, 2).toUpperCase() : 'MK';
-
-
-
           const totalInvoicedDash = totalBilled + totalOutstanding;
-
           const earningsPct = totalInvoicedDash > 0 ? ((totalBilled / totalInvoicedDash) * 100).toFixed(1) + '%' : '0%';
-
           const receivablesPct = totalInvoicedDash > 0 ? ((totalOutstanding / totalInvoicedDash) * 100).toFixed(1) + '%' : '0%';
-
           const purchasesPct = totalInvoicedDash > 0 ? ((totalPurchaseAmount / (totalInvoicedDash + totalPurchaseAmount)) * 100).toFixed(1) + '%' : '0%';
-
           const stockNetPct = totalPurchaseAmount > 0 ? (((totalPurchaseAmount - totalSalesAmount) / totalPurchaseAmount) * 100).toFixed(1) + '%' : '0%';
-
           const overheadPct = totalInvoicedDash > 0 ? ((expenseStats.totalExpenses / totalInvoicedDash) * 100).toFixed(1) + '%' : '0%';
-
           const taxPct = totalInvoicedDash > 0 ? ((netTaxLiability / totalInvoicedDash) * 100).toFixed(1) + '%' : '0%';
 
+          const currentMonthVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          const currentSelectedMonth = selectedMonthlyPeriod || currentMonthVal;
 
+          const monthOptions: { value: string; label: string }[] = [];
+          for (let i = 0; i < 24; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const lbl = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+            monthOptions.push({ value: val, label: i === 0 ? `Current Month (${lbl})` : lbl });
+          }
+
+          const handlePrevMonth = () => {
+            const [yS, mS] = currentSelectedMonth.split('-');
+            const d = new Date(parseInt(yS, 10), parseInt(mS, 10) - 2, 1);
+            setSelectedMonthlyPeriod(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+          };
+
+          const handleNextMonth = () => {
+            const [yS, mS] = currentSelectedMonth.split('-');
+            const d = new Date(parseInt(yS, 10), parseInt(mS, 10), 1);
+            if (d <= new Date(now.getFullYear(), now.getMonth(), 1)) {
+              setSelectedMonthlyPeriod(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+            }
+          };
+
+          const [yStr, mStr] = currentSelectedMonth.split('-');
+          const mYear = parseInt(yStr, 10);
+          const mMonth = parseInt(mStr, 10) - 1;
+
+          const monthSalesInvoices = allLedgerInvoices.filter(inv => {
+            const d = new Date(inv.date);
+            return !isNaN(d.getTime()) && d.getFullYear() === mYear && d.getMonth() === mMonth;
+          });
+          const monthlySales = monthSalesInvoices.reduce((acc, inv) => acc + (inv.grandTotal || 0), 0);
+          const monthlySalesTax = monthSalesInvoices.reduce((acc, inv) => acc + (inv.taxTotal || 0), 0);
+
+          const monthPurchaseBills = allPurchaseBills.filter(inv => {
+            const d = new Date(inv.date);
+            return !isNaN(d.getTime()) && d.getFullYear() === mYear && d.getMonth() === mMonth;
+          });
+          const monthlyPurchases = monthPurchaseBills.reduce((acc, inv) => acc + (inv.grandTotal || 0), 0);
+          const monthlyPurchaseTax = monthPurchaseBills.reduce((acc, inv) => acc + (inv.taxTotal || 0), 0);
+
+          const monthlyStock = monthlyPurchases - monthlySales;
+
+          const monthExpenses = supabaseExpenses.filter(ex => {
+            const d = new Date(ex.expense_date || ex.date || '');
+            return !isNaN(d.getTime()) && d.getFullYear() === mYear && d.getMonth() === mMonth;
+          });
+          const monthlyExpenses = monthExpenses.reduce((acc, ex) => acc + (Number(ex.amount) || 0), 0);
+
+          const monthlyTax = Math.max(0, monthlySalesTax - monthlyPurchaseTax);
+
+          const dateObj = new Date(mYear, mMonth, 1);
+          const monthLabel = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+          const monthlyMetrics = {
+            monthlySales,
+            monthlyPurchases,
+            monthlyStock,
+            monthlyExpenses,
+            monthlyTax,
+            monthLabel,
+            salesCount: monthSalesInvoices.length,
+            purchasesCount: monthPurchaseBills.length,
+            expensesCount: monthExpenses.length
+          };
 
           return (
-
             <div className="space-y-6 text-sans animate-in fade-in duration-300">
 
-
-
-              {/* KPI Cards — Top Row (Total Sales -> Total Purchases -> Stock -> Tax Liabilities) */}
-
+              {/* KPI Cards — Top Row (Lifetime Sales -> Lifetime Purchases -> Lifetime Stock -> Lifetime Expenses) */}
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-
-                {/* 1. Total Sales */}
-
+                {/* 1. Lifetime Sales */}
                 <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-indigo-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[140px] sm:min-h-[160px] h-full overflow-hidden">
-
                   <div className="flex justify-between items-start">
-
                     <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950/80 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-
                       <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-
                     </div>
-
                     <span className="text-[8px] sm:text-[10px] font-black text-indigo-600 bg-indigo-50 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 px-1.5 sm:px-2 py-0.5 rounded-full font-mono">
-
-                      LIVE
-
+                      OVERALL
                     </span>
-
                   </div>
-
                   <div className="mt-2 sm:mt-2.5">
-
-                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Total Sales</span>
-
+                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Lifetime Sales</span>
                     <span className="text-base sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
-
                       {currencySymbol}{formatNum(totalSalesAmount)}
-
                     </span>
-
-                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Tax Invoices Total</span>
-
+                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Total Revenue Billed</span>
                   </div>
-
                   {/* Sparkline bars */}
-
                   <div className="flex items-end gap-1 h-4 sm:h-5 self-start mt-1.5 sm:mt-2">
-
                     {totalSalesSparklineHeights.map((h, idx) => (
-
                       <div
-
                         key={`tss-${idx}`}
-
                         className={`w-1 rounded-t-sm ${idx === totalSalesSparklineHeights.length - 1 ? 'bg-indigo-500 dark:bg-indigo-400' : idx % 2 === 0 ? 'bg-indigo-400 dark:bg-indigo-500' : 'bg-indigo-300 dark:bg-indigo-700'}`}
-
                         style={{ height: `${Math.max(4, h * 0.8)}px` }}
-
                       />
-
                     ))}
-
                   </div>
-
                 </div>
 
-
-
-                {/* 2. Total Purchases */}
-
+                {/* 2. Lifetime Purchases */}
                 <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-rose-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[140px] sm:min-h-[160px] h-full overflow-hidden">
-
                   <div className="flex justify-between items-start">
-
                     <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#FEF2F2] text-[#EF4444] border border-[#FEE2E2] flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-
                       <MinusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-
                     </div>
-
                     <span className="text-[8px] sm:text-[10px] font-black text-[#EF4444] bg-[#FEF2F2] border border-[#FEE2E2] px-1.5 sm:px-2 py-0.5 rounded-full font-mono">
-
-                      {purchasesPct}
-
+                      OVERALL
                     </span>
-
                   </div>
-
                   <div className="mt-2 sm:mt-2.5">
-
-                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Total Purchases</span>
-
+                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Lifetime Purchases</span>
                     <span className="text-base sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
-
                       {currencySymbol}{formatNum(totalPurchaseAmount)}
-
                     </span>
-
-                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Purchase Bills Value</span>
-
+                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Total Purchase Bills</span>
                   </div>
-
                   {/* Sparkline bars */}
-
                   <div className="flex items-end gap-1 h-4 sm:h-5 self-start mt-1.5 sm:mt-2">
-
                     {purchaseSparklineHeights.map((h, idx) => (
-
                       <div
-
                         key={`ps-${idx}`}
-
                         className={`w-1 rounded-t-sm ${idx === purchaseSparklineHeights.length - 1 ? 'bg-rose-500 dark:bg-rose-500' : idx % 2 === 0 ? 'bg-rose-400 dark:bg-rose-600' : 'bg-rose-300 dark:bg-rose-700'}`}
-
                         style={{ height: `${Math.max(4, h * 0.8)}px` }}
-
                       />
-
                     ))}
-
                   </div>
-
                 </div>
 
-
-
-                {/* 3. Stock */}
-
+                {/* 3. Lifetime Stock */}
                 <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-teal-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[140px] sm:min-h-[160px] h-full overflow-hidden">
-
                   <div className="flex justify-between items-start">
-
                     <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-teal-50 text-teal-600 dark:bg-teal-950/80 dark:text-teal-400 border border-teal-200 dark:border-teal-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-
                       <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-
                     </div>
-
                     <span className="text-[8px] sm:text-[10px] font-black text-teal-600 bg-teal-50 dark:bg-teal-950 dark:text-teal-300 border border-teal-200 dark:border-teal-800 px-1.5 sm:px-2 py-0.5 rounded-full font-mono">
-
-                      {stockNetPct}
-
+                      OVERALL
                     </span>
-
                   </div>
-
                   <div className="mt-2 sm:mt-2.5">
-
-                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Stock</span>
-
+                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Lifetime Stock</span>
                     <span className="text-base sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
-
                       {stockAnalyticsValue < 0 ? '-' : ''}{currencySymbol}{formatNum(Math.abs(stockAnalyticsValue))}
-
                     </span>
-
-                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Purchases − Sales</span>
-
+                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Net Stock (Purchases − Sales)</span>
                   </div>
-
                   {/* Sparkline bars */}
-
                   <div className="flex items-end gap-1 h-4 sm:h-5 self-start mt-1.5 sm:mt-2">
-
                     {stockSparklineHeights.map((h, idx) => (
-
                       <div
-
                         key={`sks-${idx}`}
-
                         className={`w-1 rounded-t-sm ${idx === stockSparklineHeights.length - 1 ? 'bg-teal-500 dark:bg-teal-400' : idx % 2 === 0 ? 'bg-teal-400 dark:bg-teal-500' : 'bg-teal-300 dark:bg-teal-700'}`}
-
                         style={{ height: `${Math.max(4, h * 0.8)}px` }}
-
                       />
-
                     ))}
-
                   </div>
-
                 </div>
 
-
-
-                {/* 4. Tax Liabilities */}
-
-                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-sky-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[140px] sm:min-h-[160px] h-full overflow-hidden">
-
+                {/* 4. Lifetime Expenses */}
+                <div className="bg-white dark:bg-[#111a36] border-l-4 border-l-purple-500 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3 sm:p-4.5 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-200 cursor-default group relative flex flex-col justify-between min-h-[140px] sm:min-h-[160px] h-full overflow-hidden">
                   <div className="flex justify-between items-start">
-
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-400 border border-sky-200 dark:border-sky-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-
-                      <Percent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-950/80 dark:text-purple-400 border border-purple-200 dark:border-purple-800/80 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                      <ReceiptText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </div>
-
-                    <span className="text-[8px] sm:text-[10px] font-black text-sky-600 bg-sky-50 dark:bg-sky-950 dark:text-sky-300 border border-sky-200 dark:border-sky-800 px-1.5 sm:px-2 py-0.5 rounded-full font-mono">
-
-                      {taxPct}
-
+                    <span className="text-[8px] sm:text-[10px] font-black text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800 px-1.5 sm:px-2 py-0.5 rounded-full font-mono">
+                      OVERALL
                     </span>
-
                   </div>
-
                   <div className="mt-2 sm:mt-2.5">
-
-                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Tax Liabilities</span>
-
+                    <span className="text-[8.5px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b]/90 dark:text-[#94a3b8]/90 block truncate">Lifetime Expenses</span>
                     <span className="text-base sm:text-xl font-black text-[#0f172a] dark:text-white mt-0.5 block font-mono tracking-tight truncate">
-
-                      {currencySymbol}{formatNum(netTaxLiability)}
-
+                      {currencySymbol}{formatNum(expenseStats.totalExpenses)}
                     </span>
-
-                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Net GST (after ITC)</span>
-
+                    <span className="text-[8px] sm:text-[8.5px] text-[#64748b]/70 dark:text-[#94a3b8]/70 mt-0.5 block truncate">Total Operational Expenses</span>
                   </div>
-
                   {/* Sparkline bars */}
-
                   <div className="flex items-end gap-1 h-4 sm:h-5 self-start mt-1.5 sm:mt-2">
+                    {expenseSparklineHeights.map((h, idx) => (
+                      <div
+                        key={`ltes-${idx}`}
+                        className={`w-1 rounded-t-sm ${idx === expenseSparklineHeights.length - 1 ? 'bg-purple-500 dark:bg-purple-400' : idx % 2 === 0 ? 'bg-purple-400 dark:bg-purple-500' : 'bg-purple-300 dark:bg-purple-700'}`}
+                        style={{ height: `${Math.max(4, h * 0.8)}px` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
 
-                    <div className="w-1 bg-sky-200 dark:bg-sky-800 rounded-t-sm h-3" />
-
-                    <div className="w-1 bg-sky-400 dark:bg-sky-600 rounded-t-sm h-2" />
-
-                    <div className="w-1 bg-sky-500 dark:bg-sky-500 rounded-t-sm h-5" />
-
-                    <div className="w-1 bg-sky-300 dark:bg-sky-700 rounded-t-sm h-4" />
-
+              {/* Monthly Overview Section — Interactive Monthly Breakdown */}
+              <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-4 sm:p-5 shadow-xs transition-all">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 sm:pb-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] flex items-center justify-center shrink-0">
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-xs sm:text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
+                          Monthly Performance
+                        </h3>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-sky-50 dark:bg-sky-950 text-[#0284c7] dark:text-[#38bdf8] border border-sky-200 dark:border-sky-800 font-mono">
+                          {monthlyMetrics.monthLabel}
+                        </span>
+                      </div>
+                      <p className="text-[9px] sm:text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">
+                        Breakdown of Sales, Purchases, Stock Net, Expenses & Tax for selected month
+                      </p>
+                    </div>
                   </div>
 
+                  {/* Monthly Navigation & Month Dropdown */}
+                  <div className="flex items-center gap-1.5 sm:gap-2 self-end sm:self-auto flex-wrap">
+                    <button
+                      onClick={handlePrevMonth}
+                      className="p-1.5 rounded-lg bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd] dark:border-[#223269] text-[#0f172a] dark:text-zinc-300 hover:border-[#0284c7] dark:hover:border-[#38bdf8] cursor-pointer transition-colors"
+                      title="Previous Month"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+
+                    <select
+                      value={currentSelectedMonth}
+                      onChange={(e) => setSelectedMonthlyPeriod(e.target.value)}
+                      className="px-2.5 py-1.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd] hover:border-[#0284c7] dark:border-[#223269] dark:hover:border-[#38bdf8] rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 focus:outline-none cursor-pointer transition-colors"
+                    >
+                      {monthOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+
+                    <button
+                      onClick={handleNextMonth}
+                      disabled={currentSelectedMonth >= currentMonthVal}
+                      className={`p-1.5 rounded-lg bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd] dark:border-[#223269] text-[#0f172a] dark:text-zinc-300 transition-colors ${currentSelectedMonth >= currentMonthVal ? 'opacity-40 cursor-not-allowed' : 'hover:border-[#0284c7] dark:hover:border-[#38bdf8] cursor-pointer'}`}
+                      title="Next Month"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+
+                    {currentSelectedMonth !== currentMonthVal && (
+                      <button
+                        onClick={() => setSelectedMonthlyPeriod(currentMonthVal)}
+                        className="px-2.5 py-1.5 rounded-lg bg-[#0284c7] text-white text-[9px] font-black uppercase tracking-wider hover:bg-[#0369a1] cursor-pointer transition-colors"
+                      >
+                        This Month
+                      </button>
+                    )}
+                  </div>
                 </div>
 
+                {/* 5 Monthly Metric Cards Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3.5 mt-3 sm:mt-4">
+                  {/* 1. Monthly Sales */}
+                  <div className="bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-xl p-3 flex flex-col justify-between hover:border-indigo-400/50 transition-all">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b] dark:text-zinc-400">Monthly Sales</span>
+                      <TrendingUp className="w-3.5 h-3.5 text-indigo-500" />
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-sm sm:text-base font-black text-[#0f172a] dark:text-white font-mono tracking-tight block truncate">
+                        {currencySymbol}{formatNum(monthlyMetrics.monthlySales)}
+                      </span>
+                      <span className="text-[8px] text-[#64748b]/70 dark:text-zinc-400 block mt-0.5">
+                        {monthlyMetrics.salesCount} Invoices
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 2. Monthly Purchases */}
+                  <div className="bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-xl p-3 flex flex-col justify-between hover:border-rose-400/50 transition-all">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b] dark:text-zinc-400">Monthly Purchase</span>
+                      <MinusCircle className="w-3.5 h-3.5 text-rose-500" />
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-sm sm:text-base font-black text-[#0f172a] dark:text-white font-mono tracking-tight block truncate">
+                        {currencySymbol}{formatNum(monthlyMetrics.monthlyPurchases)}
+                      </span>
+                      <span className="text-[8px] text-[#64748b]/70 dark:text-zinc-400 block mt-0.5">
+                        {monthlyMetrics.purchasesCount} Bills
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 3. Monthly Stock */}
+                  <div className="bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-xl p-3 flex flex-col justify-between hover:border-teal-400/50 transition-all">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b] dark:text-zinc-400">Monthly Stock</span>
+                      <Package className="w-3.5 h-3.5 text-teal-500" />
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-sm sm:text-base font-black text-[#0f172a] dark:text-white font-mono tracking-tight block truncate">
+                        {monthlyMetrics.monthlyStock < 0 ? '-' : ''}{currencySymbol}{formatNum(Math.abs(monthlyMetrics.monthlyStock))}
+                      </span>
+                      <span className="text-[8px] text-[#64748b]/70 dark:text-zinc-400 block mt-0.5">
+                        Purchases − Sales
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 4. Monthly Expenses */}
+                  <div className="bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-xl p-3 flex flex-col justify-between hover:border-purple-400/50 transition-all">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b] dark:text-zinc-400">Monthly Expense</span>
+                      <ReceiptText className="w-3.5 h-3.5 text-purple-500" />
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-sm sm:text-base font-black text-[#0f172a] dark:text-white font-mono tracking-tight block truncate">
+                        {currencySymbol}{formatNum(monthlyMetrics.monthlyExpenses)}
+                      </span>
+                      <span className="text-[8px] text-[#64748b]/70 dark:text-zinc-400 block mt-0.5">
+                        {monthlyMetrics.expensesCount} Expenses
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 5. Monthly Tax */}
+                  <div className="bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-xl p-3 flex flex-col justify-between hover:border-sky-400/50 transition-all col-span-2 sm:col-span-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-wider text-[#64748b] dark:text-zinc-400">Monthly Tax</span>
+                      <Percent className="w-3.5 h-3.5 text-sky-500" />
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-sm sm:text-base font-black text-[#0f172a] dark:text-white font-mono tracking-tight block truncate">
+                        {currencySymbol}{formatNum(monthlyMetrics.monthlyTax)}
+                      </span>
+                      <span className="text-[8px] text-[#64748b]/70 dark:text-zinc-400 block mt-0.5">
+                        Net GST (Output − Input)
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
 
@@ -14329,7 +14229,17 @@ export default function Dashboard({
 
               <Info className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8] flex-shrink-0 mt-0.5 hidden sm:block" />
 
-              <span>This documentation applies to MakInvoices v1.2. For technical support, open the <strong className="text-[#0f172a] dark:text-zinc-300">Help & Support</strong> page from the profile menu. Policies are subject to periodic updates — last revised July 2025.</span>
+              <span>
+                This documentation applies to MakInvoices v1.2. For technical support, open the{' '}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('support')}
+                  className="font-bold text-[#0284c7] hover:text-[#0369a1] dark:text-[#38bdf8] dark:hover:text-sky-300 underline cursor-pointer inline-flex items-center transition-colors focus:outline-none"
+                >
+                  Help & Support
+                </button>{' '}
+                page from the profile menu. Policies are subject to periodic updates — last revised July 2025.
+              </span>
 
             </div>
 

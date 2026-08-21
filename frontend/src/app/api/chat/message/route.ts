@@ -162,7 +162,7 @@ export async function POST(request: Request) {
     let globalKbContext = kbContext;
     try {
       globalKbContext = kbData.map((entry: any) => 
-        `Topic: ${entry.topic}\nRoute: ${entry.route || 'None'}\nSummary: ${entry.summary}\nSteps:\n${(entry.steps || []).map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}`
+        `Topic: ${entry.topic}\nRoute: ${entry.route || 'None'}\nSummary: ${entry.summary}\nKeywords: ${(entry.keywords || []).join(', ')}\nSteps:\n${(entry.steps || []).map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}`
       ).join('\n\n---\n\n');
     } catch (e) {
       console.error("Failed to load global KB", e);

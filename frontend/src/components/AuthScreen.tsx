@@ -25,9 +25,10 @@ interface AuthScreenProps {
   defaultMode?: 'login' | 'signup' | 'reset-password' | 'forgot-password';
   initialError?: string;
   onPasswordResetComplete?: () => void;
+  onNavigate?: (path: string) => void;
 }
 
-export default function AuthScreen({ defaultMode = 'login', initialError, onPasswordResetComplete }: AuthScreenProps) {
+export default function AuthScreen({ defaultMode = 'login', initialError, onPasswordResetComplete, onNavigate }: AuthScreenProps) {
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot-password' | 'reset-password'>(defaultMode);
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone' | 'google'>('email');
   
@@ -498,7 +499,7 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
         {/* Logo */}
         <div
           className="flex items-center gap-3 cursor-pointer z-10"
-          onClick={() => window.location.href = '/'}
+          onClick={() => onNavigate ? onNavigate('/') : (window.location.href = '/')}
           style={{ transition: 'opacity 0.2s' }}
           onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.opacity = '0.8'}
           onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.opacity = '1'}
@@ -569,7 +570,7 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
         {/* Back link */}
         <button
           type="button"
-          onClick={() => window.location.href = '/'}
+          onClick={() => onNavigate ? onNavigate('/') : (window.location.href = '/')}
           className="hidden md:flex"
           style={{ position: 'absolute', top: 32, left: 32, alignItems: 'center', gap: 6, fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: theme === 'dark' ? '#94a3b8' : '#64748b', background: 'none', border: 'none', cursor: 'pointer', zIndex: 10, transition: 'color 0.2s' }}
           onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = theme === 'dark' ? '#38bdf8' : '#0284c7'}
@@ -579,7 +580,7 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
         </button>
 
         {/* Mobile logo */}
-        <div className="md:hidden flex items-center gap-2 mb-8 cursor-pointer z-10" onClick={() => window.location.href = '/'}>
+        <div className="md:hidden flex items-center gap-2 mb-8 cursor-pointer z-10" onClick={() => onNavigate ? onNavigate('/') : (window.location.href = '/')}>
           <img src="/logo.svg" alt="MakInvoices Logo" style={{ width: 34, height: 34, objectFit: 'contain' }} />
           <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: '1.1rem', fontWeight: 900, color: theme === 'dark' ? '#f8fafc' : '#0f172a' }}>
             Mak<span style={{ color: '#0ea5e9' }}>Invoices</span>
