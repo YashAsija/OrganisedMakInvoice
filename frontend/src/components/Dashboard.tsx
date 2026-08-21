@@ -1884,7 +1884,7 @@ export default function Dashboard({
             <button onClick={() => handleTabClick('reports')} className={navItemClass('reports')}>
               <div className="flex items-center gap-2.5">
                 <div className={iconWrapper(activeTab === 'reports', 'bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400')}><TrendingUp className="w-3.5 h-3.5" /></div>
-                <span>Accounting Summary</span>
+                <span>Accounting Report</span>
               </div>
             </button>
 
@@ -6896,7 +6896,7 @@ export default function Dashboard({
 
       case 'reports':
 
-        return 'Financial Hub / Accounting Summary';
+        return 'Financial Hub / Accounting Report';
 
       case 'master_vendor':
 
@@ -10466,7 +10466,7 @@ export default function Dashboard({
 
                   <div>
 
-                    <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Accounting Summary</h2>
+                    <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Accounting Report</h2>
 
                     <span className="text-[11px] text-[#64748b]/70 dark:text-zinc-400 mt-0.5 block">Generate customised tax &amp; income expense ledger reports</span>
 
@@ -14055,7 +14055,7 @@ export default function Dashboard({
 
                     { step: '04', title: 'Manage Financial Ledgers', desc: 'Access Sales Ledger to issue Tax Invoices, Quotes, and Credit Notes. Access Purchases Ledger to record bills and POs. CGST/SGST/IGST tax splits calculate automatically.' },
 
-                    { step: '05', title: 'Review Reports & Exports', desc: 'Review total revenue and expenses in the main Billing Dashboard. Visit Financial Hub → Accounting Summary to export ledger databases directly to Excel.' },
+                    { step: '05', title: 'Review Reports & Exports', desc: 'Review total revenue and expenses in the main Billing Dashboard. Visit Financial Hub → Accounting Report to export ledger databases directly to Excel.' },
 
                     { step: '06', title: 'Configure Security PIN Lock', desc: 'Go to System Settings → App Preferences. Enable a secure 4-Digit PIN to encrypt your localIndexedDB storage sandbox and sync safely with Supabase.' },
 

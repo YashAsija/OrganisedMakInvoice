@@ -188,8 +188,8 @@ const faqs = [
     important: false
   },
   {
-    q: 'What is Accounting Summary in the sidebar?',
-    a: 'Accounting Summary (Reports) provides a detailed overview of your cashflow, sales statistics, expense graphs, and lets you bulk-export your entire invoice history as an Excel spreadsheet.',
+    q: 'What is Accounting Report in the sidebar?',
+    a: 'Accounting Report provides a detailed overview of your cashflow, sales statistics, expense graphs, and lets you bulk-export your entire invoice history as an Excel spreadsheet.',
     important: false
   },
   {
@@ -514,10 +514,10 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
       {
         step: 5,
         title: 'Monitor Analytics & Export Data',
-        desc: 'Review total revenue and expenses in the Billing Dashboard. Go to Financial Hub → Accounting Summary to see detailed graphs and click Export to download your entire ledger dataset to an Excel spreadsheet instantly.',
+        desc: 'Review total revenue and expenses in the Billing Dashboard. Go to Financial Hub → Accounting Report to see detailed graphs and click Export to download your entire ledger dataset to an Excel spreadsheet instantly.',
         badge: 'Reporting',
         actions: [
-          { tabId: 'reports', label: 'View Accounting Summary', icon: <HelpCircle className="w-4 h-4" /> }
+          { tabId: 'reports', label: 'View Accounting Report', icon: <HelpCircle className="w-4 h-4" /> }
         ]
       }
     ];
