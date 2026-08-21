@@ -172,8 +172,11 @@ export function exportCollectiveReportPDF(
 
   // Business Sub-details
   doc.setFontSize(7); doc.setFont('Helvetica', 'normal'); doc.setTextColor(71, 85, 105);
+  const rawAddr = (profile.address || '').trim();
+  const addrLines: string[] = rawAddr ? doc.splitTextToSize(rawAddr, 105) : [];
+
   const busLines = [
-    profile.address,
+    ...addrLines,
     profile.email && `Email: ${profile.email}`,
     profile.phone && `Phone: ${profile.phone}`,
     profile.taxId && `GSTIN: ${profile.taxId}`,
