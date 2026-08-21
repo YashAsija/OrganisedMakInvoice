@@ -24,14 +24,41 @@ function fmt(n: number, sym: string): string {
   return (n < 0 ? '-' : '') + sym + formatted;
 }
 
-// ─── STATUS COLORS ────────────────────────────────────────────────────────────
+// ─── STATUS COLORS & FORMATTING ────────────────────────────────────────────────
 function statusColors(status: string): { bg: number[]; text: number[] } {
   const s = (status || 'pending').toLowerCase();
   if (s === 'paid') return { bg: [209, 250, 229], text: [6, 95, 70] };
+  if (s.includes('partial')) return { bg: [254, 243, 199], text: [180, 83, 9] };
   if (s === 'pending' || s === 'sent') return { bg: [254, 243, 199], text: [146, 64, 14] };
   if (s === 'overdue' || s === 'cancelled') return { bg: [254, 226, 226], text: [153, 27, 27] };
   if (s === 'approved') return { bg: [219, 234, 254], text: [30, 64, 175] };
   return { bg: [241, 245, 249], text: [71, 85, 105] };
+}
+
+function formatStatusDisplay(rawStatus: string, paidDate?: string): { main: string; sub?: string } {
+  const s = (rawStatus || 'pending').toLowerCase().replace(/_/g, ' ');
+  if (s === 'paid') {
+    return { main: 'PAID', sub: paidDate ? `ON ${paidDate}` : undefined };
+  }
+  if (s.includes('partial')) {
+    return { main: 'PARTIAL' };
+  }
+  if (s.includes('overdue')) {
+    return { main: 'OVERDUE' };
+  }
+  if (s.includes('cancel')) {
+    return { main: 'CANCELLED' };
+  }
+  if (s.includes('sent')) {
+    return { main: 'SENT' };
+  }
+  if (s.includes('draft')) {
+    return { main: 'DRAFT' };
+  }
+  if (s.includes('approved')) {
+    return { main: 'APPROVED' };
+  }
+  return { main: s.toUpperCase() };
 }
 
 export function exportCollectiveReportPDF(
@@ -229,7 +256,7 @@ export function exportCollectiveReportPDF(
   });
 
   const activeSections = SECTIONS.filter(sec => (groupedInvoices[sec.key] || []).length > 0);
-  const cols = { date: mL + 2, inv: mL + 20, client: mL + 45, sub: W - mR - 56, tax: W - mR - 34, grand: W - mR - 13, status: W - mR };
+  const cols = { date: mL + 2, inv: mL + 21, client: mL + 45, sub: mL + 106, tax: mL + 127, grand: mL + 154, status: W - mR - 1 };
 
   if (invoices.length === 0 || activeSections.length === 0) {
     doc.setFillColor(241, 245, 249);
@@ -311,21 +338,22 @@ export function exportCollectiveReportPDF(
         doc.setFontSize(7.2); doc.setFont('Helvetica', 'normal'); doc.setTextColor(30, 41, 59);
         doc.text(inv.date, cols.date, y + 5.2);
         doc.text(inv.invoiceNumber, cols.inv, y + 5.2);
-        const cn = inv.clientName.length > 22 ? inv.clientName.slice(0, 22) + '…' : inv.clientName;
+        const cn = inv.clientName.length > 17 ? inv.clientName.slice(0, 17) + '…' : inv.clientName;
         doc.text(cn, cols.client, y + 5.2);
         doc.text(fmt(inv.subtotal, sym), cols.sub, y + 5.2, { align: 'right' });
         doc.text(fmt(inv.taxTotal, sym), cols.tax, y + 5.2, { align: 'right' });
         doc.text(fmt(inv.grandTotal, sym), cols.grand, y + 5.2, { align: 'right' });
 
         const sc = statusColors(inv.status);
+        const st = formatStatusDisplay(inv.status, inv.paidDate);
         doc.setFont('Helvetica', 'bold'); doc.setTextColor(sc.text[0], sc.text[1], sc.text[2]);
 
-        if (inv.status === 'paid' && inv.paidDate) {
-          doc.text('PAID', cols.status, y + 3.8, { align: 'right' });
+        if (st.sub) {
+          doc.text(st.main, cols.status, y + 3.8, { align: 'right' });
           doc.setFontSize(5);
-          doc.text(`ON ${inv.paidDate}`, cols.status, y + 7, { align: 'right' });
+          doc.text(st.sub, cols.status, y + 7, { align: 'right' });
         } else {
-          doc.text((inv.status || 'pending').toUpperCase(), cols.status, y + 5.2, { align: 'right' });
+          doc.text(st.main, cols.status, y + 5.2, { align: 'right' });
         }
 
         doc.setFont('Helvetica', 'normal');
