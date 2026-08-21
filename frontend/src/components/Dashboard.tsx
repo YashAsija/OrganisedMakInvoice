@@ -3019,7 +3019,7 @@ export default function Dashboard({
 
     return (
 
-      <div className="space-y-5 text-sans animate-in fade-in duration-205">
+      <div className="space-y-5 text-sans animate-in fade-in duration-205 master-registry-container no-privacy-blur" data-privacy-exempt="true">
 
 
 
@@ -4690,6 +4690,8 @@ export default function Dashboard({
   const [reportEndDate, setReportEndDate] = useState('');
 
   const [reportClientFilter, setReportClientFilter] = useState('all');
+
+  const [reportDocTypeFilter, setReportDocTypeFilter] = useState('all');
 
 
 
@@ -6874,13 +6876,11 @@ export default function Dashboard({
 
   // --- REPORTS COMPILED CALCULATIONS ---
 
-  // Apply date, client, and document type filters (Tax Invoices only for accounting analytics)
+  // Apply date, client, and document type filters
 
   const reportedInvoices = invoices.filter(inv => {
 
     if (inv.status === 'draft') return false;
-
-    if (getInvoiceDocumentType(inv) !== 'invoice') return false;
 
     // Client filter
 
@@ -6891,6 +6891,74 @@ export default function Dashboard({
     if (reportStartDate && inv.date < reportStartDate) return false;
 
     if (reportEndDate && inv.date > reportEndDate) return false;
+
+    // Document Type Filter
+
+    if (reportDocTypeFilter === 'all') return true;
+
+    const docType = (getInvoiceDocumentType(inv) || 'invoice').toLowerCase();
+
+    const isPurchase = (inv as any).isPurchase || docType.includes('purchase') || docType === 'debit_note';
+
+    if (reportDocTypeFilter === 'all_sales') {
+
+      return !isPurchase;
+
+    }
+
+    if (reportDocTypeFilter === 'all_purchases') {
+
+      return isPurchase;
+
+    }
+
+    if (reportDocTypeFilter === 'tax_invoice') {
+
+      return docType === 'invoice' || docType === 'sales' || docType === 'tax_invoice';
+
+    }
+
+    if (reportDocTypeFilter === 'proforma') {
+
+      return docType === 'proforma' || docType === 'proforma_invoice';
+
+    }
+
+    if (reportDocTypeFilter === 'receipt') {
+
+      return docType === 'receipt';
+
+    }
+
+    if (reportDocTypeFilter === 'quote') {
+
+      return docType === 'quote' || docType === 'estimate';
+
+    }
+
+    if (reportDocTypeFilter === 'credit_note') {
+
+      return docType === 'credit_note';
+
+    }
+
+    if (reportDocTypeFilter === 'purchase_order') {
+
+      return docType === 'purchase_order' || docType === 'po';
+
+    }
+
+    if (reportDocTypeFilter === 'purchase_invoice') {
+
+      return docType === 'purchase_invoice' || docType === 'purchase';
+
+    }
+
+    if (reportDocTypeFilter === 'debit_note') {
+
+      return docType === 'debit_note';
+
+    }
 
     return true;
 
@@ -7072,13 +7140,35 @@ export default function Dashboard({
 
         {/* Left Side: Logo + Mobile Menu Trigger + Breadcrumb */}
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+
+          <button
+            onClick={() => setIsMobileDrawerOpen(true)}
+            aria-label="Toggle structural sidebar menu drawer"
+            className="xl:hidden p-1.5 text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0369a1] dark:hover:text-white transition-colors cursor-pointer rounded-xl hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] active:scale-95"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
 
           <div className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => window.location.href = '/'}>
 
-            <img src="/logo.svg" alt="MakInvoices Logo" className="w-10 h-10 object-contain drop-shadow-sm shrink-0" />
+            <img src="/logo.svg" alt="MakInvoices Logo" className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-sm shrink-0" />
 
-            <div className="hidden lg:block">
+            {/* Mobile Top Bar Title: Company Name (if filled) or App Name */}
+            <div className="sm:hidden min-w-0 max-w-[130px] xs:max-w-[180px]">
+              {profile.name && profile.name.trim() !== '' ? (
+                <span className="text-xs font-bold text-[#0f172a] dark:text-white truncate block leading-tight tracking-wide" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
+                  {profile.name.trim()}
+                </span>
+              ) : (
+                <span className="text-sm font-black tracking-tight text-[#0f172a] dark:text-white block leading-none" style={{fontFamily: "'IBM Plex Sans', sans-serif"}}>
+                  Mak<span className="text-[#0ea5e9]">Invoices</span>
+                </span>
+              )}
+            </div>
+
+            {/* Desktop App Name */}
+            <div className="hidden sm:block">
 
               <span className="text-xl font-black tracking-tight text-[#0f172a] dark:text-white block leading-none" style={{fontFamily: "'IBM Plex Sans', sans-serif"}}>
 
@@ -7091,16 +7181,6 @@ export default function Dashboard({
           </div>
 
           <div className="w-px h-6 bg-[#bae6fd] dark:bg-[#223269] hidden sm:block"></div>
-
-          <button
-            onClick={() => setIsMobileDrawerOpen(true)}
-            aria-label="Toggle structural sidebar menu drawer"
-            className="xl:hidden p-2 -ml-2 text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0369a1] dark:hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f]"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
-
 
           <div className="hidden sm:flex items-center gap-3.5">
 
@@ -7126,19 +7206,24 @@ export default function Dashboard({
 
 
 
-        {/* Center: Mobile Company Name */}
+        {/* Right Side: Theme Toggle + Notifications + Profile Avatar (Mobile Capsule Pill Layout) */}
 
-        <div className="flex sm:hidden items-center justify-center absolute left-1/2 -translate-x-1/2 pointer-events-none">
-
-           <span className="font-bold text-slate-800 dark:text-white tracking-wide text-[16px]">{profile.name || 'MAKINVOICE'}</span>
-
-        </div>
-
-
-
-        {/* Right Side: Notifications + Profile Avatar */}
-
-        <div className="flex items-center gap-3 sm:gap-5">
+        <div className="flex items-center gap-1.5 sm:gap-4 p-1 sm:p-0 bg-white/80 dark:bg-[#111a36]/90 sm:bg-transparent sm:dark:bg-transparent border border-[#bae6fd]/70 dark:border-[#223269] sm:border-0 rounded-full shadow-2xs sm:shadow-none backdrop-blur-md sm:backdrop-blur-none">
+          
+          {/* Dedicated Dark & Light Mode Toggle Button (Mobile Optimized) */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-[#f4f9ff] dark:bg-[#1b264f] hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f]/90 text-[#475569] dark:text-[#38bdf8] hover:text-[#0284c7] transition-all cursor-pointer border border-[#bae6fd]/60 dark:border-[#223269]/70 shadow-2xs active:scale-90 shrink-0"
+            aria-label="Toggle dark and light mode"
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-amber-400 animate-in spin-in-90 duration-200" />
+            ) : (
+              <Moon className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-600 hover:text-[#0284c7] animate-in spin-in-90 duration-200" />
+            )}
+          </button>
 
           <div className="relative" id="notifications-dropdown-container">
 
@@ -10623,261 +10708,167 @@ export default function Dashboard({
 
 
 
-              {/* Single horizontal body row */}
-
-              <div className="px-6 py-5 flex flex-wrap lg:flex-nowrap items-end gap-4">
-
-
-
-                {/* Start Date */}
-
-                <div className="space-y-1.5 flex-1 min-w-[140px]">
-
-                  <label htmlFor="rep-start" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80">
-
-                    <span className="w-1 h-1 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] inline-block" />
-
-                    Start Date
-
-                  </label>
-
-                  <input
-
-                    id="rep-start"
-
-                    type="date"
-
-                    value={reportStartDate}
-
-                    onChange={(e) => setReportStartDate(e.target.value)}
-
-                    className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 hover:border-[#0284c7] focus:border-[#0284c7] dark:border-[#223269] dark:focus:border-[#38bdf8] rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none transition-colors duration-150"
-
-                  />
-
-                </div>
-
-
-
-                {/* End Date */}
-
-                <div className="space-y-1.5 flex-1 min-w-[140px]">
-
-                  <label htmlFor="rep-end" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80">
-
-                    <span className="w-1 h-1 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] inline-block" />
-
-                    End Date
-
-                  </label>
-
-                  <input
-
-                    id="rep-end"
-
-                    type="date"
-
-                    value={reportEndDate}
-
-                    onChange={(e) => setReportEndDate(e.target.value)}
-
-                    className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 hover:border-[#0284c7] focus:border-[#0284c7] dark:border-[#223269] dark:focus:border-[#38bdf8] rounded-xl text-xs text-[#0f172a] dark:text-white focus:outline-none transition-colors duration-150"
-
-                  />
-
-                </div>
-
-
-
-                {/* Client Account */}
-
-                <div className="space-y-1.5 flex-1 min-w-[160px]">
-
-                  <label htmlFor="rep-client" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80">
-
-                    <span className="w-1 h-1 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] inline-block" />
-
-                    Client Account
-
-                  </label>
-
-                  <select
-
-                    id="rep-client"
-
-                    value={reportClientFilter}
-
-                    onChange={(e) => setReportClientFilter(e.target.value)}
-
-                    className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 hover:border-[#0284c7] focus:border-[#0284c7] dark:border-[#223269] dark:focus:border-[#38bdf8] rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:outline-none transition-colors duration-150 cursor-pointer"
-
-                  >
-
-                    <option value="all">All Clients</option>
-
-                    {Array.from(new Set(invoices.map(it => it.clientName))).filter(Boolean).map(clName => (
-
-                      <option key={clName} value={clName}>{clName}</option>
-
-                    ))}
-
-                  </select>
-
-                </div>
-
-
-
-                {/* Vertical divider */}
-
-                <div className="hidden lg:block w-px self-stretch bg-gradient-to-b from-transparent via-[#bae6fd]/40 to-transparent mx-1" />
-
-
-
-                {/* Quick chips */}
-
-                <div className="space-y-1.5 shrink-0">
-
-                  <p className="text-[9px] font-black uppercase tracking-wider text-[#64748b]/60 dark:text-zinc-500">Quick Range</p>
-
-                  <div className="flex flex-wrap gap-1.5">
-
-                    {[
-
-                      { label: '7 Days', days: 7 },
-
-                      { label: '1 Month', days: 30 },
-
-                      { label: '1 Year', days: 365 },
-
-                      { label: 'All Time', days: 0 },
-
-                    ].map(opt => {
-
-                      const isReset = opt.days === 0;
-
-                      return (
-
-                        <button
-
-                          key={opt.label}
-
-                          type="button"
-
-                          onClick={() => {
-
-                            if (isReset) {
-
-                              setReportStartDate('');
-
-                              setReportEndDate('');
-
-                            } else {
-
-                              const end = new Date().toISOString().split('T')[0];
-
-                              const d = new Date();
-
-                              d.setDate(d.getDate() - opt.days);
-
-                              setReportStartDate(d.toISOString().split('T')[0]);
-
-                              setReportEndDate(end);
-
-                            }
-
-                          }}
-
-                          className="px-3 py-2 rounded-xl text-[11px] font-bold transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.97] cursor-pointer bg-[#f4f9ff] hover:bg-[#e0f2fe] text-[#0284c7] border border-[#bae6fd] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] dark:text-[#38bdf8] dark:border-[#223269]"
-
-                        >
-
-                          {opt.label}
-
-                        </button>
-
-                      );
-
-                    })}
-
+              {/* Single horizontal body card structure */}
+              <div className="px-5 sm:px-6 py-5 space-y-4">
+
+                {/* Tier 1: Responsive Grid of 4 Control Inputs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 w-full">
+
+                  {/* Start Date */}
+                  <div className="space-y-1.5 min-w-0">
+                    <label htmlFor="rep-start" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
+                      <span className="w-1 h-1 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] inline-block" />
+                      Start Date
+                    </label>
+                    <input
+                      id="rep-start"
+                      type="date"
+                      value={reportStartDate}
+                      onChange={(e) => setReportStartDate(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 hover:border-[#0284c7] focus:border-[#0284c7] dark:border-[#223269] dark:focus:border-[#38bdf8] rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:outline-none transition-all duration-150 shadow-2xs"
+                    />
+                  </div>
+
+                  {/* End Date */}
+                  <div className="space-y-1.5 min-w-0">
+                    <label htmlFor="rep-end" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
+                      <span className="w-1 h-1 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] inline-block" />
+                      End Date
+                    </label>
+                    <input
+                      id="rep-end"
+                      type="date"
+                      value={reportEndDate}
+                      onChange={(e) => setReportEndDate(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 hover:border-[#0284c7] focus:border-[#0284c7] dark:border-[#223269] dark:focus:border-[#38bdf8] rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:outline-none transition-all duration-150 shadow-2xs"
+                    />
+                  </div>
+
+                  {/* Client Account */}
+                  <div className="space-y-1.5 min-w-0">
+                    <label htmlFor="rep-client" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
+                      <span className="w-1 h-1 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] inline-block" />
+                      Client Account
+                    </label>
+                    <select
+                      id="rep-client"
+                      value={reportClientFilter}
+                      onChange={(e) => setReportClientFilter(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 hover:border-[#0284c7] focus:border-[#0284c7] dark:border-[#223269] dark:focus:border-[#38bdf8] rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:outline-none transition-all duration-150 cursor-pointer shadow-2xs"
+                    >
+                      <option value="all">All Clients</option>
+                      {Array.from(new Set(invoices.map(it => it.clientName))).filter(Boolean).map(clName => (
+                        <option key={clName} value={clName}>{clName}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Document Type */}
+                  <div className="space-y-1.5 min-w-0">
+                    <label htmlFor="rep-doc-type" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
+                      <span className="w-1 h-1 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] inline-block" />
+                      Document Type
+                    </label>
+                    <select
+                      id="rep-doc-type"
+                      value={reportDocTypeFilter}
+                      onChange={(e) => setReportDocTypeFilter(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 hover:border-[#0284c7] focus:border-[#0284c7] dark:border-[#223269] dark:focus:border-[#38bdf8] rounded-xl text-xs font-bold text-[#0f172a] dark:text-white focus:outline-none transition-all duration-150 cursor-pointer shadow-2xs"
+                    >
+                      <option value="all">All Documents (Combined)</option>
+                      <option value="all_sales">All Sales Ledger</option>
+                      <option value="all_purchases">All Purchase Ledger</option>
+                      <optgroup label="Sales Documents">
+                        <option value="tax_invoice">Tax Invoice</option>
+                        <option value="proforma">Proforma Invoice</option>
+                        <option value="receipt">Receipt / Cash Voucher</option>
+                        <option value="quote">Quotation / Estimate</option>
+                        <option value="credit_note">Credit Note</option>
+                      </optgroup>
+                      <optgroup label="Purchase Documents">
+                        <option value="purchase_order">Purchase Order</option>
+                        <option value="purchase_invoice">Purchase Invoice</option>
+                        <option value="debit_note">Debit Note</option>
+                      </optgroup>
+                    </select>
                   </div>
 
                 </div>
 
+                {/* Tier 2: Quick Range Chips & Action Buttons */}
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pt-3.5 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 w-full">
 
+                  {/* Left: Quick Range Chips */}
+                  <div className="space-y-1.5">
+                    <p className="text-[9px] font-black uppercase tracking-wider text-[#64748b]/60 dark:text-zinc-500">Quick Range</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { label: '7 Days', days: 7 },
+                        { label: '1 Month', days: 30 },
+                        { label: '1 Year', days: 365 },
+                        { label: 'All Time', days: 0 },
+                      ].map(opt => {
+                        const isReset = opt.days === 0;
+                        return (
+                          <button
+                            key={opt.label}
+                            type="button"
+                            onClick={() => {
+                              if (isReset) {
+                                setReportStartDate('');
+                                setReportEndDate('');
+                              } else {
+                                const end = new Date().toISOString().split('T')[0];
+                                const d = new Date();
+                                d.setDate(d.getDate() - opt.days);
+                                setReportStartDate(d.toISOString().split('T')[0]);
+                                setReportEndDate(end);
+                              }
+                            }}
+                            className="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.97] cursor-pointer bg-[#f4f9ff] hover:bg-[#e0f2fe] text-[#0284c7] border border-[#bae6fd] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] dark:text-[#38bdf8] dark:border-[#223269]"
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-                {/* Vertical divider */}
+                  {/* Right: Download buttons */}
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 shrink-0 self-end md:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (reportedInvoices.length === 0) { alert("No billing records match the specified document selection and interval."); return; }
+                        const rangeLabel = reportStartDate && reportEndDate ? `${reportStartDate} to ${reportEndDate}` : "Cumulative Ledger Period";
+                        exportCollectiveReportPDF(reportedInvoices, profile, rangeLabel, reportDocTypeFilter);
+                      }}
+                      className="group relative px-4 py-2.5 rounded-xl text-white text-[10.5px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.98] cursor-pointer overflow-hidden shadow-sm"
+                      style={{ background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)' }}
+                    >
+                      <span className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-150" />
+                      <FileText className="w-3.5 h-3.5 shrink-0" />
+                      <span>Ledger PDF</span>
+                    </button>
 
-                <div className="hidden lg:block w-px self-stretch bg-gradient-to-b from-transparent via-[#bae6fd]/40 to-transparent mx-1" />
-
-
-
-                {/* Download buttons */}
-
-                <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
-
-                  <button
-
-                    type="button"
-
-                    onClick={() => {
-
-                      if (reportedInvoices.length === 0) { alert("No client billing records match the specified interval."); return; }
-
-                      const rangeLabel = reportStartDate && reportEndDate ? `${reportStartDate} to ${reportEndDate}` : "Cumulative Ledger Period";
-
-                      exportCollectiveReportPDF(reportedInvoices, profile, rangeLabel);
-
-                    }}
-
-                    className="group relative px-4 py-2.5 rounded-xl text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.98] cursor-pointer overflow-hidden whitespace-nowrap"
-
-                    style={{ background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)' }}
-
-                  >
-
-                    <span className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-150" />
-
-                    <FileText className="w-3.5 h-3.5 shrink-0" />
-
-                    <span>Ledger PDF</span>
-
-                  </button>
-
-
-
-                  <button
-
-                    type="button"
-
-                    onClick={() => {
-
-                      if (reportedInvoices.length === 0) { alert("No client billing records match the specified interval."); return; }
-
-                      reportedInvoices.forEach((inv, index) => {
-
-                        setTimeout(async () => { await exportInvoicePDFAsync(inv, profile); }, index * 350);
-
-                      });
-
-                    }}
-
-                    className="group relative px-4 py-2.5 rounded-xl text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.98] cursor-pointer overflow-hidden whitespace-nowrap"
-
-                    style={{ background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)' }}
-
-                  >
-
-                    <span className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-150" />
-
-                    <Download className="w-3.5 h-3.5 shrink-0" />
-
-                    <span>All Individual Invoices</span>
-
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (reportedInvoices.length === 0) { alert("No client billing records match the specified interval."); return; }
+                        reportedInvoices.forEach((inv, index) => {
+                          setTimeout(async () => { await exportInvoicePDFAsync(inv, profile); }, index * 350);
+                        });
+                      }}
+                      className="group relative px-4 py-2.5 rounded-xl text-white text-[10.5px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.98] cursor-pointer overflow-hidden shadow-sm"
+                      style={{ background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)' }}
+                    >
+                      <span className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-150" />
+                      <Download className="w-3.5 h-3.5 shrink-0" />
+                      <span>All Individual Invoices</span>
+                    </button>
+                  </div>
 
                 </div>
-
-
 
               </div>
 
@@ -13898,7 +13889,7 @@ export default function Dashboard({
 
                     {recentView === 'invoices' ? (
 
-                      invoices.length === 0 ? (
+                      allLedgerInvoices.length === 0 ? (
 
                         <div className="py-12 text-center">
 
@@ -13932,7 +13923,7 @@ export default function Dashboard({
 
                           <tbody>
 
-                            {invoices.slice(0, 4).map(inv => (
+                            {allLedgerInvoices.slice(0, 4).map(inv => (
 
                               <tr key={inv.id} className="border-b border-[#bae6fd]/20 dark:border-[#223269]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 transition-colors">
 
@@ -15045,7 +15036,7 @@ export default function Dashboard({
 
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-[#0b1329]/80 backdrop-blur-sm overflow-y-auto no-scrollbar">
 
-            <div className="w-full max-w-5xl h-full md:h-[92vh] bg-white dark:bg-[#111a36] rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-[#bae6fd]/30 dark:border-[#223269]/60 animate-in fade-in duration-200">
+            <div className="w-full max-w-5xl h-full md:h-[92vh] bg-white dark:bg-[#111a36] rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-[#bae6fd]/30 dark:border-[#223269]/60 animate-in fade-in duration-200 doc-preview-modal invoice-preview-container preview-section no-privacy-blur" data-privacy-exempt="true">
 
               
 
@@ -15105,7 +15096,7 @@ export default function Dashboard({
 
                     {/* Invoice Info Details */}
 
-                    <div className="hidden md:block p-4 rounded-2xl border border-[#bae6fd]/40 dark:border-[#223269]/50 bg-white dark:bg-[#111a36] space-y-3.5 shadow-2xs">
+                    <div className="hidden md:block p-4 rounded-2xl border border-[#bae6fd]/40 dark:border-[#223269]/50 bg-white dark:bg-[#111a36] space-y-3.5 shadow-2xs document-summary-section document-summary no-privacy-blur" data-privacy-exempt="true">
 
                       <span className="block text-[10px] font-black uppercase tracking-widest text-[#64748b]/80 dark:text-zinc-500">Document Summary</span>
 

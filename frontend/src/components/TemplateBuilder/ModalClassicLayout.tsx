@@ -118,7 +118,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
   const valStyle = "flex-1 text-gray-900";
 
   return (
-    <div style={baseStyle} className="invoice-live-preview">
+    <div style={baseStyle} className="invoice-live-preview paper-sheet-light">
       {/* Header and Company */}
       {(sections.header?.visible !== false || sections.companyInfo?.visible !== false) && (
         <div className="flex justify-between items-start mb-3">

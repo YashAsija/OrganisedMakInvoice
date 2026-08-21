@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, ShieldCheck, AlertTriangle, Delete, RefreshCw, Mail } from 'lucide-react';
+import { Lock, ShieldCheck, AlertTriangle, Delete, RefreshCw, Mail, Fingerprint } from 'lucide-react';
 import {
   getSecuritySettings,
   saveSecuritySettings,
@@ -522,6 +522,111 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
 
   // ── MAIN UNLOCK SCREEN ────────────────────────────────────────────────────
   const hasSecurityQuestions = !!getSecurityQuestions();
+  const [isAuthenticatingBiometric, setIsAuthenticatingBiometric] = useState(false);
+
+  const isBiometricEnabled = typeof window !== 'undefined' && (
+    localStorage.getItem('mak_security_biometric') === 'true' ||
+    (() => {
+      try {
+        return JSON.parse(localStorage.getItem('mak_security_preferences_v1') || '{}').biometricEnabled === true;
+      } catch (e) {
+        return false;
+      }
+    })()
+  );
+
+  const handleBiometricUnlock = async () => {
+    if (typeof window === 'undefined' || !window.PublicKeyCredential) {
+      setError('Biometric authentication is not supported on this browser.');
+      return;
+    }
+
+    try {
+      setIsAuthenticatingBiometric(true);
+      setError('');
+
+      const isAvailable = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      if (!isAvailable) {
+        setError('Touch ID / Face ID / Windows Hello is not available on this device.');
+        setIsAuthenticatingBiometric(false);
+        return;
+      }
+
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+      const savedCredId = localStorage.getItem('mak_security_webauthn_cred_id');
+
+      if (savedCredId) {
+        try {
+          const credIdBytes = Uint8Array.from(atob(savedCredId), c => c.charCodeAt(0));
+          const credential = await navigator.credentials.get({
+            publicKey: {
+              challenge: challenge.buffer,
+              timeout: 60000,
+              allowCredentials: [{
+                id: credIdBytes.buffer,
+                type: 'public-key',
+                transports: ['internal']
+              }],
+              userVerification: 'required',
+            }
+          });
+
+          if (credential) {
+            clearAttempts();
+            onSuccess();
+            return;
+          }
+        } catch (e) {
+          // If stored credential failed, fallback to platform creation flow
+        }
+      }
+
+      // First-time or direct platform Touch ID / Face ID / Windows Hello enrollment
+      const userId = new Uint8Array(16);
+      window.crypto.getRandomValues(userId);
+
+      const newCred = await navigator.credentials.create({
+        publicKey: {
+          challenge: challenge.buffer,
+          rp: { name: 'MakInvoices Workspace' },
+          user: {
+            id: userId.buffer,
+            name: 'workspace_user',
+            displayName: 'Workspace Touch ID',
+          },
+          pubKeyCredParams: [
+            { alg: -7, type: 'public-key' },
+            { alg: -257, type: 'public-key' }
+          ],
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform', // FORCES DIRECT OS TOUCH ID / FACE ID / WINDOWS HELLO
+            userVerification: 'required',
+            requireResidentKey: false,
+          },
+          timeout: 60000,
+        }
+      }) as PublicKeyCredential;
+
+      if (newCred && newCred.rawId) {
+        const credIdBase64 = btoa(String.fromCharCode(...new Uint8Array(newCred.rawId)));
+        localStorage.setItem('mak_security_webauthn_cred_id', credIdBase64);
+        clearAttempts();
+        onSuccess();
+      } else {
+        setError('Touch ID / Face ID verification failed. Please enter your 4-digit PIN.');
+      }
+    } catch (err: any) {
+      console.warn('WebAuthn platform biometric error:', err);
+      if (err.name === 'NotAllowedError') {
+        setError('Touch ID / Face ID verification cancelled.');
+      } else {
+        setError('Biometric verification failed. Please enter your 4-digit PIN.');
+      }
+    } finally {
+      setIsAuthenticatingBiometric(false);
+    }
+  };
 
   return (
     <div
@@ -557,11 +662,24 @@ export default function BiometricVerification({ onSuccess }: BiometricVerificati
         <h1 className="text-2xl font-black text-white tracking-tight mb-2">
           {isLocked ? 'Account Locked' : 'Welcome Back'}
         </h1>
-        <p className="text-sm text-white/60 text-center leading-relaxed max-w-xs mb-6">
+        <p className="text-sm text-white/60 text-center leading-relaxed max-w-xs mb-4">
           {isLocked
             ? `Too many incorrect attempts. Try again in ${lockoutSeconds}s.`
             : 'Enter your 4-digit PIN to unlock your workspace.'}
         </p>
+
+        {/* Biometric / Touch ID Unlock Button */}
+        {isBiometricEnabled && !isLocked && (
+          <button
+            type="button"
+            onClick={handleBiometricUnlock}
+            disabled={isAuthenticatingBiometric}
+            className="w-full mb-4 py-3 px-4 rounded-2xl bg-[#0284c7]/20 hover:bg-[#0284c7]/30 text-[#38bdf8] border border-[#0284c7]/40 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-sky-950/40 active:scale-95 disabled:opacity-50"
+          >
+            <Fingerprint className={`w-5 h-5 text-[#38bdf8] ${isAuthenticatingBiometric ? 'animate-spin' : 'animate-pulse'}`} />
+            <span>{isAuthenticatingBiometric ? 'Scanning Touch ID / Face ID...' : 'Unlock with Touch ID / Face ID'}</span>
+          </button>
+        )}
 
         {/* Countdown */}
         {isLocked && (

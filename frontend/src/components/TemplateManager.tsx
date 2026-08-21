@@ -480,7 +480,7 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
   });
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200 w-full">
+    <div className="space-y-6 animate-in fade-in duration-200 w-full invoice-template-builder no-privacy-blur" data-privacy-exempt="true">
 
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">

@@ -509,7 +509,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   ) => {
     const activeItems = currentItems || items;
     return (
-      <div className="invoice-live-preview relative flex flex-col h-full w-full" style={{ flex: 1 }}>
+      <div className="invoice-live-preview relative flex flex-col h-full w-full paper-sheet-light live-preview-container no-privacy-blur" data-privacy-exempt="true" style={{ flex: 1 }}>
       {layout.watermark.enabled && (
         <div style={{
           position: 'absolute',
@@ -1697,22 +1697,22 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               const align = getSectionAlignment('payment');
               const qrBlock = config.payment.generateQrCode && (
                 qrCodeUrl ? (
-                  <div style={{ flexShrink: 0 }}>
-                    <img src={qrCodeUrl} alt="UPI QR Code" style={{ width: 60, height: 60, display: 'block', border: '1px solid #e2e8f0', padding: '1px', backgroundColor: '#fff' }} crossOrigin="anonymous" />
+                  <div className="no-privacy-blur qr-code-container" data-privacy-exempt="true" style={{ flexShrink: 0 }}>
+                    <img src={qrCodeUrl} alt="UPI QR Code" data-privacy-exempt="true" className="no-privacy-blur" style={{ width: 60, height: 60, display: 'block', border: '1px solid #e2e8f0', padding: '1px', backgroundColor: '#fff', filter: 'none', WebkitFilter: 'none' }} crossOrigin="anonymous" />
                   </div>
                 ) : (
-                  <div style={{ width: 60, height: 60, backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#64748b', textAlign: 'center', flexShrink: 0 }}>No UPI ID</div>
+                  <div className="no-privacy-blur qr-code-container" data-privacy-exempt="true" style={{ width: 60, height: 60, backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#64748b', textAlign: 'center', flexShrink: 0 }}>No UPI ID</div>
                 )
               );
 
               const detailsBlock = (
-                <div style={{ whiteSpace: 'pre-wrap', textAlign: 'left', fontSize: '10px', color: '#475569' }}>
+                <div className="no-privacy-blur" data-privacy-exempt="true" style={{ whiteSpace: 'pre-wrap', textAlign: 'left', fontSize: '10px', color: '#475569' }}>
                   {bankDetailsText}
                 </div>
               );
 
               return (
-                <div id="section-payment" key="payment" style={{ ...getSectionStyle('payment'), textAlign: align, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', width: '100%', marginBottom: config.payment.isCompact ? '4px' : undefined, paddingBottom: config.payment.isCompact ? '2px' : undefined }}>
+                <div id="section-payment" key="payment" className="no-privacy-blur" data-privacy-exempt="true" style={{ ...getSectionStyle('payment'), textAlign: align, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', width: '100%', marginBottom: config.payment.isCompact ? '4px' : undefined, paddingBottom: config.payment.isCompact ? '4px' : undefined }}>
                   <div className="font-bold text-gray-800 text-[10px] mb-1">Banking Information</div>
                   <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap" style={{ textAlign: align, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: config.payment.isCompact ? '6px' : '12px', marginTop: config.payment.isCompact ? '2px' : '4px' }}>
                     {isPaymentAfterTax ? (
@@ -1735,11 +1735,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             
             const qrBlockLarge = config.payment.generateQrCode && (
               qrCodeUrl ? (
-                <div style={{ flexShrink: 0 }}>
-                  <img src={qrCodeUrl} alt="UPI QR Code" style={{ width: '80px', height: '80px', display: 'block', border: '1px solid #e2e8f0', padding: '2px', backgroundColor: '#fff' }} crossOrigin="anonymous" />
+                <div className="no-privacy-blur qr-code-container" data-privacy-exempt="true" style={{ flexShrink: 0 }}>
+                  <img src={qrCodeUrl} alt="UPI QR Code" data-privacy-exempt="true" className="no-privacy-blur" style={{ width: '80px', height: '80px', display: 'block', border: '1px solid #e2e8f0', padding: '2px', backgroundColor: '#fff', filter: 'none', WebkitFilter: 'none' }} crossOrigin="anonymous" />
                 </div>
               ) : (
-                <div style={{ width: '80px', height: '80px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#64748b', textAlign: 'center', flexShrink: 0 }}>No UPI ID</div>
+                <div className="no-privacy-blur qr-code-container" data-privacy-exempt="true" style={{ width: '80px', height: '80px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#64748b', textAlign: 'center', flexShrink: 0 }}>No UPI ID</div>
               )
             );
 

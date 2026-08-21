@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useCallback } from 'react';
 import { Sparkles, Loader2, X, Undo2, Redo2 } from 'lucide-react';
@@ -278,7 +278,7 @@ export function SmartBillingBox({ activeTemplate, setters, existingState }: Smar
   return (
     <div className="mx-1 mb-2.5 sm:mb-3 shrink-0">
       {/* Header */}
-      <div className="p-2.5 sm:p-3 bg-gradient-to-br from-[#f4f9ff] via-[#f4f9ff] to-[#e0f2fe] dark:from-[#111a36] dark:to-[#1b264f]/40 border border-[#bae6fd] dark:border-[#223269]/60 rounded-xl sm:rounded-2xl shadow-xs">
+      <div className="p-2.5 sm:p-3 bg-gradient-to-br from-[#f4f9ff] via-[#f4f9ff] to-[#e0f2fe] dark:from-[#0f172a] dark:via-[#111827] dark:to-[#1e293b] border border-[#bae6fd] dark:border-[#0284c7]/40 rounded-xl sm:rounded-2xl shadow-xs">
         <div className="flex items-center gap-2 mb-1.5">
           <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#0284c7] to-[#2563eb] flex items-center justify-center shadow-xs shrink-0">
             <Sparkles className="w-3.5 h-3.5 text-white" />
@@ -298,7 +298,7 @@ export function SmartBillingBox({ activeTemplate, setters, existingState }: Smar
           )}
         </div>
 
-        <p className="text-[10.5px] sm:text-[11px] text-slate-500 dark:text-slate-400 mb-2 font-medium leading-tight">
+        <p className="text-[10.5px] sm:text-[11px] text-slate-600 dark:text-slate-300 mb-2 font-medium leading-tight">
           Describe your invoice in plain English — client, items, tax, dates, transport. AI fills fields in your template.
         </p>
 
@@ -312,7 +312,7 @@ export function SmartBillingBox({ activeTemplate, setters, existingState }: Smar
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleGenerate(); } }}
               placeholder="e.g. Bill Sharma Traders ₹45000 for 5 laptops HSN 84713, GST 18%, vehicle DL9SAK2211, due in 30 days..."
               disabled={isLoading}
-              className="smart-billing-prompt-input w-full pl-3 pr-7 py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl border border-indigo-300 dark:border-indigo-700 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/30 disabled:opacity-60 transition-all shadow-xs"
+              className="smart-billing-prompt-input w-full pl-3 pr-7 py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl border border-[#bae6fd] dark:border-[#0284c7]/50 focus:outline-none focus:border-[#0284c7] focus:ring-2 focus:ring-[#0284c7]/30 disabled:opacity-60 transition-all shadow-xs"
             />
             {prompt && !isLoading && (
               <button

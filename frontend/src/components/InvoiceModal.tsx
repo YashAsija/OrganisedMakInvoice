@@ -1284,6 +1284,7 @@ export default function InvoiceModal({
   // A stable ID for this WIP invoice. Generated once on first edit, reused.
   // If we're editing an existing invoice, use its ID; otherwise generate a new one.
   const draftIdRef = useRef<string>((invoice?.id || '').trim() !== '' ? invoice!.id : `inv_draft_${Math.random().toString(36).substr(2, 9)}`);
+  const isSavedSuccessfullyRef = useRef<boolean>(false);
 
   // Tracks the real authenticated userId — updated whenever the session is available or passed as prop.
   // Used by buildAndSave() so sendBeacon payloads always carry the correct userId.
@@ -1304,8 +1305,10 @@ export default function InvoiceModal({
   useEffect(() => {
     if (isOpen && (!invoice || (invoice.id || '').trim() === '')) {
       draftIdRef.current = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
+      isSavedSuccessfullyRef.current = false;
     } else if (isOpen && invoice) {
       draftIdRef.current = invoice.id;
+      isSavedSuccessfullyRef.current = false;
     }
   }, [isOpen, invoice]);
 
@@ -1315,7 +1318,7 @@ export default function InvoiceModal({
 
   // On modal open for a NEW invoice — check for any unsaved draft to offer resuming.
   useEffect(() => {
-    if (!isOpen || invoice) return; // only for new invoices
+    if (!isOpen || invoice || isSavedSuccessfullyRef.current || savedInvoiceForPreview) return; // only for unsaved new invoices
     setResumeBannerDismissed(false);
 
     const userEmail = localStorage.getItem('makbills_custom_email');
@@ -1331,7 +1334,7 @@ export default function InvoiceModal({
 
       // Check if this pendingDraftId belongs to an already saved billed document
       const isAlreadyBilledDoc = (invoices || []).some(i => i.id === pendingDraftId && i.status !== 'draft');
-      if (isAlreadyBilledDoc) {
+      if (isAlreadyBilledDoc || isSavedSuccessfullyRef.current) {
         localStorage.removeItem('makbills_pending_resume_draft');
         setResumableDraft(null);
         return;
@@ -1406,7 +1409,7 @@ export default function InvoiceModal({
 
   // Watch all key form fields — debounce the save
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || isSavedSuccessfullyRef.current || savedInvoiceForPreview) return;
     // CRITICAL: Do NOT autosave as draft if editing an existing billed invoice OR if ID is not a temporary draft
     if ((invoice && invoice.status !== 'draft') || !draftIdRef.current.startsWith('inv_draft_')) return;
 
@@ -1486,8 +1489,8 @@ export default function InvoiceModal({
   // ─── Unload handlers: beforeunload + visibilitychange ──────────────────────
   useEffect(() => {
     const buildAndSave = () => {
-      // CRITICAL: Do NOT save draft on reload if editing an existing billed invoice OR if ID is not a temporary draft
-      if ((invoice && invoice.status !== 'draft') || !draftIdRef.current.startsWith('inv_draft_')) return;
+      // CRITICAL: Do NOT save draft on reload if document was saved, OR editing an existing billed invoice, OR if ID is not a temporary draft
+      if (isSavedSuccessfullyRef.current || savedInvoiceForPreview || (invoice && invoice.status !== 'draft') || !draftIdRef.current.startsWith('inv_draft_')) return;
 
       const draft = buildTempInvoiceRef.current(true);
       if (!draft) return;
@@ -1978,18 +1981,20 @@ export default function InvoiceModal({
       marka: marka.trim() || undefined
     };
 
+    isSavedSuccessfullyRef.current = true;
     onSave(finalInvoiceObj);
 
     // ─── Draft cleanup on successful submit ────────────────────────────────
     // Remove the draft from localStorage so it doesn't show as resumable
     try {
       localStorage.removeItem('makbills_pending_resume_draft');
+      setResumableDraft(null);
       const storageKey = getStorageKey();
       const raw = localStorage.getItem(storageKey);
       if (raw) {
         const all = JSON.parse(raw) as any[];
-        // Remove temporary draft entry if it was a temp inv_draft_ prefix
-        const filtered = all.filter((i: any) => !(savedDraftId.startsWith('inv_draft_') && i.id === savedDraftId && i.status === 'draft'));
+        // Remove temporary draft entry if it was a temp inv_draft_ prefix or matches current draft
+        const filtered = all.filter((i: any) => !(i.id === savedDraftId || (savedDraftId.startsWith('inv_draft_') && i.id === savedDraftId)));
         localStorage.setItem(storageKey, JSON.stringify(filtered));
         localStorage.setItem('invoice_maker_invoices', JSON.stringify(filtered));
       }
@@ -2107,7 +2112,8 @@ export default function InvoiceModal({
       <style dangerouslySetInnerHTML={{ __html: variables }} />
       <div
         id="invoice-editor"
-        className="w-full h-full md:h-auto md:max-h-[96dvh] max-w-full md:max-w-4xl lg:max-w-5xl xl:max-w-[95vw] 2xl:max-w-[1700px] rounded-none md:rounded-3xl overflow-hidden shadow-2xl flex flex-col border-none md:border transition-all duration-300 md:my-auto" style={{ backgroundColor: "var(--ink-deep)", borderColor: "var(--paper-line)" }}
+        data-privacy-exempt="true"
+        className="w-full h-full md:h-auto md:max-h-[96dvh] max-w-full md:max-w-4xl lg:max-w-5xl xl:max-w-[95vw] 2xl:max-w-[1700px] rounded-none md:rounded-3xl overflow-hidden shadow-2xl flex flex-col border-none md:border transition-all duration-300 md:my-auto master-registry-container invoice-template-builder invoice-modal-container no-privacy-blur" style={{ backgroundColor: "var(--ink-deep)", borderColor: "var(--paper-line)" }}
       >
 
         {/* ─── Resume Draft Banner ─────────────────────────────────────────── */}
@@ -2275,7 +2281,7 @@ export default function InvoiceModal({
                     if (currentWip) {
                       const hasName = currentWip.clientName && currentWip.clientName.trim() !== '' && !currentWip.clientName.startsWith('Guest-') && currentWip.clientName !== 'Quote / Estimate';
                       const hasItems = Array.isArray(currentWip.items) && currentWip.items.length > 0;
-                      if (currentWip && (!invoice || (invoice as any).status === 'draft') && draftIdRef.current.startsWith('inv_draft_')) {
+                      if (!isSavedSuccessfullyRef.current && !savedInvoiceForPreview && currentWip && (!invoice || (invoice as any).status === 'draft') && draftIdRef.current.startsWith('inv_draft_')) {
                         const draftToSave = {
                           ...currentWip,
                           id: draftIdRef.current,
@@ -2330,7 +2336,7 @@ export default function InvoiceModal({
                         if (currentWip) {
                           const hasName = currentWip.clientName && currentWip.clientName.trim() !== '' && !currentWip.clientName.startsWith('Guest-') && currentWip.clientName !== 'Quote / Estimate';
                           const hasItems = Array.isArray(currentWip.items) && currentWip.items.length > 0;
-                          if ((!invoice || (invoice as any).status === 'draft') && draftIdRef.current.startsWith('inv_draft_')) {
+                          if (!isSavedSuccessfullyRef.current && !savedInvoiceForPreview && (!invoice || (invoice as any).status === 'draft') && draftIdRef.current.startsWith('inv_draft_')) {
                             const draftToSave = {
                               ...currentWip,
                               id: draftIdRef.current,
@@ -3308,8 +3314,8 @@ export default function InvoiceModal({
                   <div className="p-3.5 rounded-2xl border space-y-3 shadow-xs" style={{ backgroundColor: "var(--ink-panel)", borderColor: "var(--paper-line)" }}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="block text-xs font-medium text-slate-800 dark:text-slate-200">Recurring Invoice Settings</span>
-                        <span className="text-[10px] text-slate-400 block">Auto-generate copies of this bill on selected schedules</span>
+                        <span className="block text-xs font-extrabold text-slate-100 dark:text-white" style={{ color: "var(--text-dark-bg, #f8fafc)" }}>Recurring Invoice Settings</span>
+                        <span className="text-[10px] text-slate-300 dark:text-slate-300 block" style={{ color: "var(--text-dark-bg-dim, #cbd5e1)" }}>Auto-generate copies of this bill on selected schedules</span>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer select-none">
                         <input
@@ -3330,7 +3336,7 @@ export default function InvoiceModal({
                     {isRecurring && (
                       <div className="space-y-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/65 grid grid-cols-1 sm:grid-cols-2 gap-3 transition-all duration-300">
                         <div className="col-span-1">
-                          <label htmlFor="recurring-interval" className="block text-[10px] font-medium text-slate-500 uppercase">Billing Frequency</label>
+                          <label htmlFor="recurring-interval" className="block text-[10px] font-bold text-slate-300 dark:text-slate-300 uppercase tracking-wide" style={{ color: "var(--text-dark-bg-dim, #cbd5e1)" }}>Billing Frequency</label>
                           <select
                             id="recurring-interval"
                             value={recurringInterval}
@@ -3345,7 +3351,7 @@ export default function InvoiceModal({
                         </div>
 
                         <div className="col-span-1">
-                          <label htmlFor="recurring-start" className="block text-[10px] font-medium text-slate-500 uppercase">First Bill Date</label>
+                          <label htmlFor="recurring-start" className="block text-[10px] font-bold text-slate-300 dark:text-slate-300 uppercase tracking-wide" style={{ color: "var(--text-dark-bg-dim, #cbd5e1)" }}>First Bill Date</label>
                           <input
                             id="recurring-start"
                             type="date"
@@ -3357,8 +3363,8 @@ export default function InvoiceModal({
                         </div>
 
                         <div className="col-span-2">
-                          <label className="block text-[10px] font-medium text-slate-400 uppercase mb-1">Ending Criteria</label>
-                          <div className="flex items-center gap-4 text-xs font-medium text-slate-705 dark:text-slate-300 mt-1">
+                          <label className="block text-[10px] font-bold text-slate-300 dark:text-slate-300 uppercase tracking-wide mb-1" style={{ color: "var(--text-dark-bg-dim, #cbd5e1)" }}>Ending Criteria</label>
+                          <div className="flex items-center gap-4 text-xs font-semibold text-slate-200 dark:text-slate-200 mt-1" style={{ color: "var(--text-dark-bg, #f8fafc)" }}>
                             <label className="flex items-center gap-1.5 cursor-pointer">
                               <input
                                 type="radio"
@@ -3401,7 +3407,7 @@ export default function InvoiceModal({
 
                   {/* Custom Invoice Notes */}
                   <div>
-                    <label htmlFor="invoice-notes" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Custom Footnotes / Payment Instructions</label>
+                    <label htmlFor="invoice-notes" className="block text-xs font-bold text-slate-100 dark:text-white mb-1" style={{ color: "var(--text-dark-bg, #f8fafc)" }}>Custom Footnotes / Payment Instructions</label>
                     <textarea
                       id="invoice-notes"
                       value={notes}
@@ -3414,7 +3420,7 @@ export default function InvoiceModal({
 
                   {/* Custom Invoice Terms & Conditions */}
                   <div>
-                    <label htmlFor="invoice-terms" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Invoice Terms & Conditions (Jurisdictional/MSME)</label>
+                    <label htmlFor="invoice-terms" className="block text-xs font-bold text-slate-100 dark:text-white mb-1" style={{ color: "var(--text-dark-bg, #f8fafc)" }}>Invoice Terms & Conditions (Jurisdictional/MSME)</label>
                     <textarea
                       id="invoice-terms"
                       value={invoiceTerms}
@@ -3426,27 +3432,27 @@ export default function InvoiceModal({
                   </div>
 
                   {/* GEOGRAPHIC TAX ENGINE CONTROLLER */}
-                  <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100/70 dark:border-slate-900 space-y-3">
-                    <div className="flex items-center justify-between border-b border-slate-150 dark:border-slate-900/50 pb-2">
+                  <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3" style={{ backgroundColor: "var(--ink-panel)", borderColor: "var(--paper-line)" }}>
+                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 bg-emerald-600 rounded-full animate-ping"></span>
-                        <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                        <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
+                        <span className="text-xs font-extrabold uppercase tracking-wider text-slate-100 dark:text-white" style={{ color: "var(--text-dark-bg, #f8fafc)" }}>
                           Tax Compliance & Policies
                         </span>
                       </div>
-                      <span className="text-[10px] font-medium text-sky-600 bg-sky-50 dark:bg-sky-950/50 px-2 py-0.5 rounded-md uppercase">
+                      <span className="text-[10px] font-bold text-sky-400 bg-sky-950/80 px-2 py-0.5 rounded-md uppercase border border-sky-800/50">
                         {taxClassification.name}
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <p className="text-[11px] text-slate-300 dark:text-slate-200 leading-relaxed font-medium" style={{ color: "var(--text-dark-bg-dim, #cbd5e1)" }}>
                       {taxClassification.desc}
                     </p>
 
-                    <div className="pt-2.5 border-t border-slate-150 dark:border-slate-800 space-y-2">
-                      <label className="block text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Tax Application Mode</label>
+                    <div className="pt-2.5 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                      <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-300 dark:text-slate-300" style={{ color: "var(--text-dark-bg-dim, #cbd5e1)" }}>Tax Application Mode</label>
                       <div className="flex gap-4">
-                        <label className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
+                        <label className="flex items-center gap-1.5 text-xs text-slate-200 dark:text-slate-200 font-semibold cursor-pointer" style={{ color: "var(--text-dark-bg, #f8fafc)" }}>
                           <input
                             type="radio"
                             name="tax-mode-toggle"
@@ -3456,7 +3462,7 @@ export default function InvoiceModal({
                           />
                           Auto Regional Tax
                         </label>
-                        <label className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
+                        <label className="flex items-center gap-1.5 text-xs text-slate-200 dark:text-slate-200 font-semibold cursor-pointer" style={{ color: "var(--text-dark-bg, #f8fafc)" }}>
                           <input
                             type="radio"
                             name="tax-mode-toggle"
@@ -3472,7 +3478,7 @@ export default function InvoiceModal({
                         <div className="space-y-3 pt-1.5">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                              <label htmlFor="custom-tax-name" className="block text-[9px] font-medium text-slate-400 dark:text-slate-550 uppercase">Tax Label/Name</label>
+                              <label htmlFor="custom-tax-name" className="block text-[9px] font-bold text-slate-300 dark:text-slate-300 uppercase" style={{ color: "var(--text-dark-bg-dim, #cbd5e1)" }}>Tax Label/Name</label>
                               <input
                                 id="custom-tax-name"
                                 type="text"
@@ -3488,7 +3494,7 @@ export default function InvoiceModal({
                               />
                             </div>
                             <div>
-                              <label htmlFor="custom-tax-rate-val" className="block text-[9px] font-medium text-slate-400 dark:text-slate-550 uppercase">Override Rate (%)</label>
+                              <label htmlFor="custom-tax-rate-val" className="block text-[9px] font-bold text-slate-300 dark:text-slate-300 uppercase" style={{ color: "var(--text-dark-bg-dim, #cbd5e1)" }}>Override Rate (%)</label>
                               <input
                                 id="custom-tax-rate-val"
                                 type="number"
@@ -3503,8 +3509,9 @@ export default function InvoiceModal({
                           <div>
                             <button
                               type="button"
-                              className="w-full py-2 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 text-[11px] font-medium text-slate-500 hover:text-sky-600 hover:border-sky-500 hover:bg-sky-50 dark:hover:bg-sky-950/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                              className="w-full py-2 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 text-[11px] font-bold text-slate-300 dark:text-slate-300 hover:text-sky-400 dark:hover:text-sky-400 hover:border-sky-500 hover:bg-sky-950/30 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                               onClick={() => setAdditionalTaxes([...additionalTaxes, { id: Date.now().toString(), name: 'Additional Tax', rate: 0 }])}
+                              style={{ color: "var(--text-dark-bg-dim, #cbd5e1)" }}
                             >
                               <Plus size={14} strokeWidth={3} /> Add more taxes
                             </button>
@@ -3513,7 +3520,7 @@ export default function InvoiceModal({
                                 {additionalTaxes.map((tax, index) => (
                                   <div key={tax.id} className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end relative group">
                                     <div>
-                                      <label className="block text-[9px] font-medium text-slate-400 dark:text-slate-550 uppercase mb-1">Additional Tax Name</label>
+                                      <label className="block text-[9px] font-bold text-slate-300 dark:text-slate-300 uppercase mb-1" style={{ color: "var(--text-dark-bg-dim, #cbd5e1)" }}>Additional Tax Name</label>
                                       <input
                                         type="text"
                                         value={tax.name}
@@ -3526,7 +3533,7 @@ export default function InvoiceModal({
                                       />
                                     </div>
                                     <div>
-                                      <label className="block text-[9px] font-medium text-slate-400 dark:text-slate-550 uppercase mb-1">Rate (%)</label>
+                                      <label className="block text-[9px] font-bold text-slate-300 dark:text-slate-300 uppercase mb-1" style={{ color: "var(--text-dark-bg-dim, #cbd5e1)" }}>Rate (%)</label>
                                       <div className="relative">
                                         <input
                                           type="number"
@@ -3564,7 +3571,7 @@ export default function InvoiceModal({
                   </div>
 
                   {/* TAX CALCULATOR OUTPUT DISPLAY */}
-                  <div className="p-4 bg-sky-50/50 dark:bg-slate-950 text-slate-805 rounded-3xl border border-sky-100/35 dark:border-slate-900 space-y-2.5">
+                  <div className="p-4 bg-sky-50/50 dark:bg-slate-950 text-slate-805 rounded-3xl border border-sky-100/35 dark:border-slate-900 space-y-2.5 document-summary-section document-summary no-privacy-blur" data-privacy-exempt="true">
                     <span className="block text-xs font-medium uppercase tracking-wider text-sky-700 dark:text-sky-400">Tax Calculator Calculations</span>
 
                     <div className="space-y-1.5 text-xs">
@@ -3613,7 +3620,8 @@ export default function InvoiceModal({
                     <div
                       ref={editablePreviewRef}
                       id="pdf-export-content-editable"
-                      className="origin-top-left absolute top-0 left-0 flex flex-col"
+                      data-privacy-exempt="true"
+                      className="origin-top-left absolute top-0 left-0 flex flex-col paper-sheet-light bg-white text-slate-900 shadow-md invoice-modal-container invoice-preview-container master-registry-container invoice-template-builder no-privacy-blur"
                       style={{
                         width: '794px',
                         height: 'auto',
@@ -3754,28 +3762,28 @@ export default function InvoiceModal({
 
           </div> {/* End Wrapper */}
 
-          <div className="pt-4 border-t flex flex-wrap items-center justify-between sm:justify-end gap-2.5 sm:gap-3.5 hide-on-print w-full shrink-0 mt-2 px-6 pb-2" style={{ backgroundColor: "var(--ink-panel)", borderTopColor: "var(--paper-line)" }}>
+          <div className="pt-4 border-t flex flex-wrap items-center justify-between sm:justify-end gap-2.5 sm:gap-3.5 hide-on-print w-full shrink-0 mt-2 px-6 pb-2 bg-slate-50 dark:bg-[#0b1329] border-slate-200 dark:border-[#223269]/60">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 sm:flex-none px-3 sm:px-5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer text-center"
+              className="flex-1 sm:flex-none px-3 sm:px-5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 transition-all cursor-pointer text-center border border-slate-200 dark:border-zinc-700 shadow-2xs"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSaveAsDraft}
-              className="flex px-3 sm:px-5 py-2.5 sm:py-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-medium items-center justify-center gap-1.5 transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
+              className="flex px-3 sm:px-5 py-2.5 sm:py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-[#1b264f] dark:hover:bg-[#223269] dark:text-[#38bdf8] rounded-xl text-xs font-bold items-center justify-center gap-1.5 transition-all cursor-pointer border border-slate-300 dark:border-[#223269] shadow-2xs"
               title="Save as Draft"
             >
-              <Save className="w-4 h-4 text-slate-500 shrink-0" />
+              <Save className="w-4 h-4 shrink-0 text-slate-600 dark:text-[#38bdf8]" />
               <span className="hidden sm:inline">Save as Draft</span>
             </button>
             <button
               type="submit"
-              className="flex-1 sm:flex-none justify-center px-3 sm:px-6 py-2.5 sm:py-2 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-sky-950/20 active:scale-95 cursor-pointer"
+              className="flex-1 sm:flex-none justify-center px-3 sm:px-6 py-2.5 sm:py-2 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-md shadow-sky-950/20 active:scale-95 cursor-pointer border border-[#0284c7]"
             >
-              <Check className="w-4 h-4 shrink-0" />
+              <Check className="w-4 h-4 shrink-0 stroke-[3]" />
               <span className="whitespace-nowrap">Save</span>
             </button>
           </div>
@@ -3784,8 +3792,8 @@ export default function InvoiceModal({
       </div>
 
       {savedInvoiceForPreview && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-0 md:p-4 bg-[#0b1329]/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="w-full h-full md:h-[92dvh] max-w-full md:max-w-5xl lg:max-w-6xl xl:max-w-7xl bg-white dark:bg-[#111a36] rounded-none md:rounded-3xl overflow-hidden shadow-2xl border-none md:border md:border-[#bae6fd]/30 dark:md:border-[#223269]/60 flex flex-col animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-0 md:p-4 bg-[#0b1329]/80 backdrop-blur-md animate-in fade-in duration-300 no-privacy-blur" data-privacy-exempt="true">
+          <div className="w-full h-full md:h-[92dvh] max-w-full md:max-w-5xl lg:max-w-6xl xl:max-w-7xl bg-white dark:bg-[#111a36] rounded-none md:rounded-3xl overflow-hidden shadow-2xl border-none md:border md:border-[#bae6fd]/30 dark:md:border-[#223269]/60 flex flex-col animate-in zoom-in-95 duration-200 doc-preview-modal invoice-preview-container no-privacy-blur" data-privacy-exempt="true">
             {/* Header */}
             <div className="p-4 md:p-6 border-b border-[#bae6fd]/30 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] flex items-center justify-between relative">
               <div className="flex items-center gap-3">
@@ -3819,7 +3827,7 @@ export default function InvoiceModal({
               <div className="w-full md:w-[380px] shrink-0 border-b md:border-b-0 md:border-r border-[#bae6fd]/30 dark:border-[#223269]/50 p-4 md:p-6 flex flex-col justify-between overflow-y-auto max-h-[45vh] md:max-h-none space-y-4 md:space-y-6 order-2 md:order-1">
                 <div className="space-y-6">
                   {/* Summary card */}
-                  <div className="hidden md:block p-4 rounded-2xl border border-[#bae6fd] dark:border-[#223269]/60 bg-white dark:bg-[#111a36] space-y-3 shadow-xs">
+                  <div className="hidden md:block p-4 rounded-2xl border border-[#bae6fd] dark:border-[#223269]/60 bg-white dark:bg-[#111a36] space-y-3 shadow-xs document-summary-section document-summary no-privacy-blur" data-privacy-exempt="true">
                     <span className="block text-[10px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
                       Billing Summary
                     </span>
@@ -3975,7 +3983,7 @@ export default function InvoiceModal({
                     >
                       <div
                         ref={successPreviewRef}
-                        className="absolute top-0 left-0 origin-top-left"
+                        className="absolute top-0 left-0 origin-top-left paper-sheet-light bg-white text-slate-900 shadow-md"
                         style={{
                           width: '794px',
                           height: 'auto',

@@ -176,12 +176,12 @@ body {
   color: #F5F5F5 !important;
 }
 
-.dark .bg-white {
+.dark .bg-white:not(.paper-sheet-light *) {
   background-color: #161616 !important;
 }
 
 /* Make sure modal elements and tables are highly legible */
-.dark table {
+.dark table:not(.paper-sheet-light *) {
   color: #E5E7EB;
 }
 
@@ -318,4 +318,171 @@ section::-webkit-scrollbar {
   color: #94a3b8 !important; /* slate-400 */
   opacity: 0.7 !important;
   display: inline-block !important;
+}
+
+/* ===========================================================================
+   PAPER DOCUMENT PREVIEW SHEET (100% UNTOUCHED BY DARK MODE OVERRIDES)
+   Guarantees all document template colors, borders, text, backgrounds,
+   badges, inputs, and inline styles remain 100% identical to light mode.
+   =========================================================================== */
+.paper-sheet-light,
+.dark .paper-sheet-light,
+[data-theme="dark"] .paper-sheet-light {
+  color-scheme: light !important;
+  background-color: #ffffff !important;
+  color: #0f172a;
+
+  --color-slate-50: #f8fafc !important;
+  --color-slate-100: #f1f5f9 !important;
+  --color-slate-150: #e2e8f0 !important;
+  --color-slate-200: #e2e8f0 !important;
+  --color-slate-205: #e2e8f0 !important;
+  --color-slate-300: #cbd5e1 !important;
+  --color-slate-350: #cbd5e1 !important;
+  --color-slate-400: #94a3b8 !important;
+  --color-slate-405: #94a3b8 !important;
+  --color-slate-450: #64748b !important;
+  --color-slate-500: #64748b !important;
+  --color-slate-550: #475569 !important;
+  --color-slate-600: #475569 !important;
+  --color-slate-650: #334155 !important;
+  --color-slate-700: #334155 !important;
+  --color-slate-705: #1e293b !important;
+  --color-slate-750: #1e293b !important;
+  --color-slate-800: #1e293b !important;
+  --color-slate-805: #0f172a !important;
+  --color-slate-850: #e2e8f0 !important;
+  --color-slate-900: #0f172a !important;
+  --color-slate-950: #020617 !important;
+
+  --color-gray-50: #f9fafb !important;
+  --color-gray-100: #f3f4f6 !important;
+  --color-gray-200: #e5e7eb !important;
+  --color-gray-300: #d1d5db !important;
+  --color-gray-400: #9ca3af !important;
+  --color-gray-500: #6b7280 !important;
+  --color-gray-600: #4b5563 !important;
+  --color-gray-700: #374151 !important;
+  --color-gray-800: #1f2937 !important;
+  --color-gray-900: #111827 !important;
+
+  --color-zinc-50: #fafafa !important;
+  --color-zinc-100: #f4f4f5 !important;
+  --color-zinc-200: #e4e4e7 !important;
+  --color-zinc-300: #d4d4d8 !important;
+  --color-zinc-400: #a1a1aa !important;
+  --color-zinc-500: #71717a !important;
+  --color-zinc-600: #52525b !important;
+  --color-zinc-700: #39393d !important;
+  --color-zinc-800: #27272a !important;
+  --color-zinc-900: #18181b !important;
+
+  --color-sky-50: #f0f9ff !important;
+  --color-sky-100: #e0f2fe !important;
+  --color-sky-200: #bae6fd !important;
+  --color-sky-300: #7dd3fc !important;
+  --color-sky-400: #38bdf8 !important;
+  --color-sky-500: #0ea5e9 !important;
+  --color-sky-600: #0284c7 !important;
+  --color-sky-700: #0369a1 !important;
+  --color-sky-800: #075985 !important;
+  --color-sky-900: #0c4a6e !important;
+}
+
+.paper-sheet-light,
+.paper-sheet-light *,
+.paper-sheet-light ::before,
+.paper-sheet-light ::after {
+  color-scheme: light !important;
+}
+
+/* Ensure outer paper containers maintain light background */
+.dark .paper-sheet-light.bg-white,
+.paper-sheet-light.bg-white,
+.dark .paper-sheet-light .invoice-pdf-page,
+.paper-sheet-light .invoice-pdf-page,
+.dark .paper-sheet-light .invoice-live-preview,
+.paper-sheet-light .invoice-live-preview {
+  background-color: #ffffff !important;
+}
+
+/* Force light background & text on fillable interactive fields inside paper sheet */
+.paper-sheet-light input:not([type="checkbox"]):not([type="radio"]),
+.paper-sheet-light select,
+.paper-sheet-light textarea {
+  background-color: #f8fafc;
+  color: #0f172a;
+  -webkit-text-fill-color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.paper-sheet-light .editable-placeholder {
+  background-color: #f8fafc;
+  border-color: #7dd3fc;
+}
+
+.paper-sheet-light .editable-placeholder:hover,
+.paper-sheet-light [contenteditable="true"]:hover,
+.paper-sheet-light input:not([type="checkbox"]):not([type="radio"]):hover,
+.paper-sheet-light select:hover,
+.paper-sheet-light textarea:hover {
+  background-color: #f1f5f9;
+}
+
+.paper-sheet-light .editable-placeholder:focus,
+.paper-sheet-light [contenteditable="true"]:focus,
+.paper-sheet-light input:not([type="checkbox"]):not([type="radio"]):focus,
+.paper-sheet-light select:focus,
+.paper-sheet-light textarea:focus {
+  background-color: #ffffff;
+  color: #0f172a;
+  -webkit-text-fill-color: #0f172a;
+  border-color: #0284c7;
+  outline-color: #0284c7;
+}
+
+/* Elevate dark mode secondary & muted text legibility */
+.dark .text-zinc-400:not(.paper-sheet-light *),
+.dark .text-slate-400:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-400:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-400:not(.paper-sheet-light *) {
+  color: #cbd5e1 !important; /* Slate 300 - High contrast crisp text */
+}
+
+.dark .text-zinc-500:not(.paper-sheet-light *),
+.dark .text-slate-500:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-500:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-500:not(.paper-sheet-light *) {
+  color: #cbd5e1 !important; /* Slate 300 - Clear legible text */
+}
+
+.dark .text-zinc-600:not(.paper-sheet-light *),
+.dark .text-slate-600:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-600:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-600:not(.paper-sheet-light *) {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-zinc-700:not(.paper-sheet-light *),
+.dark .text-slate-700:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-700:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-700:not(.paper-sheet-light *) {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-slate-800:not(.paper-sheet-light *),
+.dark .text-slate-900:not(.paper-sheet-light *),
+.dark .text-slate-950:not(.paper-sheet-light *),
+.dark .text-zinc-800:not(.paper-sheet-light *),
+.dark .text-zinc-900:not(.paper-sheet-light *),
+.dark .text-gray-800:not(.paper-sheet-light *),
+.dark .text-gray-900:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-800:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-900:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-950:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-800:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-900:not(.paper-sheet-light *),
+[data-theme="dark"] .text-gray-800:not(.paper-sheet-light *),
+[data-theme="dark"] .text-gray-900:not(.paper-sheet-light *) {
+  color: #f8fafc !important;
 }

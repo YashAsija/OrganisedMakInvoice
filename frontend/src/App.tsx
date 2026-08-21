@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import AuthScreen from './components/AuthScreen';
 import { PinSetupModal } from './components/PinSetupModal';
 import type { User } from '@supabase/supabase-js';
 import { supabase, handleSupabaseError, OperationType, isSupabaseConfigured } from './lib/supabase';
@@ -6,6 +7,8 @@ import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Exp
 import { getSampleInvoice, BUSINESS_TEMPLATES } from './lib/presets';
 import { getSecuritySettings, saveSecuritySettings, SecuritySettings, hashPin, hashPinPBKDF2, generateSalt, hashAnswer, saveSecurityQuestions, clearSecurityQuestions } from './lib/biometrics';
 import type { PinSetupSecQPayload } from './components/PinSetupModal';
+import { getDeviceId } from './lib/sessionManager';
+import { emitNotification } from './lib/notifications';
 
 const ALLOWED_SUPABASE_COLUMNS = [
   'id', 'userId', 'invoiceType', 'invoiceNumber', 'referenceNumber', 'poNumber', 'date', 
@@ -181,6 +184,33 @@ export default function App() {
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [userEmail, setUserEmail] = useState<string | null>(() => {
     return localStorage.getItem('makbills_custom_email') || null;
+  });
+  const [isPasswordResetMode, setIsPasswordResetMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.hash.includes('type=recovery') ||
+             window.location.search.includes('type=recovery') ||
+             window.location.pathname.includes('reset-password');
+    }
+    return false;
+  });
+  const [urlAuthError, setUrlAuthError] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const search = window.location.search;
+      const hash = window.location.hash;
+      if (search.includes('error=') || hash.includes('error=') || search.includes('error_code=') || hash.includes('error_code=')) {
+        try {
+          const searchParams = new URLSearchParams(search);
+          const hashParams = new URLSearchParams(hash.replace(/^#/, '?'));
+          const desc = searchParams.get('error_description') || hashParams.get('error_description');
+          const code = searchParams.get('error_code') || hashParams.get('error_code');
+          if (code === 'otp_expired' || (desc && desc.toLowerCase().includes('expired'))) {
+            return 'The password reset link is invalid or has expired. Please enter your email below to request a new link.';
+          }
+          return desc ? decodeURIComponent(desc.replace(/\+/g, ' ')) : 'Authentication link is invalid or has expired.';
+        } catch (e) {}
+      }
+    }
+    return null;
   });
 
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -1438,6 +1468,25 @@ export default function App() {
     // Setup Auth State Listener — runs unconditionally so login always works
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        const hasUrlError = typeof window !== 'undefined' && (
+          window.location.search.includes('error=') || window.location.hash.includes('error=') ||
+          window.location.search.includes('error_code=') || window.location.hash.includes('error_code=')
+        );
+
+        if (hasUrlError || urlAuthError) {
+          setIsAuthLoading(false);
+          return;
+        }
+
+        if (event === 'PASSWORD_RECOVERY' || (typeof window !== 'undefined' && (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery')))) {
+          setIsPasswordResetMode(true);
+          setIsAuthLoading(false);
+          return;
+        }
+        if (isPasswordResetMode) {
+          setIsAuthLoading(false);
+          return;
+        }
         await syncUserData(session?.user ?? null, event);
         if (session?.user?.id) {
           triggerBackgroundSync();
@@ -1447,9 +1496,35 @@ export default function App() {
 
     const checkSession = async () => {
       try {
+        const hasUrlError = typeof window !== 'undefined' && (
+          window.location.search.includes('error=') || window.location.hash.includes('error=') ||
+          window.location.search.includes('error_code=') || window.location.hash.includes('error_code=')
+        );
+
+        if (hasUrlError || urlAuthError) {
+          setIsAuthLoading(false);
+          if (typeof window !== 'undefined' && window.history.replaceState) {
+            const cleanPath = window.location.pathname === '/dashboard' ? '/login' : window.location.pathname;
+            window.history.replaceState(null, '', cleanPath);
+          }
+          return;
+        }
+
+        const isRecovery = typeof window !== 'undefined' && (
+          window.location.hash.includes('type=recovery') ||
+          window.location.search.includes('type=recovery') ||
+          window.location.pathname.includes('reset-password')
+        );
+
+        if (isRecovery) {
+          setIsPasswordResetMode(true);
+          setIsAuthLoading(false);
+          return;
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
         
-        // If there is an OAuth hash, DO NOT end loading. Wait for SIGNED_IN event.
+        // If there is an OAuth hash or recovery hash, DO NOT end loading. Wait for event.
         if (typeof window !== 'undefined' && (window.location.hash.includes('access_token=') || window.location.hash.includes('type=recovery'))) {
           return;
         }
@@ -1477,6 +1552,258 @@ export default function App() {
     if (!isUnlocked) return;
     loadLocalData();
   }, [isUnlocked]);
+
+  // System Inactivity Auto-Lock Timer (Locks workspace when idle for configured timeout)
+  useEffect(() => {
+    if (!isUnlocked || !securitySettings.isPinLockEnabled) return;
+
+    const getTimeoutMs = (): number | null => {
+      const saved = localStorage.getItem('mak_security_autolock_timeout');
+      if (!saved || saved === 'off') return null;
+      switch (saved) {
+        case '5m': return 5 * 60 * 1000;
+        case '15m': return 15 * 60 * 1000;
+        case '30m': return 30 * 60 * 1000;
+        case '1h': return 60 * 60 * 1000;
+        default: return null;
+      }
+    };
+
+    const timeoutMs = getTimeoutMs();
+    if (!timeoutMs) return;
+
+    let timer: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        setIsUnlocked(false);
+      }, timeoutMs);
+    };
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    events.forEach(evt => window.addEventListener(evt, resetTimer, { passive: true }));
+
+    resetTimer();
+
+    return () => {
+      clearTimeout(timer);
+      events.forEach(evt => window.removeEventListener(evt, resetTimer));
+    };
+  }, [isUnlocked, securitySettings.isPinLockEnabled]);
+
+  // Global Privacy Mode & Security Settings Sync (Applies to whole website)
+  useEffect(() => {
+    const syncSecurityPreferences = () => {
+      const isPrivacyDirect = localStorage.getItem('mak_security_privacy_mode') === 'true';
+      let isPrivacyV1 = false;
+      try {
+        isPrivacyV1 = JSON.parse(localStorage.getItem('mak_security_preferences_v1') || '{}').privacyMode === true;
+      } catch (e) {}
+
+      const active = isPrivacyDirect || isPrivacyV1;
+      let styleTag = document.getElementById('mak-privacy-style');
+
+      if (active) {
+        document.body.classList.add('mak-privacy-active');
+        if (!styleTag) {
+          styleTag = document.createElement('style');
+          styleTag.id = 'mak-privacy-style';
+          styleTag.innerHTML = `
+            body.mak-privacy-active .privacy-sensitive:not(:hover):not([data-privacy-exempt="true"]):not([data-privacy-exempt="true"] *):not(.no-privacy-blur *):not(.master-registry-container *):not(.invoice-template-builder *):not(.invoice-modal-container *):not(.invoice-preview-container *):not(.live-preview-container *):not(.preview-section *):not(.document-summary-section *):not(.document-summary *):not(.doc-preview-modal *):not([class*="preview"] *):not([class*="summary"] *):not(table *):not(tbody *):not(tr *):not(td *):not(.ledger-table *):not(.ledger-row *):not(.document-row *):not(.invoice-row *):not(.document-list-item *):not(.document-card *):not(.paper-sheet-light *):not(.paper-sheet *):not(#pdf-export-content-editable *):not(#invoice-editor *),
+            body.mak-privacy-active [data-privacy-sensitive="true"]:not(:hover):not([data-privacy-exempt="true"]):not([data-privacy-exempt="true"] *):not(.no-privacy-blur *):not(.master-registry-container *):not(.invoice-template-builder *):not(.invoice-modal-container *):not(.invoice-preview-container *):not(.live-preview-container *):not(.preview-section *):not(.document-summary-section *):not(.document-summary *):not(.doc-preview-modal *):not([class*="preview"] *):not([class*="summary"] *):not(table *):not(tbody *):not(tr *):not(td *):not(.ledger-table *):not(.ledger-row *):not(.document-row *):not(.invoice-row *):not(.document-list-item *):not(.document-card *):not(.paper-sheet-light *):not(.paper-sheet *):not(#pdf-export-content-editable *):not(#invoice-editor *),
+            body.mak-privacy-active .financial-amount:not(:hover):not([data-privacy-exempt="true"]):not([data-privacy-exempt="true"] *):not(.no-privacy-blur *):not(.master-registry-container *):not(.invoice-template-builder *):not(.invoice-modal-container *):not(.invoice-preview-container *):not(.live-preview-container *):not(.preview-section *):not(.document-summary-section *):not(.document-summary *):not(.doc-preview-modal *):not([class*="preview"] *):not([class*="summary"] *):not(table *):not(tbody *):not(tr *):not(td *):not(.ledger-table *):not(.ledger-row *):not(.document-row *):not(.invoice-row *):not(.document-list-item *):not(.document-card *):not(.paper-sheet-light *):not(.paper-sheet *):not(#pdf-export-content-editable *):not(#invoice-editor *),
+            body.mak-privacy-active .privacy-amount:not(:hover):not([data-privacy-exempt="true"]):not([data-privacy-exempt="true"] *):not(.no-privacy-blur *):not(.master-registry-container *):not(.invoice-template-builder *):not(.invoice-modal-container *):not(.invoice-preview-container *):not(.live-preview-container *):not(.preview-section *):not(.document-summary-section *):not(.document-summary *):not(.doc-preview-modal *):not([class*="preview"] *):not([class*="summary"] *):not(table *):not(tbody *):not(tr *):not(td *):not(.ledger-table *):not(.ledger-row *):not(.document-row *):not(.invoice-row *):not(.document-list-item *):not(.document-card *):not(.paper-sheet-light *):not(.paper-sheet *):not(#pdf-export-content-editable *):not(#invoice-editor *),
+            .privacy-blurred:not(:hover):not([data-privacy-exempt="true"]):not([data-privacy-exempt="true"] *):not(.no-privacy-blur *):not(.master-registry-container *):not(.invoice-template-builder *):not(.invoice-modal-container *):not(.invoice-preview-container *):not(.live-preview-container *):not(.preview-section *):not(.document-summary-section *):not(.document-summary *):not(.doc-preview-modal *):not([class*="preview"] *):not([class*="summary"] *):not(table *):not(tbody *):not(tr *):not(td *):not(.ledger-table *):not(.ledger-row *):not(.document-row *):not(.invoice-row *):not(.document-list-item *):not(.document-card *):not(.paper-sheet-light *):not(.paper-sheet *):not(#pdf-export-content-editable *):not(#invoice-editor *) {
+              filter: blur(8px) !important;
+              -webkit-filter: blur(8px) !important;
+              user-select: none !important;
+              transition: filter 0.2s ease, opacity 0.2s ease !important;
+              cursor: pointer !important;
+            }
+            body.mak-privacy-active .privacy-sensitive:hover,
+            body.mak-privacy-active .privacy-sensitive:hover *,
+            body.mak-privacy-active [data-privacy-sensitive="true"]:hover,
+            body.mak-privacy-active [data-privacy-sensitive="true"]:hover *,
+            body.mak-privacy-active .financial-amount:hover,
+            body.mak-privacy-active .financial-amount:hover *,
+            body.mak-privacy-active .privacy-amount:hover,
+            body.mak-privacy-active .privacy-amount:hover *,
+            .privacy-blurred:hover,
+            .privacy-blurred:hover *,
+            [data-privacy-exempt="true"],
+            [data-privacy-exempt="true"] *,
+            .no-privacy-blur,
+            .no-privacy-blur *,
+            .master-registry-container,
+            .master-registry-container *,
+            .invoice-template-builder,
+            .invoice-template-builder *,
+            .invoice-modal-container,
+            .invoice-modal-container *,
+            .invoice-preview-container,
+            .invoice-preview-container *,
+            .live-preview-container,
+            .live-preview-container *,
+            .preview-section,
+            .preview-section *,
+            .document-summary-section,
+            .document-summary-section *,
+            .document-summary,
+            .document-summary *,
+            .doc-preview-modal,
+            .doc-preview-modal *,
+            [class*="preview"],
+            [class*="preview"] *,
+            [class*="summary"],
+            [class*="summary"] *,
+            table,
+            table *,
+            tbody,
+            tbody *,
+            tr,
+            tr *,
+            td,
+            td *,
+            .ledger-table,
+            .ledger-table *,
+            .ledger-row,
+            .ledger-row *,
+            .document-row,
+            .document-row *,
+            .invoice-row,
+            .invoice-row *,
+            .document-list-item,
+            .document-list-item *,
+            .document-card,
+            .document-card *,
+            .paper-sheet-light,
+            .paper-sheet-light *,
+            .paper-sheet,
+            .paper-sheet *,
+            #pdf-export-content-editable,
+            #pdf-export-content-editable *,
+            #invoice-editor,
+            #invoice-editor * {
+              filter: none !important;
+              -webkit-filter: none !important;
+              opacity: 1 !important;
+            }
+            @media print {
+              *, *::before, *::after {
+                filter: none !important;
+                -webkit-filter: none !important;
+              }
+            }
+          `;
+          document.head.appendChild(styleTag);
+        }
+      } else {
+        document.body.classList.remove('mak-privacy-active');
+        if (styleTag) styleTag.remove();
+      }
+    };
+
+    syncSecurityPreferences();
+
+    window.addEventListener('mak_security_settings_changed', syncSecurityPreferences);
+    window.addEventListener('storage', syncSecurityPreferences);
+
+    return () => {
+      window.removeEventListener('mak_security_settings_changed', syncSecurityPreferences);
+      window.removeEventListener('storage', syncSecurityPreferences);
+    };
+  }, []);
+
+  // Automatic DOM Financial & Stock Valuation Scanner & Tagger for Privacy Mode
+  useEffect(() => {
+    let observer: MutationObserver | null = null;
+
+    const scanAndTagFinancials = () => {
+      const isPrivacyDirect = localStorage.getItem('mak_security_privacy_mode') === 'true';
+      let isPrivacyV1 = false;
+      try {
+        isPrivacyV1 = JSON.parse(localStorage.getItem('mak_security_preferences_v1') || '{}').privacyMode === true;
+      } catch (e) {}
+
+      if (!isPrivacyDirect && !isPrivacyV1) return;
+
+      const currencyPattern = /(?:[\$\₹\€\£]|Rs\.?|USD|INR|EUR|GBP)\s*-?\d+/i;
+      const numericAmountPattern = /^-?\d{1,3}(?:[,\.]\d{2,3})+(?:\.\d{1,2})?$/;
+
+      const elements = document.querySelectorAll('span, td, div, p, strong, b, h1, h2, h3, h4, h5, h6, small');
+      elements.forEach(el => {
+        // Exempt Master Registry, Invoice Templates, Preview, Document Summary, and Document Tables/Rows from privacy blur
+        const isExempt = el.closest('[data-privacy-exempt="true"], .no-privacy-blur, .master-registry-container, .invoice-template-builder, .invoice-modal-container, .invoice-preview-container, .live-preview-container, .preview-section, .document-summary-section, .document-summary, .doc-preview-modal, .paper-sheet-light, .paper-sheet, #pdf-export-content-editable, #invoice-editor, [class*="preview"], [class*="summary"], table, tbody, tr, td, .ledger-table, .ledger-row, .document-row, .invoice-row, .doc-table-container, .document-list-item, .document-card');
+        if (isExempt) {
+          el.removeAttribute('data-privacy-sensitive');
+          return;
+        }
+
+        if (el.children.length === 0 && el.textContent) {
+          const txt = el.textContent.trim();
+          if (!txt) return;
+
+          // Check if element contains currency or financial/stock numbers
+          if (currencyPattern.test(txt) || numericAmountPattern.test(txt)) {
+            el.setAttribute('data-privacy-sensitive', 'true');
+          } else {
+            // Check if parent container is financial or stock metrics container
+            const parent = el.closest('[class*="total"], [class*="amount"], [class*="price"], [class*="revenue"], [class*="stock"], [class*="grand"], [class*="balance"], [class*="rate"], [class*="metric"], [class*="val"]');
+            if (parent && !parent.closest('[data-privacy-exempt="true"], .no-privacy-blur, .master-registry-container, .invoice-template-builder, .invoice-modal-container, .invoice-preview-container, .live-preview-container, .preview-section, .document-summary-section, .document-summary, .paper-sheet-light, .paper-sheet, #pdf-export-content-editable, #invoice-editor, [class*="preview"], table, tbody, tr, td, .ledger-table, .ledger-row, .document-row, .invoice-row, .doc-table-container, .document-list-item, .document-card') && /^-?\d+(?:[,\.]\d+)*$/.test(txt)) {
+              el.setAttribute('data-privacy-sensitive', 'true');
+            }
+          }
+        }
+      });
+    };
+
+    scanAndTagFinancials();
+
+    observer = new MutationObserver(() => {
+      scanAndTagFinancials();
+    });
+
+    if (typeof document !== 'undefined') {
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    }
+
+    window.addEventListener('mak_security_settings_changed', scanAndTagFinancials);
+
+    return () => {
+      if (observer) observer.disconnect();
+      window.removeEventListener('mak_security_settings_changed', scanAndTagFinancials);
+    };
+  }, []);
+
+  // Listen for remote session revocation events across windows/tabs/devices
+  useEffect(() => {
+    const currentId = getDeviceId();
+
+    const handleSessionRevoked = (e: any) => {
+      const targetId = e?.detail?.targetSessionId;
+      if (targetId && targetId === currentId) {
+        setIsUnlocked(false);
+        emitNotification('Session Revoked', 'Your session was signed out from another device.', 'warning');
+      }
+    };
+
+    const handleAllOthersRevoked = (e: any) => {
+      const activeId = e?.detail?.currentId;
+      if (activeId && activeId !== currentId) {
+        setIsUnlocked(false);
+        emitNotification('Session Revoked', 'Signed out by active primary session.', 'warning');
+      }
+    };
+
+    window.addEventListener('mak_session_revoked', handleSessionRevoked);
+    window.addEventListener('mak_all_other_sessions_revoked', handleAllOthersRevoked);
+
+    return () => {
+      window.removeEventListener('mak_session_revoked', handleSessionRevoked);
+      window.removeEventListener('mak_all_other_sessions_revoked', handleAllOthersRevoked);
+    };
+  }, []);
 
 
 
@@ -2785,6 +3112,28 @@ export default function App() {
   };
 
   // --- RENDERING CONFIGURATION ---
+  if (urlAuthError) {
+    return (
+      <AuthScreen
+        defaultMode="forgot-password"
+        initialError={urlAuthError}
+        onPasswordResetComplete={() => {
+          setUrlAuthError(null);
+          setIsPasswordResetMode(false);
+        }}
+      />
+    );
+  }
+
+  if (isPasswordResetMode) {
+    return (
+      <AuthScreen
+        defaultMode="reset-password"
+        onPasswordResetComplete={() => setIsPasswordResetMode(false)}
+      />
+    );
+  }
+
   if (isAuthLoading || isUnlocked === null) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-gray-50 dark:bg-gray-900">

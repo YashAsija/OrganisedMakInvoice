@@ -35,13 +35,88 @@ function statusColors(status: string): { bg: number[]; text: number[] } {
 }
 
 export function exportCollectiveReportPDF(
-  invoices: Invoice[], profile: BusinessProfile, periodName: string
+  invoices: Invoice[],
+  profile: BusinessProfile,
+  periodName: string,
+  docTypeFilter: string = 'all'
 ): void {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const sym = getCurrencySymbol(profile.currency || 'INR');
   const W = 210, H = 297;
   const mL = 14, mR = 14;
   const cW = W - mL - mR;
+
+  // Dynamic titles and labels mapping
+  const docTitles: Record<string, { topBanner: string; subTitle: string; card1: string; card2: string; card3: string; card4: string; themeRgb: [number, number, number] }> = {
+    all: {
+      topBanner: 'MASTER ACCOUNTING LEDGER STATEMENT',
+      subTitle: 'ALL TRANSACTIONS LEDGER',
+      card1: 'TOTAL BILLED', card2: 'COLLECTED', card3: 'OUTSTANDING', card4: 'TAX LIABILITY',
+      themeRgb: [2, 132, 199]
+    },
+    all_sales: {
+      topBanner: 'MASTER SALES ACCOUNTING LEDGER REPORT',
+      subTitle: 'ALL SALES TRANSACTIONS LEDGER',
+      card1: 'TOTAL SALES BILLED', card2: 'COLLECTED REVENUE', card3: 'RECEIVABLE BALANCE', card4: 'OUTPUT GST TAX',
+      themeRgb: [2, 132, 199]
+    },
+    all_purchases: {
+      topBanner: 'MASTER PURCHASE ACCOUNTING LEDGER REPORT',
+      subTitle: 'ALL PURCHASE TRANSACTIONS LEDGER',
+      card1: 'TOTAL PURCHASED', card2: 'PAID OUT TO VENDORS', card3: 'PAYABLE BALANCE', card4: 'INPUT GST CREDIT',
+      themeRgb: [99, 102, 241]
+    },
+    tax_invoice: {
+      topBanner: 'TAX INVOICE ACCOUNTING LEDGER STATEMENT',
+      subTitle: 'TAX INVOICES STATEMENT',
+      card1: 'TOTAL INVOICED', card2: 'COLLECTED REVENUE', card3: 'DUE BALANCE', card4: 'GST OUTPUT TAX',
+      themeRgb: [2, 132, 199]
+    },
+    proforma: {
+      topBanner: 'PROFORMA INVOICE ACCOUNTING STATEMENT',
+      subTitle: 'PROFORMA INVOICES LEDGER',
+      card1: 'TOTAL PROFORMA BILLED', card2: 'ADVANCE COLLECTED', card3: 'OPEN BALANCE', card4: 'ESTIMATED TAX',
+      themeRgb: [14, 165, 233]
+    },
+    receipt: {
+      topBanner: 'CASH RECEIPT & VOUCHER STATEMENT',
+      subTitle: 'CASH RECEIPTS LEDGER',
+      card1: 'TOTAL CASH RECEIVED', card2: 'CLEARED RECEIPTS', card3: 'ZERO BALANCE', card4: 'TAX PORTION',
+      themeRgb: [16, 185, 129]
+    },
+    quote: {
+      topBanner: 'QUOTATION & ESTIMATE STATEMENT',
+      subTitle: 'QUOTATION LEDGER',
+      card1: 'TOTAL QUOTED VALUE', card2: 'CONVERTED ORDERS', card3: 'OPEN QUOTATIONS', card4: 'TAX ESTIMATE',
+      themeRgb: [245, 158, 11]
+    },
+    credit_note: {
+      topBanner: 'CREDIT NOTE ACCOUNTING STATEMENT',
+      subTitle: 'CREDIT NOTES STATEMENT',
+      card1: 'TOTAL CREDIT ISSUED', card2: 'ADJUSTED VALUE', card3: 'REMAINING CREDIT', card4: 'TAX ADJUSTED',
+      themeRgb: [225, 29, 72]
+    },
+    purchase_order: {
+      topBanner: 'PURCHASE ORDER STATEMENT REPORT',
+      subTitle: 'PURCHASE ORDERS LEDGER',
+      card1: 'TOTAL ORDERED', card2: 'FULFILLED PURCHASES', card3: 'OPEN PO BALANCE', card4: 'INPUT TAX ESTIMATE',
+      themeRgb: [99, 102, 241]
+    },
+    purchase_invoice: {
+      topBanner: 'PURCHASE INVOICE ACCOUNTING REPORT',
+      subTitle: 'PURCHASE INVOICES LEDGER',
+      card1: 'TOTAL PURCHASE BILLED', card2: 'PAID TO SUPPLIERS', card3: 'PAYABLE BALANCE', card4: 'INPUT TAX CREDIT',
+      themeRgb: [139, 92, 246]
+    },
+    debit_note: {
+      topBanner: 'DEBIT NOTE ACCOUNTING REPORT',
+      subTitle: 'DEBIT NOTES STATEMENT',
+      card1: 'TOTAL DEBIT ISSUED', card2: 'RECOVERED VALUE', card3: 'REMAINING DEBIT', card4: 'TAX ADJUSTMENT',
+      themeRgb: [217, 70, 239]
+    }
+  };
+
+  const meta = docTitles[docTypeFilter] || docTitles.all;
 
   doc.setFont('Helvetica', 'normal');
 
@@ -51,33 +126,50 @@ export function exportCollectiveReportPDF(
     doc.line(mL, y, W - mR, y);
   };
 
-  // Header bar
+  // Header top strip
   doc.setFillColor(15, 23, 42);
   doc.rect(0, 0, W, 13, 'F');
   doc.setFontSize(7.5); doc.setFont('Helvetica', 'bold'); doc.setTextColor(255, 255, 255);
-  doc.text('BUSINESS LEDGER & FINANCIAL STATEMENT', mL, 8.5);
-  doc.text(`Report: ${new Date().toLocaleDateString('en-IN')}`, W - mR, 8.5, { align: 'right' });
+  doc.text(meta.topBanner, mL, 8.5);
+  doc.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, W - mR, 8.5, { align: 'right' });
 
-  let y = 22;
-  doc.setFontSize(14); doc.setFont('Helvetica', 'bold'); doc.setTextColor(15, 23, 42);
+  let y = 20;
+
+  // Business Name & Title
+  doc.setFontSize(13); doc.setFont('Helvetica', 'bold'); doc.setTextColor(15, 23, 42);
   doc.text(profile.name || 'My Business', mL, y);
-  doc.setFontSize(9.5); doc.setTextColor(2, 132, 199);
-  doc.text('LEDGER STATEMENT', W - mR, y, { align: 'right' });
-  y += 5;
 
-  doc.setFontSize(7.2); doc.setFont('Helvetica', 'normal'); doc.setTextColor(71, 85, 105);
-  [profile.address, profile.email && `Email: ${profile.email}`, profile.taxId && `GSTIN: ${profile.taxId}`]
-    .filter(Boolean).forEach(l => { doc.text(l as string, mL, y); y += 3.7; });
+  doc.setFontSize(9); doc.setTextColor(meta.themeRgb[0], meta.themeRgb[1], meta.themeRgb[2]);
+  doc.text(meta.subTitle, W - mR, y, { align: 'right' });
+  y += 4.5;
 
-  let ry = 27;
-  doc.setFontSize(7.8); doc.setFont('Helvetica', 'bold'); doc.setTextColor(30, 41, 59);
+  // Business Sub-details
+  doc.setFontSize(7); doc.setFont('Helvetica', 'normal'); doc.setTextColor(71, 85, 105);
+  const busLines = [
+    profile.address,
+    profile.email && `Email: ${profile.email}`,
+    profile.phone && `Phone: ${profile.phone}`,
+    profile.taxId && `GSTIN: ${profile.taxId}`,
+    (profile as any).pan && `PAN: ${(profile as any).pan}`
+  ].filter(Boolean);
+
+  let ly = y;
+  busLines.forEach(l => { doc.text(l as string, mL, ly); ly += 3.5; });
+
+  // Right-aligned Metadata Box
+  let ry = y;
+  doc.setFontSize(7.5); doc.setFont('Helvetica', 'bold'); doc.setTextColor(30, 41, 59);
   doc.text('Period:', W - mR - 55, ry); doc.setFont('Helvetica', 'normal');
-  doc.text(periodName.toUpperCase(), W - mR, ry, { align: 'right' }); ry += 4.5;
-  doc.setFont('Helvetica', 'bold'); doc.text('Records:', W - mR - 55, ry); doc.setFont('Helvetica', 'normal');
-  doc.text(`${invoices.length} invoice(s)`, W - mR, ry, { align: 'right' });
+  doc.text(periodName.toUpperCase(), W - mR, ry, { align: 'right' }); ry += 4;
 
-  y = Math.max(y + 2, ry + 6);
-  hRule(y, 0.3, 30, 41, 59); y += 7;
+  doc.setFont('Helvetica', 'bold'); doc.text('Filter:', W - mR - 55, ry); doc.setFont('Helvetica', 'normal');
+  doc.text(docTypeFilter.replace('_', ' ').toUpperCase(), W - mR, ry, { align: 'right' }); ry += 4;
+
+  doc.setFont('Helvetica', 'bold'); doc.text('Records:', W - mR - 55, ry); doc.setFont('Helvetica', 'normal');
+  doc.text(`${invoices.length} document(s)`, W - mR, ry, { align: 'right' });
+
+  y = Math.max(ly + 1, ry + 4);
+  hRule(y, 0.3, 30, 41, 59); y += 6;
 
   // Stats cards
   const totalGrand = invoices.reduce((s, i) => s + i.grandTotal, 0);
@@ -86,93 +178,194 @@ export function exportCollectiveReportPDF(
   const pending = invoices.reduce((s, i) => s + (i.status === 'paid' ? 0 : Math.max(0, i.grandTotal - (i.paidAmount ?? 0))), 0);
 
   const cards = [
-    { label: 'TOTAL BILLED', val: fmt(totalGrand, sym), bg: [240, 246, 255], fg: [37, 99, 235] },
-    { label: 'COLLECTED', val: fmt(totalPaid, sym), bg: [240, 253, 250], fg: [13, 148, 136] },
-    { label: 'OUTSTANDING', val: fmt(pending, sym), bg: [254, 243, 199], fg: [146, 64, 14] },
-    { label: 'TAX LIABILITY', val: fmt(totalTax, sym), bg: [254, 226, 226], fg: [153, 27, 27] },
+    { label: meta.card1, val: fmt(totalGrand, sym), bg: [240, 246, 255], fg: [37, 99, 235] },
+    { label: meta.card2, val: fmt(totalPaid, sym), bg: [240, 253, 250], fg: [13, 148, 136] },
+    { label: meta.card3, val: fmt(pending, sym), bg: [254, 243, 199], fg: [146, 64, 14] },
+    { label: meta.card4, val: fmt(totalTax, sym), bg: [254, 226, 226], fg: [153, 27, 27] },
   ];
   const cardW = (cW - 9) / 4;
   cards.forEach((c, i) => {
     const cx = mL + i * (cardW + 3);
     doc.setFillColor(c.bg[0], c.bg[1], c.bg[2]);
     doc.roundedRect(cx, y, cardW, 14, 1.5, 1.5, 'F');
-    doc.setFontSize(6.2); doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(6); doc.setFont('Helvetica', 'bold');
     doc.setTextColor(c.fg[0], c.fg[1], c.fg[2]);
-    doc.text(c.label, cx + 3, y + 5.5);
-    doc.setFontSize(8.2); doc.text(c.val, cx + 3, y + 11);
+    doc.text(c.label, cx + 3, y + 5);
+    doc.setFontSize(8); doc.text(c.val, cx + 3, y + 10.5);
   });
-  y += 20; hRule(y); y += 6;
+  y += 18; hRule(y); y += 5;
 
-  // Table header
-  doc.setFillColor(241, 245, 249);
-  doc.rect(mL, y, cW, 7, 'F');
-  doc.setFontSize(6.5); doc.setFont('Helvetica', 'bold'); doc.setTextColor(71, 85, 105);
-  const cols = { date: mL + 2, inv: mL + 22, client: mL + 46, sub: W - mR - 56, tax: W - mR - 34, grand: W - mR - 13, status: W - mR };
-  doc.text('DATE', cols.date, y + 4.8);
-  doc.text('INV NO', cols.inv, y + 4.8);
-  doc.text('CLIENT', cols.client, y + 4.8);
-  doc.text('SUBTOTAL', cols.sub, y + 4.8, { align: 'right' });
-  doc.text('TAX', cols.tax, y + 4.8, { align: 'right' });
-  doc.text('TOTAL', cols.grand, y + 4.8, { align: 'right' });
-  doc.text('STATUS', cols.status, y + 4.8, { align: 'right' });
-  y += 7;
+  // Helper to categorize an invoice
+  const getDocTypeKey = (inv: Invoice): string => {
+    const rawType = (inv.invoiceType || (inv as any).type || 'invoice').toLowerCase();
+    const isPurchase = (inv as any).isPurchase || rawType.includes('purchase') || rawType === 'debit_note';
+    if (rawType === 'proforma' || rawType === 'proforma_invoice') return 'proforma';
+    if (rawType === 'receipt') return 'receipt';
+    if (rawType === 'quote' || rawType === 'estimate') return 'quote';
+    if (rawType === 'credit_note') return 'credit_note';
+    if (rawType === 'purchase_order' || rawType === 'po') return 'purchase_order';
+    if (rawType === 'purchase_invoice' || (isPurchase && rawType.includes('invoice'))) return 'purchase_invoice';
+    if (rawType === 'debit_note') return 'debit_note';
+    return 'tax_invoice';
+  };
 
-  if (invoices.length === 0) {
+  const SECTIONS = [
+    { key: 'tax_invoice', title: 'TAX INVOICE TRANSACTIONS', subtitle: 'TAX INVOICES', partyHeader: 'CLIENT / BUYER', color: [2, 132, 199] as [number, number, number] },
+    { key: 'proforma', title: 'PROFORMA INVOICE TRANSACTIONS', subtitle: 'PROFORMA INVOICES', partyHeader: 'CLIENT / BUYER', color: [14, 165, 233] as [number, number, number] },
+    { key: 'receipt', title: 'CASH RECEIPT & VOUCHER TRANSACTIONS', subtitle: 'CASH RECEIPTS', partyHeader: 'CLIENT / PAYER', color: [16, 185, 129] as [number, number, number] },
+    { key: 'quote', title: 'QUOTATION & ESTIMATE TRANSACTIONS', subtitle: 'QUOTATIONS / ESTIMATES', partyHeader: 'PROSPECT / CLIENT', color: [245, 158, 11] as [number, number, number] },
+    { key: 'credit_note', title: 'CREDIT NOTE ADJUSTMENTS', subtitle: 'CREDIT NOTES', partyHeader: 'CLIENT / PARTY', color: [225, 29, 72] as [number, number, number] },
+    { key: 'purchase_order', title: 'PURCHASE ORDER TRANSACTIONS', subtitle: 'PURCHASE ORDERS', partyHeader: 'VENDOR / SUPPLIER', color: [99, 102, 241] as [number, number, number] },
+    { key: 'purchase_invoice', title: 'PURCHASE INVOICE TRANSACTIONS', subtitle: 'PURCHASE INVOICES', partyHeader: 'VENDOR / SUPPLIER', color: [139, 92, 246] as [number, number, number] },
+    { key: 'debit_note', title: 'DEBIT NOTE ADJUSTMENTS', subtitle: 'DEBIT NOTES', partyHeader: 'VENDOR / SUPPLIER', color: [217, 70, 239] as [number, number, number] },
+  ];
+
+  // Group invoices by document type
+  const groupedInvoices: Record<string, Invoice[]> = {};
+  invoices.forEach(inv => {
+    const key = getDocTypeKey(inv);
+    if (!groupedInvoices[key]) groupedInvoices[key] = [];
+    groupedInvoices[key].push(inv);
+  });
+
+  const activeSections = SECTIONS.filter(sec => (groupedInvoices[sec.key] || []).length > 0);
+  const cols = { date: mL + 2, inv: mL + 20, client: mL + 45, sub: W - mR - 56, tax: W - mR - 34, grand: W - mR - 13, status: W - mR };
+
+  if (invoices.length === 0 || activeSections.length === 0) {
+    doc.setFillColor(241, 245, 249);
+    doc.rect(mL, y, cW, 7, 'F');
+    doc.setFontSize(6.5); doc.setFont('Helvetica', 'bold'); doc.setTextColor(71, 85, 105);
+    doc.text('DATE', cols.date, y + 4.8);
+    doc.text('DOC NO', cols.inv, y + 4.8);
+    doc.text('PARTY NAME', cols.client, y + 4.8);
+    doc.text('SUBTOTAL', cols.sub, y + 4.8, { align: 'right' });
+    doc.text('TAX', cols.tax, y + 4.8, { align: 'right' });
+    doc.text('TOTAL', cols.grand, y + 4.8, { align: 'right' });
+    doc.text('STATUS', cols.status, y + 4.8, { align: 'right' });
+    y += 7;
+
     doc.setFontSize(7.8); doc.setFont('Helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-    doc.text('No records found for this period.', mL + 10, y + 6); y += 12;
+    doc.text('No matching document records found for this period.', mL + 10, y + 6); y += 12;
   } else {
-    invoices.forEach((inv, i) => {
-      if (y > H - 30) {
+    activeSections.forEach((sec, sIdx) => {
+      const items = groupedInvoices[sec.key];
+      if (!items || items.length === 0) return;
+
+      if (y > H - 40) {
         doc.addPage(); y = 15;
         doc.setFillColor(15, 23, 42); doc.rect(0, 0, W, 3.5, 'F');
       }
-      if (i % 2 === 1) { doc.setFillColor(252, 253, 254); doc.rect(mL, y, cW, 9, 'F'); }
 
-      doc.setFontSize(7.2); doc.setFont('Helvetica', 'normal'); doc.setTextColor(30, 41, 59);
-      doc.text(inv.date, cols.date, y + 5.5);
-      doc.text(inv.invoiceNumber, cols.inv, y + 5.5);
-      const cn = inv.clientName.length > 20 ? inv.clientName.slice(0, 20) + '…' : inv.clientName;
-      doc.text(cn, cols.client, y + 5.5);
-      doc.text(fmt(inv.subtotal, sym), cols.sub, y + 5.5, { align: 'right' });
-      doc.text(fmt(inv.taxTotal, sym), cols.tax, y + 5.5, { align: 'right' });
-      doc.text(fmt(inv.grandTotal, sym), cols.grand, y + 5.5, { align: 'right' });
+      // --- SECTION SUB-TITLE HEADER BANNER ---
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(mL, y, cW, 8.5, 1, 1, 'F');
+      doc.setFillColor(sec.color[0], sec.color[1], sec.color[2]);
+      doc.rect(mL, y, 2.5, 8.5, 'F');
 
-      const sc = statusColors(inv.status);
-      doc.setFont('Helvetica', 'bold'); doc.setTextColor(sc.text[0], sc.text[1], sc.text[2]);
+      doc.setFontSize(7.8); doc.setFont('Helvetica', 'bold'); doc.setTextColor(sec.color[0], sec.color[1], sec.color[2]);
+      doc.text(`SEQUENCE ${sIdx + 1}: ${sec.title}`, mL + 5, y + 5.5);
 
-      if (inv.status === 'paid' && inv.paidDate) {
-        doc.text('PAID', cols.status, y + 4, { align: 'right' });
-        doc.setFontSize(5);
-        doc.text(`ON ${inv.paidDate}`, cols.status, y + 7.5, { align: 'right' });
-      } else {
-        doc.text((inv.status || 'pending').toUpperCase(), cols.status, y + 5.5, { align: 'right' });
-      }
+      doc.setFontSize(6.5); doc.setFont('Helvetica', 'bold'); doc.setTextColor(100, 116, 139);
+      doc.text(`${items.length} RECORD(S)`, W - mR - 3, y + 5.5, { align: 'right' });
+      y += 10;
 
-      doc.setFont('Helvetica', 'normal');
-      y += 9;
+      // Table Header for this section
+      doc.setFillColor(241, 245, 249);
+      doc.rect(mL, y, cW, 6.5, 'F');
+      doc.setFontSize(6.2); doc.setFont('Helvetica', 'bold'); doc.setTextColor(71, 85, 105);
+      doc.text('DATE', cols.date, y + 4.5);
+      doc.text('DOC NO', cols.inv, y + 4.5);
+      doc.text(sec.partyHeader, cols.client, y + 4.5);
+      doc.text('SUBTOTAL', cols.sub, y + 4.5, { align: 'right' });
+      doc.text('TAX', cols.tax, y + 4.5, { align: 'right' });
+      doc.text('TOTAL', cols.grand, y + 4.5, { align: 'right' });
+      doc.text('STATUS', cols.status, y + 4.5, { align: 'right' });
+      y += 6.5;
+
+      let secGrand = 0;
+      let secTax = 0;
+
+      items.forEach((inv, i) => {
+        if (y > H - 25) {
+          doc.addPage(); y = 15;
+          doc.setFillColor(15, 23, 42); doc.rect(0, 0, W, 3.5, 'F');
+
+          doc.setFillColor(241, 245, 249);
+          doc.rect(mL, y, cW, 6.5, 'F');
+          doc.setFontSize(6.2); doc.setFont('Helvetica', 'bold'); doc.setTextColor(71, 85, 105);
+          doc.text('DATE', cols.date, y + 4.5);
+          doc.text('DOC NO', cols.inv, y + 4.5);
+          doc.text(sec.partyHeader, cols.client, y + 4.5);
+          doc.text('SUBTOTAL', cols.sub, y + 4.5, { align: 'right' });
+          doc.text('TAX', cols.tax, y + 4.5, { align: 'right' });
+          doc.text('TOTAL', cols.grand, y + 4.5, { align: 'right' });
+          doc.text('STATUS', cols.status, y + 4.5, { align: 'right' });
+          y += 6.5;
+        }
+
+        if (i % 2 === 1) { doc.setFillColor(252, 253, 254); doc.rect(mL, y, cW, 8.5, 'F'); }
+
+        secGrand += inv.grandTotal;
+        secTax += inv.taxTotal;
+
+        doc.setFontSize(7.2); doc.setFont('Helvetica', 'normal'); doc.setTextColor(30, 41, 59);
+        doc.text(inv.date, cols.date, y + 5.2);
+        doc.text(inv.invoiceNumber, cols.inv, y + 5.2);
+        const cn = inv.clientName.length > 22 ? inv.clientName.slice(0, 22) + '…' : inv.clientName;
+        doc.text(cn, cols.client, y + 5.2);
+        doc.text(fmt(inv.subtotal, sym), cols.sub, y + 5.2, { align: 'right' });
+        doc.text(fmt(inv.taxTotal, sym), cols.tax, y + 5.2, { align: 'right' });
+        doc.text(fmt(inv.grandTotal, sym), cols.grand, y + 5.2, { align: 'right' });
+
+        const sc = statusColors(inv.status);
+        doc.setFont('Helvetica', 'bold'); doc.setTextColor(sc.text[0], sc.text[1], sc.text[2]);
+
+        if (inv.status === 'paid' && inv.paidDate) {
+          doc.text('PAID', cols.status, y + 3.8, { align: 'right' });
+          doc.setFontSize(5);
+          doc.text(`ON ${inv.paidDate}`, cols.status, y + 7, { align: 'right' });
+        } else {
+          doc.text((inv.status || 'pending').toUpperCase(), cols.status, y + 5.2, { align: 'right' });
+        }
+
+        doc.setFont('Helvetica', 'normal');
+        y += 8.5;
+      });
+
+      // SECTION SUBTOTAL BAR
+      if (y > H - 25) { doc.addPage(); y = 15; }
+      doc.setFillColor(245, 247, 250);
+      doc.rect(mL, y, cW, 7, 'F');
+      doc.setFontSize(6.8); doc.setFont('Helvetica', 'bold'); doc.setTextColor(71, 85, 105);
+      doc.text(`SUBTOTAL (${sec.subtitle} - ${items.length} Records):`, mL + 4, y + 4.8);
+      doc.setTextColor(sec.color[0], sec.color[1], sec.color[2]);
+      doc.text(fmt(secGrand, sym), cols.grand, y + 4.8, { align: 'right' });
+      doc.setTextColor(71, 85, 105);
+      doc.text(fmt(secTax, sym), cols.tax, y + 4.8, { align: 'right' });
+      y += 10;
     });
   }
 
-  hRule(y, 0.3, 30, 41, 59); y += 7;
+  hRule(y, 0.3, 30, 41, 59); y += 6;
 
-  // Totals row
+  // GRAND TOTALS ROW
   if (y > H - 30) { doc.addPage(); y = 20; }
   doc.setFillColor(240, 249, 255);
   doc.rect(mL, y, cW, 9, 'F');
   doc.setFontSize(7.8); doc.setFont('Helvetica', 'bold'); doc.setTextColor(2, 132, 199);
-  doc.text(`TOTALS (${invoices.length} records)`, mL + 3, y + 6);
+  doc.text(`GRAND COMBINED TOTALS (${invoices.length} total records across ${activeSections.length} document categories)`, mL + 3, y + 6);
   doc.text(fmt(totalGrand, sym), cols.grand, y + 6, { align: 'right' });
   doc.setTextColor(30, 41, 59);
   doc.text(fmt(totalTax, sym), cols.tax, y + 6, { align: 'right' });
-  y += 16;
+  y += 15;
 
   if (y < H - 35) {
     doc.setFillColor(248, 250, 252);
-    doc.rect(mL, y, cW, 18, 'F');
-    doc.setFontSize(7.5); doc.setFont('Helvetica', 'bold'); doc.setTextColor(30, 41, 59);
-    doc.text('GST COMPLIANCE NOTE', mL + 3, y + 6);
-    doc.setFont('Helvetica', 'normal'); doc.setFontSize(6.8); doc.setTextColor(100, 116, 139);
-    doc.text('This statement summarizes invoices generated for tax reconciliation. Each invoice applies CGST/SGST (intra-state) or IGST (inter-state/export) as per GST rules. Verify all figures against your GSTR-1 filing before submission.', mL + 3, y + 11, { maxWidth: cW - 6 });
+    doc.rect(mL, y, cW, 16, 'F');
+    doc.setFontSize(7.2); doc.setFont('Helvetica', 'bold'); doc.setTextColor(30, 41, 59);
+    doc.text('GST & AUDIT COMPLIANCE STATEMENT', mL + 3, y + 5);
+    doc.setFont('Helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(100, 116, 139);
+    doc.text('This statement provides an official accounting ledger breakdown categorized by document sequence. All values include appropriate tax computations (CGST/SGST/IGST) as required by GST tax regulations.', mL + 3, y + 9.5, { maxWidth: cW - 6 });
   }
 
   const totalPgs = doc.getNumberOfPages();
@@ -180,10 +373,10 @@ export function exportCollectiveReportPDF(
     doc.setPage(p);
     doc.setFillColor(15, 23, 42); doc.rect(0, H - 3.5, W, 3.5, 'F');
     doc.setFontSize(6.8); doc.setFont('Helvetica', 'normal'); doc.setTextColor(148, 163, 184);
-    doc.text(`Ledger Statement  |  Page ${p} of ${totalPgs}  |  MakInvoices`, W / 2, H - 6, { align: 'center' });
+    doc.text(`Ledger Statement  |  Page ${p} of ${totalPgs}  |  MakInvoices Enterprise Accounting`, W / 2, H - 6, { align: 'center' });
   }
 
-  doc.save(`ledger_${periodName.toLowerCase().replace(/\s+/g, '_')}.pdf`);
+  doc.save(`Ledger_Report_${docTypeFilter}_${periodName.replace(/\s+/g, '_')}.pdf`);
   emitNotification('Ledger PDF Downloaded', `Ledger statement report (${periodName}) downloaded as PDF.`, 'success');
 }
 
@@ -312,6 +505,7 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
 
   // Create a hidden container within viewport bounds to prevent blank captures
   const container = document.createElement('div');
+  container.className = 'paper-sheet-light';
   container.style.position = 'absolute';
   container.style.left = '-9999px';
   container.style.top = '0';
