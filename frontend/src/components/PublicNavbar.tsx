@@ -56,7 +56,7 @@ export default function PublicNavbar({ theme, onNavigate, activePath }: PublicNa
           
           {/* Logo Brand */}
           <div className="flex items-center gap-2 cursor-pointer select-none group" onClick={() => onNavigate('/')}>
-            <img src="/logo.svg" alt="MakInvoices Logo" className="w-10 h-10 object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300 shrink-0" />
+            <img src="/logo.svg" alt="MakInvoices Logo" width="40" height="40" decoding="async" className="w-10 h-10 object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300 shrink-0" />
             <div>
               <span className="text-base font-black tracking-tight text-slate-805 dark:text-white block leading-none">
                 Mak<span className="text-sky-500">Invoices</span>

@@ -561,8 +561,8 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
     })
   );
 
-  // Fast micro-task wait for React DOM paint (60ms instead of 1200ms)
-  await new Promise(r => setTimeout(r, 60));
+  // DOM paint wait for React render & images (200ms)
+  await new Promise(r => setTimeout(r, 200));
 
   try {
     const pageHeight = activeTemplate.layout.pageSize === 'A4' ? 1123 : 1056;
@@ -684,8 +684,8 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
         })
       );
 
-      // Fast DOM re-render paint (60ms)
-      await new Promise(r => setTimeout(r, 60));
+      // DOM re-render paint wait (200ms)
+      await new Promise(r => setTimeout(r, 200));
     }
 
     // Patch CSSStyleSheet to ignore SecurityError from cross-origin stylesheets

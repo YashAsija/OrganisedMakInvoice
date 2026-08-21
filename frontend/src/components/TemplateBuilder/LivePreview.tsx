@@ -149,8 +149,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
   const [croppedSignature, setCroppedSignature] = useState<string>('');
 
+  const rawSignature = (businessProfile as any)?.signatureUrl || (businessProfile as any)?.signature || (invoiceData as any)?.signature || (invoiceData as any)?.signatureUrl || '';
+  const activeSignature = croppedSignature || rawSignature;
+
   useEffect(() => {
-    let rawSig = (businessProfile as any)?.signatureUrl || (businessProfile as any)?.signature;
+    let rawSig = rawSignature;
     if (!rawSig) {
       setCroppedSignature('');
       return;
@@ -1776,7 +1779,15 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 <div key="signature" style={{ ...getSectionStyle('signature'), textAlign: 'right', marginTop: 'auto' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
                     {config.signature.showStamp && <div style={{ width: 60, height: 60, borderRadius: '50%', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#94a3b8' }}>STAMP</div>}
-                    {config.signature.showSignature && <div style={{ width: 100, borderBottom: '1px solid #000', marginBottom: '5px' }}></div>}
+                    {config.signature.showSignature && (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginBottom: '4px' }}>
+                        {activeSignature ? (
+                          <img src={activeSignature} alt="Signature" style={{ width: `${businessProfile?.signatureSize || 180}px`, height: 'auto', maxHeight: '70px', objectFit: 'contain', marginBottom: '4px' }} crossOrigin="anonymous" />
+                        ) : (
+                          <div style={{ width: 100, borderBottom: '1px solid #000', marginBottom: '5px' }}></div>
+                        )}
+                      </div>
+                    )}
                     <div className="text-[10px] text-gray-600 font-bold">{config.signature.signatoryName || "Authorized Signatory"}</div>
                     <div className="text-[9px] text-gray-400">{config.signature.designation || "Signatory"}</div>
                   </div>
@@ -1795,8 +1806,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   )}
                   {config.signature.showSignature && (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: sigAlignItems }}>
-                      {croppedSignature ? (
-                        <img src={croppedSignature} alt="Signature" style={{ width: `${businessProfile?.signatureSize || 220}px`, height: 'auto', maxHeight: `${Math.round((businessProfile?.signatureSize || 220) * 0.4)}px`, objectFit: 'contain', marginBottom: '4px' }} crossOrigin="anonymous" />
+                      {activeSignature ? (
+                        <img src={activeSignature} alt="Signature" style={{ width: `${businessProfile?.signatureSize || 220}px`, height: 'auto', maxHeight: `${Math.round((businessProfile?.signatureSize || 220) * 0.4)}px`, objectFit: 'contain', marginBottom: '4px' }} crossOrigin="anonymous" />
                       ) : (
                         <div style={{ width: `${businessProfile?.signatureSize || 220}px`, height: config.signature.height, borderBottom: '1px solid #cbd5e1', marginBottom: '10px' }}></div>
                       )}
@@ -1873,8 +1884,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   {config.signature.showStamp && <div style={{ width: 60, height: 60, borderRadius: '50%', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#94a3b8' }}>STAMP</div>}
                   {config.signature.showSignature && (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      {croppedSignature ? (
-                        <img src={croppedSignature} alt="Signature" style={{ width: `${businessProfile?.signatureSize || 220}px`, height: 'auto', maxHeight: `${Math.round((businessProfile?.signatureSize || 220) * 0.4)}px`, objectFit: 'contain', marginBottom: '4px' }} crossOrigin="anonymous" />
+                      {activeSignature ? (
+                        <img src={activeSignature} alt="Signature" style={{ width: `${businessProfile?.signatureSize || 220}px`, height: 'auto', maxHeight: `${Math.round((businessProfile?.signatureSize || 220) * 0.4)}px`, objectFit: 'contain', marginBottom: '4px' }} crossOrigin="anonymous" />
                       ) : (
                         <div style={{ width: `${businessProfile?.signatureSize || 220}px`, height: config.signature.height, borderBottom: '1px solid #cbd5e1', marginBottom: '10px' }}></div>
                       )}
