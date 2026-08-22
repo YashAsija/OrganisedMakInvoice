@@ -754,25 +754,23 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
       }
     }
 
-    const effectiveSelectedCopies = (invoice as any)?.selectedCopies || { customer: true, transport: false, supplier: false, challan: false };
+    const effectiveSelectedCopies = (invoice as any)?.selectedCopies || (invoice as any)?.embeddedTemplate?.selectedCopies || { customer: true, transport: false, supplier: false, challan: false };
 
-    // Re-render with calculated chunks if multi-page split was necessary or non-standard single page
-    if (!isStandardSinglePage || chunks.length > 1) {
-      root.render(
-        React.createElement(LivePreview, {
-          template: activeTemplate,
-          invoiceData: { ...invoice, items: tempInvoice.items, selectedCopies: effectiveSelectedCopies } as any,
-          businessProfile: profile,
-          currencySymbol: currencySymbol,
-          isInteractive: false,
-          isPrintMode: true,
-          printPageChunks: chunks
-        })
-      );
+    // Always re-render with effectiveSelectedCopies so all selected copies (Customer, Transport, Supplier, Challan) are rendered to container
+    root.render(
+      React.createElement(LivePreview, {
+        template: activeTemplate,
+        invoiceData: { ...invoice, items: tempInvoice.items, selectedCopies: effectiveSelectedCopies } as any,
+        businessProfile: profile,
+        currencySymbol: currencySymbol,
+        isInteractive: false,
+        isPrintMode: true,
+        printPageChunks: chunks
+      })
+    );
 
-      // DOM re-render paint wait (200ms)
-      await new Promise(r => setTimeout(r, 200));
-    }
+    // DOM re-render paint wait (200ms)
+    await new Promise(r => setTimeout(r, 200));
 
     // Patch CSSStyleSheet to ignore SecurityError from cross-origin stylesheets
     const originalCssRules = Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'cssRules');

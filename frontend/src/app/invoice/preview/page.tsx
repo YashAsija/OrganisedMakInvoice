@@ -240,9 +240,10 @@ function InvoicePreviewContent() {
           if (data.invoice) {
             const cloudInv = data.invoice;
             // Merge local edits over cloud invoice so unsynced or fresh edits render immediately
+            const existingCopies = (localMatch as any)?.selectedCopies || (cloudInv as any)?.selectedCopies || (localMatch?.embeddedTemplate as any)?.selectedCopies || (cloudInv?.embeddedTemplate as any)?.selectedCopies;
             const mergedInvoice = {
               ...(localMatch ? { ...cloudInv, ...localMatch } : cloudInv),
-              selectedCopies: { customer: true, transport: false, supplier: false, challan: false }
+              ...(existingCopies ? { selectedCopies: existingCopies } : {})
             } as Invoice;
             const mergedProfile = data.profile || localProf || ({} as BusinessProfile);
             setInvoice(mergedInvoice);
@@ -258,9 +259,10 @@ function InvoicePreviewContent() {
 
       // If cloud fetch failed or invoice not found in cloud, fall back to local storage match
       if (localMatch) {
+        const existingCopies = (localMatch as any)?.selectedCopies || (localMatch.embeddedTemplate as any)?.selectedCopies;
         setInvoice({
           ...localMatch,
-          selectedCopies: { customer: true, transport: false, supplier: false, challan: false }
+          ...(existingCopies ? { selectedCopies: existingCopies } : {})
         } as Invoice);
         setProfile(localProf || ({} as BusinessProfile));
         setError(null);
@@ -358,27 +360,7 @@ function InvoicePreviewContent() {
           <button
             onClick={async () => {
               try {
-                const { pdf } = await import('@react-pdf/renderer');
-                const { getPDFTemplate } = await import('../../../components/PDFTemplates');
-                const PDFTemplate = getPDFTemplate(invoice.selectedTemplateStyle || (invoice.embeddedTemplate?.style));
-                
-                const blob = await pdf(
-                  <PDFTemplate 
-                    invoice={invoice}
-                    profile={(profile ?? {}) as BusinessProfile}
-                    logo={logoBase64Ref.current}
-                    signature={signatureBase64Ref.current}
-                  />
-                ).toBlob();
-                
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `invoice-${invoice.invoiceNumber}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                await exportInvoicePDFAsync(invoice, (profile ?? {}) as BusinessProfile, 'save');
               } catch (err: any) {
                 alert('Failed to export PDF: ' + (err.message || err.toString()));
               }
