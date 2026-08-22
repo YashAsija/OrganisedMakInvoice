@@ -10439,45 +10439,24 @@ export default function Dashboard({
             {/* â”€â”€ Page Header â”€â”€ */}
 
             <div
-
-              className="relative overflow-hidden bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl"
-
-              style={{ boxShadow: '0 1px 3px rgba(2,132,199,0.06)' }}
-
+              className="relative overflow-hidden bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xs"
             >
-
-              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#bae6fd]/60 to-transparent" />
-
-              <div className="absolute inset-0 bg-gradient-to-br from-[#f4f9ff]/80 via-white/30 to-transparent dark:from-[#1b264f]/20 pointer-events-none" />
-
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#0284c7]/40 dark:via-[#38bdf8]/50 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[#f4f9ff]/80 via-white/30 to-transparent dark:from-[#1b264f]/50 dark:via-[#111a36]/60 dark:to-transparent pointer-events-none" />
               <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-5 sm:px-6 py-4 sm:py-5">
-
                 <div className="flex items-center gap-4">
-
                   <div
-
                     className="w-11 h-11 rounded-xl bg-[#0284c7] dark:bg-[#38bdf8] flex items-center justify-center shrink-0"
-
                     style={{ boxShadow: '0 2px 8px rgba(2,132,199,0.3), inset 0 1px 0 rgba(255,255,255,0.15)' }}
-
                   >
-
                     <FileText className="w-5 h-5 text-white dark:text-[#0b1329]" />
-
                   </div>
-
                   <div>
-
                     <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Accounting Report</h2>
-
-                    <span className="text-[11px] text-[#64748b]/70 dark:text-zinc-400 mt-0.5 block">Generate customised tax &amp; income expense ledger reports</span>
-
+                    <span className="text-[11px] font-medium text-[#64748b] dark:text-[#94a3b8] mt-0.5 block">Generate customised tax &amp; income expense ledger reports</span>
                   </div>
-
                 </div>
-
               </div>
-
             </div>
 
 
