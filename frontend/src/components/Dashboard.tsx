@@ -6734,6 +6734,7 @@ export default function Dashboard({
 
   const reportedInvoices = useMemo(() => {
     const rawList = invoices.filter(inv => {
+      if (inv.isDeleted) return false;
       if (inv.status === 'draft') return false;
       if (reportClientFilter !== 'all' && inv.clientName !== reportClientFilter) return false;
       if (reportStartDate && inv.date < reportStartDate) return false;
@@ -6830,20 +6831,33 @@ export default function Dashboard({
   }, [reportedInvoices, reportDocTypeFilter]);
 
   const reportedOutstanding = useMemo(() => {
-    return reportedInvoices
-      .filter(inv => {
-        if (reportDocTypeFilter === 'all' || reportDocTypeFilter === 'all_sales' || reportDocTypeFilter === 'tax_invoice') {
-          return isSalesInvoiceForReport(inv);
+    const targetInvoices = invoices.filter(inv => {
+      if (!isSalesInvoiceForReport(inv)) return false;
+      if (reportClientFilter !== 'all' && inv.clientName !== reportClientFilter) return false;
+      if (reportEndDate && inv.date > reportEndDate) return false;
+      return true;
+    });
+
+    const deduplicatedMap = new Map<string, Invoice>();
+    targetInvoices.forEach(inv => {
+      const docType = (getInvoiceDocumentType(inv) || 'invoice').toLowerCase();
+      const invNum = (inv.invoiceNumber || '').trim().toLowerCase();
+      const key = invNum ? `${docType}_${invNum}` : inv.id;
+      if (!deduplicatedMap.has(key)) {
+        deduplicatedMap.set(key, inv);
+      } else {
+        const existing = deduplicatedMap.get(key)!;
+        const existingTime = new Date(existing.updatedAt || existing.createdAt || existing.date || 0).getTime();
+        const newTime = new Date(inv.updatedAt || inv.createdAt || inv.date || 0).getTime();
+        if (newTime >= existingTime) {
+          deduplicatedMap.set(key, inv);
         }
-        const docType = (getInvoiceDocumentType(inv) || 'invoice').toLowerCase();
-        const isPurchase = (inv as any).isPurchase || docType.includes('purchase') || docType === 'debit_note';
-        if (isPurchase || docType === 'proforma' || docType === 'proforma_invoice' || docType === 'quote' || docType === 'estimate') {
-          return false;
-        }
-        return inv.status !== 'cancelled' && (inv.status as string) !== 'void';
-      })
+      }
+    });
+
+    return Array.from(deduplicatedMap.values())
       .reduce((sum, inv) => sum + (inv.status === 'paid' ? 0 : Math.max(0, inv.grandTotal - (inv.paidAmount ?? 0))), 0);
-  }, [reportedInvoices, reportDocTypeFilter]);
+  }, [invoices, reportClientFilter, reportEndDate]);
 
   const reportedTaxTotal = useMemo(() => {
     return reportedInvoices
