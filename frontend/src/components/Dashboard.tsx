@@ -4950,7 +4950,24 @@ export default function Dashboard({
 
   // Non-draft, non-deleted Tax Invoices only for Global Sales Ledger totals & Analytics
   const allLedgerInvoices = useMemo(() => {
-    return invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === 'invoice' && !inv.isDeleted);
+    const rawList = invoices.filter(inv => inv.status !== 'draft' && getInvoiceDocumentType(inv) === 'invoice' && !inv.isDeleted);
+    const deduplicatedMap = new Map<string, Invoice>();
+    rawList.forEach(inv => {
+      const docType = (getInvoiceDocumentType(inv) || 'invoice').toLowerCase();
+      const invNum = (inv.invoiceNumber || '').trim().toLowerCase();
+      const key = invNum ? `${docType}_${invNum}` : inv.id;
+      if (!deduplicatedMap.has(key)) {
+        deduplicatedMap.set(key, inv);
+      } else {
+        const existing = deduplicatedMap.get(key)!;
+        const existingTime = new Date(existing.updatedAt || existing.createdAt || existing.date || 0).getTime();
+        const newTime = new Date(inv.updatedAt || inv.createdAt || inv.date || 0).getTime();
+        if (newTime >= existingTime) {
+          deduplicatedMap.set(key, inv);
+        }
+      }
+    });
+    return Array.from(deduplicatedMap.values());
   }, [invoices]);
 
   const totalBilled = allLedgerInvoices
@@ -4966,15 +4983,31 @@ export default function Dashboard({
     .reduce((sum, inv) => sum + (inv.taxTotal || 0), 0);
 
   // Purchase Bills Analytics — strictly active purchase bills ('purchases') only
-  const allPurchaseBills = useMemo(() =>
-    invoices.filter(inv =>
+  const allPurchaseBills = useMemo(() => {
+    const rawList = invoices.filter(inv =>
       inv.status !== 'draft' &&
       inv.status !== 'cancelled' &&
       !inv.isDeleted &&
       getInvoiceDocumentType(inv) === 'purchases'
-    ),
-    [invoices]
-  );
+    );
+    const deduplicatedMap = new Map<string, Invoice>();
+    rawList.forEach(inv => {
+      const docType = (getInvoiceDocumentType(inv) || 'invoice').toLowerCase();
+      const invNum = (inv.invoiceNumber || '').trim().toLowerCase();
+      const key = invNum ? `${docType}_${invNum}` : inv.id;
+      if (!deduplicatedMap.has(key)) {
+        deduplicatedMap.set(key, inv);
+      } else {
+        const existing = deduplicatedMap.get(key)!;
+        const existingTime = new Date(existing.updatedAt || existing.createdAt || existing.date || 0).getTime();
+        const newTime = new Date(inv.updatedAt || inv.createdAt || inv.date || 0).getTime();
+        if (newTime >= existingTime) {
+          deduplicatedMap.set(key, inv);
+        }
+      }
+    });
+    return Array.from(deduplicatedMap.values());
+  }, [invoices]);
 
   const totalPurchaseAmount = allPurchaseBills.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
   const totalPurchaseGst    = allPurchaseBills.reduce((sum, inv) => sum + (inv.taxTotal || 0), 0);
