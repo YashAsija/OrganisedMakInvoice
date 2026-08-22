@@ -6776,21 +6776,47 @@ export default function Dashboard({
 
 
 
-  const reportedIncomePaid = reportedInvoices
+  const isSalesInvoiceForReport = (inv: Invoice) => {
+    if (!inv || inv.status === 'draft' || inv.status === 'cancelled' || (inv.status as string) === 'void' || inv.isDeleted) return false;
+    const docType = (getInvoiceDocumentType(inv) || 'invoice').toLowerCase();
+    const isPurchase = (inv as any).isPurchase || docType.includes('purchase') || docType === 'debit_note';
+    if (isPurchase) return false;
+    if (docType === 'proforma' || docType === 'proforma_invoice' || docType === 'quote' || docType === 'estimate') return false;
+    return true;
+  };
 
-    .reduce((sum, inv) => sum + (inv.status === 'paid' ? (inv.paidAmount ?? inv.grandTotal) : (inv.paidAmount ?? 0)), 0);
+  const reportedIncomePaid = useMemo(() => {
+    return reportedInvoices
+      .filter(inv => {
+        if (reportDocTypeFilter === 'all' || reportDocTypeFilter === 'all_sales' || reportDocTypeFilter === 'tax_invoice') {
+          return isSalesInvoiceForReport(inv);
+        }
+        return inv.status !== 'cancelled' && (inv.status as string) !== 'void';
+      })
+      .reduce((sum, inv) => sum + (inv.status === 'paid' ? (inv.paidAmount ?? inv.grandTotal) : (inv.paidAmount ?? 0)), 0);
+  }, [reportedInvoices, reportDocTypeFilter]);
 
+  const reportedOutstanding = useMemo(() => {
+    return reportedInvoices
+      .filter(inv => {
+        if (reportDocTypeFilter === 'all' || reportDocTypeFilter === 'all_sales' || reportDocTypeFilter === 'tax_invoice') {
+          return isSalesInvoiceForReport(inv);
+        }
+        const docType = (getInvoiceDocumentType(inv) || 'invoice').toLowerCase();
+        const isPurchase = (inv as any).isPurchase || docType.includes('purchase') || docType === 'debit_note';
+        if (isPurchase || docType === 'proforma' || docType === 'proforma_invoice' || docType === 'quote' || docType === 'estimate') {
+          return false;
+        }
+        return inv.status !== 'cancelled' && (inv.status as string) !== 'void';
+      })
+      .reduce((sum, inv) => sum + (inv.status === 'paid' ? 0 : Math.max(0, inv.grandTotal - (inv.paidAmount ?? 0))), 0);
+  }, [reportedInvoices, reportDocTypeFilter]);
 
-
-  const reportedOutstanding = reportedInvoices
-
-    .reduce((sum, inv) => sum + (inv.status === 'paid' ? 0 : Math.max(0, inv.grandTotal - (inv.paidAmount ?? 0))), 0);
-
-
-
-  const reportedTaxTotal = reportedInvoices
-
-    .reduce((sum, inv) => sum + (inv.taxTotal || 0), 0);
+  const reportedTaxTotal = useMemo(() => {
+    return reportedInvoices
+      .filter(inv => isSalesInvoiceForReport(inv))
+      .reduce((sum, inv) => sum + (inv.taxTotal || 0), 0);
+  }, [reportedInvoices]);
 
 
 
@@ -10985,198 +11011,109 @@ export default function Dashboard({
 
                 }
 
-                reportedInvoices.forEach(inv => {
-
+                reportedInvoices.filter(isSalesInvoiceForReport).forEach(inv => {
                   const d = new Date(inv.date);
-
                   if (isNaN(d.getTime())) return;
-
                   const lbl = `${d.getDate()}/${d.getMonth() + 1}`;
-
                   const match = records.find(r => r.label === lbl);
-
                   if (match) {
-
                     match.income += inv.status === 'paid' ? (inv.paidAmount ?? inv.grandTotal) : (inv.paidAmount ?? 0);
-
                     match.tax += (inv.taxTotal || 0);
-
                   }
-
                 });
 
                 reportedExpenses.forEach(exp => {
-
                   const d = new Date(exp.expense_date || exp.date || '');
-
                   if (isNaN(d.getTime())) return;
-
                   const lbl = `${d.getDate()}/${d.getMonth() + 1}`;
-
                   const match = records.find(r => r.label === lbl);
-
                   if (match) match.expense += exp.amount;
-
                 });
-
-
 
               } else if (reportsChartRange === '1m') {
-
                 // Weekly buckets for last 4 weeks
-
                 for (let i = 3; i >= 0; i--) {
-
                   const wEnd = new Date(now);
-
                   wEnd.setDate(now.getDate() - i * 7);
-
                   const wStart = new Date(wEnd);
-
                   wStart.setDate(wEnd.getDate() - 6);
-
                   records.push({ label: `W${4 - i}`, income: 0, expense: 0, tax: 0, _start: wStart, _end: wEnd } as any);
-
                 }
 
-                reportedInvoices.forEach(inv => {
-
+                reportedInvoices.filter(isSalesInvoiceForReport).forEach(inv => {
                   const d = new Date(inv.date);
-
                   if (isNaN(d.getTime())) return;
-
                   const match = (records as any[]).find(r => d >= r._start && d <= r._end);
-
                   if (match) {
-
                     match.income += inv.status === 'paid' ? (inv.paidAmount ?? inv.grandTotal) : (inv.paidAmount ?? 0);
-
                     match.tax += (inv.taxTotal || 0);
-
                   }
-
                 });
 
                 reportedExpenses.forEach(exp => {
-
                   const d = new Date(exp.expense_date || exp.date || '');
-
                   if (isNaN(d.getTime())) return;
-
                   const match = (records as any[]).find(r => d >= r._start && d <= r._end);
-
                   if (match) match.expense += exp.amount;
-
                 });
-
-
 
               } else if (reportsChartRange === 'all') {
-
                 // Yearly buckets
-
-                const minYearInv = reportedInvoices.length > 0 ? Math.min(...reportedInvoices.map(i => new Date(i.date).getFullYear())) : now.getFullYear();
-
+                const salesInvoicesOnly = reportedInvoices.filter(isSalesInvoiceForReport);
+                const minYearInv = salesInvoicesOnly.length > 0 ? Math.min(...salesInvoicesOnly.map(i => new Date(i.date).getFullYear())) : now.getFullYear();
                 const minYearExp = reportedExpenses.length > 0 ? Math.min(...reportedExpenses.map(e => new Date(e.expense_date || e.date || '').getFullYear())) : now.getFullYear();
-
                 const startYear = Math.min(minYearInv, minYearExp, now.getFullYear());
-
                 const endYear = now.getFullYear();
-
                 
-
                 // Show at least a 3-year spread if there's only 1 year of data so the chart line has points
-
                 const adjustedStart = (endYear - startYear < 2) ? endYear - 2 : startYear;
-
                 
-
                 for (let y = adjustedStart; y <= endYear; y++) {
-
                   records.push({ label: y.toString(), income: 0, expense: 0, tax: 0, _year: y } as any);
-
                 }
-
                 
-
-                reportedInvoices.forEach(inv => {
-
+                salesInvoicesOnly.forEach(inv => {
                   const d = new Date(inv.date);
-
                   if (isNaN(d.getTime())) return;
-
                   const match = (records as any[]).find(r => r._year === d.getFullYear());
-
                   if (match) {
-
                     match.income += inv.status === 'paid' ? (inv.paidAmount ?? inv.grandTotal) : (inv.paidAmount ?? 0);
-
                     match.tax += (inv.taxTotal || 0);
-
                   }
-
                 });
 
                 reportedExpenses.forEach(exp => {
-
                   const d = new Date(exp.expense_date || exp.date || '');
-
                   if (isNaN(d.getTime())) return;
-
                   const match = (records as any[]).find(r => r._year === d.getFullYear());
-
                   if (match) match.expense += exp.amount;
-
                 });
-
-
 
               } else {
-
                 // Monthly buckets
-
                 const monthCount = reportsChartRange === '3m' ? 3 : reportsChartRange === '6m' ? 6 : 12;
-
                 const monthsShort = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
                 for (let i = monthCount - 1; i >= 0; i--) {
-
                   const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-
                   records.push({ label: monthsShort[d.getMonth()], income: 0, expense: 0, tax: 0, _month: d.getMonth(), _year: d.getFullYear() } as any);
-
                 }
 
-                reportedInvoices.forEach(inv => {
-
+                reportedInvoices.filter(isSalesInvoiceForReport).forEach(inv => {
                   const d = new Date(inv.date);
-
                   if (isNaN(d.getTime())) return;
-
                   const match = (records as any[]).find(r => r._month === d.getMonth() && r._year === d.getFullYear());
-
                   if (match) {
-
                     match.income += inv.status === 'paid' ? (inv.paidAmount ?? inv.grandTotal) : (inv.paidAmount ?? 0);
-
                     match.tax += (inv.taxTotal || 0);
-
                   }
-
                 });
 
                 reportedExpenses.forEach(exp => {
-
                   const d = new Date(exp.expense_date || exp.date || '');
-
                   if (isNaN(d.getTime())) return;
-
                   const match = (records as any[]).find(r => r._month === d.getMonth() && r._year === d.getFullYear());
-
                   if (match) match.expense += exp.amount;
-
                 });
-
               }
 
 
