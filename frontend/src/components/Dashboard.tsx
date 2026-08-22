@@ -4512,6 +4512,7 @@ export default function Dashboard({
   const [reportClientFilter, setReportClientFilter] = useState('all');
 
   const [reportDocTypeFilter, setReportDocTypeFilter] = useState('all');
+  const [reportSortBy, setReportSortBy] = useState<'doc_no_asc' | 'doc_no_desc' | 'date_asc' | 'date_desc' | 'amount_asc' | 'amount_desc'>('doc_no_asc');
 
 
 
@@ -6698,91 +6699,66 @@ export default function Dashboard({
 
   // Apply date, client, and document type filters
 
-  const reportedInvoices = invoices.filter(inv => {
+  const reportedInvoices = useMemo(() => {
+    const rawList = invoices.filter(inv => {
+      if (inv.status === 'draft') return false;
+      if (reportClientFilter !== 'all' && inv.clientName !== reportClientFilter) return false;
+      if (reportStartDate && inv.date < reportStartDate) return false;
+      if (reportEndDate && inv.date > reportEndDate) return false;
+      if (reportDocTypeFilter === 'all') return true;
 
-    if (inv.status === 'draft') return false;
+      const docType = (getInvoiceDocumentType(inv) || 'invoice').toLowerCase();
+      const isPurchase = (inv as any).isPurchase || docType.includes('purchase') || docType === 'debit_note';
 
-    // Client filter
+      if (reportDocTypeFilter === 'all_sales') return !isPurchase;
+      if (reportDocTypeFilter === 'all_purchases') return isPurchase;
+      if (reportDocTypeFilter === 'tax_invoice') return docType === 'invoice' || docType === 'sales' || docType === 'tax_invoice';
+      if (reportDocTypeFilter === 'proforma') return docType === 'proforma' || docType === 'proforma_invoice';
+      if (reportDocTypeFilter === 'receipt') return docType === 'receipt';
+      if (reportDocTypeFilter === 'quote') return docType === 'quote' || docType === 'estimate';
+      if (reportDocTypeFilter === 'credit_note') return docType === 'credit_note';
+      if (reportDocTypeFilter === 'purchase_order') return docType === 'purchase_order' || docType === 'po';
+      if (reportDocTypeFilter === 'purchase_invoice') return docType === 'purchase_invoice' || docType === 'purchase';
+      if (reportDocTypeFilter === 'debit_note') return docType === 'debit_note';
+      return true;
+    });
 
-    if (reportClientFilter !== 'all' && inv.clientName !== reportClientFilter) return false;
-
-    // Date range filter
-
-    if (reportStartDate && inv.date < reportStartDate) return false;
-
-    if (reportEndDate && inv.date > reportEndDate) return false;
-
-    // Document Type Filter
-
-    if (reportDocTypeFilter === 'all') return true;
-
-    const docType = (getInvoiceDocumentType(inv) || 'invoice').toLowerCase();
-
-    const isPurchase = (inv as any).isPurchase || docType.includes('purchase') || docType === 'debit_note';
-
-    if (reportDocTypeFilter === 'all_sales') {
-
-      return !isPurchase;
-
-    }
-
-    if (reportDocTypeFilter === 'all_purchases') {
-
-      return isPurchase;
-
-    }
-
-    if (reportDocTypeFilter === 'tax_invoice') {
-
-      return docType === 'invoice' || docType === 'sales' || docType === 'tax_invoice';
-
-    }
-
-    if (reportDocTypeFilter === 'proforma') {
-
-      return docType === 'proforma' || docType === 'proforma_invoice';
-
-    }
-
-    if (reportDocTypeFilter === 'receipt') {
-
-      return docType === 'receipt';
-
-    }
-
-    if (reportDocTypeFilter === 'quote') {
-
-      return docType === 'quote' || docType === 'estimate';
-
-    }
-
-    if (reportDocTypeFilter === 'credit_note') {
-
-      return docType === 'credit_note';
-
-    }
-
-    if (reportDocTypeFilter === 'purchase_order') {
-
-      return docType === 'purchase_order' || docType === 'po';
-
-    }
-
-    if (reportDocTypeFilter === 'purchase_invoice') {
-
-      return docType === 'purchase_invoice' || docType === 'purchase';
-
-    }
-
-    if (reportDocTypeFilter === 'debit_note') {
-
-      return docType === 'debit_note';
-
-    }
-
-    return true;
-
-  });
+    const deduplicatedMap = new Map<string, Invoice>();
+    rawList.forEach(inv => {
+      const docType = (getInvoiceDocumentType(inv) || 'invoice').toLowerCase();
+      const invNum = (inv.invoiceNumber || '').trim().toLowerCase();
+      const key = invNum ? `${docType}_${invNum}` : inv.id;
+      if (!deduplicatedMap.has(key)) {
+        deduplicatedMap.set(key, inv);
+      } else {
+        const existing = deduplicatedMap.get(key)!;
+        const existingTime = new Date(existing.updatedAt || existing.createdAt || existing.date || 0).getTime();
+        const newTime = new Date(inv.updatedAt || inv.createdAt || inv.date || 0).getTime();
+        if (newTime >= existingTime) {
+          deduplicatedMap.set(key, inv);
+        }
+      }
+    });
+    const list = Array.from(deduplicatedMap.values());
+    return list.sort((a, b) => {
+      switch (reportSortBy) {
+        case 'doc_no_asc':
+          return (a.invoiceNumber || '').localeCompare(b.invoiceNumber || '', undefined, { numeric: true, sensitivity: 'base' });
+        case 'doc_no_desc':
+          return (b.invoiceNumber || '').localeCompare(a.invoiceNumber || '', undefined, { numeric: true, sensitivity: 'base' });
+        case 'date_asc':
+          return new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime();
+        case 'date_desc':
+          return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+        case 'amount_asc':
+          return (a.grandTotal || 0) - (b.grandTotal || 0);
+        case 'amount_desc':
+          return (b.grandTotal || 0) - (a.grandTotal || 0);
+        default:
+          return 0;
+      }
+    });
+  }, [invoices, reportClientFilter, reportStartDate, reportEndDate, reportDocTypeFilter, reportSortBy]);
 
 
 
@@ -10531,8 +10507,8 @@ export default function Dashboard({
               {/* Single horizontal body card structure */}
               <div className="px-5 sm:px-6 py-5 space-y-4">
 
-                {/* Tier 1: Responsive Grid of 4 Control Inputs */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 w-full">
+                {/* Tier 1: Responsive Grid of 5 Control Inputs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5 w-full">
 
                   {/* Start Date */}
                   <div className="space-y-1.5 min-w-0">
@@ -10613,6 +10589,27 @@ export default function Dashboard({
                     </select>
                   </div>
 
+                  {/* Sort By */}
+                  <div className="space-y-1.5 min-w-0">
+                    <label htmlFor="rep-sort-by" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
+                      <span className="w-1 h-1 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] inline-block" />
+                      Sort By
+                    </label>
+                    <select
+                      id="rep-sort-by"
+                      value={reportSortBy}
+                      onChange={(e) => setReportSortBy(e.target.value as any)}
+                      className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 hover:border-[#0284c7] focus:border-[#0284c7] dark:border-[#223269] dark:focus:border-[#38bdf8] rounded-xl text-xs font-bold text-[#0f172a] dark:text-white focus:outline-none transition-all duration-150 cursor-pointer shadow-2xs"
+                    >
+                      <option value="doc_no_asc">Doc No (Increasing)</option>
+                      <option value="doc_no_desc">Doc No (Decreasing)</option>
+                      <option value="date_asc">Date (Increasing / Oldest First)</option>
+                      <option value="date_desc">Date (Decreasing / Newest First)</option>
+                      <option value="amount_asc">Amount (Increasing / Low to High)</option>
+                      <option value="amount_desc">Amount (Decreasing / High to Low)</option>
+                    </select>
+                  </div>
+
                 </div>
 
                 {/* Tier 2: Quick Range Chips & Action Buttons */}
@@ -10661,7 +10658,7 @@ export default function Dashboard({
                       onClick={() => {
                         if (reportedInvoices.length === 0) { alert("No billing records match the specified document selection and interval."); return; }
                         const rangeLabel = reportStartDate && reportEndDate ? `${reportStartDate} to ${reportEndDate}` : "Cumulative Ledger Period";
-                        exportCollectiveReportPDF(reportedInvoices, profile, rangeLabel, reportDocTypeFilter);
+                        exportCollectiveReportPDF(reportedInvoices, profile, rangeLabel, reportDocTypeFilter, reportSortBy);
                       }}
                       className="group relative px-4 py-2.5 rounded-xl text-white text-[10.5px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-150 hover:translate-y-[-1px] active:scale-[0.98] cursor-pointer overflow-hidden shadow-sm"
                       style={{ background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)' }}

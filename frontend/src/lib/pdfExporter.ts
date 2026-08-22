@@ -65,7 +65,8 @@ export function exportCollectiveReportPDF(
   invoices: Invoice[],
   profile: BusinessProfile,
   periodName: string,
-  docTypeFilter: string = 'all'
+  docTypeFilter: string = 'all',
+  sortBy: string = 'doc_no_asc'
 ): void {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const sym = getCurrencySymbol(profile.currency || 'INR');
@@ -199,13 +200,45 @@ export function exportCollectiveReportPDF(
   doc.text(`${invoices.length} document(s)`, W - mR, ry, { align: 'right' });
 
   y = Math.max(ly + 1, ry + 4);
-  hRule(y, 0.3, 30, 41, 59); y += 6;
+  // Helper to categorize an invoice
+  const getDocTypeKey = (inv: Invoice): string => {
+    const rawType = (inv.invoiceType || (inv as any).type || 'invoice').toLowerCase();
+    const isPurchase = (inv as any).isPurchase || rawType.includes('purchase') || rawType === 'debit_note';
+    if (rawType === 'proforma' || rawType === 'proforma_invoice') return 'proforma';
+    if (rawType === 'receipt') return 'receipt';
+    if (rawType === 'quote' || rawType === 'estimate') return 'quote';
+    if (rawType === 'credit_note') return 'credit_note';
+    if (rawType === 'purchase_order' || rawType === 'po') return 'purchase_order';
+    if (rawType === 'purchase_invoice' || (isPurchase && rawType.includes('invoice'))) return 'purchase_invoice';
+    if (rawType === 'debit_note') return 'debit_note';
+    return 'tax_invoice';
+  };
+
+  // Deduplicate invoices by document type and invoice number to remove duplicate copies
+  const deduplicatedMap = new Map<string, Invoice>();
+  (invoices || []).forEach(inv => {
+    const rawType = getDocTypeKey(inv);
+    const num = (inv.invoiceNumber || '').trim().toLowerCase();
+    const key = num ? `${rawType}_${num}` : inv.id;
+    if (!deduplicatedMap.has(key)) {
+      deduplicatedMap.set(key, inv);
+    } else {
+      const existing = deduplicatedMap.get(key)!;
+      const existingTime = new Date(existing.updatedAt || existing.createdAt || existing.date || 0).getTime();
+      const newTime = new Date(inv.updatedAt || inv.createdAt || inv.date || 0).getTime();
+      if (newTime >= existingTime) {
+        deduplicatedMap.set(key, inv);
+      }
+    }
+  });
+
+  const cleanInvoicesList = Array.from(deduplicatedMap.values());
 
   // Stats cards
-  const totalGrand = invoices.reduce((s, i) => s + i.grandTotal, 0);
-  const totalPaid = invoices.reduce((s, i) => s + (i.status === 'paid' ? (i.paidAmount ?? i.grandTotal) : (i.paidAmount ?? 0)), 0);
-  const totalTax = invoices.reduce((s, i) => s + i.taxTotal, 0);
-  const pending = invoices.reduce((s, i) => s + (i.status === 'paid' ? 0 : Math.max(0, i.grandTotal - (i.paidAmount ?? 0))), 0);
+  const totalGrand = cleanInvoicesList.reduce((s, i) => s + i.grandTotal, 0);
+  const totalPaid = cleanInvoicesList.reduce((s, i) => s + (i.status === 'paid' ? (i.paidAmount ?? i.grandTotal) : (i.paidAmount ?? 0)), 0);
+  const totalTax = cleanInvoicesList.reduce((s, i) => s + i.taxTotal, 0);
+  const pending = cleanInvoicesList.reduce((s, i) => s + (i.status === 'paid' ? 0 : Math.max(0, i.grandTotal - (i.paidAmount ?? 0))), 0);
 
   const cards = [
     { label: meta.card1, val: fmt(totalGrand, sym), bg: [240, 246, 255], fg: [37, 99, 235] },
@@ -226,19 +259,6 @@ export function exportCollectiveReportPDF(
   y += 18; hRule(y); y += 5;
 
   // Helper to categorize an invoice
-  const getDocTypeKey = (inv: Invoice): string => {
-    const rawType = (inv.invoiceType || (inv as any).type || 'invoice').toLowerCase();
-    const isPurchase = (inv as any).isPurchase || rawType.includes('purchase') || rawType === 'debit_note';
-    if (rawType === 'proforma' || rawType === 'proforma_invoice') return 'proforma';
-    if (rawType === 'receipt') return 'receipt';
-    if (rawType === 'quote' || rawType === 'estimate') return 'quote';
-    if (rawType === 'credit_note') return 'credit_note';
-    if (rawType === 'purchase_order' || rawType === 'po') return 'purchase_order';
-    if (rawType === 'purchase_invoice' || (isPurchase && rawType.includes('invoice'))) return 'purchase_invoice';
-    if (rawType === 'debit_note') return 'debit_note';
-    return 'tax_invoice';
-  };
-
   const SECTIONS = [
     { key: 'tax_invoice', title: 'TAX INVOICE TRANSACTIONS', subtitle: 'TAX INVOICES', partyHeader: 'CLIENT / BUYER', color: [2, 132, 199] as [number, number, number] },
     { key: 'proforma', title: 'PROFORMA INVOICE TRANSACTIONS', subtitle: 'PROFORMA INVOICES', partyHeader: 'CLIENT / BUYER', color: [14, 165, 233] as [number, number, number] },
@@ -250,18 +270,45 @@ export function exportCollectiveReportPDF(
     { key: 'debit_note', title: 'DEBIT NOTE ADJUSTMENTS', subtitle: 'DEBIT NOTES', partyHeader: 'VENDOR / SUPPLIER', color: [217, 70, 239] as [number, number, number] },
   ];
 
+  // Helper to sort invoices array according to selected sortBy option
+  const sortInvoicesList = (list: Invoice[]): Invoice[] => {
+    return [...list].sort((a, b) => {
+      switch (sortBy) {
+        case 'doc_no_asc':
+          return (a.invoiceNumber || '').localeCompare(b.invoiceNumber || '', undefined, { numeric: true, sensitivity: 'base' });
+        case 'doc_no_desc':
+          return (b.invoiceNumber || '').localeCompare(a.invoiceNumber || '', undefined, { numeric: true, sensitivity: 'base' });
+        case 'date_asc':
+          return new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime();
+        case 'date_desc':
+          return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+        case 'amount_asc':
+          return (a.grandTotal || 0) - (b.grandTotal || 0);
+        case 'amount_desc':
+          return (b.grandTotal || 0) - (a.grandTotal || 0);
+        default:
+          return 0;
+      }
+    });
+  };
+
   // Group invoices by document type
   const groupedInvoices: Record<string, Invoice[]> = {};
-  invoices.forEach(inv => {
+  cleanInvoicesList.forEach(inv => {
     const key = getDocTypeKey(inv);
     if (!groupedInvoices[key]) groupedInvoices[key] = [];
     groupedInvoices[key].push(inv);
   });
 
+  // Sort each group's invoices array according to sortBy
+  Object.keys(groupedInvoices).forEach(key => {
+    groupedInvoices[key] = sortInvoicesList(groupedInvoices[key]);
+  });
+
   const activeSections = SECTIONS.filter(sec => (groupedInvoices[sec.key] || []).length > 0);
   const cols = { date: mL + 2, inv: mL + 21, client: mL + 45, sub: mL + 106, tax: mL + 127, grand: mL + 154, status: W - mR - 1 };
 
-  if (invoices.length === 0 || activeSections.length === 0) {
+  if (cleanInvoicesList.length === 0 || activeSections.length === 0) {
     doc.setFillColor(241, 245, 249);
     doc.rect(mL, y, cW, 7, 'F');
     doc.setFontSize(6.5); doc.setFont('Helvetica', 'bold'); doc.setTextColor(71, 85, 105);
@@ -341,8 +388,15 @@ export function exportCollectiveReportPDF(
         doc.setFontSize(7.2); doc.setFont('Helvetica', 'normal'); doc.setTextColor(30, 41, 59);
         doc.text(inv.date, cols.date, y + 5.2);
         doc.text(inv.invoiceNumber, cols.inv, y + 5.2);
-        const cn = inv.clientName.length > 17 ? inv.clientName.slice(0, 17) + '…' : inv.clientName;
-        doc.text(cn, cols.client, y + 5.2);
+        const partyName = ((inv.clientCompanyName || inv.clientCompany || '').trim()) || inv.clientName || '';
+        let partyFontSize = 7.2;
+        doc.setFontSize(partyFontSize);
+        while (partyFontSize > 4.6 && doc.getTextWidth(partyName) > 38) {
+          partyFontSize -= 0.2;
+          doc.setFontSize(partyFontSize);
+        }
+        doc.text(partyName, cols.client, y + 5.2);
+        doc.setFontSize(7.2);
         doc.text(fmt(inv.subtotal, sym), cols.sub, y + 5.2, { align: 'right' });
         doc.text(fmt(inv.taxTotal, sym), cols.tax, y + 5.2, { align: 'right' });
         doc.text(fmt(inv.grandTotal, sym), cols.grand, y + 5.2, { align: 'right' });
@@ -407,7 +461,8 @@ export function exportCollectiveReportPDF(
     doc.text(`Ledger Statement  |  Page ${p} of ${totalPgs}  |  MakInvoices Enterprise Accounting`, W / 2, H - 6, { align: 'center' });
   }
 
-  doc.save(`Ledger_Report_${docTypeFilter}_${periodName.replace(/\s+/g, '_')}.pdf`);
+  const todayStr = new Date().toISOString().split('T')[0];
+  doc.save(`Ledger_Report_${docTypeFilter}_${periodName.replace(/\s+/g, '_')}_${todayStr}.pdf`);
   emitNotification('Ledger PDF Downloaded', `Ledger statement report (${periodName}) downloaded as PDF.`, 'success');
 }
 
