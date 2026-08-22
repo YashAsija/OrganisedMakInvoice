@@ -64,11 +64,12 @@ export default function SecurityPage({ theme, onNavigate, onGoogleLogin }: Secur
       border-bottom: 1px solid var(--paper-line);
     }
     .topnav-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 32px; max-width: 1180px; margin: 0 auto; }
-    .logo-container { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    @media (max-width: 640px) { .topnav-inner { padding: 12px 16px; } }
+    .logo-container { display: flex; align-items: center; gap: 10px; cursor: pointer; flex-shrink: 0; }
     .navlinks { display: flex; gap: 34px; font-size: 0.92rem; color: var(--text-dark-bg-dim); }
     .navlinks button { background: none; border: none; font-size: inherit; color: inherit; cursor: pointer; transition: color .2s; font-weight: bold; font-family: 'IBM Plex Sans', sans-serif; }
     .navlinks button:hover { color: var(--stamp-red); }
-    .nav-actions { display: flex; align-items: center; gap: 10px; }
+    .nav-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
     .nav-login {
       font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; background: transparent; color: var(--stamp-red);
       padding: 9px 18px; border-radius: 8px; letter-spacing: 0.02em;
@@ -87,6 +88,7 @@ export default function SecurityPage({ theme, onNavigate, onGoogleLogin }: Secur
 
     /* ---------- SECURITY HEADER ---------- */
     .sec-hero { padding: 90px 0 60px; text-align: center; }
+    @media (max-width: 480px) { .sec-hero { padding: 48px 0 32px; } }
     .eyebrow {
       font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
       color: var(--stamp-red); display: inline-flex; align-items: center; gap: 10px; margin-bottom: 22px; font-weight: bold;
@@ -94,14 +96,14 @@ export default function SecurityPage({ theme, onNavigate, onGoogleLogin }: Secur
     .eyebrow::before, .eyebrow::after { content: ""; width: 22px; height: 1px; background: var(--stamp-red); }
     
     h1.sec-h1 {
-      font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(2.4rem, 5vw, 3.8rem);
+      font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(1.8rem, 5vw, 3.8rem);
       line-height: 1.1; margin: 0 auto 20px; letter-spacing: -0.02em; color: var(--text-dark-bg); max-width: 800px;
     }
     .sec-sub { font-size: 1.1rem; color: var(--text-dark-bg-dim); max-width: 620px; margin: 0 auto; line-height: 1.6; }
 
     /* ---------- SECURITY BARS GRID ---------- */
     .sec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 48px; }
-    @media (max-width: 820px) { .sec-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 820px) { .sec-grid { grid-template-columns: 1fr; gap: 16px; margin-top: 24px; } }
     
     .sec-card {
       background: var(--ink-panel); border: 1px solid var(--paper-line);
@@ -109,7 +111,7 @@ export default function SecurityPage({ theme, onNavigate, onGoogleLogin }: Secur
       box-shadow: ${theme === 'dark' ? '0 10px 30px rgba(0,0,0,0.3)' : '0 10px 30px rgba(2,132,199,0.02)'};
       display: flex; gap: 24px; align-items: flex-start;
     }
-    @media (max-width: 480px) { .sec-card { padding: 24px; gap: 16px; } }
+    @media (max-width: 480px) { .sec-card { padding: 20px 16px; gap: 14px; } }
 
     .sec-icon-wrap {
       width: 52px; height: 52px; border-radius: 14px;
@@ -122,10 +124,12 @@ export default function SecurityPage({ theme, onNavigate, onGoogleLogin }: Secur
 
     /* ---------- REGULATORY & STANDARDS ---------- */
     .compliance-sec { padding: 80px 0; border-top: 1px solid var(--paper-line); margin-top: 60px; }
+    @media (max-width: 480px) { .compliance-sec { padding: 40px 0; margin-top: 30px; } }
     .compliance-box {
       background: var(--ink-panel-2); border: 1.5px dashed var(--paper-line);
       border-radius: 16px; padding: 40px; text-align: center;
     }
+    @media (max-width: 480px) { .compliance-box { padding: 24px 16px; } }
     .comp-title { font-family: 'Fraunces', serif; font-size: 1.6rem; color: var(--text-dark-bg); margin-bottom: 12px; font-weight: 600; }
     .comp-desc { font-size: 0.96rem; color: var(--text-dark-bg-dim); max-width: 700px; margin: 0 auto 30px; line-height: 1.65; }
     .comp-badges { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }

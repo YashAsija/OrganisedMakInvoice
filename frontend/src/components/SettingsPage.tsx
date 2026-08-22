@@ -498,27 +498,29 @@ export default function SettingsPage({
                 </div>
 
                 {/* 1. MASTER TOGGLE: RECEIVE NOTIFICATIONS */}
-                <div className="p-4 bg-[#f4f9ff] dark:bg-[#0b1329]/80 rounded-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 shadow-xs flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                <div className="p-4 bg-[#f4f9ff] dark:bg-[#0b1329]/80 rounded-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                  <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                       draftNotif.isNotificationsEnabled
                         ? 'bg-[#0284c7] text-white shadow-md shadow-[#0284c7]/20'
                         : 'bg-slate-200 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500'
                     }`}>
                       {draftNotif.isNotificationsEnabled ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <span className="text-xs font-black text-[#0f172a] dark:text-white block">Receive Application Notifications</span>
-                      <span className="text-[10.5px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5">
+                      <span className="text-[10.5px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5 leading-snug">
                         Master switch to turn all workspace notifications and event alerts ON or OFF
                       </span>
                     </div>
                   </div>
 
-                  <Toggle
-                    checked={draftNotif.isNotificationsEnabled}
-                    onChange={handleToggleMasterNotif}
-                  />
+                  <div className="self-end sm:self-center shrink-0">
+                    <Toggle
+                      checked={draftNotif.isNotificationsEnabled}
+                      onChange={handleToggleMasterNotif}
+                    />
+                  </div>
                 </div>
 
                 {/* 2. CONDITIONAL DETAILED OPTIONS (Shown only if Master Toggle is YES / Enabled) */}
@@ -540,10 +542,10 @@ export default function SettingsPage({
                         <div key={item.id} className="p-4 rounded-2xl border bg-[#f4f9ff]/50 dark:bg-[#0b1329]/60 border-[#bae6fd]/50 dark:border-[#223269]/50 shadow-2xs space-y-3">
                           {/* Top Header: Title, Description, and Master Enable Toggle for this specific alert */}
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-xs font-bold text-[#0f172a] dark:text-white block">{item.title}</span>
-                                <span className={`px-2 py-0.2 rounded-md text-[8.5px] font-black uppercase tracking-wider ${
+                                <span className={`px-2 py-0.2 rounded-md text-[8.5px] font-black uppercase tracking-wider shrink-0 ${
                                   item.enabled
                                     ? 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd]/60 dark:border-[#223269]'
                                     : 'bg-slate-200 dark:bg-zinc-800 text-slate-500 dark:text-zinc-500'
@@ -556,7 +558,9 @@ export default function SettingsPage({
                               </p>
                             </div>
 
-                            <Toggle checked={item.enabled} onChange={() => handleToggleAlertMaster(item.id)} />
+                            <div className="self-end sm:self-center shrink-0">
+                              <Toggle checked={item.enabled} onChange={() => handleToggleAlertMaster(item.id)} />
+                            </div>
                           </div>
 
                           {/* Selectable Notification Types / Channels for THIS specific alert */}
@@ -873,7 +877,7 @@ export default function SettingsPage({
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-1 bg-[#f4f9ff] dark:bg-[#0b1329] p-1 rounded-xl border border-[#bae6fd]/60 dark:border-[#223269]/60 shrink-0">
+                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-1 bg-[#f4f9ff] dark:bg-[#0b1329] p-1 rounded-xl border border-[#bae6fd]/60 dark:border-[#223269]/60 shrink-0 max-w-full overflow-x-auto scrollbar-none">
                           {[
                             { id: 'off', label: 'Never' },
                             { id: '5m', label: '5 Min' },
@@ -885,7 +889,7 @@ export default function SettingsPage({
                               key={item.id}
                               type="button"
                               onClick={() => handleTimeoutChange(item.id)}
-                              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                                 autoLockTimeout === item.id
                                   ? 'bg-[#0284c7] text-white shadow-2xs'
                                   : 'text-[#64748b] dark:text-zinc-400 hover:text-[#0284c7] dark:hover:text-white'
