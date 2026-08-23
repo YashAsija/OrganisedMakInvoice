@@ -17,9 +17,10 @@ if (typeof window !== 'undefined') {
 }
 
 export interface Tier {
-  name: 'Starter' | 'Pro' | 'Advanced';
+  name: 'Starter' | 'Basic' | 'Professional' | 'Enterprise';
   description: string;
   features: string[];
+  fallbackPrice: { month: string; year: string };
   priceId: { month: string; year: string };
 }
 
@@ -33,29 +34,62 @@ interface PricingPageProps {
 const TIERS: Tier[] = [
   {
     name: 'Starter',
-    description: 'Get started at a low cost. Perfect for individual freelancers.',
+    description: 'Get started at zero cost. Essential billing and ledger tools.',
+    fallbackPrice: { month: '₹0', year: '₹0' },
     features: [
-      'Up to 10 invoices / month',
-      '1 business profile',
-      'Invoice & Quotation',
-      'Simple invoice template',
-      'PDF export',
+      'Sales & Purchase Ledger Full Access',
+      'WhatsApp & Email Sharing, PDF Export, Payment Recording',
+      'Interactive Editable Document Builder & Billing Dashboard',
+      'Expenses Tracker',
+      '1 Accounting Report / month',
+      '10 Documents / month total quota',
+      'Client, Vendor, HSN, Transport & Catalog Databases',
+      'System Preset Templates & Auto UPI QR Code',
+      'Dark and Light Theme Mode Toggle',
     ],
     priceId: {
-      month: 'pri_01kzgyek7a7g58fyprtr83m188',
-      year: 'pri_01kzgyemhfphepwc3j8ay9qwhx',
+      month: 'pri_starter_m',
+      year: 'pri_starter_y',
     },
   },
   {
-    name: 'Pro',
-    description: 'Perfect for growing businesses that bill at volume.',
+    name: 'Basic',
+    description: 'Perfect for freelancers & growing businesses scaling billing operations.',
+    fallbackPrice: { month: '₹199', year: '₹1,990' },
     features: [
-      'Up to 100 invoices / month',
-      '3 business profiles',
-      'All document types incl. Debit & Credit Notes',
-      'All templates + custom logo & signature',
-      'AI Smart Billing (Gemini)',
-      'Multi-rate tax splits',
+      '60 Documents / month total quota',
+      '5 Accounting Reports / month',
+      'Bulk Database Management for All Registries',
+      'Create Own Custom Simple & Advanced Templates',
+      'Bulk Ledger Actions for Payments, Deletion & CSV Exports',
+      'Personalised Company Logo & Signature',
+      'Personalised Watermark & Watermark Removal',
+      'Duplicate Document & Convert Document Types',
+      'Full Sales & Purchase Ledger Capabilities',
+      'Interactive Document Builder & Expenses Tracker',
+      'Auto UPI Payment QR & Dark/Light Mode',
+    ],
+    priceId: {
+      month: 'pri_01kzgye8kkwcx2s2a865b4c1y9',
+      year: 'pri_01kzgyeabqf6gxcw5cwtptzrgj',
+    },
+  },
+  {
+    name: 'Professional',
+    description: 'Advanced automation, AI smart billing, and higher monthly limits.',
+    fallbackPrice: { month: '₹299', year: '₹2,990' },
+    features: [
+      '140 Documents / month total quota',
+      '15 Accounting Reports / month',
+      'AI Smart Billing Feature with Gemini Parsing',
+      '24*7 Dedicated MakInvoices AI Assistant Support',
+      'Automated Recurring Invoice Scheduler',
+      'Bulk Database Management & Bulk Ledger Actions',
+      'Create Own Custom Simple & Advanced Templates',
+      'Personalised Logo, Signature & Watermark Removal',
+      'Duplicate Existing Documents & Document Converter',
+      'Full Sales & Purchase Ledger Capabilities',
+      'Interactive Document Builder & Expenses Tracker',
     ],
     priceId: {
       month: 'pri_01kzgyepxvsa4p7ekmc0k0mntg',
@@ -63,15 +97,21 @@ const TIERS: Tier[] = [
     },
   },
   {
-    name: 'Advanced',
-    description: 'No caps, no limits. Built for high-volume operations.',
+    name: 'Enterprise',
+    description: 'Unlimited scale and dedicated support for high-volume operations.',
+    fallbackPrice: { month: '₹599', year: '₹5,990' },
     features: [
-      'Unlimited invoices',
-      'Unlimited business profiles',
-      'All templates + custom logo & signature',
-      'AI Smart Billing (Gemini)',
-      'Recurring invoice scheduler',
-      'Priority support with SLA',
+      'Unlimited Monthly Documents Quota',
+      'Unlimited Accounting Reports / month',
+      'Priority 24/7 VIP Support & Service Level Agreement',
+      'Dedicated Account Manager & Custom Onboarding',
+      'AI Smart Billing & 24/7 MakInvoices AI Assistant Support',
+      'Automated Recurring Invoice Scheduler',
+      'Bulk Database Management & Bulk Ledger Actions',
+      'Create Own Custom Simple & Advanced Templates',
+      'Personalised Logo, Signature & Watermark',
+      'Duplicate Existing Documents & Document Converter',
+      'Full Sales & Purchase Ledger Capabilities',
     ],
     priceId: {
       month: 'pri_01kzgyetffh4ax8ng5yapbc9m7',
@@ -107,6 +147,11 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [loadingPrices, setLoadingPrices] = useState(true);
   const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
+  const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({});
+
+  const toggleExpandPlan = (name: string) => {
+    setExpandedPlans((prev) => ({ ...prev, [name]: !prev[name] }));
+  };
 
   const handleNavigate = (path: string) => {
     if (onNavigate) {
@@ -141,13 +186,21 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
 
   // Fetch localized prices using PricePreview
   useEffect(() => {
-    if (!paddle) return;
+    if (!paddle) {
+      setLoadingPrices(false);
+      return;
+    }
 
     setLoadingPrices(true);
     const items = TIERS.flatMap((t) => [
       { priceId: t.priceId.month, quantity: 1 },
       { priceId: t.priceId.year, quantity: 1 },
-    ]);
+    ]).filter((item) => Boolean(item.priceId && item.priceId.startsWith('pri_') && item.priceId.length > 15));
+
+    if (items.length === 0) {
+      setLoadingPrices(false);
+      return;
+    }
 
     paddle
       .PricePreview({
@@ -156,14 +209,18 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
       })
       .then((preview) => {
         const priceMap: Record<string, string> = {};
-        preview.data.details.lineItems.forEach((item: any) => {
-          priceMap[item.price.id] = item.formattedTotals.total;
-        });
+        if (preview?.data?.details?.lineItems) {
+          preview.data.details.lineItems.forEach((item: any) => {
+            if (item?.price?.id && item?.formattedTotals?.total) {
+              priceMap[item.price.id] = item.formattedTotals.total;
+            }
+          });
+        }
         setPrices(priceMap);
         setLoadingPrices(false);
       })
       .catch((err) => {
-        console.error('Failed to preview prices:', err);
+        // Fallback gracefully to default plan prices when paddle sandbox/token returns unconfigured price IDs
         setLoadingPrices(false);
       });
   }, [paddle, country]);
@@ -264,8 +321,8 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
     }
     @keyframes pr-pop { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-    .pr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: stretch; max-width: 1000px; margin: 0 auto; }
-    @media (max-width: 900px) { .pr-grid { grid-template-columns: 1fr 1fr; gap: 18px; } }
+    .pr-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; align-items: stretch; max-width: 1180px; margin: 0 auto; }
+    @media (max-width: 1024px) { .pr-grid { grid-template-columns: repeat(2, 1fr); gap: 18px; } }
     @media (max-width: 560px) { .pr-grid { grid-template-columns: 1fr; } }
 
     .pr-card {
@@ -447,7 +504,8 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
             {TIERS.map((plan) => {
               const currentPriceId = billing === 'annual' ? plan.priceId.year : plan.priceId.month;
               const formattedPrice = prices[currentPriceId];
-              const popular = plan.name === 'Pro';
+              const popular = plan.name === 'Professional';
+              const displayedFeatures = plan.features.slice(0, 5);
               
               return (
                 <div key={plan.name} className={`pr-card${popular ? ' featured' : ''}`}>
@@ -459,20 +517,21 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
                     {loadingPrices ? (
                       <span className="skeleton-price" />
                     ) : (
-                      <span className="pr-val">{formattedPrice || (billing === 'annual' ? '$0' : '$0')}</span>
+                      <span className="pr-val">{formattedPrice || plan.fallbackPrice[billing === 'annual' ? 'year' : 'month']}</span>
                     )}
                     <span className="pr-per">{billing === 'annual' ? '/yr' : '/mo'}</span>
                   </div>
                   <p className="pr-note">Includes 7-day free trial</p>
                   <hr className="pr-divider" />
                   <ul className="pr-features">
-                    {plan.features.map((f, i) => (
+                    {displayedFeatures.map((f, i) => (
                       <li key={i}>
                         <span className="pr-check">✓</span>
                         {f}
                       </li>
                     ))}
                   </ul>
+
                   <button
                     type="button"
                     className={`pr-btn ${popular ? 'solid' : 'ghost'}`}
@@ -483,6 +542,225 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
                 </div>
               );
             })}
+          </div>
+
+          {/* Full Comparison Table */}
+          <div style={{ marginTop: '80px', textAlign: 'left' }}>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <div className="pr-eyebrow">Detailed Matrix</div>
+              <h2 className="pr-[#0f172a] dark:text-[#f8fafc]" style={{ fontFamily: "'Fraunces', serif", fontSize: '2rem', fontWeight: 700, margin: '0 0 10px' }}>
+                Full Subscription Comparison
+              </h2>
+              <p style={{ color: isDark ? '#94a3b8' : '#475569', fontSize: '0.95rem' }}>
+                Every single feature, limit, database tool, and template capability compared side-by-side.
+              </p>
+            </div>
+
+            <div style={{ overflowX: 'auto', borderRadius: '16px', border: `1px solid ${isDark ? '#223269' : '#bae6fd'}`, background: isDark ? '#111a36' : '#fff' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ background: isDark ? '#0b1329' : '#f4f9ff', borderBottom: `1px solid ${isDark ? '#223269' : '#bae6fd'}` }}>
+                    <th style={{ padding: '16px', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.75rem', width: '35%' }}>Feature / Quota</th>
+                    <th style={{ padding: '16px', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.75rem', textAlign: 'center' }}>Starter</th>
+                    <th style={{ padding: '16px', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.75rem', textAlign: 'center' }}>Basic</th>
+                    <th style={{ padding: '16px', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.75rem', textAlign: 'center', color: isDark ? '#38bdf8' : '#0284c7' }}>Professional</th>
+                    <th style={{ padding: '16px', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.75rem', textAlign: 'center' }}>Enterprise</th>
+                  </tr>
+                </thead>
+                <tbody style={{ color: isDark ? '#cbd5e1' : '#334155' }}>
+                  {/* Quotas & Limits */}
+                  <tr style={{ background: isDark ? '#162244' : '#f8fafc' }}>
+                    <td colSpan={5} style={{ padding: '10px 16px', fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase', color: isDark ? '#38bdf8' : '#0284c7' }}>Monthly Quotas &amp; Limits</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Documents / Month (Sales &amp; Purchase Total)</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 700 }}>10 Docs</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 700 }}>60 Docs</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 700, color: isDark ? '#38bdf8' : '#0284c7' }}>140 Docs</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 700, color: '#16a34a' }}>Unlimited</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Accounting Reports / Month</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 700 }}>1 Report</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 700 }}>5 Reports</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 700, color: isDark ? '#38bdf8' : '#0284c7' }}>15 Reports</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 700, color: '#16a34a' }}>Unlimited</td>
+                  </tr>
+
+                  {/* Core Ledger Access & Actions */}
+                  <tr style={{ background: isDark ? '#162244' : '#f8fafc' }}>
+                    <td colSpan={5} style={{ padding: '10px 16px', fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase', color: isDark ? '#38bdf8' : '#0284c7' }}>Ledger Access &amp; Document Controls</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Sales Ledger (Invoices, Quotations, Proforma, Credit Notes)</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Purchase Ledger (Purchases, POs, Purchase Debit Notes)</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Share Documents via WhatsApp &amp; Email</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Edit, Record Payments, Download PDF &amp; Delete Documents</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+
+                  {/* Document Builder & Expense Management */}
+                  <tr style={{ background: isDark ? '#162244' : '#f8fafc' }}>
+                    <td colSpan={5} style={{ padding: '10px 16px', fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase', color: isDark ? '#38bdf8' : '#0284c7' }}>Document Builder &amp; Expenses</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Interactive Editable Document Builder</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Expense Tracking &amp; Category Log</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Interactive Billing &amp; Financial Dashboard</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>System Presets for Invoice Templates</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Auto-Generated Payment QR from UPI ID</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Dark / Light Theme Toggle Mode</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+
+                  {/* Master Databases & Bulk Operations */}
+                  <tr style={{ background: isDark ? '#162244' : '#f8fafc' }}>
+                    <td colSpan={5} style={{ padding: '10px 16px', fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase', color: isDark ? '#38bdf8' : '#0284c7' }}>Databases &amp; Bulk Operations</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Database Entry (Client, Vendor, HSN, Transport, Product Category, Catalog)</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 700 }}>Single Entry</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 700, color: '#16a34a' }}>Bulk + Single</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 700, color: '#16a34a' }}>Bulk + Single</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 700, color: '#16a34a' }}>Bulk + Single</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Bulk Ledger Actions (Bulk Record Payments, Delete Bulk Docs, Export CSV)</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#ef4444', fontWeight: 800 }}>✕</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Duplicate Existing Document Without Remaking</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#ef4444', fontWeight: 800 }}>✕</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Convert Document Type (e.g. Quotation to Tax Invoice)</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#ef4444', fontWeight: 800 }}>✕</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+
+                  {/* Template Customization & Branding */}
+                  <tr style={{ background: isDark ? '#162244' : '#f8fafc' }}>
+                    <td colSpan={5} style={{ padding: '10px 16px', fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase', color: isDark ? '#38bdf8' : '#0284c7' }}>Template Customization &amp; Branding</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Create Own Templates using Simple &amp; Advanced Builders</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#ef4444', fontWeight: 800 }}>✕</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Personalised Logo &amp; Personalised Digital Signature</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#ef4444', fontWeight: 800 }}>✕</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Remove MakInvoices Watermark &amp; Add Personalised Watermark</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#ef4444', fontWeight: 800 }}>✕</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+
+                  {/* AI Features & Automation */}
+                  <tr style={{ background: isDark ? '#162244' : '#f8fafc' }}>
+                    <td colSpan={5} style={{ padding: '10px 16px', fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase', color: isDark ? '#38bdf8' : '#0284c7' }}>AI Features &amp; Automation</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>AI Smart Billing Feature (Gemini Document Parsing)</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#ef4444', fontWeight: 800 }}>✕</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#ef4444', fontWeight: 800 }}>✕</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>MakInvoices AI Assistant 24*7 Support</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#ef4444', fontWeight: 800 }}>✕</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#ef4444', fontWeight: 800 }}>✕</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Recurring Invoice Scheduler Automation</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#ef4444', fontWeight: 800 }}>✕</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#ef4444', fontWeight: 800 }}>✕</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>Support Channels &amp; Priority SLA</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 500 }}>Email / FAQ / Ticket</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 500 }}>Standard Support</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 500, color: isDark ? '#38bdf8' : '#0284c7' }}>24*7 AI + Priority</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>VIP Priority + SLA</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>

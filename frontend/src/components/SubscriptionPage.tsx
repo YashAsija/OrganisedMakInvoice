@@ -7,7 +7,9 @@ import {
   ShieldCheck, 
   CreditCard,
   RefreshCw,
-  Coins
+  Coins,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { BusinessProfile, Invoice } from '../types';
 
@@ -22,90 +24,117 @@ interface SubscriptionPageProps {
 const PLANS = [
   {
     id: 'free' as const,
-    tier: 'Free',
+    tier: 'Free / Trial',
     name: 'Starter',
-    tagline: 'Get started at zero cost. No credit card required.',
+    tagline: 'Get started at zero cost. Essential billing and ledger tools.',
     monthly: '₹0',
     annual: '₹0',
     annualNote: 'Free forever. No commitment needed.',
     monthlyNote: 'Free forever. No credit card needed.',
     popular: false,
     limit: 10,
+    reportLimit: 1,
     features: [
-      { text: 'Up to 10 invoices / month', included: true },
-      { text: '1 business profile', included: true },
-      { text: 'Invoice & Quotation', included: true },
-      { text: 'Simple invoice template', included: true },
-      { text: 'PDF export', included: true },
-      { text: 'AI Smart Billing (Gemini)', included: false },
-      { text: 'Advanced templates', included: false },
-      { text: 'Priority support', included: false },
+      { text: 'Sales Ledger and Purchase Ledger Access', included: true },
+      { text: 'WhatsApp & Email Sharing, PDF Export, Payment Recording', included: true },
+      { text: 'Interactive Editable Document Builder', included: true },
+      { text: 'Expenses Tracker & Billing Dashboard', included: true },
+      { text: '1 Accounting Report / month', included: true },
+      { text: '10 Documents / month total quota', included: true },
+      { text: 'Client, Vendor, HSN, Transport & Catalog Databases', included: true },
+      { text: 'System Preset Templates & Auto UPI QR Code', included: true },
+      { text: 'Dark and Light Theme Mode Toggle', included: true },
+      { text: 'Email, FAQ & Ticket Support Channels', included: true },
+      { text: 'Bulk Database Management', included: false },
+      { text: 'Create Own Custom Simple & Advanced Templates', included: false },
+      { text: 'Bulk Ledger Actions (Payments, Deletion, CSV Export)', included: false },
+      { text: 'Personalised Logo & Signature', included: false },
+      { text: 'Personalised Watermark & Company Watermark Removal', included: false },
+      { text: 'Document Duplication & Document Type Converter', included: false },
+      { text: 'AI Smart Billing & 24/7 AI Support', included: false },
+      { text: 'Recurring Invoice Scheduler', included: false },
     ],
   },
   {
     id: 'basic' as const,
     tier: 'Basic',
     name: 'Basic',
-    tagline: 'Perfect for freelancers scaling their invoicing.',
-    monthly: '₹200',
-    annual: '₹160',
-    annualNote: 'Billed ₹1,920/year — save ₹480.',
+    tagline: 'Perfect for freelancers & businesses scaling document management.',
+    monthly: '₹199',
+    annual: '₹159',
+    annualNote: 'Billed ₹1,908/year — save 20%.',
     monthlyNote: 'Billed monthly. Cancel anytime.',
     popular: false,
-    limit: 50,
+    limit: 60,
+    reportLimit: 5,
     features: [
-      { text: 'Up to 50 invoices / month', included: true },
-      { text: '2 business profiles', included: true },
-      { text: 'Invoice, Quotation & Purchase Order', included: true },
-      { text: 'Simple + Advanced templates', included: true },
-      { text: 'PDF export', included: true },
-      { text: 'Sales & Purchase ledger', included: true },
-      { text: 'AI Smart Billing (Gemini)', included: false },
-      { text: 'Priority support', included: false },
+      { text: '60 Documents / month total quota', included: true },
+      { text: '5 Accounting Reports / month', included: true },
+      { text: 'Bulk Database Management for All Registries', included: true },
+      { text: 'Create Own Custom Simple & Advanced Templates', included: true },
+      { text: 'Bulk Ledger Actions for Payments, Deletion & CSV Exports', included: true },
+      { text: 'Personalised Company Logo & Signature', included: true },
+      { text: 'Personalised Watermark & MakInvoices Watermark Removal', included: true },
+      { text: 'Duplicate Documents & Convert Document Types', included: true },
+      { text: 'Sales Ledger and Purchase Ledger Access', included: true },
+      { text: 'Interactive Document Builder & Expenses Tracker', included: true },
+      { text: 'Auto UPI Payment QR & Dark/Light Mode', included: true },
+      { text: 'AI Smart Billing & 24/7 AI Support', included: false },
+      { text: 'Recurring Invoice Scheduler', included: false },
     ],
   },
   {
     id: 'pro' as const,
-    tier: 'Pro',
+    tier: 'Professional',
     name: 'Professional',
-    tagline: 'For growing businesses that bill at volume.',
-    monthly: '₹350',
-    annual: '₹280',
-    annualNote: 'Billed ₹3,360/year — save ₹840.',
+    tagline: 'For growing businesses requiring AI billing & recurring automation.',
+    monthly: '₹299',
+    annual: '₹239',
+    annualNote: 'Billed ₹2,868/year — save 20%.',
     monthlyNote: 'Billed monthly. Cancel anytime.',
     popular: true,
-    limit: 100,
+    limit: 140,
+    reportLimit: 15,
     features: [
-      { text: 'Up to 100 invoices / month', included: true },
-      { text: '3 business profiles', included: true },
-      { text: 'All document types incl. Debit & Credit Notes', included: true },
-      { text: 'All templates + custom logo & signature', included: true },
-      { text: 'AI Smart Billing (Gemini)', included: true },
-      { text: 'Multi-rate tax splits', included: true },
-      { text: 'Region-aware number formatting', included: true },
-      { text: 'Priority support', included: false },
+      { text: '140 Documents / month total quota', included: true },
+      { text: '15 Accounting Reports / month', included: true },
+      { text: 'AI Smart Billing Feature with Gemini Parsing', included: true },
+      { text: '24*7 Dedicated MakInvoices AI Assistant Support', included: true },
+      { text: 'Automated Recurring Invoice Scheduler', included: true },
+      { text: 'Bulk Database Management & Bulk Ledger Actions', included: true },
+      { text: 'Create Own Custom Simple & Advanced Templates', included: true },
+      { text: 'Personalised Logo, Signature & Watermark Removal', included: true },
+      { text: 'Duplicate Existing Documents & Document Converter', included: true },
+      { text: 'Full Sales & Purchase Ledger Capabilities', included: true },
+      { text: 'Interactive Document Builder & Expenses Tracker', included: true },
+      { text: 'Unlimited Documents & Reports', included: false },
+      { text: 'Dedicated Account Manager & VIP Support', included: false },
     ],
   },
   {
     id: 'unlimited' as const,
-    tier: 'Unlimited',
-    name: 'Unlimited',
-    tagline: 'No caps, no limits. Built for high-volume operations.',
-    monthly: '₹600',
-    annual: '₹480',
-    annualNote: 'Billed ₹5,760/year — save ₹1,440.',
+    tier: 'Enterprise',
+    name: 'Enterprise',
+    tagline: 'Unlimited scale and dedicated support for large operations.',
+    monthly: '₹599',
+    annual: '₹479',
+    annualNote: 'Billed ₹5,748/year — save 20%.',
     monthlyNote: 'Billed monthly. Cancel anytime.',
     popular: false,
     limit: Infinity,
+    reportLimit: Infinity,
     features: [
-      { text: 'Unlimited invoices', included: true },
-      { text: 'Unlimited business profiles', included: true },
-      { text: 'All document types incl. Debit & Credit Notes', included: true },
-      { text: 'All templates + custom logo & signature', included: true },
-      { text: 'AI Smart Billing (Gemini)', included: true },
-      { text: 'RAG-trained AI chat support', included: true },
-      { text: 'Recurring invoice scheduler', included: true },
-      { text: 'Priority support with SLA', included: true },
+      { text: 'Unlimited Monthly Documents Quota', included: true },
+      { text: 'Unlimited Accounting Reports / month', included: true },
+      { text: 'Priority 24/7 VIP Support & Service Level Agreement', included: true },
+      { text: 'Dedicated Account Manager & Custom Onboarding', included: true },
+      { text: 'AI Smart Billing & 24/7 MakInvoices AI Assistant Support', included: true },
+      { text: 'Automated Recurring Invoice Scheduler', included: true },
+      { text: 'Bulk Database Management & Bulk Ledger Actions', included: true },
+      { text: 'Create Own Custom Simple & Advanced Templates', included: true },
+      { text: 'Personalised Logo, Signature & Watermark', included: true },
+      { text: 'Duplicate Existing Documents & Document Converter', included: true },
+      { text: 'Full Sales & Purchase Ledger Capabilities', included: true },
     ],
   },
 ];
@@ -120,6 +149,11 @@ export default function SubscriptionPage({
   const [isYearly, setIsYearly] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState<string | null>(null);
+  const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({});
+
+  const toggleExpandPlan = (planId: string) => {
+    setExpandedPlans((prev) => ({ ...prev, [planId]: !prev[planId] }));
+  };
 
   // Normalise mapped subscription tier (enterprise maps to unlimited conceptually for limits check)
   const activeTier = subscriptionTier === 'enterprise' ? 'unlimited' : subscriptionTier;
@@ -149,8 +183,8 @@ export default function SubscriptionPage({
   
   const getActiveLimit = () => {
     if (activeTier === 'free') return 10;
-    if (activeTier === 'basic') return 50;
-    if (activeTier === 'pro') return 100;
+    if (activeTier === 'basic') return 60;
+    if (activeTier === 'pro') return 140;
     return Infinity;
   };
 
@@ -200,12 +234,12 @@ export default function SubscriptionPage({
             
             <p className="text-[10px] text-[#64748b] dark:text-[#94a3b8] mt-1 font-medium">
               {activeTier === 'free' 
-                ? 'Usage limited to 10 invoices per month.' 
+                ? 'Starter: Limit of 10 documents & 1 report/mo.' 
                 : activeTier === 'basic'
-                  ? 'Basic plan limits are active on your account.'
+                  ? 'Basic: Limit of 60 documents & 5 reports/mo.'
                   : activeTier === 'pro' 
-                    ? 'Professional billing activated on your account.'
-                    : 'Unlimited capabilities fully unlocked.'}
+                    ? 'Professional: Limit of 140 documents & 15 reports/mo with AI Smart Billing.'
+                    : 'Enterprise: Unlimited documents & reports fully unlocked.'}
             </p>
             
             {/* Usage limit meter */}
@@ -262,6 +296,8 @@ export default function SubscriptionPage({
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {PLANS.map((plan) => {
           const isActive = activeTier === plan.id;
+          const displayedFeatures = plan.features.slice(0, 5);
+
           return (
             <div 
               key={plan.id} 
@@ -269,7 +305,7 @@ export default function SubscriptionPage({
                 theme === 'dark' ? 'bg-[#111a36] border-[#bae6fd]/40 hover:border-[#bae6fd]/60 dark:border-[#223269]/50 dark:hover:border-[#223269]/80' : 'bg-white border-[#bae6fd]/60 hover:border-[#0284c7]/40 shadow-xs'
               } ${plan.popular ? 'border-[#0284c7]/50 ring-1 ring-[#0284c7]/30 shadow-[#0284c7]/5' : ''} ${isActive ? 'ring-2 ring-[#0284c7]' : ''}`}
             >
-              <div className="relative">
+              <div className="relative flex-1 flex flex-col">
                 {plan.popular && (
                   <div className="absolute -top-10 left-1/2 transform -translate-x-1/2">
                     <span className="text-[8px] px-2 py-0.5 bg-gradient-to-r from-[#0284c7] to-[#2563eb] text-white rounded-full font-black uppercase tracking-wider shadow-md">Most Popular</span>
@@ -283,22 +319,22 @@ export default function SubscriptionPage({
                     <span className="text-[9px] px-2 py-0.5 bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] rounded-full font-bold">Active</span>
                   )}
                 </div>
-                <p className="text-[11px] text-[#64748b] dark:text-[#64748b] dark:text-[#94a3b8] mt-2 leading-relaxed min-h-[36px]">
+                <p className="text-[11px] text-[#64748b] dark:text-[#94a3b8] mt-2 leading-relaxed min-h-[36px]">
                   {plan.tagline}
                 </p>
                 
-                <div className="flex items-baseline gap-1 my-5">
+                <div className="flex items-baseline gap-1 my-4">
                   <span className="text-3xl font-black text-[#0f172a] dark:text-white">
                     {isYearly ? plan.annual : plan.monthly}
                   </span>
                   <span className="text-xs text-[#64748b] dark:text-[#94a3b8]">/mo</span>
                 </div>
-                <p className="text-[10px] font-mono text-[#64748b] dark:text-[#94a3b8] dark:text-zinc-500 min-h-[24px]">
+                <p className="text-[10px] font-mono text-[#64748b] dark:text-zinc-500 min-h-[24px]">
                   {isYearly ? plan.annualNote : plan.monthlyNote}
                 </p>
 
-                <div className="border-t border-[#bae6fd]/30 dark:border-[#223269]/30 pt-4 space-y-2.5 mb-6">
-                  {plan.features.map((feat, i) => (
+                <div className="border-t border-[#bae6fd]/30 dark:border-[#223269]/30 pt-4 space-y-2.5 mb-6 flex-1">
+                  {displayedFeatures.map((feat, i) => (
                     <div key={i} className={`flex items-start gap-2 text-[11px] ${feat.included ? '' : 'opacity-40'}`}>
                       {feat.included ? (
                         <div className="w-4 h-4 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
@@ -317,7 +353,7 @@ export default function SubscriptionPage({
                 type="button"
                 disabled={isActive || loadingPlan !== null}
                 onClick={() => handleUpgradeSimulate(plan.id)}
-                className={`w-full py-2.5 font-bold text-xs rounded-xl cursor-pointer transition-all border flex items-center justify-center gap-2 ${
+                className={`w-full py-2.5 font-bold text-xs rounded-xl cursor-pointer transition-all border flex items-center justify-center gap-2 mt-2 ${
                   isActive
                     ? 'bg-[#e0f2fe] dark:bg-zinc-800/60 border-transparent text-[#64748b] dark:text-[#94a3b8] dark:text-zinc-500 cursor-default'
                     : plan.popular
@@ -344,6 +380,224 @@ export default function SubscriptionPage({
             </div>
           );
         })}
+      </div>
+
+      {/* Comprehensive Subscription Comparison Table */}
+      <div className="mt-12 space-y-6">
+        <div className="text-center space-y-2">
+          <h3 className="text-xl sm:text-2xl font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
+            Full Feature Comparison Matrix
+          </h3>
+          <p className="text-xs sm:text-sm text-[#64748b] dark:text-[#94a3b8] max-w-2xl mx-auto">
+            Compare all capabilities, monthly document quotas, bulk ledger tools, template builders, and AI features across all plan tiers in detail.
+          </p>
+        </div>
+
+        <div className="overflow-x-auto rounded-3xl border border-[#bae6fd]/60 dark:border-[#223269]/60 bg-white dark:bg-[#111a36] shadow-sm">
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead>
+              <tr className="border-b border-[#bae6fd]/60 dark:border-[#223269]/60 bg-[#f4f9ff] dark:bg-[#0b1329]">
+                <th className="p-4 text-xs font-black uppercase text-[#0f172a] dark:text-white w-1/3">Feature Capabilities</th>
+                <th className="p-4 text-xs font-black uppercase text-center text-[#0f172a] dark:text-white">Starter</th>
+                <th className="p-4 text-xs font-black uppercase text-center text-[#0f172a] dark:text-white">Basic</th>
+                <th className="p-4 text-xs font-black uppercase text-center text-[#0284c7] dark:text-[#38bdf8]">Professional</th>
+                <th className="p-4 text-xs font-black uppercase text-center text-[#0f172a] dark:text-white">Enterprise</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#bae6fd]/30 dark:divide-[#223269]/40 text-xs">
+              {/* Monthly Quotas & Limits */}
+              <tr className="bg-slate-50/50 dark:bg-[#162244]/50">
+                <td colSpan={5} className="p-3 px-4 font-black uppercase tracking-wider text-[10px] text-[#0284c7] dark:text-[#38bdf8]">Monthly Quotas &amp; Limits</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Documents / Month (Sales &amp; Purchase Total)</td>
+                <td className="p-4 text-center font-bold">10 Docs</td>
+                <td className="p-4 text-center font-bold">60 Docs</td>
+                <td className="p-4 text-center font-bold text-[#0284c7] dark:text-[#38bdf8]">140 Docs</td>
+                <td className="p-4 text-center font-bold text-emerald-600 dark:text-emerald-400">Unlimited</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Accounting Reports / Month</td>
+                <td className="p-4 text-center font-bold">1 Report</td>
+                <td className="p-4 text-center font-bold">5 Reports</td>
+                <td className="p-4 text-center font-bold text-[#0284c7] dark:text-[#38bdf8]">15 Reports</td>
+                <td className="p-4 text-center font-bold text-emerald-600 dark:text-emerald-400">Unlimited</td>
+              </tr>
+
+              {/* Core Ledger Access & Actions */}
+              <tr className="bg-slate-50/50 dark:bg-[#162244]/50">
+                <td colSpan={5} className="p-3 px-4 font-black uppercase tracking-wider text-[10px] text-[#0284c7] dark:text-[#38bdf8]">Ledger Access &amp; Document Controls</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Sales Ledger (Invoices, Quotations, Proforma, Credit Notes)</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Purchase Ledger (Purchases, POs, Purchase Debit Notes)</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Share Documents via WhatsApp &amp; Email</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Edit, Record Payments, Download PDF &amp; Delete Documents</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+              </tr>
+
+              {/* Document Builder & Expense Management */}
+              <tr className="bg-slate-50/50 dark:bg-[#162244]/50">
+                <td colSpan={5} className="p-3 px-4 font-black uppercase tracking-wider text-[10px] text-[#0284c7] dark:text-[#38bdf8]">Document Builder &amp; Expenses</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Interactive Editable Document Builder</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Expense Tracking &amp; Category Log</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Interactive Billing &amp; Financial Dashboard</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">System Presets for Invoice Templates</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Auto-Generated Payment QR from UPI ID</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Dark / Light Theme Toggle Mode</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+                <td className="p-4 text-center text-emerald-500">✓</td>
+              </tr>
+
+              {/* Master Databases & Bulk Operations */}
+              <tr className="bg-slate-50/50 dark:bg-[#162244]/50">
+                <td colSpan={5} className="p-3 px-4 font-black uppercase tracking-wider text-[10px] text-[#0284c7] dark:text-[#38bdf8]">Databases &amp; Bulk Operations</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Database Entry (Client, Vendor, HSN, Transport, Product Category, Catalog)</td>
+                <td className="p-4 text-center font-bold">Single Entry</td>
+                <td className="p-4 text-center font-bold text-emerald-600 dark:text-emerald-400">Bulk + Single</td>
+                <td className="p-4 text-center font-bold text-emerald-600 dark:text-emerald-400">Bulk + Single</td>
+                <td className="p-4 text-center font-bold text-emerald-600 dark:text-emerald-400">Bulk + Single</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Bulk Ledger Actions (Bulk Record Payments, Delete Bulk Docs, Export CSV)</td>
+                <td className="p-4 text-center text-rose-500 font-bold">✕</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Duplicate Existing Document Without Remaking</td>
+                <td className="p-4 text-center text-rose-500 font-bold">✕</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Convert Document Type (e.g. Quotation to Tax Invoice)</td>
+                <td className="p-4 text-center text-rose-500 font-bold">✕</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+              </tr>
+
+              {/* Template Customization & Branding */}
+              <tr className="bg-slate-50/50 dark:bg-[#162244]/50">
+                <td colSpan={5} className="p-3 px-4 font-black uppercase tracking-wider text-[10px] text-[#0284c7] dark:text-[#38bdf8]">Template Customization &amp; Branding</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Create Own Templates using Simple &amp; Advanced Builders</td>
+                <td className="p-4 text-center text-rose-500 font-bold">✕</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Personalised Logo &amp; Personalised Digital Signature</td>
+                <td className="p-4 text-center text-rose-500 font-bold">✕</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Remove MakInvoices Watermark &amp; Add Personalised Watermark</td>
+                <td className="p-4 text-center text-rose-500 font-bold">✕</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+              </tr>
+
+              {/* AI Features & Automation */}
+              <tr className="bg-slate-50/50 dark:bg-[#162244]/50">
+                <td colSpan={5} className="p-3 px-4 font-black uppercase tracking-wider text-[10px] text-[#0284c7] dark:text-[#38bdf8]">AI Features &amp; Automation</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">AI Smart Billing Feature (Gemini Document Parsing)</td>
+                <td className="p-4 text-center text-rose-500 font-bold">✕</td>
+                <td className="p-4 text-center text-rose-500 font-bold">✕</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">MakInvoices AI Assistant 24*7 Support</td>
+                <td className="p-4 text-center text-rose-500 font-bold">✕</td>
+                <td className="p-4 text-center text-rose-500 font-bold">✕</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Recurring Invoice Scheduler Automation</td>
+                <td className="p-4 text-center text-rose-500 font-bold">✕</td>
+                <td className="p-4 text-center text-rose-500 font-bold">✕</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+                <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">Support Channels &amp; Priority SLA</td>
+                <td className="p-4 text-center font-medium">Email / FAQ / Ticket</td>
+                <td className="p-4 text-center font-medium">Standard Support</td>
+                <td className="p-4 text-center font-medium text-[#0284c7] dark:text-[#38bdf8]">24*7 AI + Priority</td>
+                <td className="p-4 text-center font-bold text-emerald-600 dark:text-emerald-400">VIP Priority + SLA</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Trust badging / Security notice */}
