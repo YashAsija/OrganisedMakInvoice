@@ -236,6 +236,101 @@ const faqs = [
     q: 'What is Product Category in the Master Registry?',
     a: 'Product Category registry allows you to define categories (e.g., Consulting, Hardware, SaaS) to organize your materials catalog and filter accounting reports.',
     important: false
+  },
+  {
+    q: 'How do I create and issue Delivery Notes?',
+    a: 'Navigate to Sales Ledger, select the Delivery Notes tab, and click "New Delivery Note". Fill in recipient details, transport carrier, driver contact, and vehicle numbers. Delivery Notes allow you to document goods dispatch separately from payment invoices.',
+    important: true
+  },
+  {
+    q: 'How do searchable comboboxes work when picking items or clients?',
+    a: 'When creating an invoice or document, click the Client or Item dropdown field. Smart searchable comboboxes allow instant typing to filter by name, company, HSN code, or SKU, with full keyboard arrow navigation and instant auto-fill.',
+    important: true
+  },
+  {
+    q: 'How do I submit and track support tickets?',
+    a: 'Scroll down on the Help & Support page to the Support Tickets section. Select a category and priority, then submit your issue. You can view open/closed ticket status, read responses from staff, and send live reply messages directly from the ticket viewer.',
+    important: true
+  },
+  {
+    q: 'Can I print or export multi-copy PDFs (Original, Duplicate, Triplicate)?',
+    a: 'Yes! When exporting or printing documents, select your desired copy options: Original for Recipient, Duplicate for Transporter, Triplicate for Supplier, or Extra Copy. The ultra-fast vector engine compiles all copies into a single downloadable PDF.',
+    important: true
+  },
+  {
+    q: 'How is Uncollected Revenue and Cumulative Outstanding computed?',
+    a: 'The Accounting Report calculates true uncollected revenue across active Tax Invoices. Soft-deleted documents, voided bills, proforma quotes, and purchase bills are strictly excluded so your Dashboard Receivables match the Accounting Report balance perfectly.',
+    important: true
+  },
+  {
+    q: 'Can I display Client and Vendor Company Names on invoices?',
+    a: 'Yes. You can enter both contact person name and Company Name in the Client and Vendor databases or directly on invoice forms. The system renders the Company Name clearly on Billed To and Shipped To invoice sections, master registries, and sales ledgers.',
+    important: false
+  },
+  {
+    q: 'How do percentage (%) and fixed amount (₹) discounts work?',
+    a: 'You can apply discounts either per individual line item or for the whole document subtotal. Choose between percentage rate (% discount) or fixed flat currency amount (₹ discount) for flexible price adjustments.',
+    important: false
+  },
+  {
+    q: 'Is the app layout optimized for mobile phones and tablets?',
+    a: 'Yes. MakInvoices features a fully responsive 100dvh layout with safe-area spacing, touch-friendly bento grid analytics, and viewport-aware action menus that automatically position themselves without clipping on small screens.',
+    important: false
+  },
+  {
+    q: 'Where can I find the Interactive Onboarding Guide and Video Tutorials?',
+    a: 'On the Help & Support page, click "Interactive Onboarding Guide" to follow a 5-step step-by-step setup wizard, or click "Video Tutorials" to stream walkthrough videos on templates, GST tax splits, and purchase ledgers.',
+    important: false
+  },
+  {
+    q: 'What document types are supported in the Sales Ledger?',
+    a: 'The Sales Ledger organizes 5 outbound document sub-sections: Tax Invoices (for official tax billing), Proforma Invoices (advance estimates), Credit Notes (sales returns/adjustments), Quotes/Estimates (proposals), and Delivery Notes (goods dispatch challans).',
+    important: true
+  },
+  {
+    q: 'How does the Bin / Trash (Soft Delete) feature work in Sales Ledger?',
+    a: 'Deleting an invoice moves it to the Bin sub-section instead of permanent loss. Invoices in the Bin are excluded from revenue totals and accounting reports. You can restore them anytime or click "Empty Trash" for permanent removal.',
+    important: true
+  },
+  {
+    q: 'What document statuses can I set on Sales Ledger invoices?',
+    a: 'Documents can be set to Draft (editing in progress), Issued (sent to client), Paid (payment received), Overdue (past due date), or Cancelled/Void (invalidated bill). Statuses update metrics across Dashboard and Accounting Reports automatically.',
+    important: false
+  },
+  {
+    q: 'What sub-sections are available in the Purchases Ledger?',
+    a: 'The Purchases Ledger contains 3 main sub-sections: Purchase Bills (inbound supplier invoices), Purchase Orders / PO (official supply requests), and Debit Notes (purchase returns to vendors).',
+    important: true
+  },
+  {
+    q: 'How do Purchase Analytics and vendor payment tracking work?',
+    a: 'The Purchases Ledger displays live KPI cards at the top showing Total Supplier Spending, Total Paid Amount, and Pending Vendor Balance. You can mark purchase bills as Paid or Pending to keep supplier ledgers balanced.',
+    important: true
+  },
+  {
+    q: 'How do I record and track Business Expenses?',
+    a: 'Go to Financial Hub → Accounting Report or Dashboard → Expense Tracker. Click "Add Expense", enter the expense title, total amount, category (Rent, Logistics, Marketing, Utilities, Salaries, SaaS, etc.), date, and payment mode (UPI, Cash, Bank Transfer, Card).',
+    important: true
+  },
+  {
+    q: 'What Expense Categories and Payment Modes are available?',
+    a: 'Supported expense categories include Office Rent, Logistics/Freight, Marketing, Utilities, Raw Materials, Staff Salaries, Software/SaaS, Maintenance, and Miscellaneous. Supported payment modes include Cash, Bank Transfer, UPI, Credit/Debit Card, and Cheque.',
+    important: false
+  },
+  {
+    q: 'How do Expenses affect my Net Profit and Accounting Report?',
+    a: 'Recorded expenses are automatically aggregated into your monthly financial analytics, deducted from total sales revenue to show net operating profit, and graphed by category in the Accounting Report.',
+    important: false
+  },
+  {
+    q: 'How do Quick Share and messaging links work for invoices?',
+    a: 'On any invoice card or preview, click the "Share" button to generate pre-formatted document summary messages for WhatsApp, Email, or SMS with total amount, due date, payment UPI details, and PDF attachments.',
+    important: false
+  },
+  {
+    q: 'Can I bulk import or export Clients, Vendors, and Catalog Items?',
+    a: 'Yes. In the Master Registries (Client Database, Vendor Database, Material Catalog), click "Export Excel" to download your complete master list, or click "Bulk Import" to upload multiple profiles using our standard Excel spreadsheet template.',
+    important: false
   }
 ];
 
