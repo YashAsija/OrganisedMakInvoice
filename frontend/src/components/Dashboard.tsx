@@ -7886,9 +7886,11 @@ export default function Dashboard({
                 <h2 className="text-xs sm:text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight flex items-center gap-2 truncate" style={{fontFamily: "'Fraunces', serif"}}>
                   <span className="w-3.5 h-px bg-[#0284c7] dark:bg-[#38bdf8] inline-block shrink-0" />
                   <span className="truncate">
-                    {activeTab === 'purchases'
-                      ? (purchaseLedgerSection === 'purchase_order' ? 'Purchase Orders Ledger' : purchaseLedgerSection === 'purchase_debit_note' ? 'Purchase Debit Notes' : 'Purchases Ledger')
-                      : (ledgerSection === 'proforma' ? 'Proforma Invoices' : ledgerSection === 'credit_note' ? 'Credit Notes' : ledgerSection === 'debit_note' ? 'Debit Notes' : ledgerSection === 'quote' ? 'Quotes & Estimates' : 'Invoices Ledger')}
+                    {showBinView
+                      ? 'Trash Bin / Recycled Documents'
+                      : activeTab === 'purchases'
+                        ? (purchaseLedgerSection === 'purchase_order' ? 'Purchase Orders Ledger' : purchaseLedgerSection === 'purchase_debit_note' ? 'Purchase Debit Notes' : 'Purchases Ledger')
+                        : (ledgerSection === 'proforma' ? 'Proforma Invoices' : ledgerSection === 'credit_note' ? 'Credit Notes' : ledgerSection === 'debit_note' ? 'Debit Notes' : ledgerSection === 'quote' ? 'Quotes & Estimates' : 'Invoices Ledger')}
                   </span>
                 </h2>
                 <span className="px-1.5 py-0.5 bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] rounded text-[9px] font-black shrink-0" style={{fontFamily: "'IBM Plex Mono', monospace"}}>{filteredInvoices.length} Docs</span>
@@ -9371,95 +9373,99 @@ export default function Dashboard({
 
                 <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
 
-                  <button
+                  {!showBinView && (
+                    <>
+                      <button
 
-                    onClick={handleBulkExportPDF}
+                        onClick={handleBulkExportPDF}
 
-                    className="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-sky-600 hover:bg-sky-500 rounded-xl text-[9px] sm:text-[10px] font-extrabold flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
+                        className="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-sky-600 hover:bg-sky-500 rounded-xl text-[9px] sm:text-[10px] font-extrabold flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
 
-                    title="Export selected bills sequentially to PDF"
+                        title="Export selected bills sequentially to PDF"
 
-                  >
+                      >
 
-                    <FileDown className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <FileDown className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
 
-                    <span>PDFs</span>
+                        <span>PDFs</span>
 
-                  </button>
+                      </button>
 
-                  
+                      
 
-                  <button
+                      <button
 
-                    onClick={handleBulkExportExcel}
+                        onClick={handleBulkExportExcel}
 
-                    className="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-[9px] sm:text-[10px] font-extrabold flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
+                        className="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-[9px] sm:text-[10px] font-extrabold flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
 
-                    title="Export selected bills ledger details to Excel CSV"
+                        title="Export selected bills ledger details to Excel CSV"
 
-                  >
+                      >
 
-                    <Database className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <Database className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
 
-                    <span>Excel</span>
+                        <span>Excel</span>
 
-                  </button>
+                      </button>
 
 
 
-                  <select
+                      <select
 
-                    onChange={(e) => {
+                        onChange={(e) => {
 
-                      if (e.target.value) {
+                          if (e.target.value) {
 
-                        onBulkUpdateInvoicesStatus(selectedInvoiceIds, e.target.value as any);
+                            onBulkUpdateInvoicesStatus(selectedInvoiceIds, e.target.value as any);
 
-                        setSelectedInvoiceIds([]);
+                            setSelectedInvoiceIds([]);
 
-                      }
+                          }
 
-                    }}
+                        }}
 
-                    value=""
+                        value=""
 
-                    className="px-1.5 py-1 sm:px-2 sm:py-1.5 bg-neutral-800 text-white rounded-xl text-[9px] sm:text-[10px] font-extrabold focus:outline-none border border-neutral-750 cursor-pointer"
+                        className="px-1.5 py-1 sm:px-2 sm:py-1.5 bg-neutral-800 text-white rounded-xl text-[9px] sm:text-[10px] font-extrabold focus:outline-none border border-neutral-750 cursor-pointer"
 
-                    title="Change status in bulk"
+                        title="Change status in bulk"
 
-                  >
+                      >
 
-                    <option value="" disabled>Status...</option>
+                        <option value="" disabled>Status...</option>
 
-                    {ledgerSection === 'credit_note' || (activeTab === 'purchases' && purchaseLedgerSection === 'purchase_debit_note') ? (
+                        {ledgerSection === 'credit_note' || (activeTab === 'purchases' && purchaseLedgerSection === 'purchase_debit_note') ? (
 
-                      <>
+                          <>
 
-                        <option value="pending">Set Pending</option>
+                            <option value="pending">Set Pending</option>
 
-                        <option value="approved">Set Approved</option>
+                            <option value="approved">Set Approved</option>
 
-                        <option value="rejected">Set Not Approved</option>
+                            <option value="rejected">Set Not Approved</option>
 
-                      </>
+                          </>
 
-                    ) : (
+                        ) : (
 
-                      <>
+                          <>
 
-                        <option value="paid">Set Paid</option>
+                            <option value="paid">Set Paid</option>
 
-                        <option value="pending">Set Pending</option>
+                            <option value="pending">Set Pending</option>
 
-                        <option value="draft">Set Draft</option>
+                            <option value="draft">Set Draft</option>
 
-                        <option value="cancelled">Set Cancelled</option>
+                            <option value="cancelled">Set Cancelled</option>
 
-                      </>
+                          </>
 
-                    )}
+                        )}
 
-                  </select>
+                      </select>
+                    </>
+                  )}
 
 
 
@@ -9467,7 +9473,13 @@ export default function Dashboard({
 
                     onClick={() => {
 
-                      onBulkDeleteInvoices(selectedInvoiceIds);
+                      if (showBinView) {
+                        selectedInvoiceIds.forEach(id => {
+                          if (onHardDeleteInvoice) onHardDeleteInvoice(id);
+                        });
+                      } else {
+                        onBulkDeleteInvoices(selectedInvoiceIds);
+                      }
 
                       setSelectedInvoiceIds([]);
 
@@ -9475,13 +9487,13 @@ export default function Dashboard({
 
                     className="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-rose-600 hover:bg-rose-500 rounded-xl text-[9px] sm:text-[10px] font-extrabold flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
 
-                    title="Delete all selected bills"
+                    title={showBinView ? "Permanently delete selected documents from cloud" : "Delete all selected documents"}
 
                   >
 
                     <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
 
-                    <span>Delete</span>
+                    <span>{showBinView ? "Delete Permanently" : "Delete"}</span>
 
                   </button>
 
@@ -9679,19 +9691,15 @@ export default function Dashboard({
 
                 </div>
 
-                <button
-
-                  onClick={() => setActiveTab(isPurchaseOrigin ? 'purchases' : 'invoices')}
-
-                  className="px-2.5 py-1.5 sm:px-4 sm:py-1.5 bg-white dark:bg-[#111a36] border border-[#bae6fd] dark:border-[#223269]/60 hover:bg-[#f4f9ff]/50 dark:hover:bg-[#1b264f]/40 text-[#0f172a] dark:text-white rounded-xl text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider flex items-center gap-1 sm:gap-1.5 cursor-pointer shadow-xs transition-all active:scale-95 whitespace-nowrap ml-auto shrink-0"
-
-                >
-
-                  <ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0284c7] dark:text-[#38bdf8]" />
-
-                  <span>Back to Ledger</span>
-
-                </button>
+                <div className="flex items-center gap-2 ml-auto shrink-0">
+                  <button
+                    onClick={() => setActiveTab(isPurchaseOrigin ? 'purchases' : 'invoices')}
+                    className="px-2.5 py-1.5 sm:px-4 sm:py-1.5 bg-white dark:bg-[#111a36] border border-[#bae6fd] dark:border-[#223269]/60 hover:bg-[#f4f9ff]/50 dark:hover:bg-[#1b264f]/40 text-[#0f172a] dark:text-white rounded-xl text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider flex items-center gap-1 sm:gap-1.5 cursor-pointer shadow-xs transition-all active:scale-95 whitespace-nowrap shrink-0"
+                  >
+                    <ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0284c7] dark:text-[#38bdf8]" />
+                    <span>Back to Ledger</span>
+                  </button>
+                </div>
 
               </div>
 
@@ -9841,97 +9849,237 @@ export default function Dashboard({
 
               ) : (
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-4">
 
-                  {filteredDrafts.map(inv => {
+                  {/* Draft Select-All Toolbar */}
 
-                    const docTypeKey = getInvoiceDocumentType(inv);
+                  <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-[#111a36] rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/50 text-xs">
 
-                    const badge = docTypeBadges[docTypeKey] || docTypeBadges.invoice;
+                    <label className="flex items-center gap-2 font-extrabold text-[#0f172a] dark:text-white cursor-pointer select-none">
 
-                    return (
+                      <input
 
-                      <div key={inv.id} className="p-5 bg-white dark:bg-[#111a36] border border-[#bae6fd]/50 dark:border-[#223269]/60 rounded-2xl shadow-xs hover:shadow-md hover:border-[#bae6fd]/80 dark:hover:border-[#223269]/90 transition-all duration-200 group relative flex flex-col justify-between">
+                        type="checkbox"
 
-                        <div>
+                        checked={filteredDrafts.length > 0 && filteredDrafts.every(inv => selectedInvoiceIds.includes(inv.id))}
 
-                          <div className="flex justify-between items-start mb-3 gap-2">
+                        onChange={(e) => {
 
-                            <div>
+                          if (e.target.checked) {
 
-                              <span className="text-[10px] font-black text-[#0284c7] dark:text-[#38bdf8] font-mono tracking-tight block mb-1">{inv.invoiceNumber}</span>
+                            const allDraftIds = filteredDrafts.map(d => d.id);
 
-                              <h4 className="text-sm font-black text-[#0f172a] dark:text-white uppercase truncate">{inv.clientName || 'Draft Profile'}</h4>
+                            setSelectedInvoiceIds(Array.from(new Set([...selectedInvoiceIds, ...allDraftIds])));
 
-                            </div>
+                          } else {
 
-                            <div className="flex flex-col items-end gap-1 shrink-0">
+                            const draftIdSet = new Set(filteredDrafts.map(d => d.id));
 
-                              <span className={`px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider border ${badge.style}`}>
+                            setSelectedInvoiceIds(selectedInvoiceIds.filter(id => !draftIdSet.has(id)));
 
-                                {badge.label}
+                          }
 
-                              </span>
+                        }}
 
-                              <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-slate-100/80 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
+                        className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 dark:border-zinc-700 cursor-pointer"
 
-                                Draft
+                      />
 
-                              </span>
+                      <span>Select All ({filteredDrafts.length})</span>
 
-                            </div>
-
-                          </div>
-
-                          
-
-                          <div className="flex items-center justify-between mb-4 text-[10px] text-slate-500 dark:text-zinc-400 font-semibold font-mono">
-
-                            <span>Saved on {inv.date}</span>
-
-                            <span className="font-bold text-[#0f172a] dark:text-white">{currencySymbol}{inv.grandTotal ? inv.grandTotal.toFixed(2) : '0.00'}</span>
-
-                          </div>
-
-                        </div>
+                    </label>
 
 
 
-                        <div className="pt-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/40 flex gap-2">
+                    {selectedInvoiceIds.some(id => filteredDrafts.some(d => d.id === id)) && (
 
-                          <button 
+                      <div className="flex items-center gap-2">
 
-                            onClick={() => onOpenInvoiceEditor(inv)}
+                        <span className="text-[11px] font-bold text-[#0284c7] dark:text-[#38bdf8]">
 
-                            className="flex-1 py-2 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex justify-center items-center gap-1.5 shadow-sm shadow-sky-500/10 active:scale-[0.98]"
+                          {selectedInvoiceIds.filter(id => filteredDrafts.some(d => d.id === id)).length} Selected
 
-                          >
+                        </span>
 
-                            <PenTool className="w-3 h-3" /> Resume Editing
+                        <button
 
-                          </button>
+                          type="button"
 
-                          <button 
+                          onClick={() => {
 
-                            onClick={() => onDeleteInvoice(inv.id)}
+                            const activeDraftIds = selectedInvoiceIds.filter(id => filteredDrafts.some(d => d.id === id));
 
-                            className="w-8 h-8 flex items-center justify-center bg-rose-50/50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-500 hover:text-rose-600 rounded-xl transition-all border border-rose-100/50 dark:border-rose-900/30 cursor-pointer shrink-0 active:scale-95"
+                            onBulkDeleteInvoices(activeDraftIds);
 
-                            title="Delete Draft"
+                            setSelectedInvoiceIds(selectedInvoiceIds.filter(id => !activeDraftIds.includes(id)));
 
-                          >
+                          }}
 
-                            <Trash2 className="w-3.5 h-3.5" />
+                          className="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[10px] font-extrabold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-xs"
 
-                          </button>
+                          title="Delete selected drafts"
 
-                        </div>
+                        >
+
+                          <Trash2 className="w-3 h-3" />
+
+                          <span>Delete Selected ({selectedInvoiceIds.filter(id => filteredDrafts.some(d => d.id === id)).length})</span>
+
+                        </button>
 
                       </div>
 
-                    );
+                    )}
 
-                  })}
+                  </div>
+
+
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    {filteredDrafts.map(inv => {
+
+                      const docTypeKey = getInvoiceDocumentType(inv);
+
+                      const badge = docTypeBadges[docTypeKey] || docTypeBadges.invoice;
+
+                      const isSelected = selectedInvoiceIds.includes(inv.id);
+
+
+
+                      return (
+
+                        <div 
+
+                          key={inv.id} 
+
+                          className={`p-5 bg-white dark:bg-[#111a36] border rounded-2xl shadow-xs hover:shadow-md transition-all duration-200 group relative flex flex-col justify-between ${
+
+                            isSelected 
+
+                              ? 'border-[#0284c7] dark:border-[#38bdf8] ring-1 ring-[#0284c7]/40 dark:ring-[#38bdf8]/40 bg-[#f0f9ff]/40 dark:bg-[#112347]/40' 
+
+                              : 'border-[#bae6fd]/50 dark:border-[#223269]/60 hover:border-[#bae6fd]/80 dark:hover:border-[#223269]/90'
+
+                          }`}
+
+                        >
+
+                          <div>
+
+                            <div className="flex justify-between items-start mb-3 gap-2">
+
+                              <div className="flex items-start gap-2.5 min-w-0">
+
+                                <input
+
+                                  type="checkbox"
+
+                                  checked={isSelected}
+
+                                  onChange={(e) => {
+
+                                    e.stopPropagation();
+
+                                    if (e.target.checked) {
+
+                                      setSelectedInvoiceIds([...selectedInvoiceIds, inv.id]);
+
+                                    } else {
+
+                                      setSelectedInvoiceIds(selectedInvoiceIds.filter(id => id !== inv.id));
+
+                                    }
+
+                                  }}
+
+                                  className="w-4 h-4 mt-0.5 rounded text-sky-600 focus:ring-sky-500 border-slate-300 dark:border-zinc-700 cursor-pointer shrink-0"
+
+                                />
+
+                                <div className="min-w-0">
+
+                                  <span className="text-[10px] font-black text-[#0284c7] dark:text-[#38bdf8] font-mono tracking-tight block mb-1">{inv.invoiceNumber}</span>
+
+                                  <h4 className="text-sm font-black text-[#0f172a] dark:text-white uppercase truncate">{inv.clientName || 'Draft Profile'}</h4>
+
+                                </div>
+
+                              </div>
+
+
+
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+
+                                <span className={`px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider border ${badge.style}`}>
+
+                                  {badge.label}
+
+                                </span>
+
+                                <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-slate-100/80 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
+
+                                  Draft
+
+                                </span>
+
+                              </div>
+
+                            </div>
+
+                            
+
+                            <div className="flex items-center justify-between mb-4 text-[10px] text-slate-500 dark:text-zinc-400 font-semibold font-mono">
+
+                              <span>Saved on {inv.date}</span>
+
+                              <span className="font-bold text-[#0f172a] dark:text-white">{currencySymbol}{inv.grandTotal ? inv.grandTotal.toFixed(2) : '0.00'}</span>
+
+                            </div>
+
+                          </div>
+
+
+
+                          <div className="pt-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/40 flex gap-2">
+
+                            <button 
+
+                              onClick={() => onOpenInvoiceEditor(inv)}
+
+                              className="flex-1 py-2 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex justify-center items-center gap-1.5 shadow-sm shadow-sky-500/10 active:scale-[0.98]"
+
+                            >
+
+                              <PenTool className="w-3 h-3" /> Resume Editing
+
+                            </button>
+
+
+
+                            <button 
+
+                              onClick={() => onDeleteInvoice(inv.id)}
+
+                              className="w-8 h-8 flex items-center justify-center bg-rose-50/50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-500 hover:text-rose-600 rounded-xl transition-all border border-rose-100/50 dark:border-rose-900/30 cursor-pointer shrink-0 active:scale-95"
+
+                              title="Delete Draft"
+
+                            >
+
+                              <Trash2 className="w-3.5 h-3.5" />
+
+                            </button>
+
+                          </div>
+
+                        </div>
+
+                      );
+
+                    })}
+
+                  </div>
 
                 </div>
 
