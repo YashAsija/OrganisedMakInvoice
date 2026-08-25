@@ -131,9 +131,9 @@ export function exportCollectiveReportPDF(
       themeRgb: [99, 102, 241]
     },
     purchase_invoice: {
-      topBanner: 'PURCHASE INVOICE ACCOUNTING REPORT',
-      subTitle: 'PURCHASE INVOICES LEDGER',
-      card1: 'TOTAL PURCHASE BILLED', card2: 'PAID TO SUPPLIERS', card3: 'PAYABLE BALANCE', card4: 'INPUT TAX CREDIT',
+      topBanner: 'PURCHASES ACCOUNTING REPORT',
+      subTitle: 'PURCHASES LEDGER',
+      card1: 'TOTAL PURCHASES BILLED', card2: 'PAID TO SUPPLIERS', card3: 'PAYABLE BALANCE', card4: 'INPUT TAX CREDIT',
       themeRgb: [139, 92, 246]
     },
     debit_note: {
@@ -202,15 +202,27 @@ export function exportCollectiveReportPDF(
   y = Math.max(ly + 1, ry + 4);
   // Helper to categorize an invoice
   const getDocTypeKey = (inv: Invoice): string => {
-    const rawType = (inv.invoiceType || (inv as any).type || 'invoice').toLowerCase();
-    const isPurchase = (inv as any).isPurchase || rawType.includes('purchase') || rawType === 'debit_note';
-    if (rawType === 'proforma' || rawType === 'proforma_invoice') return 'proforma';
-    if (rawType === 'receipt') return 'receipt';
-    if (rawType === 'quote' || rawType === 'estimate') return 'quote';
-    if (rawType === 'credit_note') return 'credit_note';
-    if (rawType === 'purchase_order' || rawType === 'po') return 'purchase_order';
-    if (rawType === 'purchase_invoice' || (isPurchase && rawType.includes('invoice'))) return 'purchase_invoice';
-    if (rawType === 'debit_note') return 'debit_note';
+    const rawType = (inv.invoiceType || (inv as any).type || (inv as any).docType || '').toLowerCase().trim();
+    const invNum = (inv.invoiceNumber || '').toUpperCase().trim();
+    const title = (inv.embeddedTemplate?.config?.header?.invoiceTitle || '').toLowerCase();
+
+    const isPurchase = (inv as any).isPurchase || 
+                       rawType.includes('purchase') || 
+                       rawType === 'purchases' || 
+                       rawType === 'purchase_invoice' || 
+                       rawType === 'purchase_bill' || 
+                       invNum.startsWith('PUR') || 
+                       invNum.includes('PUR-') ||
+                       title.includes('purchase');
+
+    if (rawType === 'purchase_order' || rawType === 'po' || title.includes('purchase order')) return 'purchase_order';
+    if (rawType === 'purchase_debit_note' || rawType === 'purchase_dn' || title.includes('purchase debit')) return 'debit_note';
+    if (rawType === 'debit_note' || rawType === 'debit' || title.includes('debit')) return 'debit_note';
+    if (rawType === 'proforma' || rawType === 'proforma_invoice' || title.includes('proforma')) return 'proforma';
+    if (rawType === 'receipt' || title.includes('receipt')) return 'receipt';
+    if (rawType === 'quote' || rawType === 'estimate' || title.includes('quote') || title.includes('estimate')) return 'quote';
+    if (rawType === 'credit_note' || rawType === 'credit' || title.includes('credit')) return 'credit_note';
+    if (isPurchase || rawType === 'purchases' || rawType === 'purchase_invoice' || rawType === 'purchase_bill' || rawType === 'purchase') return 'purchase_invoice';
     return 'tax_invoice';
   };
 
@@ -266,7 +278,7 @@ export function exportCollectiveReportPDF(
     { key: 'quote', title: 'QUOTATION & ESTIMATE TRANSACTIONS', subtitle: 'QUOTATIONS / ESTIMATES', partyHeader: 'PROSPECT / CLIENT', color: [245, 158, 11] as [number, number, number] },
     { key: 'credit_note', title: 'CREDIT NOTE ADJUSTMENTS', subtitle: 'CREDIT NOTES', partyHeader: 'CLIENT / PARTY', color: [225, 29, 72] as [number, number, number] },
     { key: 'purchase_order', title: 'PURCHASE ORDER TRANSACTIONS', subtitle: 'PURCHASE ORDERS', partyHeader: 'VENDOR / SUPPLIER', color: [99, 102, 241] as [number, number, number] },
-    { key: 'purchase_invoice', title: 'PURCHASE INVOICE TRANSACTIONS', subtitle: 'PURCHASE INVOICES', partyHeader: 'VENDOR / SUPPLIER', color: [139, 92, 246] as [number, number, number] },
+    { key: 'purchase_invoice', title: 'PURCHASES TRANSACTIONS', subtitle: 'PURCHASES', partyHeader: 'VENDOR / SUPPLIER', color: [139, 92, 246] as [number, number, number] },
     { key: 'debit_note', title: 'DEBIT NOTE ADJUSTMENTS', subtitle: 'DEBIT NOTES', partyHeader: 'VENDOR / SUPPLIER', color: [217, 70, 239] as [number, number, number] },
   ];
 

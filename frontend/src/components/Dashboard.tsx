@@ -6820,7 +6820,7 @@ export default function Dashboard({
       if (reportDocTypeFilter === 'quote') return docType === 'quote' || docType === 'estimate';
       if (reportDocTypeFilter === 'credit_note') return docType === 'credit_note';
       if (reportDocTypeFilter === 'purchase_order') return docType === 'purchase_order' || docType === 'po';
-      if (reportDocTypeFilter === 'purchase_invoice') return docType === 'purchase_invoice' || docType === 'purchase';
+      if (reportDocTypeFilter === 'purchase_invoice' || reportDocTypeFilter === 'purchases') return docType === 'purchase_invoice' || docType === 'purchase' || docType === 'purchases';
       if (reportDocTypeFilter === 'debit_note') return docType === 'debit_note';
       return true;
     });
@@ -10969,7 +10969,7 @@ export default function Dashboard({
                       </optgroup>
                       <optgroup label="Purchase Documents">
                         <option value="purchase_order">Purchase Order</option>
-                        <option value="purchase_invoice">Purchase Invoice</option>
+                        <option value="purchase_invoice">Purchases</option>
                         <option value="debit_note">Debit Note</option>
                       </optgroup>
                     </select>
