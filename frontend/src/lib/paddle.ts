@@ -35,6 +35,8 @@ export interface PaddleCheckoutOptions {
   priceId: string;
   userEmail?: string;
   userId?: string;
+  plan?: string;
+  mode?: string;
   onSuccess?: () => void;
   onClose?: () => void;
 }
@@ -57,6 +59,9 @@ export async function openPaddleCheckout(options: PaddleCheckoutOptions): Promis
     ],
     customData: {
       userId: options.userId || '',
+      user_id: options.userId || '',
+      plan: options.plan || 'basic',
+      mode: options.mode || 'monthly',
     },
     eventCallback: (data: any) => {
       console.log('[Paddle Event]', data);

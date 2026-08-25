@@ -53,73 +53,88 @@ export async function POST(req: NextRequest) {
 
     const now = new Date();
 
-    if (event === 'subscription.activated') {
+    if (event === 'subscription.activated' || event === 'subscription.charged') {
       const subEntity = payload.payload?.subscription?.entity;
-      const subId = subEntity?.id;
-      const planId = subEntity?.plan_id;
-      const notes = subEntity?.notes || {};
-      const userId = notes.userId;
-      const userEmail = notes.userEmail;
-      const planKey = notes.planKey || 'basic';
-      const billingCycle = notes.billingMode || 'monthly';
+      const payEntity = payload.payload?.payment?.entity;
+      const notes = subEntity?.notes || payEntity?.notes || {};
 
-      const currentPeriodEnd = subEntity?.current_end
-        ? new Date(subEntity.current_end * 1000).toISOString()
-        : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const userId = notes.userId || notes.user_id;
+      const userEmail = notes.userEmail || payEntity?.email;
+      const planKey = notes.plan || notes.planKey || 'basic';
+      const billingCycle = notes.mode || notes.billingMode || 'monthly';
 
-      if (subId) {
-        await supabaseAdmin.from('subscriptions').upsert(
-          {
-            user_id: userId || null,
-            user_email: userEmail || null,
-            gateway: 'razorpay',
-            gateway_sub_id: subId,
-            plan_key: planKey,
-            billing_cycle: billingCycle,
-            status: 'active',
-            auto_renew: true,
-            current_period_end: currentPeriodEnd,
-            updated_at: now.toISOString(),
-          },
-          { onConflict: 'gateway_sub_id' }
-        );
-
-        if (userId) {
-          await supabaseAdmin.from('users').update({
-            gateway: 'razorpay',
-            gateway_subscription_id: subId,
-            plan_id: planKey,
-            subscription_status: 'active',
-            auto_renew: true,
-            current_period_end: currentPeriodEnd,
-          }).eq('id', userId);
-        }
+      if (!userId) {
+        console.error('[Razorpay Webhook] No userId in notes — cannot sync subscription');
+        return NextResponse.json({ received: true }, { status: 200 });
       }
-    } else if (event === 'subscription.charged') {
-      const subEntity = payload.payload?.subscription?.entity;
-      const subId = subEntity?.id;
+
       const currentPeriodEnd = subEntity?.current_end
         ? new Date(subEntity.current_end * 1000).toISOString()
         : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-      if (subId) {
-        await supabaseAdmin.from('subscriptions').update({
-          current_period_end: currentPeriodEnd,
+      const { error } = await supabaseAdmin.from('subscriptions').upsert(
+        {
+          user_id: userId,
+          user_email: userEmail || null,
+          gateway: 'razorpay',
+          gateway_sub_id: subEntity?.id || payEntity?.id || `sub_${userId}`,
+          plan_key: planKey.toLowerCase(),
+          billing_cycle: billingCycle,
           status: 'active',
+          auto_renew: billingCycle !== 'yearly_onetime',
+          current_period_end: currentPeriodEnd,
           updated_at: now.toISOString(),
-        }).eq('gateway_sub_id', subId);
+        },
+        { onConflict: 'user_id', ignoreDuplicates: false }
+      );
+
+      if (error) {
+        console.error('[Razorpay Webhook] Supabase upsert error:', error);
+        return NextResponse.json({ error: 'DB write failed' }, { status: 500 });
       }
+
+      console.log('[Razorpay Webhook] Subscription synced for user:', userId);
+    } else if (event === 'payment.captured') {
+      const payEntity = payload.payload?.payment?.entity;
+      const notes = payEntity?.notes || {};
+      const userId = notes.userId || notes.user_id;
+      const planKey = notes.plan || notes.planKey || 'basic';
+      const mode = notes.mode || notes.billingMode;
+
+      if (!userId || mode !== 'yearly_onetime') {
+        return NextResponse.json({ received: true }, { status: 200 });
+      }
+
+      const expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
+
+      const { error } = await supabaseAdmin.from('subscriptions').upsert(
+        {
+          user_id: userId,
+          user_email: payEntity?.email || null,
+          gateway: 'razorpay',
+          gateway_sub_id: payEntity?.id || `pay_${userId}`,
+          plan_key: planKey.toLowerCase(),
+          billing_cycle: 'yearly_onetime',
+          status: 'active',
+          auto_renew: false,
+          subscription_expires_at: expiresAt,
+          current_period_end: expiresAt,
+          updated_at: now.toISOString(),
+        },
+        { onConflict: 'user_id', ignoreDuplicates: false }
+      );
+
+      if (error) console.error('[Razorpay Webhook] Supabase upsert error:', error);
     } else if (event === 'subscription.cancelled') {
       const subEntity = payload.payload?.subscription?.entity;
-      const subId = subEntity?.id;
+      const userId = subEntity?.notes?.userId || subEntity?.notes?.user_id;
+      if (!userId) return NextResponse.json({ received: true }, { status: 200 });
 
-      if (subId) {
-        await supabaseAdmin.from('subscriptions').update({
-          status: 'cancelled',
-          auto_renew: false,
-          updated_at: now.toISOString(),
-        }).eq('gateway_sub_id', subId);
-      }
+      await supabaseAdmin
+        .from('subscriptions')
+        .update({ status: 'cancelled', auto_renew: false, updated_at: now.toISOString() })
+        .eq('user_id', userId)
+        .eq('gateway', 'razorpay');
     } else if (event === 'payment.captured') {
       const payEntity = payload.payload?.payment?.entity;
       const notes = payEntity?.notes || {};

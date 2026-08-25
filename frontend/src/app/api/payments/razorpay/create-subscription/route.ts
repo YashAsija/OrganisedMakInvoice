@@ -33,7 +33,11 @@ export async function POST(req: NextRequest) {
           customer_notify: 1,
           notes: {
             userId: userId || '',
+            user_id: userId || '',
             userEmail: userEmail || '',
+            plan: body.plan || body.planKey || 'basic',
+            mode: body.mode || body.billingMode || 'monthly',
+            type: 'subscription',
           },
         }),
       });

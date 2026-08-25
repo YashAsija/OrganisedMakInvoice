@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { detectRegion, Region } from '../lib/detectRegion';
 import { openRazorpayCheckout } from '../lib/razorpay';
 import { openPaddleCheckout } from '../lib/paddle';
+import { useSubscription } from '../lib/subscriptionContext';
 
 // Throw error early if environment variables are not set
 const clientToken = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
@@ -162,6 +163,7 @@ const FAQS = [
 ];
 
 export default function PricingPage({ theme, onNavigate, country }: PricingPageProps) {
+  const { subscription, isActive, planKey, isLoading: subLoading, refetch } = useSubscription();
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
   const [yearlySubMode, setYearlySubMode] = useState<Record<string, 'yearly_recurring' | 'yearly_onetime'>>({
     Basic: 'yearly_recurring',
@@ -343,7 +345,10 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
             email: userEmail,
             plan: tier.name,
             mode: selectedMode,
-            onSuccess: () => handleNavigate('/dashboard?upgraded=1'),
+            onSuccess: async () => {
+              await refetch();
+              handleNavigate('/dashboard?upgraded=1');
+            },
             onError: () => setProcessingPlan(null),
           });
 
@@ -365,7 +370,10 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
             email: userEmail,
             plan: tier.name,
             mode: selectedMode,
-            onSuccess: () => handleNavigate('/dashboard?upgraded=1'),
+            onSuccess: async () => {
+              await refetch();
+              handleNavigate('/dashboard?upgraded=1');
+            },
             onError: () => setProcessingPlan(null),
           });
         }
@@ -732,8 +740,12 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
                     ))}
                   </ul>
 
-                  {isDetectingRegion ? (
+                  {isDetectingRegion || subLoading ? (
                     <div className="skeleton-price" style={{ width: '100%', height: '44px', borderRadius: '12px', marginTop: '16px' }} />
+                  ) : isActive && planKey === plan.name.toLowerCase() ? (
+                    <button className={`pr-btn ${popular ? 'solid' : 'ghost'}`} disabled style={{ opacity: 0.7, cursor: 'default' }}>
+                      ✓ Current Plan
+                    </button>
                   ) : (
                     <button
                       type="button"

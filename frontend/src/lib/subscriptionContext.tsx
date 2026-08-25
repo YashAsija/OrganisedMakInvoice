@@ -89,35 +89,38 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   // Setup Supabase Realtime subscription listener
   const setupRealtimeSync = useCallback((uid: string) => {
-    // Clean up any existing channel
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
 
     const channel = supabase
-      .channel(`subscription_sync_${uid}`)
-      // Listen for subscription changes
+      .channel(`sub_sync_${uid}_${Date.now()}`) // unique name prevents stale channel reuse
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'subscriptions',
         filter: `user_id=eq.${uid}`,
       }, (payload) => {
-        console.log('[Realtime] Subscription changed:', payload.eventType);
+        console.log('[Realtime] Subscription update received:', payload.eventType);
         fetchSubscriptionData(uid);
       })
-      // Listen for usage changes
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'subscription_usage',
         filter: `user_id=eq.${uid}`,
       }, (payload) => {
-        console.log('[Realtime] Usage changed:', payload.eventType);
+        console.log('[Realtime] Usage update received:', payload.eventType);
         fetchSubscriptionData(uid);
       })
-      .subscribe((status) => {
-        console.log('[Realtime] Channel status:', status);
+      .subscribe((status, err) => {
+        console.log('[Realtime] Channel status:', status, err || '');
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          // Auto-reconnect after 3 seconds
+          console.warn('[Realtime] Channel error — reconnecting in 3s');
+          setTimeout(() => setupRealtimeSync(uid), 3000);
+        }
       });
 
     channelRef.current = channel;
@@ -136,6 +139,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     });
 
     const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESHED' && session?.user) {
+        console.log('[Auth] Token refreshed — re-syncing Realtime channel');
+        setupRealtimeSync(session.user.id);
+      }
       if (event === 'SIGNED_IN' && session?.user) {
         setUserId(session.user.id);
         fetchSubscriptionData(session.user.id);
@@ -145,13 +152,19 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         setSubscription(null);
         setUsage(null);
         setUserId(null);
-        if (channelRef.current) supabase.removeChannel(channelRef.current);
+        if (channelRef.current) {
+          supabase.removeChannel(channelRef.current);
+          channelRef.current = null;
+        }
       }
     });
 
     return () => {
       authListener.unsubscribe();
-      if (channelRef.current) supabase.removeChannel(channelRef.current);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [fetchSubscriptionData, setupRealtimeSync]);
 

@@ -3,6 +3,7 @@ import { getFinancialYearShort, getNextInvoiceNumber } from './InvoiceModal';
 import { useExpenses } from '../hooks/useExpenses';
 import { ExpensesPage } from './ExpensesPage';
 import { supabase } from '../lib/supabase';
+import { useSubscription } from '../lib/subscriptionContext';
 
 import * as XLSX from 'xlsx';
 
@@ -350,6 +351,17 @@ export default function Dashboard({
 
   const { confirm } = useConfirm();
   const { expenses: supabaseExpenses, stats: expenseStats } = useExpenses();
+  const { refetch: refetchSubscription } = useSubscription();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('upgraded') === '1') {
+        refetchSubscription();
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, [refetchSubscription]);
 
   const suffix = userEmail ? `_${encodeURIComponent(userEmail)}` : '';
 

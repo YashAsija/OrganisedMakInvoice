@@ -68,136 +68,70 @@ export async function POST(req: NextRequest) {
 
     const now = new Date();
 
-    if (eventType === 'subscription.activated') {
-      const data = event.data;
-      const subId = data.id || data.subscription_id;
-      const customData = data.custom_data || {};
-      const userId = customData.userId;
-      const planKey = customData.plan || 'basic';
-      const billingCycle = customData.mode || 'monthly';
-      const customerEmail = data.customer?.email || data.user_email;
-      const currentPeriodEnd = data.current_billing_period?.ends_at
+    const data = event.data;
+    const customData = data?.custom_data || {};
+    const userId = customData.userId || customData.user_id;
+    const planKey = customData.plan || customData.planKey || 'basic';
+    const mode = customData.mode || customData.billingMode || 'monthly';
+    const customerEmail = data?.customer?.email || data?.user_email;
+
+    if (!userId) {
+      console.error('[Paddle Webhook] No userId in custom_data — cannot sync');
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+
+    if (eventType === 'subscription.activated' || eventType === 'subscription.updated') {
+      const currentPeriodEnd = data?.current_billing_period?.ends_at
         ? new Date(data.current_billing_period.ends_at).toISOString()
         : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-      if (subId) {
-        await supabaseAdmin.from('subscriptions').upsert(
-          {
-            user_id: userId || null,
-            user_email: customerEmail || null,
-            gateway: 'paddle',
-            gateway_sub_id: subId,
-            plan_key: planKey,
-            billing_cycle: billingCycle,
-            status: 'active',
-            auto_renew: true,
-            current_period_end: currentPeriodEnd,
-            updated_at: now.toISOString(),
-          },
-          { onConflict: 'gateway_sub_id' }
-        );
-
-        if (userId) {
-          await supabaseAdmin.from('users').update({
-            gateway: 'paddle',
-            gateway_subscription_id: subId,
-            plan_id: planKey,
-            subscription_status: 'active',
-            auto_renew: true,
-            current_period_end: currentPeriodEnd,
-          }).eq('id', userId);
-        }
-      }
-    } else if (eventType === 'subscription.updated') {
-      const data = event.data;
-      const subId = data.id;
-      const status = data.status || 'active';
-      const customData = data.custom_data || {};
-      const targetMode = customData.mode || 'yearly_recurring';
-      const currentPeriodEnd = data.current_billing_period?.ends_at
-        ? new Date(data.current_billing_period.ends_at).toISOString()
-        : new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
-
-      if (subId) {
-        const updateFields: any = {
-          status: status,
+      const { error } = await supabaseAdmin.from('subscriptions').upsert(
+        {
+          user_id: userId,
+          user_email: customerEmail || null,
+          gateway: 'paddle',
+          gateway_sub_id: data?.id || `paddle_${userId}`,
+          plan_key: planKey.toLowerCase(),
+          billing_cycle: mode,
+          status: 'active',
+          auto_renew: true,
           current_period_end: currentPeriodEnd,
           updated_at: now.toISOString(),
-        };
+        },
+        { onConflict: 'user_id', ignoreDuplicates: false }
+      );
 
-        if (customData.type === 'upgrade_proration') {
-          updateFields.billing_cycle = targetMode;
-          updateFields.auto_renew = targetMode === 'yearly_recurring';
-          updateFields.upgraded_at = now.toISOString();
-          console.log(`[Paddle Webhook] Upgrade proration logged for sub: ${subId}`);
-        }
+      if (error) console.error('[Paddle Webhook] Supabase upsert error:', error);
+      else console.log('[Paddle Webhook] Subscription synced for user:', userId);
+    } else if (eventType === 'transaction.completed' && mode === 'yearly_onetime') {
+      const expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
 
-        await supabaseAdmin.from('subscriptions').update(updateFields).eq('gateway_sub_id', subId);
-
-        if (customData.userId) {
-          await supabaseAdmin.from('users').update({
-            subscription_status: status,
-            current_period_end: currentPeriodEnd,
-            auto_renew: targetMode === 'yearly_recurring',
-          }).eq('id', customData.userId);
-        }
-      }
-    } else if (eventType === 'subscription.cancelled' || eventType === 'subscription.canceled') {
-      const subId = event.data?.id;
-
-      if (subId) {
-        await supabaseAdmin.from('subscriptions').update({
-          status: 'cancelled',
+      const { error } = await supabaseAdmin.from('subscriptions').upsert(
+        {
+          user_id: userId,
+          user_email: customerEmail || null,
+          gateway: 'paddle',
+          gateway_sub_id: data?.id || `paddle_${userId}`,
+          plan_key: planKey.toLowerCase(),
+          billing_cycle: 'yearly_onetime',
+          status: 'active',
           auto_renew: false,
+          subscription_expires_at: expiresAt,
           updated_at: now.toISOString(),
-        }).eq('gateway_sub_id', subId);
-      }
-    } else if (eventType === 'transaction.completed') {
-      const data = event.data;
-      const customData = data.custom_data || {};
+        },
+        { onConflict: 'user_id', ignoreDuplicates: false }
+      );
 
-      // Handle yearly_onetime transactions
-      if (customData.mode === 'yearly_onetime') {
-        const transId = data.id;
-        const userId = customData.userId;
-        const customerEmail = data.customer?.email || data.user_email;
-        const planKey = customData.plan || 'basic';
-        const expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
-
-        if (transId) {
-          await supabaseAdmin.from('subscriptions').upsert(
-            {
-              user_id: userId || null,
-              user_email: customerEmail || null,
-              gateway: 'paddle',
-              gateway_sub_id: transId,
-              plan_key: planKey,
-              billing_cycle: 'yearly_onetime',
-              status: 'active',
-              auto_renew: false,
-              subscription_expires_at: expiresAt,
-              current_period_end: expiresAt,
-              updated_at: now.toISOString(),
-            },
-            { onConflict: 'gateway_sub_id' }
-          );
-
-          if (userId) {
-            await supabaseAdmin.from('users').update({
-              gateway: 'paddle',
-              gateway_subscription_id: transId,
-              plan_id: planKey,
-              subscription_status: 'active',
-              auto_renew: false,
-              subscription_expires_at: expiresAt,
-              current_period_end: expiresAt,
-            }).eq('id', userId);
-          }
-        }
-      }
+      if (error) console.error('[Paddle Webhook] Supabase upsert error:', error);
+    } else if (eventType === 'subscription.cancelled') {
+      await supabaseAdmin
+        .from('subscriptions')
+        .update({ status: 'cancelled', auto_renew: false, updated_at: now.toISOString() })
+        .eq('user_id', userId)
+        .eq('gateway', 'paddle');
     }
 
-    return NextResponse.json({ received: true });
+    return NextResponse.json({ received: true }, { status: 200 });
   } catch (err: any) {
     console.error('[Paddle Webhook Exception]', err);
     return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
