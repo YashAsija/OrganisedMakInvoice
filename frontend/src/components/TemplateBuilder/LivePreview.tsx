@@ -1462,13 +1462,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                               }}
                               title={isInteractive ? 'Click to toggle discount mode (Percent %, Flat Amount, Off)' : ''}
                             >
-                              Discount {isDiscPercent ? '(%)' : isDiscFlat ? '(Flat)' : '(Off)'}
+                              Discount {isDiscPercent ? (isInteractive ? `(${renderInteractive(discVal, 'discountValue', 'text', '0')}%)` : `(${discVal}%)`) : isDiscFlat ? '(Flat)' : '(Off)'}
                             </span>
-                            {isDiscPercent && isInteractive && (
-                              <span className="inline-flex items-center text-xs font-semibold text-rose-600">
-                                ({renderInteractive(discVal, 'discountValue', 'text', '0')}%)
-                              </span>
-                            )}
                           </div>
                           {(calcDiscTotal > 0 || discVal > 0 || isInteractive) && (
                             <div className="flex items-center">
@@ -1583,13 +1578,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         }}
                         title={isInteractive ? 'Click to toggle discount mode (Percent %, Flat Amount, Off)' : ''}
                       >
-                        Discount {isDiscPercent ? '(%)' : isDiscFlat ? '(Flat)' : '(Off)'}
+                        Discount {isDiscPercent ? (isInteractive ? `(${renderInteractive(discVal, 'discountValue', 'text', '0')}%)` : `(${discVal}%)`) : isDiscFlat ? '(Flat)' : '(Off)'}
                       </span>
-                      {isDiscPercent && isInteractive && (
-                        <span style={{ fontSize: '12px', fontWeight: 600 }}>
-                          ({renderInteractive(discVal, 'discountValue', 'text', '0')}%)
-                        </span>
-                      )}
                     </div>
                     {(calcDiscTotal > 0 || discVal > 0 || isInteractive) && (
                       <div style={{ display: 'flex', alignItems: 'center' }}>
