@@ -11,6 +11,10 @@ import { getDeviceId } from './lib/sessionManager';
 import { emitNotification } from './lib/notifications';
 import { MakLoader } from './components/MakLoader';
 
+import { getLocalizationConfig } from './lib/localizationEngine';
+import { getTierLimits, getCurrentBillingCycleWindow } from './lib/subscriptionGuard';
+import { SubscriptionProvider } from './lib/subscriptionContext';
+
 const ALLOWED_SUPABASE_COLUMNS = [
   'id', 'userId', 'invoiceType', 'invoiceNumber', 'referenceNumber', 'poNumber', 'date', 
   'dueDate', 'clientName', 'clientEmail', 'clientPhone', 'clientAddress', 'clientCompany', 'clientCompanyName',
@@ -468,6 +472,27 @@ export default function App() {
     updatedAt: new Date().toISOString()
   });
 
+  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise'>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('makbills_subscription_tier');
+      return (cached as 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise') || 'free';
+    }
+    return 'free';
+  });
+
+  useEffect(() => {
+    const handleSubChange = (e: any) => {
+      const newTier = e.detail || localStorage.getItem('makbills_subscription_tier') || 'free';
+      setSubscriptionTier(newTier as any);
+    };
+    window.addEventListener('mak_subscription_change', handleSubChange);
+    window.addEventListener('storage', handleSubChange);
+    return () => {
+      window.removeEventListener('mak_subscription_change', handleSubChange);
+      window.removeEventListener('storage', handleSubChange);
+    };
+  }, []);
+
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const isCloudLoadedRef = useRef<boolean>(false);
   const [presets, setPresets] = useState<PresetItem[]>([]);
@@ -592,6 +617,22 @@ export default function App() {
       return () => window.removeEventListener('popstate', handlePopState);
     }
   }, [userEmail]);
+
+  // Global listener for tab navigation (e.g. from Upgrade to Unlock buttons inside modals)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleNavigateTab = (e: Event) => {
+        const detail = (e as CustomEvent).detail;
+        if (detail) {
+          setIsInvoiceEditorOpen(false);
+          setIsProfileOpen(false);
+          setActiveTab(detail);
+        }
+      };
+      window.addEventListener('mak_navigate_tab', handleNavigateTab);
+      return () => window.removeEventListener('mak_navigate_tab', handleNavigateTab);
+    }
+  }, []);
 
 
   useEffect(() => {
@@ -740,7 +781,8 @@ export default function App() {
       try {
         setProfile(JSON.parse(localProfile));
       } catch (e) {
-        console.warn('Failed to parse local profile, using default', e);
+        console.warn('Failed to parse local profile, using auto-localized default', e);
+        const locConfig = getLocalizationConfig();
         setProfile({
           uid: user?.id || '',
           name: '',
@@ -748,12 +790,13 @@ export default function App() {
           phone: '',
           address: '',
           taxId: '',
-          currency: 'INR',
-          defaultTaxRate: 18,
+          currency: locConfig.currency,
+          defaultTaxRate: locConfig.defaultTaxRate,
           updatedAt: new Date().toISOString()
         });
       }
     } else {
+      const locConfig = getLocalizationConfig();
       setProfile({
         uid: user?.id || '',
         name: '',
@@ -761,8 +804,8 @@ export default function App() {
         phone: '',
         address: '',
         taxId: '',
-        currency: 'INR',
-        defaultTaxRate: 18,
+        currency: locConfig.currency,
+        defaultTaxRate: locConfig.defaultTaxRate,
         updatedAt: new Date().toISOString()
       });
     }
@@ -867,14 +910,18 @@ export default function App() {
     // properly sets userEmail and navigates away from the homepage.
     // Data sync is separately gated by isUnlocked (see the effect below).
 
-    let activeChannels: ReturnType<typeof supabase.channel>[] = [];
+    let activeChannels: any[] = [];
 
     const cleanupActiveListeners = async () => {
-      for (const channel of activeChannels) {
+      for (const item of activeChannels) {
         try {
-          await supabase.removeChannel(channel);
+          if (item && typeof item.unsubscribe === 'function') {
+            await item.unsubscribe();
+          } else if (item) {
+            await supabase.removeChannel(item);
+          }
         } catch (e) {
-          console.warn('Error cleaning up active Supabase listener:', String(e));
+          console.warn('Error cleaning up active listener:', String(e));
         }
       }
       activeChannels = [];
@@ -1048,6 +1095,174 @@ export default function App() {
           } catch (err) {
             console.warn('Error fetching/setting cloud profile:', String(err));
           }
+
+          // 1b. Fetch Cloud Subscription (Single Source of Truth across devices)
+          const syncCloudSubscriptionTier = async () => {
+            try {
+              let fetchedTier: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise' = 'free';
+              
+              let subData = null;
+              // 1. Try querying subscriptions table by user_id
+              const { data: subById } = await supabase
+                .from('subscriptions')
+                .select('*')
+                .eq('user_id', uid)
+                .order('updated_at', { ascending: false })
+                .limit(1);
+
+              if (subById && subById.length > 0) {
+                subData = subById;
+              } else if (activeEmail) {
+                // 1b. Try querying subscriptions table by user_email
+                const { data: subByEmail } = await supabase
+                  .from('subscriptions')
+                  .select('*')
+                  .eq('user_email', activeEmail)
+                  .order('updated_at', { ascending: false })
+                  .limit(1);
+                subData = subByEmail;
+              }
+
+              if (subData && subData.length > 0) {
+                const sub = subData[0];
+                const now = new Date();
+                const expDate = sub.current_period_end || sub.subscription_expires_at;
+                const isNotExpired = !expDate || new Date(expDate) > now;
+                const isActiveStatus = !sub.status || sub.status === 'active';
+
+                if (isNotExpired && isActiveStatus && (sub.plan_key || sub.plan_id)) {
+                  const rawKey = (sub.plan_key || sub.plan_id).toLowerCase();
+                  if (rawKey.includes('pro') || rawKey.includes('professional')) fetchedTier = 'pro';
+                  else if (rawKey.includes('unlimited') || rawKey.includes('ent')) fetchedTier = 'unlimited';
+                  else if (rawKey.includes('enterprise')) fetchedTier = 'enterprise';
+                  else if (rawKey.includes('basic')) fetchedTier = 'basic';
+
+                  if (typeof window !== 'undefined') {
+                    if (sub.created_at || sub.updated_at) {
+                      localStorage.setItem('makbills_sub_activated_at', sub.created_at || sub.updated_at);
+                    }
+                    if (expDate) {
+                      localStorage.setItem('makbills_sub_expires_iso', new Date(expDate).toISOString());
+                    }
+                    localStorage.setItem('makbills_last_active_paid_tier', fetchedTier);
+                  }
+                }
+              }
+
+              // 2. Fallback check on users table if subscriptions table didn't yield an active tier
+              if (fetchedTier === 'free') {
+                let userSubData = null;
+                const { data: uData1 } = await supabase
+                  .from('users')
+                  .select('plan_id, subscription_status, current_period_end, subscription_expires_at, created_at, updatedAt')
+                  .eq('uid', uid)
+                  .limit(1);
+
+                if (uData1 && uData1.length > 0) {
+                  userSubData = uData1;
+                } else if (activeEmail) {
+                  const { data: uData2 } = await supabase
+                    .from('users')
+                    .select('plan_id, subscription_status, current_period_end, subscription_expires_at, created_at, updatedAt')
+                    .eq('email', activeEmail)
+                    .limit(1);
+                  userSubData = uData2;
+                }
+
+                if (userSubData && userSubData.length > 0 && userSubData[0].plan_id) {
+                  const uSub = userSubData[0];
+                  const expDate = uSub.current_period_end || uSub.subscription_expires_at;
+                  const isNotExpired = !expDate || new Date(expDate) > new Date();
+                  const isActiveStatus = !uSub.subscription_status || uSub.subscription_status === 'active';
+
+                  if (isNotExpired && isActiveStatus) {
+                    const rawKey = uSub.plan_id.toLowerCase();
+                    if (rawKey.includes('pro') || rawKey.includes('professional')) fetchedTier = 'pro';
+                    else if (rawKey.includes('unlimited') || rawKey.includes('ent')) fetchedTier = 'unlimited';
+                    else if (rawKey.includes('enterprise')) fetchedTier = 'enterprise';
+                    else if (rawKey.includes('basic')) fetchedTier = 'basic';
+
+                    if (typeof window !== 'undefined') {
+                      if (uSub.created_at || uSub.updatedAt) {
+                        localStorage.setItem('makbills_sub_activated_at', uSub.created_at || uSub.updatedAt);
+                      }
+                      if (expDate) {
+                        localStorage.setItem('makbills_sub_expires_iso', new Date(expDate).toISOString());
+                      }
+                      localStorage.setItem('makbills_last_active_paid_tier', fetchedTier);
+                    }
+                  }
+                }
+              }
+
+              // 3. Fallback check local active window (for active trial or reclaimed plan active within window)
+              if (fetchedTier === 'free' && typeof window !== 'undefined') {
+                const localTier = localStorage.getItem('makbills_subscription_tier');
+                const lastPaidTier = localStorage.getItem('makbills_last_active_paid_tier');
+                const expiresIsoRaw = localStorage.getItem('makbills_sub_expires_iso');
+
+                const rawTier = (localTier && localTier !== 'free' ? localTier : lastPaidTier) as string | null;
+
+                if (rawTier && rawTier !== 'free') {
+                  const isNotExpired = !expiresIsoRaw || new Date(expiresIsoRaw).getTime() > Date.now();
+                  if (isNotExpired) {
+                    if (rawTier === 'pro' || rawTier === 'professional') fetchedTier = 'pro';
+                    else if (rawTier === 'unlimited' || rawTier === 'enterprise' || rawTier === 'ent') fetchedTier = 'unlimited';
+                    else if (rawTier === 'basic') fetchedTier = 'basic';
+                  }
+                }
+              }
+
+              setSubscriptionTier(fetchedTier);
+              localStorage.setItem('makbills_subscription_tier', fetchedTier);
+            } catch (err) {
+              console.warn('[SUPABASE SUBSCRIPTION FETCH EXCEPTION]:', err);
+            }
+          };
+
+          await syncCloudSubscriptionTier();
+
+          // 1c. Realtime listener for Subscription table & User updates (Strictly Isolated Per-User Account)
+          const subscriptionChannel = supabase
+            .channel(`subscriptions_realtime:${uid}:${Date.now()}`)
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'subscriptions' },
+              (payload: any) => {
+                const newRec = payload.new || {};
+                const oldRec = payload.old || {};
+                const matchesId = newRec.user_id === uid || oldRec.user_id === uid;
+                const matchesEmail = activeEmail && (newRec.user_email === activeEmail || oldRec.user_email === activeEmail);
+                if (matchesId || matchesEmail) {
+                  syncCloudSubscriptionTier();
+                }
+              }
+            )
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'users', filter: `uid=eq.${uid}` },
+              () => {
+                syncCloudSubscriptionTier();
+              }
+            )
+            .subscribe();
+          activeChannels.push(subscriptionChannel);
+
+          // 1d. Focus re-check & periodic poll (Guarantees multi-device sync even without WebSocket support)
+          const handleWindowFocus = () => {
+            syncCloudSubscriptionTier();
+          };
+          window.addEventListener('focus', handleWindowFocus);
+          const subPollInterval = setInterval(() => {
+            syncCloudSubscriptionTier();
+          }, 15_000);
+
+          activeChannels.push({
+            unsubscribe: () => {
+              window.removeEventListener('focus', handleWindowFocus);
+              clearInterval(subPollInterval);
+            }
+          });
 
           const reconcileCloudInvoicesWithPending = (rawCloudList: any[], activeSuffix: string): Invoice[] => {
             const parsedCloud = (rawCloudList || [])
@@ -1448,9 +1663,11 @@ export default function App() {
           setClients([]);
           setExpenses([]);
           setCustomTemplates([]);
+          setSubscriptionTier('free');
           if (typeof window !== 'undefined' && event === 'SIGNED_OUT') {
             localStorage.removeItem('makbills_custom_templates');
             localStorage.removeItem('makbills_last_user');
+            localStorage.removeItem('makbills_subscription_tier');
           }
           setProfile({
             uid: '',
@@ -2224,6 +2441,39 @@ export default function App() {
 
   // 3. Save / Update Invoice
   const handleSaveInvoice = async (invoice: Invoice) => {
+    // Document Quota Guard for newly created / published documents
+    const isExistingDoc = invoices.some(inv => inv.id === invoice.id);
+    const isEditingExistingNonDraft = isExistingDoc && invoices.find(inv => inv.id === invoice.id)?.status !== 'draft';
+    const isPublishingNewDoc = invoice.status !== 'draft' && !isEditingExistingNonDraft;
+
+    if (isPublishingNewDoc) {
+      const { start, end } = getCurrentBillingCycleWindow();
+      const startTime = start.getTime();
+      const endTime = end.getTime();
+
+      const activatedAtStr = typeof window !== 'undefined' ? localStorage.getItem('makbills_sub_activated_at') : null;
+      const actTimestamp = activatedAtStr ? new Date(activatedAtStr).getTime() : 0;
+      const effectiveStartTime = (!isNaN(actTimestamp) && actTimestamp > 0) ? Math.max(startTime, actTimestamp) : startTime;
+
+      const monthlyDocCount = invoices.filter(inv => {
+        if (inv.status === 'draft') return false;
+        const tsStr = inv.createdAt || inv.date;
+        if (!tsStr) return false;
+        const dTime = new Date(tsStr).getTime();
+        return !isNaN(dTime) && dTime >= effectiveStartTime && dTime < endTime;
+      }).length;
+
+      const limits = getTierLimits(subscriptionTier);
+      if (monthlyDocCount >= limits.documentsPerMonth) {
+        const errorMsg = `Subscription period document creation limit reached (${limits.documentsPerMonth} docs/period on ${subscriptionTier.toUpperCase()} plan). Upgrade your plan to create more documents.`;
+        showToast('Quota Exceeded 🔒', errorMsg, 'error');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+        }
+        throw new Error(errorMsg);
+      }
+    }
+
     const clientsToUpsert: ClientProfile[] = [];
     let updatedClients = [...clients];
 
@@ -2457,6 +2707,39 @@ export default function App() {
       showToast('Permanently Deleted', 'Document deleted from cloud.', 'info');
     } catch (error: any) {
       showToast('Delete Error', error.message || 'Failed to permanently delete document.', 'error');
+    }
+  };
+
+  const handleBulkHardDeleteInvoices = async (invoiceIds: string[]) => {
+    if (invoiceIds.length === 0) return;
+    const confirmed = await confirm({
+      title: 'Permanently Delete Selected',
+      message: `Are you sure you want to permanently delete the ${invoiceIds.length} selected documents from Bin? This action cannot be undone.`,
+      confirmText: 'Delete All Permanently'
+    });
+    if (!confirmed) return;
+
+    const remaining = invoices.filter(inv => !invoiceIds.includes(inv.id));
+    setInvoices(remaining);
+    localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(remaining));
+    localStorage.setItem('invoice_maker_invoices', JSON.stringify(remaining));
+
+    const activeUid = await resolveSessionUid();
+    if (activeUid) {
+      try {
+        const { error } = await supabase.from('invoices').delete().in('id', invoiceIds).eq('userId', activeUid);
+        if (error) {
+          console.error('[BulkHardDelete] Cloud delete failed:', error);
+          invoiceIds.forEach(id => markInvoicePendingDelete(id));
+        } else {
+          showToast('Permanently Deleted', `Successfully deleted ${invoiceIds.length} document(s).`, 'info');
+        }
+      } catch (error: any) {
+        console.error('[BulkHardDelete] Error:', error);
+        invoiceIds.forEach(id => markInvoicePendingDelete(id));
+      }
+    } else {
+      invoiceIds.forEach(id => markInvoicePendingDelete(id));
     }
   };
 
@@ -3251,6 +3534,7 @@ export default function App() {
         onDeleteInvoice={handleDeleteInvoice}
         onRestoreInvoice={handleRestoreInvoice}
         onHardDeleteInvoice={handleHardDeleteInvoice}
+        onBulkHardDeleteInvoices={handleBulkHardDeleteInvoices}
         onBulkDeleteInvoices={handleBulkDeleteInvoices}
         onBulkUpdateInvoicesStatus={handleBulkUpdateInvoicesStatus}
         onUpdateInvoice={handleUpdateInvoice}
@@ -3264,6 +3548,7 @@ export default function App() {
         onDeleteExpense={handleDeleteExpense}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        subscriptionTier={subscriptionTier}
       />
 
       {/* Sub-modals Settings View selectors */}
@@ -3276,6 +3561,7 @@ export default function App() {
           setIsOnboarding(false);
         }}
         onSave={handleSaveProfile}
+        subscriptionTier={subscriptionTier}
       />
 
       <InvoiceModal
@@ -3291,6 +3577,7 @@ export default function App() {
         onClose={() => setIsInvoiceEditorOpen(false)}
         onSave={handleSaveInvoice}
         userId={user?.id || null}
+        subscriptionTier={subscriptionTier}
       />
 
       {/* PIN Setup Modal */}

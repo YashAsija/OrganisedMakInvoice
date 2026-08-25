@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, LayoutTemplate, FileText, Check, Trash2, Edit2, Copy, Download, Upload, Search, Filter, ChevronDown } from 'lucide-react';
+import { Plus, LayoutTemplate, FileText, Check, Trash2, Edit2, Copy, Download, Upload, Search, Filter, ChevronDown, Lock } from 'lucide-react';
 import { InvoiceTemplate, BusinessProfile } from '../types';
 import { LivePreview } from './TemplateBuilder/LivePreview';
 import { exportInvoicePDFAsync } from '../lib/pdfExporter';
@@ -40,7 +40,7 @@ function TemplatePreview({ template, businessProfile }: { template: InvoiceTempl
   );
 }
 
-export default function TemplateManager({ businessProfile }: { businessProfile?: BusinessProfile }) {
+export default function TemplateManager({ businessProfile, subscriptionTier = 'free' }: { businessProfile?: BusinessProfile; subscriptionTier?: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise' }) {
   const { confirm } = useConfirm();
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(() => {
     if (typeof window !== 'undefined') {
@@ -497,13 +497,19 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <button
             onClick={() => {
+              if (subscriptionTier === 'free') {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                }
+                return;
+              }
               setEditingTemplate(null);
               setIsBuilding(true);
             }}
             className="flex items-center gap-1.5 px-4 py-2 bg-[#0284c7] dark:bg-[#38bdf8] border border-[#0369a1] dark:border-[#0284c7] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] rounded-xl text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm shadow-[#0284c7]/20 hover:-translate-y-px active:scale-[0.98]"
           >
-            <Plus className="w-3.5 h-3.5" />
-            New Template
+            {subscriptionTier === 'free' ? <Lock className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+            {subscriptionTier === 'free' ? 'Unlock Custom Templates 🔒' : 'New Template'}
           </button>
         </div>
       </div>
@@ -745,13 +751,24 @@ export default function TemplateManager({ businessProfile }: { businessProfile?:
               <div className="flex flex-col gap-3 mt-auto">
                 <button
                   onClick={() => {
+                    if (subscriptionTier === 'free') {
+                      emitNotification('Feature Locked 🔒', 'Template customization & builder options are available on Basic, Professional, and Enterprise plans. On Starter plan, use "Set Default" to select any preset template.', 'error');
+                      if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                      }
+                      return;
+                    }
                     setEditingTemplate(selectedTemplateForModal);
                     setIsBuilding(true);
                     setSelectedTemplateForModal(null);
                   }}
                   className="w-full py-3 bg-[#0284c7] dark:bg-[#38bdf8] border border-[#0369a1] dark:border-[#0284c7] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#0284c7]/20 hover:-translate-y-px active:scale-[0.98]"
                 >
-                  <Edit2 className="w-4 h-4" />
+                  {subscriptionTier === 'free' ? (
+                    <Lock className="w-4 h-4 text-amber-300" />
+                  ) : (
+                    <Edit2 className="w-4 h-4" />
+                  )}
                   {activeLibraryTab === 'system' ? 'Use This Preset' : 'Edit Template'}
                 </button>
                 

@@ -513,6 +513,34 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     const activeItems = currentItems || items;
     return (
       <div className="invoice-live-preview relative flex flex-col h-full w-full paper-sheet-light live-preview-container no-privacy-blur" data-privacy-exempt="true" style={{ flex: 1 }}>
+      {/* Cancelled Document Top Banner */}
+      {((invoiceData?.status || '').toLowerCase() === 'cancelled' || (invoiceData as any)?.cancelled) && (
+        <div 
+          className="cancelled-banner-stamp"
+          style={{
+            width: '100%',
+            backgroundColor: '#dc2626',
+            color: '#ffffff',
+            textAlign: 'center',
+            padding: '8px 12px',
+            fontWeight: 900,
+            fontSize: '13px',
+            lineHeight: '1.2',
+            letterSpacing: '0.25em',
+            textTransform: 'uppercase',
+            borderRadius: '6px',
+            marginBottom: '16px',
+            boxShadow: '0 2px 4px rgba(220, 38, 38, 0.25)',
+            position: 'relative',
+            display: 'block',
+            flex: 'none',
+            zIndex: 50,
+            boxSizing: 'border-box'
+          }}
+        >
+          CANCELLED
+        </div>
+      )}
       {layout.watermark.enabled && (
         <div style={{
           position: 'absolute',

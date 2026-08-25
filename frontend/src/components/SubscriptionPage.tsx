@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Check, 
   Sparkles, 
@@ -12,6 +12,12 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { BusinessProfile, Invoice } from '../types';
+import { detectRegion, Region } from '../lib/detectRegion';
+import { getCurrentBillingCycleWindow } from '../lib/subscriptionGuard';
+import { openRazorpayCheckout } from '../lib/razorpay';
+import { openPaddleCheckout } from '../lib/paddle';
+import { supabase } from '../lib/supabase';
+import { SubscriptionStatus } from './SubscriptionStatus';
 
 interface SubscriptionPageProps {
   theme: 'light' | 'dark';
@@ -20,6 +26,22 @@ interface SubscriptionPageProps {
   subscriptionTier: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise';
   onUpgrade: (tier: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise') => void;
 }
+
+const RAZORPAY_PLANS: Record<string, { month: string; year: string; amount: number }> = {
+  free: { month: 'plan_starter_free', year: 'plan_starter_free', amount: 0 },
+  basic: { month: 'plan_basic_m_199', year: 'plan_basic_y_1990', amount: 199 },
+  pro: { month: 'plan_pro_m_299', year: 'plan_pro_y_2990', amount: 299 },
+  unlimited: { month: 'plan_ent_m_599', year: 'plan_ent_y_5990', amount: 599 },
+  enterprise: { month: 'plan_ent_m_599', year: 'plan_ent_y_5990', amount: 599 },
+};
+
+const PADDLE_PRICES: Record<string, { month: string; year: string }> = {
+  free: { month: 'pri_starter_m', year: 'pri_starter_y' },
+  basic: { month: 'pri_01m0se11wgk2dkv2cpw0jqqm60', year: 'pri_01m0sm1fx442c92zf4fv6fpxdf' },
+  pro: { month: 'pri_01m0secg547pq6vzf9deyw7cpq', year: 'pri_01m0sm25kycrwxwb8tz4xad7zd' },
+  unlimited: { month: 'pri_01m0sefvjdvda8fa0kgw7j4h7f', year: 'pri_01m0sm2zqrnvp5jzzg136c41q4' },
+  enterprise: { month: 'pri_01m0sefvjdvda8fa0kgw7j4h7f', year: 'pri_01m0sm2zqrnvp5jzzg136c41q4' },
+};
 
 const PLANS = [
   {
@@ -61,8 +83,8 @@ const PLANS = [
     name: 'Basic',
     tagline: 'Perfect for freelancers & businesses scaling document management.',
     monthly: '₹199',
-    annual: '₹159',
-    annualNote: 'Billed ₹1,908/year — save 20%.',
+    annual: '₹1,990',
+    annualNote: 'Billed ₹1,990/year — save 20%.',
     monthlyNote: 'Billed monthly. Cancel anytime.',
     popular: false,
     limit: 60,
@@ -89,8 +111,8 @@ const PLANS = [
     name: 'Professional',
     tagline: 'For growing businesses requiring AI billing & recurring automation.',
     monthly: '₹299',
-    annual: '₹239',
-    annualNote: 'Billed ₹2,868/year — save 20%.',
+    annual: '₹2,990',
+    annualNote: 'Billed ₹2,990/year — save 20%.',
     monthlyNote: 'Billed monthly. Cancel anytime.',
     popular: true,
     limit: 140,
@@ -105,20 +127,18 @@ const PLANS = [
       { text: 'Create Own Custom Simple & Advanced Templates', included: true },
       { text: 'Personalised Logo, Signature & Watermark Removal', included: true },
       { text: 'Duplicate Existing Documents & Document Converter', included: true },
-      { text: 'Full Sales & Purchase Ledger Capabilities', included: true },
+      { text: 'Sales Ledger and Purchase Ledger Access', included: true },
       { text: 'Interactive Document Builder & Expenses Tracker', included: true },
-      { text: 'Unlimited Documents & Reports', included: false },
-      { text: 'Dedicated Account Manager & VIP Support', included: false },
     ],
   },
   {
     id: 'unlimited' as const,
     tier: 'Enterprise',
     name: 'Enterprise',
-    tagline: 'Unlimited scale and dedicated support for large operations.',
+    tagline: 'Unlimited scale and dedicated support for high-volume operations.',
     monthly: '₹599',
-    annual: '₹479',
-    annualNote: 'Billed ₹5,748/year — save 20%.',
+    annual: '₹5,990',
+    annualNote: 'Billed ₹5,990/year — save 20%.',
     monthlyNote: 'Billed monthly. Cancel anytime.',
     popular: false,
     limit: Infinity,
@@ -149,33 +169,156 @@ export default function SubscriptionPage({
   const [isYearly, setIsYearly] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState<string | null>(null);
+  const [showDowngradeConfirm, setShowDowngradeConfirm] = useState<boolean>(false);
   const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({});
+  const [region, setRegion] = useState<Region | null>(null);
+  const [paddlePrices, setPaddlePrices] = useState<Record<string, { month: string; year: string }>>({});
+  const [loadingPrices, setLoadingPrices] = useState<boolean>(true);
+  const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
+  const [userId, setUserId] = useState<string | undefined>(undefined);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly_recurring' | 'yearly_onetime'>('monthly');
 
-  const toggleExpandPlan = (planId: string) => {
-    setExpandedPlans((prev) => ({ ...prev, [planId]: !prev[planId] }));
-  };
+  // Fetch current authenticated user to pass userId and userEmail to checkout
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUserId(user.id);
+        setUserEmail(user.email || profile?.email);
+      }
+    });
+  }, [profile]);
+
+  // Detect Region (IN vs INTL) dynamically on mount
+  useEffect(() => {
+    let isMounted = true;
+    setLoadingPrices(true);
+    import('../lib/detectRegion').then(({ getUserRegion }) => {
+      getUserRegion().then((detRegion) => {
+        if (isMounted) {
+          setRegion(detRegion);
+          setLoadingPrices(false);
+        }
+      }).catch(() => {
+        if (isMounted) {
+          setRegion('INTL');
+          setLoadingPrices(false);
+        }
+      });
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  // Fetch Paddle prices for INTL
+  useEffect(() => {
+    if (region !== 'INTL') return;
+    const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || 'live_0b8c91040964a20151647bd285b';
+    const env = (process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT as 'sandbox' | 'production') || 'production';
+
+    import('@paddle/paddle-js').then(({ initializePaddle }) => {
+      initializePaddle({ environment: env, token }).then((paddle) => {
+        if (!paddle) return;
+        const items = [
+          { priceId: PADDLE_PRICES.basic.month, quantity: 1 },
+          { priceId: PADDLE_PRICES.basic.year, quantity: 1 },
+          { priceId: PADDLE_PRICES.pro.month, quantity: 1 },
+          { priceId: PADDLE_PRICES.pro.year, quantity: 1 },
+          { priceId: PADDLE_PRICES.enterprise.month, quantity: 1 },
+          { priceId: PADDLE_PRICES.enterprise.year, quantity: 1 },
+        ];
+        paddle.PricePreview({ items }).then((preview) => {
+          if (preview?.data?.details?.lineItems) {
+            const map: Record<string, { month: string; year: string }> = {
+              basic: { month: '$2.99', year: '$29.99' },
+              pro: { month: '$3.99', year: '$39.99' },
+              unlimited: { month: '$6.99', year: '$69.99' },
+              enterprise: { month: '$6.99', year: '$69.99' },
+            };
+            preview.data.details.lineItems.forEach((item: any) => {
+              const formatted = item.formattedTotals?.total;
+              if (formatted) {
+                if (item.price?.id === PADDLE_PRICES.basic.month) map.basic.month = formatted;
+                if (item.price?.id === PADDLE_PRICES.basic.year) map.basic.year = formatted;
+                if (item.price?.id === PADDLE_PRICES.pro.month) map.pro.month = formatted;
+                if (item.price?.id === PADDLE_PRICES.pro.year) map.pro.year = formatted;
+                if (item.price?.id === PADDLE_PRICES.enterprise.month) map.unlimited.month = formatted;
+                if (item.price?.id === PADDLE_PRICES.enterprise.year) map.unlimited.year = formatted;
+              }
+            });
+            setPaddlePrices(map);
+          }
+        }).catch(() => {});
+      });
+    });
+  }, [region]);
+
+  // Auto-launch payment modal if user arrived from Pricing Page with a plan intent
+  useEffect(() => {
+    try {
+      const storedIntent = localStorage.getItem('mak_selected_plan_intent');
+      if (storedIntent) {
+        localStorage.removeItem('mak_selected_plan_intent');
+        const parsed = JSON.parse(storedIntent);
+        if (parsed.billing === 'annual') {
+          setIsYearly(true);
+        }
+        const planKeyMap: Record<string, 'basic' | 'professional' | 'enterprise'> = {
+          basic: 'basic',
+          pro: 'professional',
+          professional: 'professional',
+          unlimited: 'enterprise',
+          enterprise: 'enterprise',
+        };
+        const validPlan = planKeyMap[parsed.tier] || 'basic';
+        const mode = parsed.mode || (parsed.billing === 'annual' ? 'yearly_recurring' : 'monthly');
+
+        setTimeout(() => {
+          triggerCheckout(validPlan, mode);
+        }, 500);
+      }
+    } catch (e) {}
+  }, [region]);
 
   // Normalise mapped subscription tier (enterprise maps to unlimited conceptually for limits check)
   const activeTier = subscriptionTier === 'enterprise' ? 'unlimited' : subscriptionTier;
 
-  const handleUpgradeSimulate = (planId: 'free' | 'basic' | 'pro' | 'unlimited') => {
-    setLoadingPlan(planId);
-    setTimeout(() => {
+  const triggerCheckout = async (planKey: 'basic' | 'professional' | 'enterprise', mode: 'monthly' | 'yearly_recurring' | 'yearly_onetime') => {
+    setLoadingPlan(planKey);
+    try {
+      const { handleCheckout } = await import('../lib/checkout');
+      await handleCheckout(planKey, mode, userEmail || profile?.email, userId, () => {
+        const upgradeTier = planKey === 'professional' ? 'pro' : planKey === 'enterprise' ? 'unlimited' : planKey;
+        const now = new Date();
+        const expires = new Date();
+        if (mode === 'monthly') {
+          expires.setMonth(now.getMonth() + 1);
+        } else {
+          expires.setFullYear(now.getFullYear() + 1);
+        }
+        localStorage.setItem('makbills_sub_activated_at', now.toISOString());
+        localStorage.setItem('makbills_sub_expires_iso', expires.toISOString());
+        localStorage.setItem('makbills_sub_expires_at', expires.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) + (mode === 'monthly' ? ' (Monthly Plan)' : ' (Annual Plan)'));
+        localStorage.setItem('makbills_last_active_paid_tier', upgradeTier);
+        onUpgrade(upgradeTier as any);
+        setShowSuccessModal(planKey);
+      });
+    } catch (err: any) {
+      alert(err.message || 'Payment initiation failed. Please try again.');
+    } finally {
       setLoadingPlan(null);
-      onUpgrade(planId);
-      setShowSuccessModal(planId);
-    }, 1500);
+    }
   };
 
   const getMonthlyUsage = () => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    
+    const { start, end } = getCurrentBillingCycleWindow();
+    const startTime = start.getTime();
+    const endTime = end.getTime();
+
     return invoices.filter(inv => {
-      if (!inv.date) return false;
-      const d = new Date(inv.date);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      if (inv.status === 'draft') return false; // Drafts are un-published templates, but all created/finalized docs count
+      const tsStr = inv.createdAt || inv.date;
+      if (!tsStr) return false;
+      const dTime = new Date(tsStr).getTime();
+      return !isNaN(dTime) && dTime >= startTime && dTime < endTime;
     }).length;
   };
 
@@ -241,34 +384,75 @@ export default function SubscriptionPage({
                     ? 'Professional: Limit of 140 documents & 15 reports/mo with AI Smart Billing.'
                     : 'Enterprise: Unlimited documents & reports fully unlocked.'}
             </p>
-            
-            {/* Usage limit meter */}
-            <div className="mt-4 pt-3.5 border-t border-[#bae6fd]/30 dark:border-[#223269]/30">
-              <div className="flex justify-between text-[10px] mb-1.5 font-bold">
-                <span className="text-[#64748b] dark:text-[#94a3b8] uppercase tracking-wider">Monthly Usage</span>
-                <span className="text-[#0f172a] dark:text-white font-mono">
-                  {activeLimit === Infinity ? 'Unlimited' : `${usageCount} / ${activeLimit}`}
+
+            <div className="mt-2 text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/50 px-2.5 py-1 rounded-lg border border-sky-200 dark:border-sky-800/50 flex items-center justify-between gap-1.5 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <span>Date of Activation:</span>
+                <span className="font-mono text-slate-800 dark:text-slate-200">
+                  {(() => {
+                    const activatedAt = typeof window !== 'undefined' ? localStorage.getItem('makbills_sub_activated_at') : null;
+                    const dateObj = activatedAt ? new Date(activatedAt) : new Date();
+                    return isNaN(dateObj.getTime()) ? new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+                  })()}
                 </span>
               </div>
-              
-              <div className="w-full bg-[#e0f2fe]/45 dark:bg-[#1b264f]/40 rounded-full h-1.5 overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    activeLimit === Infinity 
-                      ? 'bg-emerald-500 w-full' 
-                      : usagePercentage > 85 
-                        ? 'bg-rose-500' 
-                        : usagePercentage > 60 
-                          ? 'bg-amber-500' 
-                          : 'bg-[#0284c7]'
-                  }`}
-                  style={{ width: `${usagePercentage}%` }}
-                />
+              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <span>Expires / Renews:</span>
+                <span className="font-mono font-extrabold">
+                  {typeof window !== 'undefined' ? (localStorage.getItem('makbills_sub_expires_at') || 'Active Subscription') : 'Active Subscription'}
+                </span>
+              </div>
+            </div>
+            
+            {/* Usage limit meters */}
+            <div className="mt-4 pt-3.5 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 space-y-3">
+              {/* Documents Usage */}
+              <div>
+                <div className="flex justify-between text-[10px] mb-1 font-bold">
+                  <span className="text-[#64748b] dark:text-[#94a3b8] uppercase tracking-wider">Documents Usage</span>
+                  <span className="text-[#0f172a] dark:text-white font-mono">
+                    {activeLimit === Infinity ? 'Unlimited' : `${usageCount} / ${activeLimit}`}
+                  </span>
+                </div>
+                
+                <div className="w-full bg-[#e0f2fe]/45 dark:bg-[#1b264f]/40 rounded-full h-1.5 overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      activeLimit === Infinity 
+                        ? 'bg-emerald-500 w-full' 
+                        : usagePercentage > 85 
+                          ? 'bg-rose-500' 
+                          : usagePercentage > 60 
+                            ? 'bg-amber-500' 
+                            : 'bg-[#0284c7]'
+                    }`}
+                    style={{ width: `${usagePercentage}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Reports Usage */}
+              <div>
+                <div className="flex justify-between text-[10px] mb-1 font-bold">
+                  <span className="text-[#64748b] dark:text-[#94a3b8] uppercase tracking-wider">Reports Usage</span>
+                  <span className="text-[#0f172a] dark:text-white font-mono">
+                    {activeTier === 'free' ? '0 / 1' : activeTier === 'basic' ? '0 / 5' : activeTier === 'pro' ? '0 / 15' : 'Unlimited'}
+                  </span>
+                </div>
+                
+                <div className="w-full bg-[#e0f2fe]/45 dark:bg-[#1b264f]/40 rounded-full h-1.5 overflow-hidden">
+                  <div 
+                    className="h-full rounded-full transition-all duration-500 bg-[#7c3aed]"
+                    style={{ width: (activeTier as string) === 'unlimited' || (activeTier as string) === 'enterprise' ? '100%' : '0%' }}
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+
 
       {/* Pricing Billing Cycle Selector */}
       <div className="text-center space-y-4">
@@ -325,9 +509,17 @@ export default function SubscriptionPage({
                 
                 <div className="flex items-baseline gap-1 my-4">
                   <span className="text-3xl font-black text-[#0f172a] dark:text-white">
-                    {isYearly ? plan.annual : plan.monthly}
+                    {loadingPrices ? (
+                      <span className="animate-pulse bg-slate-200 dark:bg-slate-800 rounded px-4 py-1 text-transparent">...</span>
+                    ) : plan.id === 'free' ? (
+                      region === 'INTL' ? '$0' : '₹0'
+                    ) : region === 'INTL' ? (
+                      isYearly ? (paddlePrices[plan.id]?.year || (plan.id === 'basic' ? '$49.90' : plan.id === 'pro' ? '$99.90' : '$199.90')) : (paddlePrices[plan.id]?.month || (plan.id === 'basic' ? '$4.99' : plan.id === 'pro' ? '$9.99' : '$19.99'))
+                    ) : (
+                      isYearly ? plan.annual : plan.monthly
+                    )}
                   </span>
-                  <span className="text-xs text-[#64748b] dark:text-[#94a3b8]">/mo</span>
+                  <span className="text-xs text-[#64748b] dark:text-[#94a3b8]">{isYearly ? '/yr' : '/mo'}</span>
                 </div>
                 <p className="text-[10px] font-mono text-[#64748b] dark:text-zinc-500 min-h-[24px]">
                   {isYearly ? plan.annualNote : plan.monthlyNote}
@@ -349,34 +541,124 @@ export default function SubscriptionPage({
                 </div>
               </div>
 
-              <button
-                type="button"
-                disabled={isActive || loadingPlan !== null}
-                onClick={() => handleUpgradeSimulate(plan.id)}
-                className={`w-full py-2.5 font-bold text-xs rounded-xl cursor-pointer transition-all border flex items-center justify-center gap-2 mt-2 ${
-                  isActive
-                    ? 'bg-[#e0f2fe] dark:bg-zinc-800/60 border-transparent text-[#64748b] dark:text-[#94a3b8] dark:text-zinc-500 cursor-default'
-                    : plan.popular
-                      ? 'bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] active:scale-98 text-white shadow-md shadow-[#0284c7]/20'
-                      : 'border-[#bae6fd]/60 dark:border-[#223269]/60 hover:bg-[#e0f2fe]/40 dark:hover:bg-[#1b264f]/40 text-[#0284c7] dark:text-[#38bdf8]'
-                }`}
-              >
-                {loadingPlan === plan.id ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Processing...</span>
-                  </>
-                ) : isActive ? (
-                  'Currently Active'
-                ) : plan.id === 'free' ? (
-                  'Downgrade to Free'
-                ) : (
-                  <>
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Get {plan.name}</span>
-                  </>
-                )}
-              </button>
+              {(() => {
+                const isBasicTrialClaimed = Boolean(typeof window !== 'undefined' && localStorage.getItem('makbills_trial_used_basic'));
+                const isProTrialClaimed = Boolean(typeof window !== 'undefined' && localStorage.getItem('makbills_trial_used_pro'));
+
+                const canTrialBasic = plan.id === 'basic' && !isBasicTrialClaimed && !isActive;
+                const canTrialPro = plan.id === 'pro' && !isProTrialClaimed && !isActive;
+
+                // Check active valid subscription window for reclaim vs renew
+                const lastPaidTier = typeof window !== 'undefined' ? localStorage.getItem('makbills_last_active_paid_tier') : null;
+                const expiresIsoRaw = typeof window !== 'undefined' ? localStorage.getItem('makbills_sub_expires_iso') : null;
+                const isMatchingTier = Boolean(
+                  lastPaidTier === plan.id ||
+                  (lastPaidTier === 'enterprise' && plan.id === 'unlimited') ||
+                  (lastPaidTier === 'unlimited' && plan.id === 'unlimited')
+                );
+
+                const isWithinActivationWindow = Boolean(
+                  isMatchingTier && 
+                  (!expiresIsoRaw || new Date(expiresIsoRaw).getTime() > Date.now())
+                );
+                const isExpiredPaidPlan = Boolean(
+                  isMatchingTier && 
+                  expiresIsoRaw && 
+                  new Date(expiresIsoRaw).getTime() <= Date.now()
+                );
+
+                const handleStartTrial = (planId: 'basic' | 'pro') => {
+                  const now = new Date();
+                  const expires = new Date();
+                  expires.setDate(now.getDate() + 30);
+                  
+                  localStorage.setItem('makbills_sub_activated_at', now.toISOString());
+                  localStorage.setItem('makbills_sub_expires_iso', expires.toISOString());
+                  localStorage.setItem('makbills_sub_expires_at', expires.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) + ' (1-Month Free Trial)');
+                  localStorage.setItem('makbills_last_active_paid_tier', planId);
+                  
+                  if (planId === 'basic') {
+                    localStorage.setItem('makbills_trial_used_basic', expires.toISOString());
+                    onUpgrade('basic');
+                    setShowSuccessModal('basic_trial');
+                  } else {
+                    localStorage.setItem('makbills_trial_used_pro', expires.toISOString());
+                    onUpgrade('pro');
+                    setShowSuccessModal('pro_trial');
+                  }
+                };
+
+                return (
+                  <div className="space-y-2 mt-2">
+                    {(canTrialBasic || canTrialPro) && (
+                      <button
+                        type="button"
+                        onClick={() => handleStartTrial(plan.id as 'basic' | 'pro')}
+                        className="w-full py-2.5 font-extrabold text-xs rounded-xl cursor-pointer transition-all bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Start 1-Month Free Trial</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={isActive || loadingPlan !== null}
+                      onClick={() => {
+                        if (plan.id === 'free') {
+                          setShowDowngradeConfirm(true);
+                          return;
+                        }
+
+                        // Reclaim active plan without payment IF within valid activation time window
+                        if (isWithinActivationWindow) {
+                          onUpgrade(plan.id as any);
+                          setShowSuccessModal(plan.id);
+                          return;
+                        }
+
+                        // Otherwise (expired or new subscription), trigger paid payment checkout / renewal
+                        const mappedKey = (plan.id === 'pro' ? 'professional' : plan.id === 'unlimited' ? 'enterprise' : plan.id) as 'basic' | 'professional' | 'enterprise';
+                        const mode = isYearly ? 'yearly_recurring' : 'monthly';
+                        triggerCheckout(mappedKey, mode);
+                      }}
+                      className={`w-full py-2.5 font-bold text-xs rounded-xl cursor-pointer transition-all border flex items-center justify-center gap-2 ${
+                        isActive
+                          ? 'bg-[#e0f2fe] dark:bg-zinc-800/60 border-transparent text-[#64748b] dark:text-[#94a3b8] dark:text-zinc-500 cursor-default'
+                          : plan.popular && !(canTrialBasic || canTrialPro)
+                            ? 'bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] active:scale-98 text-white shadow-md shadow-[#0284c7]/20'
+                            : 'border-[#bae6fd]/60 dark:border-[#223269]/60 hover:bg-[#e0f2fe]/40 dark:hover:bg-[#1b264f]/40 text-[#0284c7] dark:text-[#38bdf8]'
+                      }`}
+                    >
+                      {loadingPlan === plan.id ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Processing...</span>
+                        </>
+                      ) : isActive ? (
+                        'Currently Active'
+                      ) : plan.id === 'free' ? (
+                        'Downgrade to Free'
+                      ) : isWithinActivationWindow ? (
+                        <>
+                          <Zap className="w-3.5 h-3.5 fill-[#0284c7] dark:fill-[#38bdf8]" />
+                          <span>Reclaim {plan.name} Plan</span>
+                        </>
+                      ) : isExpiredPaidPlan ? (
+                        <>
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span>Renew {plan.name} Plan</span>
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span>{(canTrialBasic || canTrialPro) ? `Buy Paid ${plan.name}` : `Get ${plan.name}`}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
@@ -622,10 +904,14 @@ export default function SubscriptionPage({
             </div>
             
             <h3 className="text-xl font-black text-[#0f172a] dark:text-white uppercase tracking-tight">
-              Upgrade Successful!
+              {showSuccessModal.includes('_trial') ? '1-Month Free Trial Activated!' : 'Upgrade Successful!'}
             </h3>
-            <p className="text-xs text-[#64748b] dark:text-[#94a3b8] dark:text-[#64748b] dark:text-[#94a3b8] mt-2 leading-relaxed">
-              Congratulations! Your MakInvoices account has been upgraded to the <span className="font-extrabold capitalize text-[#0284c7]">{showSuccessModal} Plan</span>. All features, layouts, and limits are instantly active.
+            <p className="text-xs text-[#64748b] dark:text-[#94a3b8] mt-2 leading-relaxed">
+              {showSuccessModal.includes('_trial') ? (
+                <>Congratulations! Your <span className="font-extrabold capitalize text-emerald-600 dark:text-emerald-400">1-Month Free Trial</span> for the {showSuccessModal === 'basic_trial' ? 'Basic Plan' : 'Professional Plan'} is now active. Enjoy full features for 30 days at zero cost!</>
+              ) : (
+                <>Congratulations! Your MakInvoices account has been upgraded to the <span className="font-extrabold capitalize text-[#0284c7]">{showSuccessModal} Plan</span>. All features, layouts, and limits are instantly active.</>
+              )}
             </p>
 
             <button
@@ -634,6 +920,46 @@ export default function SubscriptionPage({
             >
               Continue to Dashboard
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Downgrade Confirmation Overlay */}
+      {showDowngradeConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-md bg-white dark:bg-[#111a36] rounded-3xl p-8 border border-amber-500/40 text-center shadow-2xl transform scale-100 animate-in zoom-in duration-300">
+            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-950/50 rounded-full flex items-center justify-center mx-auto mb-5 text-amber-600 dark:text-amber-400">
+              <Crown className="w-8 h-8" />
+            </div>
+            
+            <h3 className="text-xl font-black text-[#0f172a] dark:text-white uppercase tracking-tight">
+              Confirm Plan Downgrade
+            </h3>
+            <p className="text-xs text-[#64748b] dark:text-[#94a3b8] mt-2 leading-relaxed">
+              Are you sure you want to switch to the <span className="font-extrabold text-amber-600 dark:text-amber-400">Free Starter Plan</span>? Your active plan features will be locked, but you can restore your paid tier anytime without paying again.
+            </p>
+
+            <div className="mt-6 flex items-center gap-3">
+              <button
+                onClick={() => setShowDowngradeConfirm(false)}
+                className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-extrabold text-xs rounded-xl cursor-pointer hover:bg-slate-200 transition-all"
+              >
+                Keep Active Plan
+              </button>
+              <button
+                onClick={() => {
+                  if (activeTier && activeTier !== 'free') {
+                    localStorage.setItem('makbills_last_active_paid_tier', activeTier);
+                  }
+                  onUpgrade('free');
+                  setShowDowngradeConfirm(false);
+                  setShowSuccessModal('free');
+                }}
+                className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs rounded-xl cursor-pointer active:scale-98 transition-all shadow-md shadow-rose-600/20"
+              >
+                Confirm Downgrade
+              </button>
+            </div>
           </div>
         </div>
       )}

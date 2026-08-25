@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { ConfirmProvider } from './components/ConfirmContext';
+import { SubscriptionProvider } from './lib/subscriptionContext';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -60,7 +61,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <ConfirmProvider>
-        <App />
+        <SubscriptionProvider>
+          <App />
+        </SubscriptionProvider>
       </ConfirmProvider>
     </ErrorBoundary>
   </StrictMode>,

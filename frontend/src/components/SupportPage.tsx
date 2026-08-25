@@ -337,9 +337,10 @@ const faqs = [
 interface SupportPageProps {
   onChatClick?: () => void;
   onNavigateTab?: (tab: string) => void;
+  subscriptionTier?: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise';
 }
 
-export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageProps) {
+export default function SupportPage({ onChatClick, onNavigateTab, subscriptionTier = 'free' }: SupportPageProps) {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   // --- Ticket Viewer & Chat State ---
@@ -1112,14 +1113,29 @@ export default function SupportPage({ onChatClick, onNavigateTab }: SupportPageP
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { icon: <Mail className="w-5 h-5" />, label: 'Email Support', value: 'support@makinvoices.com', sub: 'Response within 24h', color: 'text-[#0284c7] dark:text-[#38bdf8]', bg: 'bg-[#e0f2fe] dark:bg-[#0284c7]/30', link: 'mailto:support@makinvoices.com' },
-          { icon: <MessageCircle className="w-5 h-5" />, label: 'Live Chat', value: 'Available 9am–6pm IST', sub: 'Mon–Fri on web app', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-950/30', isChat: true },
+          { 
+            icon: subscriptionTier === 'free' || subscriptionTier === 'basic' ? <Lock className="w-5 h-5 text-amber-500" /> : <MessageCircle className="w-5 h-5" />, 
+            label: 'Live Chat (AI Support)', 
+            value: subscriptionTier === 'free' || subscriptionTier === 'basic' ? 'Pro & Enterprise Only 🔒' : 'Available 24/7', 
+            sub: subscriptionTier === 'free' || subscriptionTier === 'basic' ? 'Upgrade plan to access Live AI Chat' : 'Instant AI assistance', 
+            color: subscriptionTier === 'free' || subscriptionTier === 'basic' ? 'text-amber-500' : 'text-emerald-500', 
+            bg: subscriptionTier === 'free' || subscriptionTier === 'basic' ? 'bg-amber-50 dark:bg-amber-950/30' : 'bg-emerald-50 dark:bg-emerald-950/30', 
+            isChat: true 
+          },
           { icon: <FileText className="w-5 h-5" />, label: 'Documentation', value: 'docs.makinvoices.com', sub: 'Full guides & API', color: 'text-violet-500', bg: 'bg-violet-50 dark:bg-violet-950/30', link: 'https://docs.makinvoices.com' },
         ].map(ch => (
           <div 
             key={ch.label} 
             onClick={() => { 
-              if (ch.isChat && onChatClick) {
-                onChatClick(); 
+              if (ch.isChat) {
+                if (subscriptionTier === 'free' || subscriptionTier === 'basic') {
+                  emitNotification('Feature Locked 🔒', 'MakInvoices AI Live Chat Support is available exclusively on Professional and Enterprise plans. Upgrade your plan to chat live with AI support.', 'error');
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                  }
+                  return;
+                }
+                if (onChatClick) onChatClick(); 
               } else if (ch.link) {
                 window.location.href = ch.link;
               }

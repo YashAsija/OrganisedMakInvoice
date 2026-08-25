@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown, Loader2, ChevronDown, Smartphone, Mail, FileDown, Printer, Package } from 'lucide-react';
+import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown, Loader2, ChevronDown, Smartphone, Mail, FileDown, Printer, Package, Lock } from 'lucide-react';
 import { Invoice, TaxClassification, InvoiceItem, InvoiceStatus, DiscountType, PresetItem, ClientProfile, RecurringInterval, BusinessProfile, InvoiceTemplate } from '../types';
 import { EditableField } from './EditableField';
 import { exportInvoicePDFAsync } from '../lib/pdfExporter';
@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase';
 import { emitNotification } from '../lib/notifications';
 import { SmartBillingBox } from './SmartBillingBox';
 import { getDocumentTypeDefaults } from '../lib/docTypeDefaults';
+import { getLocalizationConfig } from '../lib/localizationEngine';
 
 
 interface InvoiceModalProps {
@@ -27,6 +28,7 @@ interface InvoiceModalProps {
   onClose: () => void;
   onSave: (inv: Invoice) => void;
   userId?: string | null;
+  subscriptionTier?: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise';
 }
 
 export const getFinancialYearShort = (dateInput?: string | Date): string => {
@@ -109,7 +111,8 @@ export default function InvoiceModal({
   isOpen,
   onClose,
   onSave,
-  userId
+  userId,
+  subscriptionTier = 'free'
 }: InvoiceModalProps) {
   // GUI Preview and Form Edit State
   const [activeMode, setActiveMode] = useState<'edit' | 'preview' | 'editable'>('editable');
@@ -1943,7 +1946,7 @@ export default function InvoiceModal({
     emitNotification('Word Document Downloaded', `Document #${inv.invoiceNumber} exported as MS Word doc.`, 'success');
   };
 
-  const handleSaveSubmit = (e: React.FormEvent) => {
+  const handleSaveSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (items.length === 0) {
@@ -2133,54 +2136,60 @@ export default function InvoiceModal({
     };
 
     isSavedSuccessfullyRef.current = true;
-    onSave(finalInvoiceObj);
-
-    // ─── Draft cleanup on successful submit ────────────────────────────────
-    // Remove the draft from localStorage so it doesn't show as resumable
     try {
-      localStorage.removeItem('makbills_pending_resume_draft');
-      setResumableDraft(null);
-      const storageKey = getStorageKey();
-      const raw = localStorage.getItem(storageKey);
-      if (raw) {
-        const all = JSON.parse(raw) as any[];
-        // Remove temporary draft entry if it was a temp inv_draft_ prefix or matches current draft
-        const filtered = all.filter((i: any) => !(i.id === savedDraftId || (savedDraftId.startsWith('inv_draft_') && i.id === savedDraftId)));
-        localStorage.setItem(storageKey, JSON.stringify(filtered));
-        localStorage.setItem('invoice_maker_invoices', JSON.stringify(filtered));
-      }
-    } catch { /* ignore */ }
-    // Also clean up temporary draft from Supabase (ONLY if savedDraftId was a temp draft)
-    if (savedDraftId.startsWith('inv_draft_')) {
-      supabase.auth.getSession().then(({ data }) => {
-        if (data.session?.user) {
-          supabase.from('invoices').delete().eq('id', savedDraftId).then(() => { });
+      await onSave(finalInvoiceObj);
+
+      // ─── Draft cleanup on successful submit ────────────────────────────────
+      // Remove the draft from localStorage so it doesn't show as resumable
+      try {
+        localStorage.removeItem('makbills_pending_resume_draft');
+        setResumableDraft(null);
+        const storageKey = getStorageKey();
+        const raw = localStorage.getItem(storageKey);
+        if (raw) {
+          const all = JSON.parse(raw) as any[];
+          // Remove temporary draft entry if it was a temp inv_draft_ prefix or matches current draft
+          const filtered = all.filter((i: any) => !(i.id === savedDraftId || (savedDraftId.startsWith('inv_draft_') && i.id === savedDraftId)));
+          localStorage.setItem(storageKey, JSON.stringify(filtered));
+          localStorage.setItem('invoice_maker_invoices', JSON.stringify(filtered));
         }
-      });
+      } catch { /* ignore */ }
+      // Also clean up temporary draft from Supabase (ONLY if savedDraftId was a temp draft)
+      if (savedDraftId.startsWith('inv_draft_')) {
+        supabase.auth.getSession().then(({ data }) => {
+          if (data.session?.user) {
+            supabase.from('invoices').delete().eq('id', savedDraftId).then(() => { });
+          }
+        });
+      }
+      // Reset draftIdRef to a new temp draft ID
+      draftIdRef.current = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
+
+      const docTypeNames: Record<string, string> = {
+        proforma: 'Proforma Invoice',
+        credit_note: 'Credit Note',
+        debit_note: 'Debit Note',
+        estimate: 'Quotation / Estimate',
+        invoice: 'Tax Invoice'
+      };
+      const docName = docTypeNames[invoiceType] || 'Tax Invoice';
+      const notifTitle = invoice ? `${docName} Updated` : `${docName} Created`;
+
+      emitNotification(
+        notifTitle,
+        `${docName} #${invoiceNumber} for ${clientName || 'Client'} has been saved to your ledger.`,
+        'success'
+      );
+
+      setSavedInvoiceForPreview({
+        ...finalInvoiceObj,
+        selectedCopies
+      } as any);
+    } catch (saveErr) {
+      // Save blocked by quota guard or database error — do not show success UI/notification
+      console.warn('[InvoiceModal] Save cancelled or failed:', saveErr);
+      isSavedSuccessfullyRef.current = false;
     }
-    // Reset draftIdRef to a new temp draft ID
-    draftIdRef.current = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
-
-    const docTypeNames: Record<string, string> = {
-      proforma: 'Proforma Invoice',
-      credit_note: 'Credit Note',
-      debit_note: 'Debit Note',
-      estimate: 'Quotation / Estimate',
-      invoice: 'Tax Invoice'
-    };
-    const docName = docTypeNames[invoiceType] || 'Tax Invoice';
-    const notifTitle = invoice ? `${docName} Updated` : `${docName} Created`;
-
-    emitNotification(
-      notifTitle,
-      `${docName} #${invoiceNumber} for ${clientName || 'Client'} has been saved to your ledger.`,
-      'success'
-    );
-
-    setSavedInvoiceForPreview({
-      ...finalInvoiceObj,
-      selectedCopies
-    } as any);
   };
 
     const variables = theme === 'dark' ? `
@@ -2562,6 +2571,13 @@ export default function InvoiceModal({
           {/* ── AI Smart Billing (isolated module) ─────────────────────────────── */}
           <SmartBillingBox
             activeTemplate={activeTemplate}
+            isAllowed={subscriptionTier === 'pro' || subscriptionTier === 'unlimited' || subscriptionTier === 'enterprise'}
+            onUpgradeClick={() => {
+              onClose();
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+              }
+            }}
             setters={{
               setClientName, setClientEmail, setClientPhone, setClientAddress,
               setClientGstin, setClientPan, setClientState, setClientCountry,
@@ -3656,15 +3672,28 @@ export default function InvoiceModal({
                   {/* Recurring Schedule Option */}
                   <div className="p-3.5 rounded-2xl border space-y-3 shadow-xs" style={{ backgroundColor: "var(--ink-panel)", borderColor: "var(--paper-line)" }}>
                     <div className="flex items-center justify-between">
-                      <div>
-                        <span className="block text-xs font-extrabold text-slate-100 dark:text-white" style={{ color: "var(--text-dark-bg, #f8fafc)" }}>Recurring Invoice Settings</span>
-                        <span className="text-[10px] text-slate-300 dark:text-slate-300 block" style={{ color: "var(--text-dark-bg-dim, #cbd5e1)" }}>Auto-generate copies of this bill on selected schedules</span>
+                      <div className="flex items-center gap-1.5">
+                        <div>
+                          <span className="block text-xs font-extrabold text-slate-100 dark:text-white" style={{ color: "var(--text-dark-bg, #f8fafc)" }}>Recurring Invoice Settings</span>
+                          <span className="text-[10px] text-slate-300 dark:text-slate-300 block" style={{ color: "var(--text-dark-bg-dim, #cbd5e1)" }}>Auto-generate copies of this bill on selected schedules</span>
+                        </div>
+                        {(subscriptionTier === 'free' || subscriptionTier === 'basic') && (
+                          <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0 ml-1" />
+                        )}
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer select-none">
                         <input
                           type="checkbox"
                           checked={isRecurring}
                           onChange={(e) => {
+                            if (subscriptionTier === 'free' || subscriptionTier === 'basic') {
+                              emitNotification('Plan Limit', 'Recurring invoice scheduler is available on Professional and Enterprise plans. Upgrade to unlock.', 'warning');
+                              onClose();
+                              if (typeof window !== 'undefined') {
+                                window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                              }
+                              return;
+                            }
                             setIsRecurring(e.target.checked);
                             if (e.target.checked && !recurringStartDate) {
                               setRecurringStartDate(date || new Date().toISOString().split('T')[0]);

@@ -11,6 +11,7 @@ interface BusinessProfileModalProps {
   isOnboarding?: boolean;
   onClose: () => void;
   onSave: (pf: BusinessProfile) => void;
+  subscriptionTier?: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise';
 }
 
 const SIGNATURE_FONTS = [
@@ -22,7 +23,7 @@ const SIGNATURE_FONTS = [
   'Tangerine', 'WindSong'
 ];
 
-export default function BusinessProfileModal({ profile, isOpen, isOnboarding = false, onClose, onSave }: BusinessProfileModalProps) {
+export default function BusinessProfileModal({ profile, isOpen, isOnboarding = false, onClose, onSave, subscriptionTier = 'free' }: BusinessProfileModalProps) {
   // Tabs State: 'company' | 'banking' | 'billing' | 'subscription' | 'tax'
   type TabType = 'company' | 'banking' | 'billing' | 'subscription' | 'tax';
   const validTabs: TabType[] = ['company', 'banking', 'billing', 'subscription', 'tax'];
@@ -2103,10 +2104,23 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => logoUrl ? setShowLogoOptions(true) : triggerLogoUpload()}
+                          onClick={() => {
+                            if (subscriptionTier === 'free') {
+                              emitNotification('Feature Locked 🔒', 'Personalised Logo upload is available on Basic, Professional, and Enterprise plans. Upgrade your plan to add your custom business logo.', 'error');
+                              if (typeof window !== 'undefined') {
+                                window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                              }
+                              return;
+                            }
+                            logoUrl ? setShowLogoOptions(true) : triggerLogoUpload();
+                          }}
                           className="px-4 py-2 bg-[#e0f2fe] hover:bg-[#bae6fd]/60 border border-[#bae6fd] dark:border-[#223269] font-extrabold text-[10px] uppercase tracking-wider text-[#0284c7] rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
                         >
-                          <Upload className="w-3.5 h-3.5" />
+                          {subscriptionTier === 'free' ? (
+                            <Lock className="w-3.5 h-3.5 text-amber-500" />
+                          ) : (
+                            <Upload className="w-3.5 h-3.5" />
+                          )}
                           {logoUrl ? 'Edit Logo' : 'Upload Logo'}
                         </button>
                         {logoUrl && (
@@ -2186,8 +2200,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               </div>
 
               {/* CARD 2: LOCATION DETAILS */}
-              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
-                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
+              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl bg-white dark:bg-[#111a36] shadow-xs">
+                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8] rounded-t-2xl">
                   Location Details
                 </div>
                 <div className="p-6 space-y-6">
@@ -2477,24 +2491,57 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                       <div className="flex bg-[#e0f2fe]/40 dark:bg-[#0b1329] p-0.5 rounded-lg border border-[#bae6fd]/50 dark:border-[#223269]/50">
                         <button
                           type="button"
-                          onClick={() => setSignatureMode('draw')}
-                          className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all cursor-pointer ${signatureMode === 'draw' ? 'bg-[#0284c7] text-white shadow-sm' : 'text-[#0284c7]/70 hover:text-[#0f172a] dark:hover:text-zinc-300'}`}
+                          onClick={() => {
+                            if (subscriptionTier === 'free') {
+                              emitNotification('Feature Locked 🔒', 'Personalised Digital Signature is available on Basic, Professional, and Enterprise plans. Upgrade your plan to unlock signature drawing.', 'error');
+                              if (typeof window !== 'undefined') {
+                                window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                              }
+                              return;
+                            }
+                            setSignatureMode('draw');
+                          }}
+                          className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all flex items-center gap-1 cursor-pointer ${signatureMode === 'draw' ? 'bg-[#0284c7] text-white shadow-sm' : 'text-[#0284c7]/70 hover:text-[#0f172a] dark:hover:text-zinc-300'}`}
                         >
+                          {subscriptionTier === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
                           Draw
                         </button>
                         <button
                           type="button"
-                          onClick={() => setSignatureMode('type')}
-                          className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all cursor-pointer ${signatureMode === 'type' ? 'bg-[#0284c7] text-white shadow-sm' : 'text-[#0284c7]/70 hover:text-[#0f172a] dark:hover:text-zinc-300'}`}
+                          onClick={() => {
+                            if (subscriptionTier === 'free') {
+                              emitNotification('Feature Locked 🔒', 'Personalised Stylized Signature is available on Basic, Professional, and Enterprise plans. Upgrade your plan to unlock signature typing.', 'error');
+                              if (typeof window !== 'undefined') {
+                                window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                              }
+                              return;
+                            }
+                            setSignatureMode('type');
+                          }}
+                          className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all flex items-center gap-1 cursor-pointer ${signatureMode === 'type' ? 'bg-[#0284c7] text-white shadow-sm' : 'text-[#0284c7]/70 hover:text-[#0f172a] dark:hover:text-zinc-300'}`}
                         >
+                          {subscriptionTier === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
                           Type
                         </button>
                         <button
                           type="button"
-                          onClick={() => signatureImageInputRef.current?.click()}
+                          onClick={() => {
+                            if (subscriptionTier === 'free') {
+                              emitNotification('Feature Locked 🔒', 'Personalised Signature Upload is available on Basic, Professional, and Enterprise plans. Upgrade your plan to upload custom signature stamps.', 'error');
+                              if (typeof window !== 'undefined') {
+                                window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                              }
+                              return;
+                            }
+                            signatureImageInputRef.current?.click();
+                          }}
                           className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all flex items-center gap-1 cursor-pointer ${signatureMode === 'upload' ? 'bg-[#0284c7] text-white shadow-sm' : 'text-[#0284c7]/70 hover:text-[#0f172a] dark:hover:text-zinc-300'}`}
                         >
-                          <Upload className="w-3 h-3" />
+                          {subscriptionTier === 'free' ? (
+                            <Lock className="w-3 h-3 text-amber-500" />
+                          ) : (
+                            <Upload className="w-3 h-3" />
+                          )}
                           Upload
                         </button>
                       </div>
@@ -3107,70 +3154,88 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           )}
 
           {/* TAB 4: SUBSCRIPTION */}
-          {activeTab === 'subscription' && (
-            <div className="space-y-6 animate-fade-in text-[#0f172a] dark:text-[#e2e8f0]">
-              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
-                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
-                  Subscription Details
-                </div>
-                <div className="p-6 space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="p-1 px-3 bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#e2e8f0] border border-slate-200 dark:border-[#223269] rounded-full text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-1.5">
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        Premium Service Stack Enabled
-                      </div>
-                      <span className="text-xs text-[#0284c7] dark:text-zinc-300 font-mono font-extrabold uppercase tracking-wider">{subStatus}</span>
-                    </div>
+          {activeTab === 'subscription' && (() => {
+            const planDisplayNames: Record<string, string> = {
+              free: 'MakInvoices Starter Plan',
+              basic: 'MakInvoices Basic Plan',
+              pro: 'MakInvoices Professional Plan',
+              unlimited: 'MakInvoices Enterprise Unlimited Plan',
+              enterprise: 'MakInvoices Enterprise Unlimited Plan',
+            };
+            const planTypes: Record<string, string> = {
+              free: 'Starter Plan (Free Tier)',
+              basic: 'Basic Plan',
+              pro: 'Professional Plan',
+              unlimited: 'Enterprise Unlimited Plan',
+              enterprise: 'Enterprise Unlimited Plan',
+            };
+            const planDescriptions: Record<string, string> = {
+              free: 'Basic document creation with 10 documents and 1 accounting report download per month.',
+              basic: 'Core billing suite with 60 documents/mo, 5 reports/mo, HSN registry, and custom templates.',
+              pro: 'Professional tier with 140 documents/mo, 15 reports/mo, AI Smart Billing, and 24/7 AI Live Chat support.',
+              unlimited: 'Unlimited document generation, unlimited report downloads, bulk actions, and enterprise features.',
+              enterprise: 'Unlimited document generation, unlimited report downloads, bulk actions, and enterprise features.',
+            };
 
-                    <div className="space-y-1">
-                      <h3 className="text-xl sm:text-2xl font-extrabold text-[#0f172a] dark:text-white">{subPlanName}</h3>
-                      <p className="text-xs text-[#0284c7]/80 dark:text-[#94a3b8]">The corporate grade cloud syncing environment. Bound strictly in military local encryptions.</p>
-                    </div>
+            const currentPlanName = planDisplayNames[subscriptionTier] || 'MakInvoices Starter Plan';
+            const currentPlanType = planTypes[subscriptionTier] || 'Starter Plan (Free Tier)';
+            const currentDescription = planDescriptions[subscriptionTier] || 'Standard billing suite environment.';
+            const currentStatus = subscriptionTier === 'free' ? 'Active Free Plan' : 'Active Subscription';
+            const currentRenewal = (typeof window !== 'undefined' && localStorage.getItem('makbills_sub_expires_at')) || (subscriptionTier === 'free' ? 'Free Forever' : 'Renews Monthly / Annually');
 
-                    <div className="border-t border-[#bae6fd]/30 dark:border-[#223269]/60 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <span className="block text-[9px] font-extrabold text-[#0284c7]/60 dark:text-[#64748b] uppercase tracking-widest">Active Plan Type</span>
-                        <span className="text-sm font-bold text-[#0f172a] dark:text-white">{subPlanType}</span>
+            return (
+              <div className="space-y-6 animate-fade-in text-[#0f172a] dark:text-[#e2e8f0]">
+                <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
+                  <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
+                    Subscription Details
+                  </div>
+                  <div className="p-6 space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="p-1 px-3 bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#e2e8f0] border border-slate-200 dark:border-[#223269] rounded-full text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          {subscriptionTier === 'free' ? 'Standard Plan Active' : 'Premium Service Stack Enabled'}
+                        </div>
+                        <span className="text-xs text-[#0284c7] dark:text-zinc-300 font-mono font-extrabold uppercase tracking-wider">{currentStatus}</span>
                       </div>
-                      <div>
-                        <span className="block text-[9px] font-extrabold text-[#0284c7]/60 dark:text-[#64748b] uppercase tracking-widest">Authorized Token Node</span>
-                        <span className="text-sm font-medium text-[#0284c7] dark:text-zinc-300 font-mono tracking-wide">{subAuthorizedToken || companyCode || 'N/A'}</span>
+
+                      <div className="space-y-1">
+                        <h3 className="text-xl sm:text-2xl font-extrabold text-[#0f172a] dark:text-white">{currentPlanName}</h3>
+                        <p className="text-xs text-[#0284c7]/80 dark:text-[#94a3b8]">{currentDescription}</p>
                       </div>
-                      <div>
-                        <span className="block text-[9px] font-extrabold text-[#0284c7]/60 dark:text-[#64748b] uppercase tracking-widest">Expires / Renews</span>
-                        <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                          {subExpiresAt}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block text-[9px] font-extrabold text-[#0284c7]/60 dark:text-[#64748b] uppercase tracking-widest">Local Node Syncing State</span>
-                        <span className="text-xs font-medium text-[#0f172a] dark:text-[#94a3b8] flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                          Authenticated
-                        </span>
+
+                      <div className="border-t border-[#bae6fd]/30 dark:border-[#223269]/60 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <span className="block text-[9px] font-extrabold text-[#0284c7]/60 dark:text-[#64748b] uppercase tracking-widest">Active Plan Type</span>
+                          <span className="text-sm font-bold text-[#0f172a] dark:text-white">{currentPlanType}</span>
+                        </div>
+                        <div>
+                          <span className="block text-[9px] font-extrabold text-[#0284c7]/60 dark:text-[#64748b] uppercase tracking-widest">Date of Activation</span>
+                          <span className="text-sm font-bold text-[#0284c7] dark:text-sky-400 font-mono">
+                            {(() => {
+                              const activatedAt = typeof window !== 'undefined' ? localStorage.getItem('makbills_sub_activated_at') : null;
+                              const dateObj = activatedAt ? new Date(activatedAt) : new Date();
+                              return isNaN(dateObj.getTime()) ? new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+                            })()}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block text-[9px] font-extrabold text-[#0284c7]/60 dark:text-[#64748b] uppercase tracking-widest">Expires / Renews</span>
+                          <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            {currentRenewal}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block text-[9px] font-extrabold text-[#0284c7]/60 dark:text-[#64748b] uppercase tracking-widest">Authorized Token Node</span>
+                          <span className="text-xs font-medium text-[#0284c7] dark:text-zinc-300 font-mono tracking-wide">{companyCode || 'C0004'}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <div className="p-4 bg-[#f4f9ff] dark:bg-zinc-955/30 rounded-2xl border border-[#bae6fd]/50 dark:border-[#223269]/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="space-y-0.5">
-                  <h4 className="text-xs font-bold text-[#0f172a] dark:text-white uppercase tracking-wider">Multi-User Collaboration & Audit System</h4>
-                  <p className="text-[10px] text-[#0284c7]/80 dark:text-[#94a3b8]">Authorize secure cryptographic access keys to branch office ledgers instantly.</p>
-                </div>
-                <button 
-                  type="button"
-                  onClick={() => setNotification({ message: 'Branch key sharing token successfully synchronized locally! Check console ledger key.', type: 'info', title: 'Branch Key Request' })}
-                  className="px-4 py-2 bg-[#0284c7] hover:bg-[#e0f2fe]0 text-white text-[10px] uppercase font-extrabold tracking-widest rounded-xl transition-all cursor-pointer flex items-center gap-1.5 self-stretch sm:self-auto justify-center"
-                >
-                  <KeyRound className="w-3.5 h-3.5 text-white" />
-                  Request Key
-                </button>
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* TAB 5: TAX CONFIG */}
           {activeTab === 'tax' && (

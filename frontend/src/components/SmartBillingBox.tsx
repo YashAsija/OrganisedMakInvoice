@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Sparkles, Loader2, X, Undo2, Redo2 } from 'lucide-react';
+import { Sparkles, Loader2, X, Undo2, Redo2, Lock } from 'lucide-react';
 import {
   buildTemplateFieldSchema,
   extractInvoiceData,
@@ -17,6 +17,8 @@ interface SmartBillingBoxProps {
   activeTemplate: InvoiceTemplate;
   setters: SmartBillingSetters;
   existingState: SmartBillingExistingState;
+  isAllowed?: boolean;
+  onUpgradeClick?: () => void;
 }
 
 interface InvoiceSnapshot {
@@ -72,7 +74,7 @@ interface InvoiceSnapshot {
  *   • setters prop (all form state setters bundled)
  *   • existingState prop (current field values for merge logic)
  */
-export function SmartBillingBox({ activeTemplate, setters, existingState }: SmartBillingBoxProps) {
+export function SmartBillingBox({ activeTemplate, setters, existingState, isAllowed = true, onUpgradeClick }: SmartBillingBoxProps) {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [lastFilledCount, setLastFilledCount] = useState<number | null>(null);
@@ -80,6 +82,40 @@ export function SmartBillingBox({ activeTemplate, setters, existingState }: Smar
   // Undo / Redo history stack
   const [history, setHistory] = useState<InvoiceSnapshot[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
+
+  if (!isAllowed) {
+    return (
+      <div className="mx-1 mb-2.5 sm:mb-3 shrink-0">
+        <div className="p-3.5 bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/20">
+              <Lock className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200">AI Smart Billing</span>
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded-md border border-amber-300/40">
+                  Pro Feature 🔒
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                Auto-fill invoice templates instantly from plain English text with Gemini AI. Upgrade to Professional plan to unlock.
+              </p>
+            </div>
+          </div>
+          {onUpgradeClick && (
+            <button
+              type="button"
+              onClick={onUpgradeClick}
+              className="w-full sm:w-auto px-3.5 py-1.5 bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer shrink-0 active:scale-95 transition-all"
+            >
+              Upgrade to Unlock →
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // Helper to capture current invoice form state snapshot
   const captureSnapshot = useCallback((promptText = prompt): InvoiceSnapshot => {

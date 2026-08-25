@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { getFinancialYearShort, getNextInvoiceNumber } from './InvoiceModal';
 import { useExpenses } from '../hooks/useExpenses';
 import { ExpensesPage } from './ExpensesPage';
+import { supabase } from '../lib/supabase';
 
 import * as XLSX from 'xlsx';
 
@@ -174,6 +175,8 @@ import TemplateManager from './TemplateManager';
 
 import { emitNotification } from '../lib/notifications';
 
+import { getTierLimits, getBillingCycleReportCount, incrementBillingCycleReportCount } from '../lib/subscriptionGuard';
+
 import { TEMPLATE_PRESETS, getDefaultTemplatePreset } from '../lib/templatePresets';
 
 import { getDocumentTypeDefaults } from '../lib/docTypeDefaults';
@@ -248,6 +251,7 @@ interface DashboardProps {
   onDeleteInvoice: (id: string) => void;
   onRestoreInvoice?: (id: string) => void;
   onHardDeleteInvoice?: (id: string) => void;
+  onBulkHardDeleteInvoices?: (ids: string[]) => void;
   onBulkDeleteInvoices: (ids: string[]) => void;
 
   onBulkUpdateInvoicesStatus: (ids: string[], status: InvoiceStatus) => void;
@@ -273,6 +277,8 @@ interface DashboardProps {
   activeTab?: string;
 
   onTabChange?: (tab: string) => void;
+
+  subscriptionTier?: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise';
 
 }
 
@@ -302,6 +308,8 @@ export default function Dashboard({
 
   onLogin,
 
+  subscriptionTier = 'free',
+
   onLogout,
 
   onOpenProfile,
@@ -311,6 +319,7 @@ export default function Dashboard({
   onDeleteInvoice,
   onRestoreInvoice,
   onHardDeleteInvoice,
+  onBulkHardDeleteInvoices,
   onBulkDeleteInvoices,
 
   onBulkUpdateInvoicesStatus,
@@ -353,28 +362,57 @@ export default function Dashboard({
   const setActiveTab = onTabChange !== undefined ? onTabChange : setLocalActiveTab;
   const [recentView, setRecentView] = useState<'invoices' | 'expenses'>('invoices');
 
-  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise'>(() => {
 
+
+  const handleUpgrade = async (tier: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise') => {
+    localStorage.setItem('makbills_subscription_tier', tier);
+    localStorage.setItem('makbills_sub_activated_at', new Date().toISOString());
     if (typeof window !== 'undefined') {
-
-      const cached = localStorage.getItem('makbills_subscription_tier');
-
-      return (cached as 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise') || 'free';
-
+      window.dispatchEvent(new CustomEvent('mak_subscription_change', { detail: tier }));
+      window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
     }
 
-    return 'free';
+    // Persist to cloud database so other devices immediately sync this tier change
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+        await supabase.from('users').update({
+          plan_id: tier,
+          subscription_status: 'active',
+          current_period_end: expiresAt,
+          subscription_expires_at: expiresAt,
+        }).eq('uid', user.id);
 
-  });
+        if (user.email) {
+          await supabase.from('users').update({
+            plan_id: tier,
+            subscription_status: 'active',
+            current_period_end: expiresAt,
+            subscription_expires_at: expiresAt,
+          }).eq('email', user.email);
+        }
 
-
-
-  const handleUpgrade = (tier: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise') => {
-
-    setSubscriptionTier(tier);
-
-    localStorage.setItem('makbills_subscription_tier', tier);
-
+        await supabase.from('subscriptions').upsert(
+          {
+            user_id: user.id,
+            user_email: user.email || null,
+            gateway: 'razorpay',
+            gateway_sub_id: `manual_sub_${user.id}_${Date.now()}`,
+            plan_key: tier,
+            billing_cycle: 'yearly_onetime',
+            status: 'active',
+            auto_renew: false,
+            subscription_expires_at: expiresAt,
+            current_period_end: expiresAt,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'gateway_sub_id' }
+        );
+      }
+    } catch (e) {
+      console.warn('[handleUpgrade] Failed to sync tier update to cloud:', e);
+    }
   };
 
 
@@ -3019,6 +3057,14 @@ export default function Dashboard({
 
                     onClick={() => {
 
+                      if (subscriptionTier === 'free') {
+                        emitNotification('Feature Locked 🔒', 'Bulk Database Upload is available on Basic, Professional, and Enterprise plans. Please upgrade your plan to unlock bulk operations.', 'error');
+                        if (typeof window !== 'undefined') {
+                          window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                        }
+                        return;
+                      }
+
                       const input = document.createElement('input');
 
                       input.type = 'file';
@@ -3113,7 +3159,11 @@ export default function Dashboard({
 
                   >
 
-                    <Upload className="w-3.5 h-3.5" />
+                    {subscriptionTier === 'free' ? (
+                      <Lock className="w-3.5 h-3.5 text-amber-500" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5" />
+                    )}
 
                     <span>Bulk Upload</span>
 
@@ -5445,6 +5495,12 @@ export default function Dashboard({
 
   const handleConvertDocument = (inv: Invoice, targetType: string) => {
     setActiveActionMenuId(null);
+    if (subscriptionTier === 'free') {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+      }
+      return;
+    }
     const defaultPrefixes: Record<string, string> = {
       invoice: 'INV',
       proforma: 'PRO',
@@ -8378,6 +8434,13 @@ export default function Dashboard({
 
                                     setActiveActionMenuId(null);
 
+                                    if (subscriptionTier === 'free') {
+                                      if (typeof window !== 'undefined') {
+                                        window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                                      }
+                                      return;
+                                    }
+
                                     onOpenInvoiceEditor({
 
                                       ...inv,
@@ -8392,13 +8455,19 @@ export default function Dashboard({
 
                                   }}
 
-                                  className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
+                                  className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
                                 >
 
-                                  <Copy className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                                  <div className="flex items-center gap-2.5">
 
-                                  <span>Duplicate</span>
+                                    <Copy className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+
+                                    <span>Duplicate</span>
+
+                                  </div>
+
+                                  {subscriptionTier === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
 
                                 </button>
 
@@ -8709,11 +8778,13 @@ export default function Dashboard({
 
                           checked={filteredInvoices.length > 0 && filteredInvoices.every(i => selectedInvoiceIds.includes(i.id))}
 
-                          onChange={handleSelectAllFiltered}
+                          onChange={(e) => {
+                            handleSelectAllFiltered();
+                          }}
 
                           className="w-4 h-4 rounded border-[#e2e8f0] text-[#64748b] focus:ring-[#64748b] cursor-pointer"
 
-                          title="Select all invoices"
+                          title={subscriptionTier === 'free' ? "Bulk selection locked on Starter plan (Upgrade to Basic, Pro or Enterprise)" : "Select all invoices"}
 
                         />
 
@@ -8777,9 +8848,13 @@ export default function Dashboard({
 
                               checked={selectedInvoiceIds.includes(inv.id)}
 
-                              onChange={(e) => handleToggleSelectInvoice(inv.id, e as any)}
+                              onChange={(e) => {
+                                handleToggleSelectInvoice(inv.id, e as any);
+                              }}
 
                               className="w-4 h-4 rounded border-[#e2e8f0] text-[#64748b] focus:ring-[#64748b] cursor-pointer"
+
+                              title={subscriptionTier === 'free' ? "Bulk selection locked on Starter plan (Upgrade to Basic, Pro or Enterprise)" : "Select document"}
 
                             />
 
@@ -9038,6 +9113,13 @@ export default function Dashboard({
 
                                       setActiveActionMenuId(null);
 
+                                      if (subscriptionTier === 'free') {
+                                        if (typeof window !== 'undefined') {
+                                          window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                                        }
+                                        return;
+                                      }
+
                                       onOpenInvoiceEditor({
 
                                         ...inv,
@@ -9052,13 +9134,19 @@ export default function Dashboard({
 
                                     }}
 
-                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
+                                    className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
                                   >
 
-                                    <Copy className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                                    <div className="flex items-center gap-2.5">
 
-                                    <span>Duplicate</span>
+                                      <Copy className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+
+                                      <span>Duplicate</span>
+
+                                    </div>
+
+                                    {subscriptionTier === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
 
                                   </button>
 
@@ -9086,13 +9174,19 @@ export default function Dashboard({
 
                                               onClick={() => handleConvertDocument(inv, 'purchases')}
 
-                                              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
+                                              className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
                                             >
 
-                                              <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
+                                              <div className="flex items-center gap-2.5">
 
-                                              <span>Convert to Purchase Bill</span>
+                                                <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
+
+                                                <span>Convert to Purchase Bill</span>
+
+                                              </div>
+
+                                              {subscriptionTier === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
 
                                             </button>
 
@@ -9104,13 +9198,19 @@ export default function Dashboard({
 
                                               onClick={() => handleConvertDocument(inv, 'purchase_order')}
 
-                                              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
+                                              className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
                                             >
 
-                                              <RefreshCw className="w-3.5 h-3.5 text-sky-600" />
+                                              <div className="flex items-center gap-2.5">
 
-                                              <span>Convert to Purchase Order</span>
+                                                <RefreshCw className="w-3.5 h-3.5 text-sky-600" />
+
+                                                <span>Convert to Purchase Order</span>
+
+                                              </div>
+
+                                              {subscriptionTier === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
 
                                             </button>
 
@@ -9122,13 +9222,19 @@ export default function Dashboard({
 
                                               onClick={() => handleConvertDocument(inv, 'purchase_debit_note')}
 
-                                              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
+                                              className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
                                             >
 
-                                              <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
+                                              <div className="flex items-center gap-2.5">
 
-                                              <span>Convert to Debit Note</span>
+                                                <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
+
+                                                <span>Convert to Debit Note</span>
+
+                                              </div>
+
+                                              {subscriptionTier === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
 
                                             </button>
 
@@ -9150,13 +9256,19 @@ export default function Dashboard({
 
                                               onClick={() => handleConvertDocument(inv, 'invoice')}
 
-                                              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
+                                              className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
                                             >
 
-                                              <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
+                                              <div className="flex items-center gap-2.5">
 
-                                              <span>Convert to Invoice</span>
+                                                <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
+
+                                                <span>Convert to Invoice</span>
+
+                                              </div>
+
+                                              {subscriptionTier === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
 
                                             </button>
 
@@ -9168,13 +9280,19 @@ export default function Dashboard({
 
                                               onClick={() => handleConvertDocument(inv, 'proforma')}
 
-                                              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
+                                              className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
                                             >
 
-                                              <RefreshCw className="w-3.5 h-3.5 text-sky-600" />
+                                              <div className="flex items-center gap-2.5">
 
-                                              <span>Convert to Proforma</span>
+                                                <RefreshCw className="w-3.5 h-3.5 text-sky-600" />
+
+                                                <span>Convert to Proforma</span>
+
+                                              </div>
+
+                                              {subscriptionTier === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
 
                                             </button>
 
@@ -9186,13 +9304,19 @@ export default function Dashboard({
 
                                               onClick={() => handleConvertDocument(inv, 'quote')}
 
-                                              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
+                                              className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
                                             >
 
-                                              <RefreshCw className="w-3.5 h-3.5 text-teal-600" />
+                                              <div className="flex items-center gap-2.5">
 
-                                              <span>Convert to Quote</span>
+                                                <RefreshCw className="w-3.5 h-3.5 text-teal-600" />
+
+                                                <span>Convert to Quote</span>
+
+                                              </div>
+
+                                              {subscriptionTier === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
 
                                             </button>
 
@@ -9204,13 +9328,19 @@ export default function Dashboard({
 
                                               onClick={() => handleConvertDocument(inv, 'credit_note')}
 
-                                              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
+                                              className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
                                             >
 
-                                              <RefreshCw className="w-3.5 h-3.5 text-violet-600" />
+                                              <div className="flex items-center gap-2.5">
 
-                                              <span>Convert to Credit Note</span>
+                                                <RefreshCw className="w-3.5 h-3.5 text-violet-600" />
+
+                                                <span>Convert to Credit Note</span>
+
+                                              </div>
+
+                                              {subscriptionTier === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
 
                                             </button>
 
@@ -9222,13 +9352,19 @@ export default function Dashboard({
 
                                               onClick={() => handleConvertDocument(inv, 'debit_note')}
 
-                                              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
+                                              className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold text-slate-705 dark:text-zinc-300 hover:bg-[#f4f9ff]/60 dark:hover:bg-[#1b264f]/45 transition-colors cursor-pointer"
 
                                             >
 
-                                              <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
+                                              <div className="flex items-center gap-2.5">
 
-                                              <span>Convert to Debit Note</span>
+                                                <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
+
+                                                <span>Convert to Debit Note</span>
+
+                                              </div>
+
+                                              {subscriptionTier === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
 
                                             </button>
 
@@ -9377,7 +9513,16 @@ export default function Dashboard({
                     <>
                       <button
 
-                        onClick={handleBulkExportPDF}
+                        onClick={() => {
+                          if (subscriptionTier === 'free' && selectedInvoiceIds.length > 1) {
+                            emitNotification('Starter Plan Limit', 'Bulk document actions are available on Basic, Professional, and Enterprise plans. Upgrade to unlock.', 'warning');
+                            if (typeof window !== 'undefined') {
+                              window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                            }
+                            return;
+                          }
+                          handleBulkExportPDF();
+                        }}
 
                         className="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-sky-600 hover:bg-sky-500 rounded-xl text-[9px] sm:text-[10px] font-extrabold flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
 
@@ -9388,6 +9533,7 @@ export default function Dashboard({
                         <FileDown className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
 
                         <span>PDFs</span>
+                        {subscriptionTier === 'free' && selectedInvoiceIds.length > 1 && <Lock className="w-3 h-3 text-amber-300 ml-0.5" />}
 
                       </button>
 
@@ -9395,7 +9541,16 @@ export default function Dashboard({
 
                       <button
 
-                        onClick={handleBulkExportExcel}
+                        onClick={() => {
+                          if (subscriptionTier === 'free' && selectedInvoiceIds.length > 1) {
+                            emitNotification('Starter Plan Limit', 'Bulk document actions are available on Basic, Professional, and Enterprise plans. Upgrade to unlock.', 'warning');
+                            if (typeof window !== 'undefined') {
+                              window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                            }
+                            return;
+                          }
+                          handleBulkExportExcel();
+                        }}
 
                         className="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-[9px] sm:text-[10px] font-extrabold flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
 
@@ -9406,6 +9561,7 @@ export default function Dashboard({
                         <Database className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
 
                         <span>Excel</span>
+                        {subscriptionTier === 'free' && selectedInvoiceIds.length > 1 && <Lock className="w-3 h-3 text-amber-300 ml-0.5" />}
 
                       </button>
 
@@ -9416,6 +9572,13 @@ export default function Dashboard({
                         onChange={(e) => {
 
                           if (e.target.value) {
+                            if (subscriptionTier === 'free' && selectedInvoiceIds.length > 1) {
+                              emitNotification('Starter Plan Limit', 'Bulk document actions are available on Basic, Professional, and Enterprise plans. Upgrade to unlock.', 'warning');
+                              if (typeof window !== 'undefined') {
+                                window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                              }
+                              return;
+                            }
 
                             onBulkUpdateInvoicesStatus(selectedInvoiceIds, e.target.value as any);
 
@@ -9472,11 +9635,22 @@ export default function Dashboard({
                   <button
 
                     onClick={() => {
+                      if (subscriptionTier === 'free' && selectedInvoiceIds.length > 1) {
+                        emitNotification('Starter Plan Limit', 'Bulk document actions are available on Basic, Professional, and Enterprise plans. Upgrade to unlock.', 'warning');
+                        if (typeof window !== 'undefined') {
+                          window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                        }
+                        return;
+                      }
 
                       if (showBinView) {
-                        selectedInvoiceIds.forEach(id => {
-                          if (onHardDeleteInvoice) onHardDeleteInvoice(id);
-                        });
+                        if (onBulkHardDeleteInvoices) {
+                          onBulkHardDeleteInvoices(selectedInvoiceIds);
+                        } else {
+                          selectedInvoiceIds.forEach(id => {
+                            if (onHardDeleteInvoice) onHardDeleteInvoice(id);
+                          });
+                        }
                       } else {
                         onBulkDeleteInvoices(selectedInvoiceIds);
                       }
@@ -9494,6 +9668,7 @@ export default function Dashboard({
                     <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
 
                     <span>{showBinView ? "Delete Permanently" : "Delete"}</span>
+                    {subscriptionTier === 'free' && selectedInvoiceIds.length > 1 && <Lock className="w-3 h-3 text-amber-300 ml-0.5" />}
 
                   </button>
 
@@ -9864,7 +10039,6 @@ export default function Dashboard({
                         checked={filteredDrafts.length > 0 && filteredDrafts.every(inv => selectedInvoiceIds.includes(inv.id))}
 
                         onChange={(e) => {
-
                           if (e.target.checked) {
 
                             const allDraftIds = filteredDrafts.map(d => d.id);
@@ -10095,7 +10269,7 @@ export default function Dashboard({
 
           <div className="space-y-4">
 
-            <TemplateManager businessProfile={profile} />
+            <TemplateManager businessProfile={profile} subscriptionTier={subscriptionTier} />
 
           </div>
 
@@ -10857,6 +11031,22 @@ export default function Dashboard({
                       type="button"
                       onClick={() => {
                         if (reportedInvoices.length === 0) { alert("No billing records match the specified document selection and interval."); return; }
+
+                        // Check Report Downloads Quota for current 1-month activation period
+                        const currentCount = getBillingCycleReportCount();
+                        const limits = getTierLimits(subscriptionTier);
+
+                        if (currentCount >= limits.reportsPerMonth) {
+                          const errorMsg = `Subscription period accounting report limit reached (${limits.reportsPerMonth} report(s)/period on ${subscriptionTier.toUpperCase()} plan). Upgrade your plan to download more reports.`;
+                          emitNotification('Quota Exceeded 🔒', errorMsg, 'error');
+                          if (typeof window !== 'undefined') {
+                            window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                          }
+                          return;
+                        }
+
+                        // Increment report count within active activation cycle & export
+                        incrementBillingCycleReportCount();
                         const rangeLabel = reportStartDate && reportEndDate ? `${reportStartDate} to ${reportEndDate}` : "Cumulative Ledger Period";
                         exportCollectiveReportPDF(reportedInvoices, profile, rangeLabel, reportDocTypeFilter, reportSortBy);
                       }}
@@ -14859,32 +15049,41 @@ export default function Dashboard({
 
         {activeTab === 'support' && (
 
-          <SupportPage onChatClick={() => setActiveTab('support-chat')} onNavigateTab={(tab) => setActiveTab(tab as any)} />
+          <SupportPage onChatClick={() => setActiveTab('support-chat')} onNavigateTab={(tab) => setActiveTab(tab as any)} subscriptionTier={subscriptionTier} />
 
         )}
-
-
 
         {/* ------------------ TAB: SUPPORT CHAT ------------------ */}
 
         {activeTab === 'support-chat' && (
+          (subscriptionTier === 'free' || subscriptionTier === 'basic') ? (
+            (() => {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+              }
+              return (
+                <div className="p-8 text-center bg-white dark:bg-[#111a36] rounded-2xl border border-amber-200 dark:border-amber-900/50">
+                  <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                    MakInvoices AI Live Chat Support is available exclusively on Professional and Enterprise plans. Redirecting to Subscription Page... 🔒
+                  </span>
+                </div>
+              );
+            })()
+          ) : (
+            <SupportChatPage 
 
-          <SupportChatPage 
+              userEmail={userEmail} 
 
-            userEmail={userEmail} 
+              onBack={() => setActiveTab('support')} 
 
-            onBack={() => setActiveTab('support')} 
+              onEscalate={(sub, desc) => {
 
-            onEscalate={(sub, desc) => {
+                setActiveTab('support');
 
-              setActiveTab('support');
+              }} 
 
-              // Optionally trigger some toast or prefill support page logic
-
-            }} 
-
-          />
-
+            />
+          )
         )}
 
 

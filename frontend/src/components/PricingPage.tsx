@@ -2,6 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { initializePaddle, Paddle } from '@paddle/paddle-js';
 import { supabase } from '../lib/supabase';
+import { detectRegion, Region } from '../lib/detectRegion';
+import { openRazorpayCheckout } from '../lib/razorpay';
+import { openPaddleCheckout } from '../lib/paddle';
 
 // Throw error early if environment variables are not set
 const clientToken = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
@@ -15,6 +18,25 @@ if (typeof window !== 'undefined') {
     console.warn("WARNING: NEXT_PUBLIC_PADDLE_ENVIRONMENT is not defined in environment variables. Billing will be disabled.");
   }
 }
+
+// Razorpay Plan IDs mapping (IN)
+const RAZORPAY_PLANS: Record<string, { month: string; year: string }> = {
+  Basic:        { month: 'plan_TTYzsswVwujxKt', year: 'plan_TTYufWiv5d4Wgr' },
+  Professional: { month: 'plan_TTVnnkJbV6uJzV', year: 'plan_TTZ0rGDnrTGzzY' },
+  Enterprise:   { month: 'plan_TTVo4PRW1GLArc', year: 'plan_TTZ1RFdtad3jTU' },
+};
+
+const RAZORPAY_ONETIME_AMOUNTS: Record<string, number> = {
+  Basic:        199000,
+  Professional: 299000,
+  Enterprise:   599000,
+};
+
+const PADDLE_ONETIME_PRICE_IDS: Record<string, string> = {
+  Basic:        'pri_01m0spr05d2b6hp8ydn7a1xw9q',
+  Professional: 'pri_01m0sprheegr518xmewcgzzsag',
+  Enterprise:   'pri_01m0sprwjefcfy06c1m9gkvx2d',
+};
 
 export interface Tier {
   name: 'Starter' | 'Basic' | 'Professional' | 'Enterprise';
@@ -70,8 +92,8 @@ const TIERS: Tier[] = [
       'Auto UPI Payment QR & Dark/Light Mode',
     ],
     priceId: {
-      month: 'pri_01kzgye8kkwcx2s2a865b4c1y9',
-      year: 'pri_01kzgyeabqf6gxcw5cwtptzrgj',
+      month: 'pri_01m0se11wgk2dkv2cpw0jqqm60',
+      year: 'pri_01m0sm1fx442c92zf4fv6fpxdf',
     },
   },
   {
@@ -92,8 +114,8 @@ const TIERS: Tier[] = [
       'Interactive Document Builder & Expenses Tracker',
     ],
     priceId: {
-      month: 'pri_01kzgyepxvsa4p7ekmc0k0mntg',
-      year: 'pri_01kzgyer2f8vmxp8r7yr9pd8hp',
+      month: 'pri_01m0secg547pq6vzf9deyw7cpq',
+      year: 'pri_01m0sm25kycrwxwb8tz4xad7zd',
     },
   },
   {
@@ -114,8 +136,8 @@ const TIERS: Tier[] = [
       'Full Sales & Purchase Ledger Capabilities',
     ],
     priceId: {
-      month: 'pri_01kzgyetffh4ax8ng5yapbc9m7',
-      year: 'pri_01kzgyevq3hjc6dt54xje6vgk0',
+      month: 'pri_01m0sefvjdvda8fa0kgw7j4h7f',
+      year: 'pri_01m0sm2zqrnvp5jzzg136c41q4',
     },
   },
 ];
@@ -141,12 +163,21 @@ const FAQS = [
 
 export default function PricingPage({ theme, onNavigate, country }: PricingPageProps) {
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
+  const [yearlySubMode, setYearlySubMode] = useState<Record<string, 'yearly_recurring' | 'yearly_onetime'>>({
+    Basic: 'yearly_recurring',
+    Professional: 'yearly_recurring',
+    Enterprise: 'yearly_recurring',
+  });
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [paddle, setPaddle] = useState<Paddle | undefined>(undefined);
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [loadingPrices, setLoadingPrices] = useState(true);
   const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
+  const [userId, setUserId] = useState<string | undefined>(undefined);
+  const [region, setRegion] = useState<Region | null>(null);
+  const [isDetectingRegion, setIsDetectingRegion] = useState(true);
+  const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({});
 
   const toggleExpandPlan = (name: string) => {
@@ -164,29 +195,59 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
   // Get user details
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user?.email) {
+      if (session?.user) {
         setUserEmail(session.user.email);
+        setUserId(session.user.id);
       }
     });
   }, []);
 
-  // Initialize Paddle JS
+  // Detect Region (IN vs INTL) on mount
   useEffect(() => {
-    if (!clientToken || !environment) return;
+    let mounted = true;
+    setIsDetectingRegion(true);
+
+    import('../lib/detectRegion').then(({ getUserRegion }) => {
+      getUserRegion()
+        .then((detRegion) => {
+          if (mounted) {
+            setRegion(detRegion);
+            setIsDetectingRegion(false);
+          }
+        })
+        .catch(() => {
+          if (mounted) {
+            setRegion('INTL');
+            setIsDetectingRegion(false);
+          }
+        });
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Initialize Paddle JS if International
+  useEffect(() => {
+    if (region === 'IN') return;
+
+    const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || 'live_0b8c91040964a20151647bd285b';
+    const env = (process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT as 'sandbox' | 'production') || 'production';
 
     initializePaddle({
-      environment: environment as 'sandbox' | 'production',
-      token: clientToken,
+      environment: env,
+      token: token,
     }).then((instance) => {
       if (instance) {
         setPaddle(instance);
       }
     });
-  }, []);
+  }, [region]);
 
-  // Fetch localized prices using PricePreview
+  // Fetch localized Paddle prices for INTL
   useEffect(() => {
-    if (!paddle) {
+    if (region === 'IN' || !paddle) {
       setLoadingPrices(false);
       return;
     }
@@ -219,11 +280,10 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
         setPrices(priceMap);
         setLoadingPrices(false);
       })
-      .catch((err) => {
-        // Fallback gracefully to default plan prices when paddle sandbox/token returns unconfigured price IDs
+      .catch(() => {
         setLoadingPrices(false);
       });
-  }, [paddle, country]);
+  }, [paddle, country, region]);
 
   useEffect(() => {
     const onScroll = () => setShowScrollTop(window.scrollY > 300);
@@ -231,24 +291,115 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Checkout trigger
-  const handleSubscribe = (priceId: string) => {
-    if (!paddle) {
-      alert('Payment system is still initializing. Please try again in a moment.');
+  const handleSubscribe = async (tier: Tier) => {
+    if (tier.name === 'Starter') {
+      handleNavigate('/signup');
       return;
     }
 
-    paddle.Checkout.open({
-      items: [{ priceId, quantity: 1 }],
-      customer: userEmail ? { email: userEmail } : undefined,
-      settings: {
-        displayMode: 'overlay',
-        theme: theme === 'dark' ? 'dark' : 'light',
-        locale: country ? country.toLowerCase() : undefined,
-        variant: 'one-page',
-        successUrl: `${window.location.origin}/dashboard`,
-      },
-    });
+    if (!userEmail || !userId) {
+      // Save intent so subscription page can resume after login
+      try {
+        const selectedMode = billing === 'annual'
+          ? (yearlySubMode[tier.name] || 'yearly_recurring')
+          : 'monthly';
+        localStorage.setItem('mak_selected_plan_intent', JSON.stringify({
+          tier: tier.name.toLowerCase(),
+          billing,
+          mode: selectedMode,
+        }));
+      } catch {}
+      handleNavigate('/login');
+      return;
+    }
+
+    const selectedMode: 'monthly' | 'yearly_recurring' | 'yearly_onetime' =
+      billing === 'annual'
+        ? (yearlySubMode[tier.name] || 'yearly_recurring')
+        : 'monthly';
+
+    setProcessingPlan(tier.name);
+
+    try {
+      if (region === 'IN') {
+        // ── RAZORPAY ──────────────────────────────────────────
+        if (selectedMode === 'yearly_onetime') {
+          // One-time yearly: use Orders API
+          const res = await fetch('/api/payments/razorpay/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount: RAZORPAY_ONETIME_AMOUNTS[tier.name],
+              plan: tier.name.toLowerCase(),
+              mode: selectedMode,
+              userId,
+            }),
+          });
+          const { order_id } = await res.json();
+
+          openRazorpayCheckout({
+            orderId: order_id,
+            amount: RAZORPAY_ONETIME_AMOUNTS[tier.name],
+            email: userEmail,
+            plan: tier.name,
+            mode: selectedMode,
+            onSuccess: () => handleNavigate('/dashboard?upgraded=1'),
+            onError: () => setProcessingPlan(null),
+          });
+
+        } else {
+          // Monthly or yearly recurring: use Subscriptions API
+          const planId = billing === 'annual'
+            ? RAZORPAY_PLANS[tier.name].year
+            : RAZORPAY_PLANS[tier.name].month;
+
+          const res = await fetch('/api/payments/razorpay/create-subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planId, plan: tier.name.toLowerCase(), mode: selectedMode, userId }),
+          });
+          const { subscription_id } = await res.json();
+
+          openRazorpayCheckout({
+            subscriptionId: subscription_id,
+            email: userEmail,
+            plan: tier.name,
+            mode: selectedMode,
+            onSuccess: () => handleNavigate('/dashboard?upgraded=1'),
+            onError: () => setProcessingPlan(null),
+          });
+        }
+
+      } else {
+        // ── PADDLE ────────────────────────────────────────────
+        if (!paddle) {
+          console.error('Paddle not initialized');
+          setProcessingPlan(null);
+          return;
+        }
+
+        const priceId = selectedMode === 'yearly_onetime'
+          ? PADDLE_ONETIME_PRICE_IDS[tier.name]
+          : billing === 'annual'
+            ? tier.priceId.year
+            : tier.priceId.month;
+
+        paddle.Checkout.open({
+          items: [{ priceId, quantity: 1 }],
+          customer: { email: userEmail },
+          customData: { userId, plan: tier.name.toLowerCase(), mode: selectedMode },
+          settings: {
+            successUrl: `${window.location.origin}/dashboard?upgraded=1`,
+          },
+        });
+
+        setProcessingPlan(null);
+      }
+
+    } catch (err) {
+      console.error('Checkout error:', err);
+      setProcessingPlan(null);
+    }
   };
 
   const isDark = theme === 'dark';
@@ -522,6 +673,55 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
                     <span className="pr-per">{billing === 'annual' ? '/yr' : '/mo'}</span>
                   </div>
                   <p className="pr-note">Includes 7-day free trial</p>
+
+                  {billing === 'annual' && plan.name !== 'Starter' && (
+                    <div style={{ marginTop: '12px', marginBottom: '8px', padding: '6px', borderRadius: '12px', background: isDark ? '#0b1329' : '#f0f9ff', border: `1px solid ${isDark ? '#223269' : '#bae6fd'}` }}>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setYearlySubMode((prev) => ({ ...prev, [plan.name]: 'yearly_recurring' }))}
+                          style={{
+                            flex: 1,
+                            padding: '6px 4px',
+                            fontSize: '9px',
+                            fontWeight: 800,
+                            borderRadius: '8px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            background: (yearlySubMode[plan.name] || 'yearly_recurring') === 'yearly_recurring' ? (isDark ? '#0284c7' : '#0284c7') : 'transparent',
+                            color: (yearlySubMode[plan.name] || 'yearly_recurring') === 'yearly_recurring' ? '#ffffff' : (isDark ? '#94a3b8' : '#475569'),
+                          }}
+                        >
+                          🔄 Auto-pay yearly
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setYearlySubMode((prev) => ({ ...prev, [plan.name]: 'yearly_onetime' }))}
+                          style={{
+                            flex: 1,
+                            padding: '6px 4px',
+                            fontSize: '9px',
+                            fontWeight: 800,
+                            borderRadius: '8px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            background: yearlySubMode[plan.name] === 'yearly_onetime' ? (isDark ? '#0284c7' : '#0284c7') : 'transparent',
+                            color: yearlySubMode[plan.name] === 'yearly_onetime' ? '#ffffff' : (isDark ? '#94a3b8' : '#475569'),
+                          }}
+                        >
+                          💳 Pay once
+                        </button>
+                      </div>
+                      {yearlySubMode[plan.name] === 'yearly_onetime' && (
+                        <p style={{ fontSize: '8.5px', marginTop: '5px', marginBottom: '0', color: isDark ? '#38bdf8' : '#0284c7', fontWeight: 700, textAlign: 'center' }}>
+                          No auto-renewal. Access valid for 1 year.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   <hr className="pr-divider" />
                   <ul className="pr-features">
                     {displayedFeatures.map((f, i) => (
@@ -532,13 +732,18 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
                     ))}
                   </ul>
 
-                  <button
-                    type="button"
-                    className={`pr-btn ${popular ? 'solid' : 'ghost'}`}
-                    onClick={() => handleSubscribe(currentPriceId)}
-                  >
-                    Subscribe to {plan.name}
-                  </button>
+                  {isDetectingRegion ? (
+                    <div className="skeleton-price" style={{ width: '100%', height: '44px', borderRadius: '12px', marginTop: '16px' }} />
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={processingPlan === plan.name}
+                      className={`pr-btn ${popular ? 'solid' : 'ghost'}`}
+                      onClick={() => handleSubscribe(plan)}
+                    >
+                      {processingPlan === plan.name ? 'Processing...' : `Subscribe to ${plan.name}`}
+                    </button>
+                  )}
                 </div>
               );
             })}
