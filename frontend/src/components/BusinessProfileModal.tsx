@@ -3092,37 +3092,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
 
 
-              {/* Card 3: Default Text & Terms */}
-              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
-                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
-                  Default Text & Terms
-                </div>
-                <div className="p-6 space-y-6">
-                  <div>
-                    <label htmlFor="billing-notes" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Default Notes</label>
-                    <textarea 
-                      id="billing-notes"
-                      value={defaultNotes || ''}
-                      onChange={(e) => setDefaultNotes(e.target.value)}
-                      placeholder="Thank you for your business."
-                      rows={2}
-                      className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] shadow-sm hover:border-slate-200 focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 resize-none font-medium"
-                    />
-                  </div>
 
-                  <div>
-                    <label htmlFor="billing-terms" className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0f172a] dark:text-zinc-300 mb-1.5">Default Terms & Conditions</label>
-                    <textarea 
-                      id="billing-terms"
-                      value={defaultTerms || ''}
-                      onChange={(e) => setDefaultTerms(e.target.value)}
-                      placeholder="Goods once sold will not be taken back or exchanged."
-                      rows={2}
-                      className="w-full px-3 py-2.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] shadow-sm hover:border-slate-200 focus:ring-2 focus:ring-[#0284c7]/15 transition-all duration-300 resize-none font-medium"
-                    />
-                  </div>
-                </div>
-              </div>
 
               {/* Lower Section (Configure Smarter & Need Assistance) */}
               <div className="grid md:grid-cols-12 gap-5 pt-2">

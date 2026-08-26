@@ -1321,43 +1321,43 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                     </div>
                     {(!config.transport?.fields || config.transport.fields.includes('vehicleNo')) && (
                       isVertical ?
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Vehicle No.</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(vehicleNo, 'vehicleNo', 'text', 'Vehicle No')}</span></div> :
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Vehicle No:</span>}<span className="text-gray-900 font-bold">{renderInteractive(vehicleNo, 'vehicleNo', 'text', 'Vehicle No')}</span></div>
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0 whitespace-nowrap`}>Vehicle No.</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(vehicleNo, 'vehicleNo', 'text', 'Vehicle No')}</span></div> :
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'} whitespace-nowrap`}>{showLabels && <span className="text-gray-500 font-medium mr-1 whitespace-nowrap shrink-0">Vehicle No:</span>}<span className="text-gray-900 font-bold">{renderInteractive(vehicleNo, 'vehicleNo', 'text', 'Vehicle No')}</span></div>
                     )}
                     {(!config.transport?.fields || config.transport.fields.includes('poNumber')) && (
                       isVertical ?
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>PO Number</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(poNumber, 'poNumber', 'text', 'PO Number')}</span></div> :
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">PO Number:</span>}<span className="text-gray-900 font-bold">{renderInteractive(poNumber, 'poNumber', 'text', 'PO Number')}</span></div>
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0 whitespace-nowrap`}>PO Number</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(poNumber, 'poNumber', 'text', 'PO Number')}</span></div> :
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'} whitespace-nowrap`}>{showLabels && <span className="text-gray-500 font-medium mr-1 whitespace-nowrap shrink-0">PO Number:</span>}<span className="text-gray-900 font-bold">{renderInteractive(poNumber, 'poNumber', 'text', 'PO Number')}</span></div>
                     )}
                     {(!config.transport?.fields || config.transport.fields.includes('transport')) && (
                       isVertical ?
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Transport Name</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(transportName, 'transport', 'text', 'Transporter Name')}</span></div> :
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Transport Name:</span>}<span className="text-gray-900 font-bold">{renderInteractive(transportName, 'transport', 'text', 'Transporter Name')}</span></div>
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0 whitespace-nowrap`}>Transport Name</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(transportName, 'transport', 'text', 'Transporter Name')}</span></div> :
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'} whitespace-nowrap`}>{showLabels && <span className="text-gray-500 font-medium mr-1 whitespace-nowrap shrink-0">Transport Name:</span>}<span className="text-gray-900 font-bold">{renderInteractive(transportName, 'transport', 'text', 'Transporter Name')}</span></div>
                     )}
                     {(!config.transport?.fields || config.transport.fields.includes('driverMobile')) && (
                       isVertical ?
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Driver Mobile</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(driverMobile, 'driverMobile', 'text', 'Driver Mobile')}</span></div> :
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Driver Mobile:</span>}<span className="text-gray-900 font-bold">{renderInteractive(driverMobile, 'driverMobile', 'text', 'Driver Mobile')}</span></div>
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0 whitespace-nowrap`}>Driver Mobile</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(driverMobile, 'driverMobile', 'text', 'Driver Mobile')}</span></div> :
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'} whitespace-nowrap`}>{showLabels && <span className="text-gray-500 font-medium mr-1 whitespace-nowrap shrink-0">Driver Mobile:</span>}<span className="text-gray-900 font-bold">{renderInteractive(driverMobile, 'driverMobile', 'text', 'Driver Mobile')}</span></div>
                     )}
                     {(!config.transport?.fields || config.transport.fields.includes('station')) && (
                       isVertical ?
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Station</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(station, 'station', 'text', 'Station')}</span></div> :
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Station:</span>}<span className="text-gray-900 font-bold">{renderInteractive(station, 'station', 'text', 'Station')}</span></div>
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0 whitespace-nowrap`}>Station</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(station, 'station', 'text', 'Station')}</span></div> :
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'} whitespace-nowrap`}>{showLabels && <span className="text-gray-500 font-medium mr-1 whitespace-nowrap shrink-0">Station:</span>}<span className="text-gray-900 font-bold">{renderInteractive(station, 'station', 'text', 'Station')}</span></div>
                     )}
                     {(!config.transport?.fields || config.transport.fields.includes('ewayBillNo')) && (
                       isVertical ?
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>E-Way Bill No.</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(ewayBillNo, 'ewayBillNo', 'text', 'E-Way Bill No')}</span></div> :
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">E-Way Bill No:</span>}<span className="text-gray-900 font-bold">{renderInteractive(ewayBillNo, 'ewayBillNo', 'text', 'E-Way Bill No')}</span></div>
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0 whitespace-nowrap`}>E-Way Bill No.</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(ewayBillNo, 'ewayBillNo', 'text', 'E-Way Bill No')}</span></div> :
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'} whitespace-nowrap`}>{showLabels && <span className="text-gray-500 font-medium mr-1 whitespace-nowrap shrink-0">E-Way Bill No:</span>}<span className="text-gray-900 font-bold">{renderInteractive(ewayBillNo, 'ewayBillNo', 'text', 'E-Way Bill No')}</span></div>
                     )}
                     {(!config.transport?.fields || config.transport.fields.includes('grRrNo')) && (
                       isVertical ?
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>GR/RR No.</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(grRrNo, 'grRrNo', 'text', 'GR/RR No')}</span></div> :
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">GR/RR No:</span>}<span className="text-gray-900 font-bold">{renderInteractive(grRrNo, 'grRrNo', 'text', 'GR/RR No')}</span></div>
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0 whitespace-nowrap`}>GR/RR No.</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(grRrNo, 'grRrNo', 'text', 'GR/RR No')}</span></div> :
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'} whitespace-nowrap`}>{showLabels && <span className="text-gray-500 font-medium mr-1 whitespace-nowrap shrink-0">GR/RR No:</span>}<span className="text-gray-900 font-bold">{renderInteractive(grRrNo, 'grRrNo', 'text', 'GR/RR No')}</span></div>
                     )}
                     {(!config.transport?.fields || config.transport.fields.includes('marka')) && (
                       isVertical ?
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Marka</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(marka, 'marka', 'text', 'Marka')}</span></div> :
-                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Marka:</span>}<span className="text-gray-900 font-bold">{renderInteractive(marka, 'marka', 'text', 'Marka')}</span></div>
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isTransCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0 whitespace-nowrap`}>Marka</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(marka, 'marka', 'text', 'Marka')}</span></div> :
+                        <div className={`flex items-center ${isTransCompact ? 'text-[9px]' : 'text-[10px]'} whitespace-nowrap`}>{showLabels && <span className="text-gray-500 font-medium mr-1 whitespace-nowrap shrink-0">Marka:</span>}<span className="text-gray-900 font-bold">{renderInteractive(marka, 'marka', 'text', 'Marka')}</span></div>
                     )}
                   </div>
                 </div>
@@ -1664,24 +1664,51 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           }
 
           if (section.id === 'terms') {
+            const showNotes = config.terms.showNotes !== false;
+            const showTerms = config.terms.showTerms !== false;
+            if (!showNotes && !showTerms) return null;
+
+            const notesContent = (invoiceData?.notes !== undefined && invoiceData?.notes !== null && invoiceData?.notes !== '')
+              ? invoiceData.notes 
+              : (config.terms.notesText || 'Thank you for your business!');
+            const termsContent = (invoiceData?.invoiceTerms !== undefined && invoiceData?.invoiceTerms !== null && invoiceData?.invoiceTerms !== '')
+              ? invoiceData.invoiceTerms 
+              : (config.terms.customText || 'Standard terms apply.');
+
             if (layout.type === 'Modal Classic') {
               return (
                 <div key="terms" style={{ ...getSectionStyle('terms'), marginTop: 'auto' }}>
-                  <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">Notes</div>
-                  <div className="text-gray-600 text-[10px] leading-relaxed mb-4">{renderInteractive(invoiceData?.notes || config.terms.notesText || 'Thank you for your business!', 'notes', 'textarea')}</div>
-                  <div className="font-bold text-gray-800 text-[10px] mb-1">Terms & Conditions</div>
-                  <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap">{renderInteractive(invoiceData?.invoiceTerms || config.terms.customText, 'invoiceTerms', 'textarea')}</div>
+                  {showNotes && (
+                    <div className="mb-3">
+                      <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">Notes</div>
+                      <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap">{renderInteractive(notesContent, 'notes', 'textarea')}</div>
+                    </div>
+                  )}
+                  {showTerms && (
+                    <div>
+                      <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">Terms & Conditions</div>
+                      <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap">{renderInteractive(termsContent, 'invoiceTerms', 'textarea')}</div>
+                    </div>
+                  )}
                 </div>
               );
-
             }
+
             const termsAlign = getFooterAlignment('terms');
             return (
               <div key="terms" style={{ ...getSectionStyle('terms'), textAlign: termsAlign }}>
-                <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0, color: '#64748b' }}>Notes</p>
-                <div style={{ fontSize: '10px', margin: '4px 0', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{renderInteractive(invoiceData?.notes || config.terms.notesText || 'Thank you for your business!', 'notes', 'textarea')}</div>
-                <p style={{ fontSize: '12px', fontWeight: 'bold', margin: '8px 0 0 0', color: '#64748b' }}>Terms & Conditions</p>
-                <div style={{ fontSize: '10px', margin: '4px 0', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{renderInteractive(invoiceData?.invoiceTerms || config.terms.customText, 'invoiceTerms', 'textarea')}</div>
+                {showNotes && (
+                  <div style={{ marginBottom: showTerms ? '8px' : '0' }}>
+                    <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0, color: '#64748b' }}>Notes</p>
+                    <div style={{ fontSize: '10px', margin: '4px 0', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{renderInteractive(notesContent, 'notes', 'textarea')}</div>
+                  </div>
+                )}
+                {showTerms && (
+                  <div>
+                    <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0, color: '#64748b' }}>Terms & Conditions</p>
+                    <div style={{ fontSize: '10px', margin: '4px 0', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{renderInteractive(termsContent, 'invoiceTerms', 'textarea')}</div>
+                  </div>
+                )}
               </div>
             );
           }
@@ -2015,13 +2042,16 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             >
               {/* Copy Label Indicator in top-right corner of the page */}
               <div 
-                className="absolute top-3.5 right-6 px-2.5 py-1 text-[8.5px] font-black uppercase tracking-wider rounded-md border select-none"
+                className="absolute top-3.5 right-6 px-3 py-1 text-[9px] font-black uppercase tracking-wider rounded-md border select-none whitespace-nowrap shrink-0 inline-block"
                 style={{
                   fontSize: '8.5px',
+                  lineHeight: '1.2',
                   fontWeight: '900',
                   border: '1px solid #bae6fd',
                   backgroundColor: '#e0f2fe',
                   color: '#0284c7',
+                  width: 'max-content',
+                  whiteSpace: 'nowrap',
                   zIndex: 20
                 }}
               >

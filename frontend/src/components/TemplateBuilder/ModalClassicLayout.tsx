@@ -296,13 +296,13 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
               {config.terms.showNotes !== false && (
                 <div>
                   <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">Notes</div>
-                  <div className="text-gray-600 text-[10px] leading-relaxed">{invoiceData?.notes || config.terms.notesText || "Thank you for your business!"}</div>
+                  <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap">{invoiceData?.notes || config.terms.notesText || "Thank you for your business!"}</div>
                 </div>
               )}
               {config.terms.showTerms !== false && (
                 <div>
-                  <div className="font-bold text-gray-800 text-[10px] mb-1">Terms & Conditions</div>
-                  <div className="text-gray-600 text-[10px] leading-relaxed">{config.terms.customText || "Standard Net-15 terms apply. Unresolved overdue balances are subject to three times the bank rate penalties under Indian MSME guidelines."}</div>
+                  <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">Terms & Conditions</div>
+                  <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap">{invoiceData?.invoiceTerms || config.terms.customText || "Standard Net-15 terms apply. Unresolved overdue balances are subject to three times the bank rate penalties under Indian MSME guidelines."}</div>
                 </div>
               )}
             </>

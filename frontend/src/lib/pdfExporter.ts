@@ -817,10 +817,10 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
         }
         const pageDataUrl = await Promise.race([
           toPng(pages[i], {
-            quality: 0.9,
-            pixelRatio: 1.6,
-            skipFonts: true,
+            quality: 0.95,
+            pixelRatio: 2,
             cacheBust: false,
+            fontEmbedCSS: '',
             filter: (node) => !(node instanceof HTMLScriptElement)
           }),
           new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 10000))
@@ -830,10 +830,10 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
     } else {
       const dataUrl = await Promise.race([
         toPng(container, {
-          quality: 0.9,
-          pixelRatio: 1.6,
-          skipFonts: true,
+          quality: 0.95,
+          pixelRatio: 2,
           cacheBust: false,
+          fontEmbedCSS: '',
           filter: (node) => !(node instanceof HTMLScriptElement)
         }),
         new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 10000))

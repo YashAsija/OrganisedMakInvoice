@@ -632,8 +632,11 @@ export default function InvoiceModal({
       setClientEmail('');
       setClientPhone('');
       setClientAddress('');
-      setNotes(initialDefaults.notes);
-      setInvoiceTerms(initialDefaults.terms);
+      const defaultInvoiceTmpl = getDocTypeDefaultTemplate('invoice');
+      const templateNotes = defaultInvoiceTmpl?.config?.terms?.notesText;
+      const templateTerms = defaultInvoiceTmpl?.config?.terms?.customText;
+      setNotes(templateNotes !== undefined && templateNotes !== null && templateNotes !== '' ? templateNotes : (initialDefaults.notes || ''));
+      setInvoiceTerms(templateTerms !== undefined && templateTerms !== null && templateTerms !== '' ? templateTerms : (initialDefaults.terms || ''));
       setStatus('pending');
       setItems([]);
       setDiscountType('none');
@@ -2508,11 +2511,14 @@ export default function InvoiceModal({
                           }
                         }
                         setInvoiceType(newType);
-                        loadDefaultTemplate(newType, true);
+                        const loadedTmpl = getDocTypeDefaultTemplate(newType);
+                        setActiveTemplate(loadedTmpl);
                         if (!invoice) {
                           const newDefaults = getDocumentTypeDefaults(newType, profile);
-                          setNotes(newDefaults.notes);
-                          setInvoiceTerms(newDefaults.terms);
+                          const tmplNotes = loadedTmpl?.config?.terms?.notesText;
+                          const tmplTerms = loadedTmpl?.config?.terms?.customText;
+                          setNotes(tmplNotes !== undefined && tmplNotes !== null && tmplNotes !== '' ? tmplNotes : (newDefaults.notes || ''));
+                          setInvoiceTerms(tmplTerms !== undefined && tmplTerms !== null && tmplTerms !== '' ? tmplTerms : (newDefaults.terms || ''));
                         }
                       }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 border ${
