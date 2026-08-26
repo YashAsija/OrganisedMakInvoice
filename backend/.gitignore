@@ -16,6 +16,15 @@ env/
 # Environment variables (secrets)
 .env
 .env.*
+.env.local
+.env.production
+
+# Databases & Admin Config
+*.db
+*.sqlite
+*.sqlite3
+admin_config.json
+makinvoices_admin.db
 
 # IDE
 .vscode/
@@ -24,3 +33,4 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+

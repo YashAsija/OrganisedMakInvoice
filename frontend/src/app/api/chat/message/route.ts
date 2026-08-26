@@ -278,24 +278,18 @@ ${historyContext}
 
     // 8. Quota Logging and Caching
     try {
-      // Upsert quota tracking
+      // Upsert quota tracking atomically via RPC
       const inputTokens = generateResponse.usageMetadata?.promptTokenCount || 0;
       const outputTokens = generateResponse.usageMetadata?.candidatesTokenCount || 0;
       
-      // Upsert tracking for the specific model
-      const existingModelRow = quotaData?.find((r: any) => r.model_name === usedModel);
-      
-      const { error: upsertError } = await supabase
-        .from('gemini_quota_tracking')
-        .upsert({ 
-          date: todayStr, 
-          model_name: usedModel,
-          requests: (existingModelRow?.requests || 0) + 1,
-          input_tokens: (existingModelRow?.input_tokens || 0) + inputTokens,
-          output_tokens: (existingModelRow?.output_tokens || 0) + outputTokens
-        });
-      
-      if (upsertError) console.error("Quota tracking error", upsertError);
+      const { error: rpcError } = await supabase.rpc('increment_quota', {
+        p_date: todayStr,
+        p_model_name: usedModel,
+        p_input_tokens: inputTokens,
+        p_output_tokens: outputTokens,
+      });
+
+      if (rpcError) console.error("Quota tracking error", rpcError);
 
       // Save to chat cache
       if (reply) {

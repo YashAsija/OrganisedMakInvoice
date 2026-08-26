@@ -21,6 +21,11 @@ from app.services import admin_db
 async def lifespan(app: FastAPI):
     """Start the recurring invoice scheduler in the background on server boot.
     The task is cancelled cleanly on shutdown."""
+    scheduler_secret = os.getenv("SCHEDULER_SECRET")
+    env = os.getenv("ENVIRONMENT") or os.getenv("NODE_ENV")
+    if not scheduler_secret and env == "production":
+        raise RuntimeError("SCHEDULER_SECRET must be set in production to protect /api/jobs/recurring-invoices")
+
     task = asyncio.create_task(scheduler_loop())
     try:
         yield

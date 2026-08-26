@@ -1,6 +1,4 @@
 import os
-import random
-import string
 import logging
 from datetime import datetime, timedelta
 import asyncio
@@ -222,8 +220,7 @@ async def run_recurring_invoices_job() -> int:
                     datetime.strptime(next_date, "%Y-%m-%d") + timedelta(days=14)
                 ).strftime("%Y-%m-%d")
 
-                rand_suffix = "".join(random.choices(string.digits, k=3))
-                spawn_number = f"{parent.get('invoiceNumber', 'INV')}-R{rand_suffix}"
+                spawn_number = f"{parent.get('invoiceNumber', 'INV')}-R{next_date.replace('-', '')}"
 
                 child_invoice = {
                     **parent,

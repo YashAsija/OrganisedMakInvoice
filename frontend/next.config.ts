@@ -40,8 +40,8 @@ const nextConfig: NextConfig = {
     const backendUrl = getNormalizedBackendUrl();
     return [
       {
-        source: '/api/ai/:path*',
-        destination: `${backendUrl}/api/ai/:path*`,
+        source: '/api/ai/generate-description',
+        destination: `${backendUrl}/api/ai/generate-description`,
       },
       {
         source: '/api/tickets',

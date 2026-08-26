@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Lock, Mail, Loader2, AlertCircle, Eye, EyeOff, ShieldCheck } from "lucide-react";
-import adminConfig from "../../../admin_config.json";
 import dynamic from "next/dynamic";
 import { ConfirmProvider } from "../../components/ConfirmContext";
 
@@ -13,8 +12,9 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const params = useParams();
   const adminSlug = params.admin_slug as string;
+  const adminRouteSlug = process.env.NEXT_PUBLIC_ADMIN_ROUTE_SLUG;
 
-  if (adminSlug !== adminConfig.admin_route_slug) {
+  if (adminSlug !== adminRouteSlug) {
     return (
       <ConfirmProvider>
         <App />

@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import adminConfig from "../../../admin_config.json";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -8,8 +7,9 @@ interface LayoutProps {
 
 export default async function AdminSlugLayout({ children, params }: LayoutProps) {
   const resolvedParams = await params;
+  const adminRouteSlug = process.env.NEXT_PUBLIC_ADMIN_ROUTE_SLUG;
 
-  if (resolvedParams.admin_slug !== adminConfig.admin_route_slug) {
+  if (resolvedParams.admin_slug !== adminRouteSlug) {
     return <>{children}</>;
   }
 

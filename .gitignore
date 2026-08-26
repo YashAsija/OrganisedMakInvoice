@@ -25,3 +25,18 @@ yarn-error.log*
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Admin Config
+admin_config.json
+frontend/admin_config.json
+
+# Databases & Secrets
+*.db
+*.sqlite
+*.sqlite3
+makinvoices_admin.db
+.env
+.env.local
+.env.production
+
+

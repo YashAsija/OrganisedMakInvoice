@@ -4,6 +4,7 @@ import httpx
 from collections import defaultdict
 from fastapi import Request, HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import jwt
 
 security = HTTPBearer(auto_error=False)
 
@@ -24,18 +25,10 @@ async def verify_supabase_token(credentials: HTTPAuthorizationCredentials = Secu
     if not credentials:
         raise HTTPException(status_code=401, detail="Authentication token required")
         
-    import base64
-    import json
-    
     token = credentials.credentials
+    secret = os.getenv("SUPABASE_JWT_SECRET") or ""
     try:
-        parts = token.split('.')
-        if len(parts) != 3:
-            raise ValueError("Invalid JWT")
-        payload = parts[1]
-        payload += '=' * (-len(payload) % 4)
-        decoded = base64.urlsafe_b64decode(payload)
-        user_data = json.loads(decoded)
+        user_data = jwt.decode(token, secret, algorithms=["HS256"])
         user_data["access_token"] = token
         
         # 'sub' is the user id in Supabase JWTs
@@ -46,11 +39,28 @@ async def verify_supabase_token(credentials: HTTPAuthorizationCredentials = Secu
         user_data["id"] = user_data["sub"]
             
         return user_data
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=401, detail="Session expired or invalid token")
 
+def get_client_ip(request: Request) -> str:
+    """Extract real client IP address from headers (X-Forwarded-For, X-Real-IP) or request.client."""
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        first_ip = forwarded_for.split(",")[0].strip()
+        if first_ip:
+            return first_ip
+
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip and real_ip.strip():
+        return real_ip.strip()
+
+    if request.client and request.client.host:
+        return request.client.host
+
+    return "unknown"
+
 async def check_rate_limit(request: Request):
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     current_time = time.time()
     
     # Filter request timestamps within the active time window

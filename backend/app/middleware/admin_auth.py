@@ -1,13 +1,10 @@
 import os
 import time
-import hmac
-import hashlib
-import json
-import base64
 import logging
 from collections import defaultdict
 from dotenv import load_dotenv
 from fastapi import Request, HTTPException, Response
+from jose import jwt
 
 # Setup logger
 logger = logging.getLogger("admin_auth")
@@ -16,10 +13,15 @@ _backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 load_dotenv(os.path.join(_backend_dir, ".env"))
 load_dotenv(os.path.join(_backend_dir, "..", "frontend", ".env.local"))
 
-# Admin credentials from environment
+# Admin credentials & config from environment
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@makinvoices.com")
 ADMIN_PASSWORD_HASH = os.getenv("ADMIN_PASSWORD_HASH")  # bcrypt hash of admin password
-ADMIN_JWT_SECRET = os.getenv("ADMIN_JWT_SECRET", "default_secret_please_change")
+ADMIN_JWT_SECRET = os.getenv("ADMIN_JWT_SECRET")
+ADMIN_ROUTE_SLUG = os.getenv("ADMIN_ROUTE_SLUG") or os.getenv("NEXT_PUBLIC_ADMIN_ROUTE_SLUG")
+
+# Enforce secure ADMIN_JWT_SECRET on application startup
+if not ADMIN_JWT_SECRET or ADMIN_JWT_SECRET == "default_secret_please_change":
+    raise RuntimeError("ADMIN_JWT_SECRET is unset or using default value 'default_secret_please_change'")
 
 # Strict Email Domain and Allowlist Gating
 ADMIN_EMAIL_DOMAIN = os.getenv("ADMIN_EMAIL_DOMAIN", "makinvoices.com").lower()
@@ -35,42 +37,12 @@ login_attempts = defaultdict(list)
 LOGIN_WINDOW = 60  # seconds
 MAX_LOGIN_ATTEMPTS = 5  # lockout after 5 attempts in 1 min
 
-# Generate a secure hash signature helper
 def sign_token(payload: dict) -> str:
-    payload_json = json.dumps(payload)
-    payload_b64 = base64.urlsafe_b64encode(payload_json.encode()).decode()
-    signature = hmac.new(
-        ADMIN_JWT_SECRET.encode(),
-        payload_b64.encode(),
-        hashlib.sha256
-    ).hexdigest()
-    return f"{payload_b64}.{signature}"
+    return jwt.encode(payload, ADMIN_JWT_SECRET, algorithm="HS256")
 
 def verify_token(token: str) -> dict:
     try:
-        parts = token.split(".")
-        if len(parts) != 2:
-            return None
-        payload_b64, signature = parts
-        
-        # Verify signature
-        expected_sig = hmac.new(
-            ADMIN_JWT_SECRET.encode(),
-            payload_b64.encode(),
-            hashlib.sha256
-        ).hexdigest()
-        
-        if not hmac.compare_digest(signature, expected_sig):
-            return None
-            
-        payload_json = base64.urlsafe_b64decode(payload_b64.encode()).decode()
-        payload = json.loads(payload_json)
-        
-        # Check expiry
-        if payload.get("exp", 0) < time.time():
-            return None
-            
-        return payload
+        return jwt.decode(token, ADMIN_JWT_SECRET, algorithms=["HS256"])
     except Exception:
         return None
 
@@ -89,11 +61,28 @@ async def verify_admin_token(request: Request) -> dict:
         
     return payload
 
+def get_client_ip(request: Request) -> str:
+    """Extract real client IP address from headers (X-Forwarded-For, X-Real-IP) or request.client."""
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        first_ip = forwarded_for.split(",")[0].strip()
+        if first_ip:
+            return first_ip
+
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip and real_ip.strip():
+        return real_ip.strip()
+
+    if request.client and request.client.host:
+        return request.client.host
+
+    return "unknown"
+
 def check_login_rate_limit(request: Request):
     """
     Blocks excessive login attempts.
     """
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     current_time = time.time()
     
     # Filter attempts in the current window
