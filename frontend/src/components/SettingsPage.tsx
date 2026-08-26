@@ -1141,8 +1141,12 @@ export default function SettingsPage({
                                 <span>{session.userEmail}</span>
                                 <span>•</span>
                                 <span>{session.lastActive}</span>
-                                <span>•</span>
-                                <span className="text-[#0284c7] dark:text-[#38bdf8]">{session.ipAddress || 'Current device'}</span>
+                                {session.ipAddress && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-[#0284c7] dark:text-[#38bdf8]">{session.ipAddress}</span>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>

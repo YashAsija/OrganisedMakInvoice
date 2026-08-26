@@ -15,7 +15,7 @@ export interface InvoiceItem {
   quantityType?: string;
 }
 
-export type InvoiceStatus = 'draft' | 'sent' | 'pending' | 'paid' | 'partially_paid' | 'cancelled' | 'approved' | 'rejected' | 'overdue';
+export type InvoiceStatus = 'draft' | 'sent' | 'pending' | 'paid' | 'partially_paid' | 'cancelled' | 'approved' | 'rejected';
 export type DiscountType = 'none' | 'percent' | 'flat';
 export type RecurringInterval = 'weekly' | 'bi-weekly' | 'monthly' | 'yearly';
 
@@ -104,15 +104,14 @@ export interface Invoice {
 
 export interface ClientProfile {
   id: string;
-  userId?: string;
+  userId: string;
   name: string;
-  companyName?: string;
-  address?: string;
-  email?: string;
-  phone?: string;
-  gstin?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  companyName: string;
+  address: string;
+  email: string;
+  phone: string;
+  createdAt: string;
+  updatedAt: string;
   _pendingSync?: boolean;
   _pendingDelete?: boolean;
 }

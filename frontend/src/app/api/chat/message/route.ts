@@ -3,16 +3,16 @@ import { createClient } from '@supabase/supabase-js';
 import { GoogleGenAI } from '@google/genai';
 import kbData from '../../../../data/knowledge-base.json';
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+);
+
 // We will initialize Gemini inside the route handler to ensure fresh env vars
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   let similarity = 0;
   let topMatch: any = null;
   try {
@@ -278,18 +278,24 @@ ${historyContext}
 
     // 8. Quota Logging and Caching
     try {
-      // Upsert quota tracking atomically via RPC
+      // Upsert quota tracking
       const inputTokens = generateResponse.usageMetadata?.promptTokenCount || 0;
       const outputTokens = generateResponse.usageMetadata?.candidatesTokenCount || 0;
       
-      const { error: rpcError } = await supabase.rpc('increment_quota', {
-        p_date: todayStr,
-        p_model_name: usedModel,
-        p_input_tokens: inputTokens,
-        p_output_tokens: outputTokens,
-      });
-
-      if (rpcError) console.error("Quota tracking error", rpcError);
+      // Upsert tracking for the specific model
+      const existingModelRow = quotaData?.find((r: any) => r.model_name === usedModel);
+      
+      const { error: upsertError } = await supabase
+        .from('gemini_quota_tracking')
+        .upsert({ 
+          date: todayStr, 
+          model_name: usedModel,
+          requests: (existingModelRow?.requests || 0) + 1,
+          input_tokens: (existingModelRow?.input_tokens || 0) + inputTokens,
+          output_tokens: (existingModelRow?.output_tokens || 0) + outputTokens
+        });
+      
+      if (upsertError) console.error("Quota tracking error", upsertError);
 
       // Save to chat cache
       if (reply) {

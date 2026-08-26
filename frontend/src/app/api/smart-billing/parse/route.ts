@@ -139,7 +139,7 @@ export async function POST(request: Request) {
 
     try {
       const response = await genAI.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-3.5-flash-lite',
         contents: prompt,
         config: {
           systemInstruction,
@@ -153,9 +153,9 @@ export async function POST(request: Request) {
         parsedResult = JSON.parse(response.text.trim());
       }
     } catch (apiErr) {
-      console.warn('[smart-billing] gemini-2.5-flash-lite failed, falling back to gemini-2.5-flash:', apiErr);
+      console.warn('[smart-billing] gemini-3.5-flash-lite failed, falling back to gemini-3.5-flash:', apiErr);
       const responseFallback = await genAI.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.5-flash',
         contents: prompt,
         config: {
           systemInstruction,

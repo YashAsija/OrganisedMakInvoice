@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
-from app.schemas.ai import DescriptionRequest
-from app.services.ai_service import generate_description_cached
+from app.schemas.ai import DescriptionRequest, ParseRequest
+from app.services.ai_service import generate_description_cached, parse_invoice_cached
 from app.middleware.auth import verify_supabase_token, check_rate_limit
 import os
 
@@ -19,6 +19,18 @@ async def generate_description(req: DescriptionRequest):
         import logging
         logging.error(f"Error in generate-description: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error occurred during description generation.")
+
+@router.post("/parse-invoice")
+async def parse_invoice(req: ParseRequest):
+    if not req.prompt.strip():
+        raise HTTPException(status_code=400, detail="Natural language billing prompt is required")
+    
+    try:
+        return parse_invoice_cached(req.prompt.strip(), req.current_invoice, req.allowed_fields)
+    except Exception as e:
+        import logging, traceback
+        logging.error(f"Error in parse-invoice: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error occurred during natural language invoice parsing: {str(e)}")
 
 # Separate jobs router to handle server-side scheduled triggers
 jobs_router = APIRouter(prefix="/api/jobs", tags=["jobs"])

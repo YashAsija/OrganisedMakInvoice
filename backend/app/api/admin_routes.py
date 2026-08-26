@@ -76,7 +76,7 @@ async def login(req: LoginRequest, request: Request, response: Response):
     user_agent = request.headers.get("user-agent", "unknown")
     
     # Rate limit check
-    await check_login_rate_limit(request)
+    check_login_rate_limit(request)
     
     email_clean = req.email.strip().lower()
     

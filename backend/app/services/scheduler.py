@@ -1,4 +1,6 @@
 import os
+import random
+import string
 import logging
 from datetime import datetime, timedelta
 import asyncio
@@ -220,7 +222,8 @@ async def run_recurring_invoices_job() -> int:
                     datetime.strptime(next_date, "%Y-%m-%d") + timedelta(days=14)
                 ).strftime("%Y-%m-%d")
 
-                spawn_number = f"{parent.get('invoiceNumber', 'INV')}-R{next_date.replace('-', '')}"
+                rand_suffix = "".join(random.choices(string.digits, k=3))
+                spawn_number = f"{parent.get('invoiceNumber', 'INV')}-R{rand_suffix}"
 
                 child_invoice = {
                     **parent,
@@ -328,39 +331,6 @@ async def run_recurring_invoices_job() -> int:
         return total_generated
 
 
-async def cleanup_rate_limit_events():
-    """
-    Deletes rate_limit_events records older than 2 hours to prevent unbounded table growth.
-    """
-    supabase_url = (os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL") or "").rstrip("/")
-    supabase_key = (
-        os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-        or os.getenv("SUPABASE_ANON_KEY")
-        or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
-    )
-
-    if not supabase_url or "YOUR_PROJECT_REF" in supabase_url or not supabase_key:
-        return
-
-    cutoff_iso = (datetime.utcnow() - timedelta(hours=2)).isoformat() + "Z"
-    headers = {
-        "apikey": supabase_key,
-        "Authorization": f"Bearer {supabase_key}",
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            res = await client.delete(
-                f"{supabase_url}/rest/v1/rate_limit_events",
-                params={"hit_at": f"lt.{cutoff_iso}"},
-                headers=headers
-            )
-            if res.status_code in (200, 204):
-                logger.info("Scheduler: cleaned up old rate_limit_events records.")
-    except Exception as e:
-        logger.warning(f"Failed to cleanup rate_limit_events: {e}")
-
-
 async def scheduler_loop():
     """
     Long-running background asyncio task started by main.py's lifespan handler.
@@ -374,13 +344,6 @@ async def scheduler_loop():
             logger.info(f"Scheduler run complete — {count} invoice(s) generated.")
         except Exception as e:
             logger.error(f"Unhandled error in scheduler_loop: {e}")
-
-        try:
-            await cleanup_rate_limit_events()
-        except Exception as e:
-            logger.error(f"Error during rate limit events cleanup: {e}")
-
         # Sleep 24 h before next run
         await asyncio.sleep(24 * 3600)
-
 

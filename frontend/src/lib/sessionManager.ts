@@ -156,7 +156,7 @@ export function revokeAllOtherSessions(userEmail?: string): WorkspaceSession[] {
       lastActive: `${nowStr} (Active Now)`,
       isCurrent: true,
       deviceType: getDeviceType(),
-      ipAddress: undefined
+      ipAddress: '192.168.1.105 (Current)'
     }
   ];
 

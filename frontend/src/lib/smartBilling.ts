@@ -265,7 +265,7 @@ export function buildTemplateFieldSchema(template: InvoiceTemplate | null | unde
 // ─── Step B: AI Extraction ─────────────────────────────────────────────────
 
 /**
- * Calls the Next.js /api/smart-billing/parse endpoint.
+ * Calls the backend /api/ai/parse-invoice endpoint.
  * Builds a rich system prompt from the schema, validates the response,
  * strips unexpected keys, and returns a SmartBillingExtracted object.
  * Returns null on failure (caller shows error toast).
