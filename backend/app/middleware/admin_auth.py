@@ -32,8 +32,10 @@ if ADMIN_EMAIL.lower() not in ADMIN_ALLOWED_EMAILS:
     ADMIN_ALLOWED_EMAILS.append(ADMIN_EMAIL.lower())
 
 
+import httpx
+from datetime import datetime, timezone, timedelta
+
 # In-memory IP rate limiter history for admin login
-login_attempts = defaultdict(list)
 LOGIN_WINDOW = 60  # seconds
 MAX_LOGIN_ATTEMPTS = 5  # lockout after 5 attempts in 1 min
 
@@ -78,26 +80,67 @@ def get_client_ip(request: Request) -> str:
 
     return "unknown"
 
-def check_login_rate_limit(request: Request):
+async def check_login_rate_limit(request: Request):
     """
-    Blocks excessive login attempts.
+    Blocks excessive login attempts using persistent Supabase tracking.
     """
     client_ip = get_client_ip(request)
-    current_time = time.time()
-    
-    # Filter attempts in the current window
-    login_attempts[client_ip] = [
-        t for t in login_attempts[client_ip]
-        if current_time - t < LOGIN_WINDOW
-    ]
-    
-    if len(login_attempts[client_ip]) >= MAX_LOGIN_ATTEMPTS:
-        raise HTTPException(
-            status_code=429,
-            detail="Too many login attempts. Please try again in 1 minute."
-        )
-    
-    login_attempts[client_ip].append(current_time)
+    supabase_url = (os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL") or "").rstrip("/")
+    supabase_key = (
+        os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        or os.getenv("SUPABASE_ANON_KEY")
+        or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+    )
+
+    if not supabase_url or "YOUR_PROJECT_REF" in supabase_url or not supabase_key:
+        return
+
+    try:
+        now_utc = datetime.now(timezone.utc)
+        now_iso = now_utc.isoformat()
+        cutoff_iso = (now_utc - timedelta(seconds=60)).isoformat()
+
+        headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+            "Content-Type": "application/json",
+            "Prefer": "count=exact"
+        }
+
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            await client.post(
+                f"{supabase_url}/rest/v1/rate_limit_events",
+                json={"ip": client_ip, "endpoint": "admin_login", "hit_at": now_iso},
+                headers=headers
+            )
+
+            res = await client.get(
+                f"{supabase_url}/rest/v1/rate_limit_events",
+                params={
+                    "ip": f"eq.{client_ip}",
+                    "endpoint": "eq.admin_login",
+                    "hit_at": f"gt.{cutoff_iso}"
+                },
+                headers=headers
+            )
+
+            if res.status_code in (200, 206):
+                range_header = res.headers.get("content-range", "")
+                if "/" in range_header:
+                    total_str = range_header.split("/")[-1]
+                    count = int(total_str) if total_str.isdigit() else len(res.json())
+                else:
+                    count = len(res.json())
+
+                if count >= MAX_LOGIN_ATTEMPTS:
+                    raise HTTPException(
+                        status_code=429,
+                        detail="Too many login attempts. Please try again in 1 minute."
+                    )
+    except HTTPException:
+        raise
+    except Exception:
+        pass
 
 async def log_admin_action(ip_address: str, user_agent: str, status: str, details: str):
     """

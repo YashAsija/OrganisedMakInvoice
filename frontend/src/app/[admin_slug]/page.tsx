@@ -14,6 +14,10 @@ export default function AdminLoginPage() {
   const adminSlug = params.admin_slug as string;
   const adminRouteSlug = process.env.NEXT_PUBLIC_ADMIN_ROUTE_SLUG;
 
+  if (!adminRouteSlug) {
+    console.error('[MakInvoices Admin] NEXT_PUBLIC_ADMIN_ROUTE_SLUG is not set in environment variables. The admin panel will not be accessible. Set this variable and restart the dev server.');
+  }
+
   if (adminSlug !== adminRouteSlug) {
     return (
       <ConfirmProvider>

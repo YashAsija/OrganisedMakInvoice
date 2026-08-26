@@ -508,7 +508,6 @@ export default function SupportPage({ onChatClick, onNavigateTab, subscriptionTi
           priority: ticketPriority,
           subject: ticketSubject,
           message: ticketBody,
-          user_id: user?.id || null
         }),
       });
       if (!res.ok) {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Phone, Globe, Check, ArrowRight } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface ContactPageProps {
   theme: 'light' | 'dark';
@@ -346,10 +347,17 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
                   e.preventDefault();
                   setContactLoading(true);
                   try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const token = session?.access_token;
                     const res = await fetch('/api/tickets', {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                      },
                       body: JSON.stringify({
+                        name: contactForm.name || 'Visitor',
+                        email: contactForm.email || 'visitor@example.com',
                         category: 'other',
                         priority: 'medium',
                         subject: `Contact Form Inquiry from ${contactForm.name}`,

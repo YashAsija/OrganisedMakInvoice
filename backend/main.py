@@ -21,6 +21,9 @@ from app.services import admin_db
 async def lifespan(app: FastAPI):
     """Start the recurring invoice scheduler in the background on server boot.
     The task is cancelled cleanly on shutdown."""
+    if not os.getenv("SUPABASE_JWT_SECRET"):
+        raise RuntimeError("SUPABASE_JWT_SECRET must be set — backend cannot verify user tokens without it")
+
     scheduler_secret = os.getenv("SCHEDULER_SECRET")
     env = os.getenv("ENVIRONMENT") or os.getenv("NODE_ENV")
     if not scheduler_secret and env == "production":

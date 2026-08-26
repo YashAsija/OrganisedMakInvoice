@@ -4,12 +4,7 @@ import { TEMPLATE_PRESETS } from '../../../../lib/templatePresets';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
-// Prefer service role key (bypasses RLS entirely — no extra policy needed).
-// Falls back to anon key — works once "Allow public read for invoice preview"
-// policies are applied in Supabase (see supabase_preview_public_policy.sql).
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Helper: derive currency code from symbol (mirrors App.tsx logic)
 const deriveCurrencyCode = (sym: string | null | undefined, fallback: string): string => {
@@ -53,7 +48,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (!invoice) {
-      console.error(`[invoice-preview] Invoice not found for id=${id}. Using key type: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'service_role' : 'anon'}`);
+      console.error(`[invoice-preview] Invoice not found or not public for id=${id}`);
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
 

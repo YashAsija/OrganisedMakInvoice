@@ -1747,7 +1747,19 @@ export default function InvoiceModal({
     onClose();
   };
 
-  const triggerWhatsAppShare = (inv: Invoice) => {
+  const markInvoicePublic = async (invoiceId: string) => {
+    if (!invoiceId) return;
+    try {
+      if (supabase) {
+        await supabase.from('invoices').update({ is_public: true }).eq('id', invoiceId);
+      }
+    } catch (err) {
+      console.error('Failed to mark invoice public:', err);
+    }
+  };
+
+  const triggerWhatsAppShare = async (inv: Invoice) => {
+    if (inv?.id) await markInvoicePublic(inv.id);
     const sym = activeProfile.currency === 'INR' ? '₹' : (activeProfile.currency === 'USD' ? '$' : activeProfile.currency + ' ');
     const previewUrl = `${window.location.origin}/invoice/preview?id=${inv.id}`;
     const message = `Hi ${inv.clientName || 'Client'}, please find your ${inv.invoiceType?.toUpperCase() ?? 'INVOICE'} ${inv.invoiceNumber} from ${activeProfile.name || 'us'} for ${sym}${inv.grandTotal.toFixed(2)} (Due: ${inv.dueDate}). You can view the document preview here:\n${previewUrl}\n\nThank you!`;
@@ -1755,7 +1767,8 @@ export default function InvoiceModal({
     window.open(url, '_blank');
   };
 
-  const triggerEmailShare = (inv: Invoice) => {
+  const triggerEmailShare = async (inv: Invoice) => {
+    if (inv?.id) await markInvoicePublic(inv.id);
     const sym = activeProfile.currency === 'INR' ? '₹' : (activeProfile.currency === 'USD' ? '$' : activeProfile.currency + ' ');
     const previewUrl = `${window.location.origin}/invoice/preview?id=${inv.id}`;
     const subject = `${inv.invoiceType?.toUpperCase() ?? 'INVOICE'} ${inv.invoiceNumber} from ${activeProfile.name}`;

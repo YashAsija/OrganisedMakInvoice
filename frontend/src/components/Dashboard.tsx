@@ -191,6 +191,15 @@ import SupportPage from './SupportPage';
 import SupportChatPage from './SupportChatPage';
 
 import SubscriptionPage from './SubscriptionPage';
+import dynamic from 'next/dynamic';
+
+const OverviewTab = dynamic(() => import('./dashboard/OverviewTab'), { ssr: false });
+const InvoicesTab = dynamic(() => import('./dashboard/InvoicesTab'), { ssr: false });
+const ClientsTab = dynamic(() => import('./dashboard/ClientsTab'), { ssr: false });
+const ExpensesTab = dynamic(() => import('./dashboard/ExpensesTab'), { ssr: false });
+const SettingsTab = dynamic(() => import('./dashboard/SettingsTab'), { ssr: false });
+const RecurringTab = dynamic(() => import('./dashboard/RecurringTab'), { ssr: false });
+
 
 
 
@@ -5983,7 +5992,20 @@ export default function Dashboard({
 
 
 
-  const handleCopyShareLink = (inv: Invoice) => {
+  const markInvoicePublic = async (invoiceId: string) => {
+    if (!invoiceId) return;
+    try {
+      if (supabase) {
+        await supabase.from('invoices').update({ is_public: true }).eq('id', invoiceId);
+      }
+    } catch (err) {
+      console.error('Failed to mark invoice public:', err);
+    }
+  };
+
+  const handleCopyShareLink = async (inv: Invoice) => {
+
+    if (inv?.id) await markInvoicePublic(inv.id);
 
     const previewUrl = `${window.location.origin}/invoice/preview?id=${inv.id}`;
 
@@ -6508,7 +6530,9 @@ export default function Dashboard({
 
 
 
-  const triggerWhatsAppShare = (inv: Invoice) => {
+  const triggerWhatsAppShare = async (inv: Invoice) => {
+
+    if (inv?.id) await markInvoicePublic(inv.id);
 
     const sym = profile.currency === 'INR' ? '₹' : (profile.currency === 'USD' ? '$' : profile.currency + ' ');
 
@@ -6524,7 +6548,9 @@ export default function Dashboard({
 
 
 
-  const triggerEmailShare = (inv: Invoice) => {
+  const triggerEmailShare = async (inv: Invoice) => {
+
+    if (inv?.id) await markInvoicePublic(inv.id);
 
     const sym = profile.currency === 'INR' ? '₹' : (profile.currency === 'USD' ? '$' : profile.currency + ' ');
 
@@ -7826,10 +7852,73 @@ export default function Dashboard({
 
 
 
-        {/* ------------------ TAB 1: INVOICES / PURCHASES ROUTE ------------------ */}
+        {/* ------------------ DYNAMIC TAB COMPONENTS ------------------ */}
+        {(activeTab === 'dashboard' || activeTab === 'overview') && (
+          <OverviewTab
+            invoices={invoices}
+            profile={profile}
+            currencySymbol={currencySymbol}
+            onOpenInvoiceEditor={onOpenInvoiceEditor}
+            onOpenProfile={onOpenProfile}
+            setActiveTab={setActiveTab}
+            theme={theme}
+          />
+        )}
 
         {(activeTab === 'invoices' || activeTab === 'purchases') && (
+          <InvoicesTab
+            invoices={invoices}
+            currencySymbol={currencySymbol}
+            onOpenInvoiceEditor={onOpenInvoiceEditor}
+            onDeleteInvoice={onDeleteInvoice}
+            onBulkDeleteInvoices={onBulkDeleteInvoices}
+            onBulkUpdateInvoicesStatus={onBulkUpdateInvoicesStatus}
+            onUpdateInvoice={onUpdateInvoice}
+            theme={theme}
+          />
+        )}
 
+        {activeTab === 'clients' && (
+          <ClientsTab
+            clients={clients}
+            onSaveClient={onSaveClient}
+            onDeleteClient={onDeleteClient}
+            theme={theme}
+          />
+        )}
+
+        {activeTab === 'expenses' && (
+          <ExpensesTab
+            expenses={expenses}
+            onSaveExpense={onSaveExpense}
+            onDeleteExpense={onDeleteExpense}
+            theme={theme}
+            currencySymbol={currencySymbol}
+          />
+        )}
+
+        {(activeTab === 'settings' || activeTab === 'profile') && (
+          <SettingsTab
+            profile={profile}
+            userEmail={userEmail}
+            isPinLockEnabled={isPinLockEnabled}
+            onToggleSecurity={onToggleSecurity}
+            theme={theme}
+            toggleTheme={toggleTheme}
+            onLogout={onLogout}
+          />
+        )}
+
+        {activeTab === 'recurring' && (
+          <RecurringTab
+            invoices={invoices}
+            onOpenInvoiceEditor={onOpenInvoiceEditor}
+            currencySymbol={currencySymbol}
+            theme={theme}
+          />
+        )}
+
+        {false && (activeTab === 'invoices' || activeTab === 'purchases') && (
           <div className="space-y-6">
 
             <section className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 font-sans select-none">

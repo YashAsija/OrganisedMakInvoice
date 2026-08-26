@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Send, ArrowLeft, MoreVertical, Loader2, Bot, User as UserIcon, AlertTriangle, ArrowRight } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { supabase } from '../lib/supabase';
@@ -176,10 +176,17 @@ export default function SupportChatPage({ userEmail, onBack, onEscalate }: Suppo
     try {
       const transcript = messages.map(m => `${m.role}: ${m.content}`).join('\n\n');
       const subject = `Chat Escalation${userEmail ? ` – ${userEmail}` : ''}`;
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
       const res = await fetch('/api/tickets', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
+          name: userEmail ? userEmail.split('@')[0] : 'Chat User',
+          email: userEmail || 'user@example.com',
           category: 'technical',
           priority: 'high',
           subject,

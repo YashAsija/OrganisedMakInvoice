@@ -29,19 +29,19 @@ class TicketCreateRequest(BaseModel):
     message: str
     category: Optional[str] = "General"
     priority: Optional[str] = "Medium"
-    user_id: Optional[str] = None
 
 class UserReplyRequest(BaseModel):
     message: str
 
 @router.post("")
 @router.post("/")
-async def create_ticket(req: TicketCreateRequest, request: Request):
+async def create_ticket(req: TicketCreateRequest, request: Request, user: dict = Depends(verify_supabase_token)):
     """
     User-facing endpoint to submit a support ticket.
     Uses admin_db.create_ticket to handle Supabase vs SQLite fallback.
     """
     try:
+        user_id = user.get("id")
         ticket_id = await admin_db.create_ticket(
             user_email=req.email,
             user_name=req.name,
@@ -49,7 +49,7 @@ async def create_ticket(req: TicketCreateRequest, request: Request):
             category=req.category,
             priority=req.priority,
             message=req.message,
-            user_id=req.user_id
+            user_id=user_id
         )
     except Exception as e:
         logger.error(f"Failed to create support ticket: {str(e)}")
