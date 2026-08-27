@@ -132,7 +132,8 @@ import {
 
   Edit2, 
 
-  ExternalLink, 
+  ExternalLink,
+  PlayCircle, 
 
   Share2, 
 
@@ -280,7 +281,7 @@ interface DashboardProps {
   onTabChange?: (tab: string) => void;
 
   subscriptionTier?: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise';
-
+  onCloseInvoiceEditor?: () => void;
 }
 
 
@@ -316,6 +317,7 @@ export default function Dashboard({
   onOpenProfile,
 
   onOpenInvoiceEditor,
+  onCloseInvoiceEditor,
 
   onDeleteInvoice,
   onRestoreInvoice,
@@ -436,7 +438,149 @@ export default function Dashboard({
   const [activeActionMenuId, setActiveActionMenuId] = useState<string | null>(null);
   const [actionMenuPosition, setActionMenuPosition] = useState<'down' | 'up'>('down');
   const [activeSendMenuId, setActiveSendMenuId] = useState<string | null>(null);
-  const [sendMenuPosition, setSendMenuPosition] = useState<'down' | 'up'>('down');
+  // Interactive App Tutorial State & Data
+  const [isTutorialActive, setIsTutorialActive] = useState<boolean>(false);
+  const [tutorialStep, setTutorialStep] = useState<number>(0);
+
+  const TUTORIAL_STEPS = [
+    {
+      step: 1,
+      title: 'Financial Billing Dashboard',
+      tab: 'dashboard',
+      tag: '1. Executive Hub',
+      description: 'Real-time financial control panel! Monitor total sales revenue, net profit margin, paid vs pending receivables, purchase expenses, and monthly revenue trends.',
+      highlightText: 'Live financial KPI cards, sales vs expense charts & quick-action billing shortcuts.',
+      tip: 'Click any metric card to open detailed ledger lists filtered by that status.'
+    },
+    {
+      step: 2,
+      title: 'Sales Ledger & Invoices',
+      tab: 'invoices',
+      tag: '2. Accounts Receivable',
+      description: 'Manage Tax Invoices, Proforma Invoices, Credit Notes, and Quotes/Estimates. Includes status filters (Paid, Pending, Overdue), WhatsApp sharing, and 1-click A4 PDF exports.',
+      highlightText: 'Sales ledger records, document type tabs & 1-click A4 PDF export buttons.',
+      tip: 'Use document type tabs to switch between Invoices, Proformas, Credit Notes & Quotes.'
+    },
+    {
+      step: 3,
+      title: 'Purchase Ledger & Vendor Bills',
+      tab: 'purchases',
+      tag: '3. Accounts Payable',
+      description: 'Track incoming vendor bills, purchase orders (PO), and supplier debit notes. Monitor procurement costs, category spending, supplier GSTINs, and Input Tax Credit (ITC).',
+      highlightText: 'Vendor expense ledger, category cost breakdown & unpaid supplier trackers.',
+      tip: 'Click "+ Record Purchase" to log supplier bills with line items & tax breakdowns.'
+    },
+    {
+      step: 4,
+      title: 'Quick Bill & AI Smart Billing Engine',
+      tab: 'invoices',
+      action: 'open_invoice_modal',
+      tag: '4. AI Smart Billing',
+      description: 'Describe billing transactions in natural text or voice (e.g. "Bill Acme: 5 Laptops @ $1200, 18% GST"). Gemini AI automatically extracts client info, line items, rates, and CGST/SGST/IGST tax splits directly into your active invoice canvas.',
+      highlightText: 'The highlighted "AI Smart Billing" prompt box at the top of the Quick Bill canvas.',
+      tip: 'Type or click the microphone icon to dictate complete billing details naturally.'
+    },
+    {
+      step: 5,
+      title: 'Invoice Templates & Layout Studio',
+      tab: 'invoice_templates',
+      tag: '5. Branding & Design',
+      description: 'Customize document aesthetics! Choose between Modern Executive, Classic Corporate, Minimalist, Bold Gradient, Dual-Tone, and POS Thermal layouts with brand color palettes & digital signature stamps.',
+      highlightText: 'Live A4 preview gallery, accent color selectors & signature stamp controls.',
+      tip: 'All layouts comply with standard single-page A4 printing & PDF standards.'
+    },
+    {
+      step: 6,
+      title: 'Accounting Reports & Financial Analytics',
+      tab: 'reports',
+      tag: '6. Analytics & Exports',
+      description: 'Audit-ready financial reporting! View sales vs expense trends, GSTR-1 & GSTR-3B tax summaries, client aging reports, and export multi-column ledgers directly to Microsoft Excel or CSV.',
+      highlightText: 'GSTR tax breakdown tables & "Export Audit-Ready Ledger to Excel" button.',
+      tip: 'Select custom date ranges to prepare monthly or quarterly tax filings.'
+    },
+    {
+      step: 7,
+      title: 'MakInvoices AI Assistant (Help & Support)',
+      tab: 'support-chat',
+      tag: '7. 24/7 AI Support Chatbot',
+      description: 'Your 24/7 AI Support assistant! Trained on GST compliance, tax calculations, invoice editing, and PDF printing. Supports English, Hindi, Hinglish, Spanish, French, and German.',
+      highlightText: 'The live AI Support Chatbot interface with multi-language selector dropdown.',
+      tip: 'Click suggested FAQ chips for instant guidance on any app feature.'
+    },
+    {
+      step: 8,
+      title: 'Master Registry & Central Database',
+      tab: 'master_vendor',
+      tag: '8. Central Database',
+      description: 'Central database for Client Profiles, Vendor Records, Products/Services with HSN codes, and Transporter details for instant auto-complete. Supports bulk Excel/CSV import & export.',
+      highlightText: 'Master registries for Clients, Vendors, Products & "+ Add Record / Bulk Excel Import".',
+      tip: 'Pre-save client GSTINs once to auto-fill billing details everywhere instantly.'
+    },
+    {
+      step: 9,
+      title: 'Company Profile & Security PIN Lock',
+      tab: 'profile',
+      tag: '9. Settings & Security',
+      description: 'Configure your company profile, GSTIN, bank settlement accounts (UPI ID / QR Code), digital signature stamp, and enable a 4-digit PIN lock for local database encryption.',
+      highlightText: 'Company details, bank payout accounts & 4-Digit Security PIN toggle.',
+      tip: 'Enable Security PIN to lock your billing data whenever you leave your desk.'
+    }
+  ];
+
+  const handleOpenCreateModal = () => {
+    if (onOpenInvoiceEditor) {
+      onOpenInvoiceEditor(null);
+    }
+  };
+
+  const handleCloseCreateModal = () => {
+    if (onCloseInvoiceEditor) {
+      onCloseInvoiceEditor();
+    }
+  };
+
+  const applyTutorialStepAction = (stepIndex: number) => {
+    const target = TUTORIAL_STEPS[stepIndex];
+    if (target.action === 'open_invoice_modal') {
+      setActiveTab('invoices');
+      handleOpenCreateModal();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mak_tutorial_highlight_ai_box', { detail: true }));
+      }
+    } else {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mak_tutorial_highlight_ai_box', { detail: false }));
+      }
+      handleCloseCreateModal();
+      setActiveTab(target.tab as any);
+    }
+  };
+
+  const startInteractiveTutorial = (startStep = 0) => {
+    setTutorialStep(startStep);
+    setIsTutorialActive(true);
+    applyTutorialStepAction(startStep);
+    emitNotification('App Tutorial Started 🚀', `Step 1 of ${TUTORIAL_STEPS.length}: ${TUTORIAL_STEPS[startStep].title}`, 'info');
+  };
+
+  const handleNextTutorialStep = () => {
+    if (tutorialStep < TUTORIAL_STEPS.length - 1) {
+      const next = tutorialStep + 1;
+      setTutorialStep(next);
+      applyTutorialStepAction(next);
+    } else {
+      setIsTutorialActive(false);
+      emitNotification('Tutorial Completed! 🎉', 'You have mastered all core features of MakInvoices.', 'success');
+    }
+  };
+
+  const handlePrevTutorialStep = () => {
+    if (tutorialStep > 0) {
+      const prev = tutorialStep - 1;
+      setTutorialStep(prev);
+      applyTutorialStepAction(prev);
+    }
+  };
 
 
 
@@ -1962,6 +2106,41 @@ export default function Dashboard({
           </div>
 
 
+
+          {/* MAKINVOICES AI (REDIRECTS TO AI CHATBOT WITH PROPER ROUTING) */}
+          <div className="my-1.5 px-0.5">
+            <button
+              onClick={() => {
+                handleTabClick('support-chat');
+                if (typeof window !== 'undefined') {
+                  window.history.pushState(null, '', '/ai-chat');
+                }
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all cursor-pointer select-none group ${
+                activeTab === 'support-chat' || activeTab === 'makinvoices_ai'
+                  ? 'bg-[#0284c7] text-white border-[#0284c7] shadow-md shadow-sky-500/20 font-extrabold'
+                  : 'bg-sky-50/70 hover:bg-sky-100/80 dark:bg-[#132554]/50 dark:hover:bg-[#1b3272]/70 text-[#0369a1] dark:text-[#38bdf8] border-[#bae6fd] dark:border-[#223269] shadow-xs'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className={`p-1.5 rounded-lg transition-transform group-hover:scale-105 ${
+                  activeTab === 'support-chat' || activeTab === 'makinvoices_ai'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-[#0284c7]/15 text-[#0284c7] dark:bg-[#38bdf8]/15 dark:text-[#38bdf8]'
+                }`}>
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
+                <span className="text-xs font-bold tracking-tight">MakInvoices AI</span>
+              </div>
+              <span className={`text-[9px] px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider ${
+                activeTab === 'support-chat' || activeTab === 'makinvoices_ai'
+                  ? 'bg-white text-[#0284c7]'
+                  : 'bg-[#0284c7] text-white dark:bg-[#38bdf8] dark:text-[#0b1329]'
+              }`}>
+                PRO
+              </span>
+            </button>
+          </div>
 
           {/* TOOLS & CUSTOMIZATION */}
 
@@ -6991,6 +7170,9 @@ export default function Dashboard({
 
           : 'Financial Hub / Sales Ledger / Drafts';
 
+      case 'makinvoices_ai':
+        return 'Financial Hub / MakInvoices AI Studio';
+
       case 'profile':
 
         return 'Financial Hub / Creator Profile';
@@ -7825,6 +8007,107 @@ export default function Dashboard({
           {/* Connections / sync triggers */}
 
 
+
+        {/* ------------------ TAB 0: MAKINVOICES AI STUDIO ------------------ */}
+        {activeTab === 'makinvoices_ai' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* AI Studio Header Banner */}
+            <div className="relative overflow-hidden bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 text-white rounded-3xl p-6 sm:p-8 shadow-xl">
+              <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="relative z-10 space-y-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-black uppercase tracking-widest text-sky-100">
+                  <Sparkles className="w-3.5 h-3.5 animate-spin" /> AI Intelligence Studio
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black font-serif tracking-tight">
+                  MakInvoices AI Assistant &amp; Smart Billing
+                </h2>
+                <p className="text-sky-100 text-sm sm:text-base max-w-2xl leading-relaxed">
+                  Describe transactions in plain language to parse line items, rates, customer details, and taxes automatically, or chat 24/7 with your dedicated AI financial assistant.
+                </p>
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCreateModal()}
+                    className="inline-flex items-center gap-2 bg-white text-sky-700 font-mono font-bold text-xs px-5 py-2.5 rounded-xl hover:bg-sky-50 transition-all shadow-md cursor-pointer active:scale-95"
+                  >
+                    <Sparkles className="w-4 h-4 text-sky-500" /> Launch AI Smart Billing Prompt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('support')}
+                    className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white font-mono font-bold text-xs px-5 py-2.5 rounded-xl transition-all border border-white/20 cursor-pointer"
+                  >
+                    <HelpCircle className="w-4 h-4" /> 24/7 AI Knowledge Base
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Smart Billing Prompt Embedded Box */}
+            <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269] rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-sky-500/10 text-sky-500 border border-sky-500/20">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-slate-900 dark:text-white">Gemini Smart Prompt Generator</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Type or speak billing details to auto-populate invoice line items</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-extrabold px-2.5 py-1 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-full border border-sky-500/20 uppercase tracking-wider">
+                  Gemini 2.5 Flash
+                </span>
+              </div>
+
+              {/* Sample Prompt Chips */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider block">Try Sample Prompts:</span>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleOpenCreateModal();
+                      emitNotification('MakInvoices AI', 'AI Prompt copied! Paste or click Generate in the Invoice Editor.', 'success');
+                    }}
+                    className="text-xs bg-slate-100 dark:bg-slate-900/60 hover:bg-sky-50 dark:hover:bg-sky-950/40 text-slate-700 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-xl transition-all text-left cursor-pointer"
+                  >
+                    💡 "Invoice Acme Corp: 5 Laptops @ $1200 each, 2 Monitors @ $300 each, GST 18%"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleOpenCreateModal();
+                      emitNotification('MakInvoices AI', 'AI Prompt copied! Paste or click Generate in the Invoice Editor.', 'success');
+                    }}
+                    className="text-xs bg-slate-100 dark:bg-slate-900/60 hover:bg-sky-50 dark:hover:bg-sky-950/40 text-slate-700 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-xl transition-all text-left cursor-pointer"
+                  >
+                    💡 "Quote for Hardware Supplies: 50 Drill Bits @ ₹150 each, 10 Power Tools @ ₹3200 each"
+                  </button>
+                </div>
+              </div>
+
+              {/* AI Features Capabilities Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-500 flex items-center justify-center font-bold">1</div>
+                  <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Natural Language Parsing</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Extracts items, quantities, unit prices, discounts, and customer names from conversational text.</p>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold">2</div>
+                  <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Tax &amp; GST Auto Split</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Calculates CGST/SGST, IGST, or VAT splits automatically based on client location.</p>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center font-bold">3</div>
+                  <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Quantity Accumulator</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Adding existing catalog items automatically increments row totals instead of making duplicate lines.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ------------------ TAB 1: INVOICES / PURCHASES ROUTE ------------------ */}
 
@@ -14301,20 +14584,24 @@ export default function Dashboard({
 
 
 
-            {/* Page Header */}
-
-            <div>
-
-              <h1 className="text-base font-black uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: "'Fraunces', serif" }}>
-
-                <span className="bg-gradient-to-r from-[#0284c7] via-[#2563eb] to-[#38bdf8] bg-clip-text text-transparent">User Guide</span>
-
-                <span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] shrink-0" />
-
-              </h1>
-
-              <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">App usage documentation, billing policies, and company invoicing standards</p>
-
+            {/* Page Header with Interactive App Tutorial Button */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-[#111a36] border border-[#bae6fd]/80 dark:border-[#223269]/80 p-5 sm:p-6 rounded-2xl shadow-xs relative overflow-hidden">
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#0284c7] via-[#2563eb] to-[#38bdf8]" />
+              <div>
+                <h1 className="text-base sm:text-lg font-black uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: "'Fraunces', serif" }}>
+                  <span className="bg-gradient-to-r from-[#0284c7] via-[#2563eb] to-[#38bdf8] bg-clip-text text-transparent">User Guide &amp; App Tutorial</span>
+                  <span className="w-2 h-2 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] shrink-0" />
+                </h1>
+                <p className="text-xs text-[#64748b]/90 dark:text-zinc-400 mt-1 font-medium">Interactive app tour, structural documentation, billing policies, and feature walkthroughs</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => startInteractiveTutorial(0)}
+                className="inline-flex items-center gap-2.5 px-5 py-3 bg-[#0284c7] hover:bg-[#0369a1] text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shadow-sky-500/20 hover:shadow-lg cursor-pointer active:scale-95 shrink-0"
+              >
+                <PlayCircle className="w-4 h-4 text-white animate-pulse" />
+                <span>Start Interactive Tutorial</span>
+              </button>
             </div>
 
 
@@ -16566,30 +16853,185 @@ export default function Dashboard({
               </button>
 
               <button
-
                 type="submit"
-
                 className="px-5 py-1.5 bg-rose-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer active:scale-95"
-
               >
-
                 Log Expense
-
               </button>
-
             </div>
-
           </form>
-
         </div>
-
       )}
 
+        {/* ------------------ INTERACTIVE APP TUTORIAL MODAL OVERLAY ------------------ */}
+        {isTutorialActive && (
+          <div className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4 z-[9999] w-[calc(100vw-1rem)] sm:w-[380px] max-w-[calc(100vw-1rem)] sm:max-w-[380px] animate-in slide-in-from-bottom-4 fade-in duration-300 pb-[env(safe-area-inset-bottom)] box-border">
+            <div
+              style={{
+                backgroundColor: theme === 'dark' ? '#0b1328' : '#ffffff',
+                color: theme === 'dark' ? '#ffffff' : '#0f172a',
+                borderColor: theme === 'dark' ? '#38bdf8' : '#0284c7'
+              }}
+              className="border-2 rounded-xl p-3 sm:p-4 shadow-xl shadow-sky-950/20 relative overflow-hidden ring-1 ring-sky-500/30 max-h-[84vh] sm:max-h-[80vh] overflow-y-auto"
+            >
+              {/* Top Accent Bar */}
+              <div className="absolute top-0 inset-x-0 h-1 bg-[#0284c7]" />
 
+              {/* Step Header */}
+              <div className="flex items-center justify-between gap-1.5 mb-2 pt-0.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="px-2 py-0.5 rounded bg-[#0284c7] text-white text-[10px] font-bold uppercase tracking-wider shadow-2xs">
+                    Step {tutorialStep + 1}/{TUTORIAL_STEPS.length}
+                  </span>
+                  <span
+                    style={{
+                      backgroundColor: theme === 'dark' ? '#0f2444' : '#e0f2fe',
+                      color: theme === 'dark' ? '#38bdf8' : '#0284c7',
+                      borderColor: theme === 'dark' ? '#0284c7' : '#bae6fd'
+                    }}
+                    className="text-[10px] font-semibold px-2 py-0.5 rounded border uppercase tracking-wide truncate max-w-[170px] sm:max-w-none"
+                  >
+                    {TUTORIAL_STEPS[tutorialStep].tag}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsTutorialActive(false);
+                    handleCloseCreateModal();
+                  }}
+                  style={{ color: theme === 'dark' ? '#94a3b8' : '#64748b' }}
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors cursor-pointer active:scale-95 shrink-0"
+                  title="Close Tour"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Step Progress Bar */}
+              <div className="flex items-center justify-between gap-2 mb-2.5">
+                <div className="flex items-center gap-1 flex-1 mr-2 overflow-x-auto py-0.5 scrollbar-none touch-pan-x">
+                  {TUTORIAL_STEPS.map((s, idx) => (
+                    <button
+                      key={s.step}
+                      type="button"
+                      onClick={() => {
+                        setTutorialStep(idx);
+                        applyTutorialStepAction(idx);
+                      }}
+                      style={{
+                        backgroundColor: idx === tutorialStep
+                          ? (theme === 'dark' ? '#38bdf8' : '#0284c7')
+                          : idx < tutorialStep
+                          ? (theme === 'dark' ? '#0284c7' : '#38bdf8')
+                          : (theme === 'dark' ? '#334155' : '#e2e8f0')
+                      }}
+                      className={`h-1 rounded-full transition-all duration-300 cursor-pointer shrink-0 ${
+                        idx === tutorialStep ? 'w-4 sm:w-5' : 'w-1 sm:w-1.5'
+                      }`}
+                      title={`Jump to Step ${idx + 1}: ${s.title}`}
+                    />
+                  ))}
+                </div>
+                <span
+                  style={{ color: theme === 'dark' ? '#94a3b8' : '#64748b' }}
+                  className="text-[10px] font-mono font-bold shrink-0"
+                >
+                  {Math.round(((tutorialStep + 1) / TUTORIAL_STEPS.length) * 100)}%
+                </span>
+              </div>
+
+              {/* Step Title & Icon */}
+              <div className="flex items-start gap-2.5 mb-2">
+                <div className="p-2 rounded-lg bg-[#0284c7]/10 text-[#0284c7] dark:text-[#38bdf8] shrink-0 border border-[#0284c7]/15 mt-0.5">
+                  {tutorialStep === 0 && <TrendingUp className="w-4 h-4" />}
+                  {tutorialStep === 1 && <FileText className="w-4 h-4" />}
+                  {tutorialStep === 2 && <Wallet className="w-4 h-4" />}
+                  {tutorialStep === 3 && <Sparkles className="w-4 h-4" />}
+                  {tutorialStep === 4 && <Notebook className="w-4 h-4" />}
+                  {tutorialStep === 5 && <BarChart3 className="w-4 h-4" />}
+                  {tutorialStep === 6 && <MessageSquare className="w-4 h-4" />}
+                  {tutorialStep === 7 && <Database className="w-4 h-4" />}
+                  {tutorialStep === 8 && <Lock className="w-4 h-4" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3
+                    style={{ color: theme === 'dark' ? '#ffffff' : '#0f172a' }}
+                    className="text-xs sm:text-sm font-bold leading-tight font-sans tracking-tight"
+                  >
+                    {TUTORIAL_STEPS[tutorialStep].title}
+                  </h3>
+                  <p
+                    style={{ color: theme === 'dark' ? '#cbd5e1' : '#475569' }}
+                    className="text-[11px] sm:text-[11.5px] mt-0.5 leading-relaxed font-normal"
+                  >
+                    {TUTORIAL_STEPS[tutorialStep].description}
+                  </p>
+                </div>
+              </div>
+
+              {/* Feature Focus Box */}
+              <div
+                style={{
+                  backgroundColor: theme === 'dark' ? '#0f192e' : '#f0f9ff',
+                  borderColor: theme === 'dark' ? '#0284c7' : '#bae6fd'
+                }}
+                className="border p-2.5 rounded-lg my-2 space-y-0.5 shadow-2xs"
+              >
+                <div className="text-[9.5px] font-mono font-bold text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-wider">
+                  Key Focus
+                </div>
+                <p
+                  style={{ color: theme === 'dark' ? '#ffffff' : '#0f172a' }}
+                  className="text-[11.5px] sm:text-xs font-semibold leading-snug"
+                >
+                  {TUTORIAL_STEPS[tutorialStep].highlightText}
+                </p>
+                <div
+                  style={{ color: theme === 'dark' ? '#94a3b8' : '#64748b' }}
+                  className="pt-0.5 text-[10.5px] sm:text-[11px] font-normal leading-normal"
+                >
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Tip:</span> {TUTORIAL_STEPS[tutorialStep].tip}
+                </div>
+              </div>
+
+              {/* Navigation Controls */}
+              <div
+                style={{ borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}
+                className="flex items-center justify-between pt-2 border-t mt-1"
+              >
+                <button
+                  type="button"
+                  onClick={handlePrevTutorialStep}
+                  disabled={tutorialStep === 0}
+                  style={{
+                    backgroundColor: tutorialStep === 0 ? 'transparent' : (theme === 'dark' ? '#1e293b' : '#f1f5f9'),
+                    color: tutorialStep === 0 ? '#64748b' : (theme === 'dark' ? '#ffffff' : '#0f172a'),
+                    borderColor: theme === 'dark' ? '#334155' : '#cbd5e1'
+                  }}
+                  className={`px-2.5 sm:px-3 py-1 rounded-md text-[11px] sm:text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer active:scale-95 border ${
+                    tutorialStep === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:opacity-90'
+                  }`}
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" /> Previous
+                </button>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleNextTutorialStep}
+                    className="px-3 sm:px-3.5 py-1 rounded-md text-[11px] sm:text-xs font-semibold bg-[#0284c7] hover:bg-[#0369a1] text-white shadow-2xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 hover:shadow-xs"
+                  >
+                    <span>{tutorialStep === TUTORIAL_STEPS.length - 1 ? 'Finish Tour 🎉' : 'Next Feature'}</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
     </div>
-
   );
-
 }
 

@@ -19,6 +19,7 @@ interface SmartBillingBoxProps {
   existingState: SmartBillingExistingState;
   isAllowed?: boolean;
   onUpgradeClick?: () => void;
+  isHighlight?: boolean;
 }
 
 interface InvoiceSnapshot {
@@ -74,7 +75,7 @@ interface InvoiceSnapshot {
  *   • setters prop (all form state setters bundled)
  *   • existingState prop (current field values for merge logic)
  */
-export function SmartBillingBox({ activeTemplate, setters, existingState, isAllowed = true, onUpgradeClick }: SmartBillingBoxProps) {
+export function SmartBillingBox({ activeTemplate, setters, existingState, isAllowed = true, onUpgradeClick, isHighlight = false }: SmartBillingBoxProps) {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [lastFilledCount, setLastFilledCount] = useState<number | null>(null);
@@ -312,9 +313,13 @@ export function SmartBillingBox({ activeTemplate, setters, existingState, isAllo
   }, [historyIndex, history, restoreSnapshot]);
 
   return (
-    <div className="mx-1 mb-2.5 sm:mb-3 shrink-0">
+    <div id="ai-smart-billing-box" className="mx-1 mb-2.5 sm:mb-3 shrink-0 transition-all duration-300">
       {/* Header */}
-      <div className="p-2.5 sm:p-3 bg-gradient-to-br from-[#f4f9ff] via-[#f4f9ff] to-[#e0f2fe] dark:from-[#0f172a] dark:via-[#111827] dark:to-[#1e293b] border border-[#bae6fd] dark:border-[#0284c7]/40 rounded-xl sm:rounded-2xl shadow-xs">
+      <div className={`p-2.5 sm:p-3 bg-gradient-to-br from-[#f4f9ff] via-[#f4f9ff] to-[#e0f2fe] dark:from-[#0f172a] dark:via-[#111827] dark:to-[#1e293b] rounded-xl sm:rounded-2xl transition-all duration-300 ${
+        isHighlight
+          ? 'border-2 border-[#0284c7] dark:border-[#38bdf8] shadow-md shadow-sky-500/20 ring-2 ring-sky-400/40 animate-pulse'
+          : 'border border-[#bae6fd] dark:border-[#0284c7]/40 shadow-xs'
+      }`}>
         <div className="flex items-center gap-2 mb-1.5">
           <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#0284c7] to-[#2563eb] flex items-center justify-center shadow-xs shrink-0">
             <Sparkles className="w-3.5 h-3.5 text-white" />

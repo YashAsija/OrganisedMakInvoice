@@ -3552,6 +3552,7 @@ export default function App() {
         onLogout={handleLogout}
         onOpenProfile={() => setIsProfileOpen(true)}
         onOpenInvoiceEditor={handleOpenInvoiceEditor}
+        onCloseInvoiceEditor={() => setIsInvoiceEditorOpen(false)}
         onDeleteInvoice={handleDeleteInvoice}
         onRestoreInvoice={handleRestoreInvoice}
         onHardDeleteInvoice={handleHardDeleteInvoice}

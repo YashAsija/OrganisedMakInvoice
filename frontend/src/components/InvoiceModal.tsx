@@ -29,6 +29,7 @@ interface InvoiceModalProps {
   onSave: (inv: Invoice) => void;
   userId?: string | null;
   subscriptionTier?: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise';
+  isTutorialHighlight?: boolean;
 }
 
 export const getFinancialYearShort = (dateInput?: string | Date): string => {
@@ -112,11 +113,31 @@ export default function InvoiceModal({
   onClose,
   onSave,
   userId,
-  subscriptionTier = 'free'
+  subscriptionTier = 'free',
+  isTutorialHighlight = false
 }: InvoiceModalProps) {
   // GUI Preview and Form Edit State
   const [activeMode, setActiveMode] = useState<'edit' | 'preview' | 'editable'>('editable');
   const [savedInvoiceForPreview, setSavedInvoiceForPreview] = useState<Invoice | null>(null);
+  const [isAiBoxHighlighted, setIsAiBoxHighlighted] = useState<boolean>(isTutorialHighlight);
+
+  useEffect(() => {
+    setIsAiBoxHighlighted(isTutorialHighlight);
+  }, [isTutorialHighlight]);
+
+  useEffect(() => {
+    const handleHighlightEvent = (e: any) => {
+      setIsAiBoxHighlighted(Boolean(e.detail));
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('mak_tutorial_highlight_ai_box', handleHighlightEvent);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('mak_tutorial_highlight_ai_box', handleHighlightEvent);
+      }
+    };
+  }, []);
 
   // Master Registry Client Database loader
   const [registryClients, setRegistryClients] = useState<any[]>([]);
@@ -2577,6 +2598,7 @@ export default function InvoiceModal({
           {/* ── AI Smart Billing (isolated module) ─────────────────────────────── */}
           <SmartBillingBox
             activeTemplate={activeTemplate}
+            isHighlight={isAiBoxHighlighted || isTutorialHighlight}
             isAllowed={subscriptionTier === 'pro' || subscriptionTier === 'unlimited' || subscriptionTier === 'enterprise'}
             onUpgradeClick={() => {
               onClose();
