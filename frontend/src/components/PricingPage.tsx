@@ -415,23 +415,26 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
   const css = `
     .pr-wrap { max-width: 1180px; margin: 0 auto; padding: 0 32px; }
     @media (max-width: 720px) { .pr-wrap { padding: 0 20px; } }
+    /* ---------- NAV ---------- */
     nav.pr-nav {
-      position: sticky; top: 0; z-index: 50;
-      background: ${isDark ? 'rgba(11,19,41,0.92)' : 'rgba(244,249,255,0.92)'};
-      backdrop-filter: blur(8px);
+      position: fixed; top: 0; left: 0; right: 0; width: 100%; z-index: 1000;
+      background: ${isDark ? 'rgba(11,19,41,0.88)' : 'rgba(244,249,255,0.88)'};
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid ${isDark ? '#223269' : '#bae6fd'};
+      box-shadow: ${isDark ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(2,132,199,0.06)'};
+      transition: background 0.25s ease, box-shadow 0.25s ease;
     }
     .pr-nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 32px; max-width: 1180px; margin: 0 auto; }
     .pr-logo { display: flex; align-items: center; gap: 10px; cursor: pointer; }
     .pr-logo img { width: 40px; height: 40px; object-fit: contain; }
-    .pr-navlinks { display: flex; gap: 28px; font-size: 0.92rem; color: ${isDark ? '#94a3b8' : '#475569'}; }
+    .pr-navlinks { display: flex; gap: 34px; font-size: 0.92rem; color: ${isDark ? '#94a3b8' : '#475569'}; }
     .pr-navlinks button { background: none; border: none; font-size: inherit; color: inherit; cursor: pointer; font-weight: bold; transition: color .2s; padding: 0; font-family: 'IBM Plex Sans', sans-serif; }
     .pr-navlinks button:hover, .pr-navlinks button.active { color: ${isDark ? '#38bdf8' : '#0284c7'}; }
     .pr-nav-actions { display: flex; align-items: center; gap: 10px; }
     .pr-login {
       font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; background: transparent;
       color: ${isDark ? '#38bdf8' : '#0284c7'};
-      padding: 9px 18px; border-radius: 8px;
+      padding: 9px 18px; border-radius: 8px; letter-spacing: 0.02em;
       border: 1.5px solid ${isDark ? '#38bdf8' : '#0284c7'};
       cursor: pointer; font-weight: bold; transition: all 0.2s;
     }
@@ -439,7 +442,7 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
     .pr-cta {
       font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem;
       background: ${isDark ? '#38bdf8' : '#0284c7'}; color: #fff;
-      padding: 10px 20px; border-radius: 8px;
+      padding: 10px 20px; border-radius: 8px; text-decoration: none; letter-spacing: 0.02em;
       border: 1px solid ${isDark ? '#0284c7' : '#0369a1'};
       cursor: pointer; font-weight: bold; transition: all 0.2s;
       box-shadow: 0 4px 12px rgba(2,132,199,0.15);
@@ -448,7 +451,7 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
     @media (max-width: 820px) { .pr-navlinks { display: none; } }
     @media (max-width: 480px) { .pr-login { display: none; } }
 
-    .pr-hero { padding: 80px 0 56px; text-align: center; }
+    .pr-hero { padding: 140px 0 56px; text-align: center; }
     .pr-eyebrow {
       font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; letter-spacing: 0.14em;
       text-transform: uppercase; color: ${isDark ? '#38bdf8' : '#0284c7'};
@@ -620,17 +623,18 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
       {/* NAV */}
       <nav className="pr-nav">
         <div className="pr-nav-inner">
-          <div className="pr-logo" onClick={() => handleNavigate('/')} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') handleNavigate('/'); }} aria-label="Go to homepage">
-            <img src="/logo.svg" alt="MakInvoices Logo" />
+          <div className="pr-logo group" onClick={() => handleNavigate('/')} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') handleNavigate('/'); }} aria-label="Go to homepage">
+            <img src="/logo.svg" alt="MakInvoices Logo" className="w-10 h-10 object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300 shrink-0" />
             <div>
-              <span style={{ fontSize: '0.95rem', fontWeight: 800, letterSpacing: '-0.01em', color: isDark ? '#f8fafc' : '#0f172a', display: 'block', lineHeight: 1 }}>
+              <span className="text-base font-black tracking-tight block leading-none" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>
                 Mak<span style={{ color: '#0ea5e9' }}>Invoices</span>
               </span>
-              <span style={{ fontSize: '0.62rem', fontWeight: 700, color: isDark ? '#94a3b8' : '#475569', display: 'block', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 3 }}>Advanced Ledger Hub</span>
+              <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-500 block tracking-wider uppercase mt-1">Advanced Ledger Hub</span>
             </div>
           </div>
           <div className="pr-navlinks">
             <button type="button" onClick={() => handleNavigate('/#overview')}>Overview</button>
+            <button type="button" onClick={() => handleNavigate('/about')}>About Us</button>
             <button type="button" onClick={() => handleNavigate('/#features')}>Features</button>
             <button type="button" className="active">Pricing</button>
             <button type="button" onClick={() => handleNavigate('/#compare')}>Compare</button>
@@ -1057,6 +1061,7 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
             <div className="pr-footer-col">
               <h5>Company</h5>
               <ul>
+                <li><button type="button" onClick={() => handleNavigate('/about')}>About Us</button></li>
                 <li><button type="button" onClick={() => handleNavigate('/contact')}>Contact</button></li>
                 <li><button type="button" onClick={() => handleNavigate('/login')}>Log In</button></li>
                 <li><button type="button" onClick={() => handleNavigate('/signup')}>Get Started</button></li>

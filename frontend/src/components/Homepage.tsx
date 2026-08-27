@@ -80,8 +80,12 @@ export default function Homepage({
 
         /* ---------- NAV ---------- */
         nav.topnav {
-          position: sticky; top: 0; z-index: 50; background: ${theme === 'dark' ? 'rgba(11,19,41,0.9)' : 'rgba(244,249,255,0.9)'}; backdrop-filter: blur(8px);
+          position: fixed; top: 0; left: 0; right: 0; width: 100%; z-index: 1000;
+          background: ${theme === 'dark' ? 'rgba(11,19,41,0.88)' : 'rgba(244,249,255,0.88)'};
+          backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
           border-bottom: 1px solid var(--paper-line);
+          box-shadow: ${theme === 'dark' ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(2,132,199,0.06)'};
+          transition: background 0.25s ease, box-shadow 0.25s ease;
         }
         .topnav-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 32px; max-width: 1180px; margin: 0 auto; }
         .logo-container { display: flex; align-items: center; gap: 10px; cursor: pointer; }
@@ -106,7 +110,7 @@ export default function Homepage({
         @media (max-width: 480px) { .nav-login { display: none; } }
 
         /* ---------- HERO ---------- */
-        .hero { padding: 110px 0 70px; position: relative; overflow: hidden; }
+        .hero { padding: 150px 0 70px; position: relative; overflow: hidden; }
         .hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 50px; align-items: center; }
         @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } }
 
@@ -381,7 +385,6 @@ export default function Homepage({
           .footer-grid { gap: 24px; padding-bottom: 32px; }
           .footer-bottom { padding: 16px 0; flex-direction: column; text-align: center; gap: 10px; }
         }
-
       ` }} />
 
       <nav className="topnav">
@@ -398,6 +401,7 @@ export default function Homepage({
           </div>
           <div className="navlinks">
             <button type="button" onClick={() => handleNavScroll('overview')}>Overview</button>
+            <button type="button" onClick={() => onNavigate('/about')}>About Us</button>
             <button type="button" onClick={() => handleNavScroll('features')}>Features</button>
             <button type="button" onClick={() => onNavigate('/pricing')}>Pricing</button>
             <button type="button" onClick={() => handleNavScroll('compare')}>Compare</button>
@@ -680,7 +684,7 @@ export default function Homepage({
               <h5>Product</h5>
               <ul>
                 <li><button type="button" onClick={() => handleNavScroll('features')}>Features</button></li>
-                <li><button type="button" onClick={() => handleNavScroll('compare')}>Pricing</button></li>
+                <li><button type="button" onClick={() => onNavigate('/pricing')}>Pricing</button></li>
                 <li><button type="button" onClick={() => handleNavScroll('overview')}>Integrations</button></li>
               </ul>
             </div>
@@ -699,6 +703,7 @@ export default function Homepage({
             <div className="footer-col">
               <h5>Company</h5>
               <ul>
+                <li><button type="button" onClick={() => onNavigate('/about')}>About Us</button></li>
                 <li><button type="button" onClick={() => onNavigate('/contact')}>Contact</button></li>
                 <li><button type="button" onClick={() => onNavigate('/login')}>Log In</button></li>
                 <li><button type="button" onClick={() => onNavigate('/signup')}>Get Started</button></li>

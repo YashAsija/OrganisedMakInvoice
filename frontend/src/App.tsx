@@ -81,6 +81,7 @@ import ContactPage from './components/ContactPage';
 import SecurityPage from './components/SecurityPage';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
+import AboutPage from './components/AboutPage';
 // Path to Sidebar Tab Mapping Definitions
 const tabToPath: Record<string, string> = {
   dashboard: '/dashboard',
@@ -3465,6 +3466,26 @@ export default function App() {
     if (publicPath === '/security') {
       return (
         <SecurityPage
+          theme={theme}
+          onNavigate={handlePublicNavigate}
+          onGoogleLogin={handleLogin}
+        />
+      );
+    }
+
+    if (publicPath === '/about') {
+      return (
+        <AboutPage
+          theme={theme}
+          onNavigate={handlePublicNavigate}
+          onGoogleLogin={handleLogin}
+        />
+      );
+    }
+
+    if (publicPath === '/contact') {
+      return (
+        <ContactPage
           theme={theme}
           onNavigate={handlePublicNavigate}
           onGoogleLogin={handleLogin}

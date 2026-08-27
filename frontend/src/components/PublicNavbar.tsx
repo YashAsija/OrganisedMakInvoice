@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, BookOpen, CreditCard, HelpCircle, Mail, Menu, X, Globe, ChevronDown, Check } from 'lucide-react';
+import { Layers, BookOpen, CreditCard, HelpCircle, Mail, Menu, X, Globe, ChevronDown, Check, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface PublicNavbarProps {
@@ -36,6 +36,8 @@ export default function PublicNavbar({ theme, onNavigate, activePath }: PublicNa
   };
 
   const navItems = [
+    { name: 'Overview', icon: Globe, path: '/#overview' },
+    { name: 'About Us', icon: Heart, path: '/about' },
     { name: 'Features', icon: Layers, path: '/#features-section' },
     { name: 'Guide', icon: BookOpen, path: '/guide' },
     { name: 'Pricing', icon: CreditCard, path: '/pricing' },

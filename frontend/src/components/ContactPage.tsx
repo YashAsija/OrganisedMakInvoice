@@ -12,6 +12,16 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
   const [contactSubmitted, setContactSubmitted] = useState(false);
   const [contactLoading, setContactLoading] = useState(false);
 
+  const handleNavScroll = (id: string) => {
+    onNavigate('/');
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 150);
+  };
+
   // Determine dynamic variables based on theme
   const variables = theme === 'dark' ? `
     :root {
@@ -63,8 +73,12 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
 
     /* ---------- NAV (Homepage Style Header) ---------- */
     nav.topnav {
-      position: sticky; top: 0; z-index: 50; background: ${theme === 'dark' ? 'rgba(11,19,41,0.9)' : 'rgba(244,249,255,0.9)'}; backdrop-filter: blur(8px);
+      position: fixed; top: 0; left: 0; right: 0; width: 100%; z-index: 1000;
+      background: ${theme === 'dark' ? 'rgba(11,19,41,0.88)' : 'rgba(244,249,255,0.88)'};
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--paper-line);
+      box-shadow: ${theme === 'dark' ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(2,132,199,0.06)'};
+      transition: background 0.25s ease, box-shadow 0.25s ease;
     }
     .topnav-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 32px; max-width: 1180px; margin: 0 auto; }
     .logo-container { display: flex; align-items: center; gap: 10px; cursor: pointer; }
@@ -89,7 +103,7 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
     @media (max-width: 480px) { .nav-login { display: none; } }
 
     /* ---------- MAIN CONTACT SECTION ---------- */
-    .contact-hero { padding: 80px 0; position: relative; }
+    .contact-hero { padding: 140px 0 80px; position: relative; }
     .contact-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 56px; align-items: start; }
     @media (max-width: 900px) { .contact-grid { grid-template-columns: 1fr; gap: 40px; } }
 
@@ -275,11 +289,12 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
             </div>
           </div>
           <div className="navlinks">
-            <button type="button" onClick={() => onNavigate('/#overview')}>Overview</button>
-            <button type="button" onClick={() => onNavigate('/#features-section')}>Features</button>
+            <button type="button" onClick={() => handleNavScroll('overview')}>Overview</button>
+            <button type="button" onClick={() => onNavigate('/about')}>About Us</button>
+            <button type="button" onClick={() => handleNavScroll('features')}>Features</button>
             <button type="button" onClick={() => onNavigate('/pricing')}>Pricing</button>
-            <button type="button" onClick={() => onNavigate('/#compare')}>Compare</button>
-            <button type="button" onClick={() => onNavigate('/#faq-section')}>FAQ</button>
+            <button type="button" onClick={() => handleNavScroll('compare')}>Compare</button>
+            <button type="button" onClick={() => handleNavScroll('faq')}>FAQ</button>
             <button type="button" className="active" onClick={() => onNavigate('/contact')}>Contact</button>
           </div>
           <div className="nav-actions">
@@ -465,6 +480,7 @@ export default function ContactPage({ theme, onNavigate, onGoogleLogin }: Contac
             <div className="footer-col">
               <h5>Company</h5>
               <ul>
+                <li><button type="button" onClick={() => onNavigate('/about')}>About Us</button></li>
                 <li><button type="button" onClick={() => onNavigate('/contact')}>Contact</button></li>
                 <li><button type="button" onClick={() => onNavigate('/login')}>Log In</button></li>
                 <li><button type="button" onClick={() => onNavigate('/signup')}>Get Started</button></li>

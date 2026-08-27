@@ -225,6 +225,7 @@ export default function TermsPage({ theme, onNavigate, onGoogleLogin }: TermsPag
           </div>
           <div className="navlinks">
             <button type="button" onClick={() => onNavigate('/#overview')}>Overview</button>
+            <button type="button" onClick={() => onNavigate('/about')}>About Us</button>
             <button type="button" onClick={() => onNavigate('/#features-section')}>Features</button>
             <button type="button" onClick={() => onNavigate('/pricing')}>Pricing</button>
             <button type="button" onClick={() => onNavigate('/#compare')}>Compare</button>
