@@ -438,6 +438,7 @@ export default function Dashboard({
   const [activeActionMenuId, setActiveActionMenuId] = useState<string | null>(null);
   const [actionMenuPosition, setActionMenuPosition] = useState<'down' | 'up'>('down');
   const [activeSendMenuId, setActiveSendMenuId] = useState<string | null>(null);
+  const [sendMenuPosition, setSendMenuPosition] = useState<'down' | 'up'>('down');
   // Interactive App Tutorial State & Data
   const [isTutorialActive, setIsTutorialActive] = useState<boolean>(false);
   const [tutorialStep, setTutorialStep] = useState<number>(0);
