@@ -107,22 +107,8 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const userUpdateData = {
-        gateway: 'razorpay',
-        gateway_subscription_id: subIdToSave,
-        plan_id: normalizedPlanKey,
-        subscription_status: 'active',
-        auto_renew: !isOrderOrOnetime,
-        subscription_expires_at: expiresAt,
-        current_period_end: expiresAt,
-      };
-
-      if (userId) {
-        await supabaseAdmin.from('users').update(userUpdateData).eq('id', userId);
-        await supabaseAdmin.from('users').update(userUpdateData).eq('uid', userId);
-      }
-      if (userEmail) {
-        await supabaseAdmin.from('users').update(userUpdateData).eq('email', userEmail);
+      if (resolvedUserId) {
+        await supabaseAdmin.from('users').update({ updatedAt: now.toISOString() }).eq('uid', resolvedUserId);
       }
     }
 

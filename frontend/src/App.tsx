@@ -1165,47 +1165,14 @@ export default function App() {
 
               // 2. Fallback check on users table if subscriptions table didn't yield an active tier
               if (fetchedTier === 'free') {
-                let userSubData = null;
                 const { data: uData1 } = await supabase
                   .from('users')
-                  .select('plan_id, subscription_status, current_period_end, subscription_expires_at, created_at, updatedAt')
+                  .select('uid, email, name, updatedAt')
                   .eq('uid', uid)
                   .limit(1);
 
-                if (uData1 && uData1.length > 0) {
-                  userSubData = uData1;
-                } else if (activeEmail) {
-                  const { data: uData2 } = await supabase
-                    .from('users')
-                    .select('plan_id, subscription_status, current_period_end, subscription_expires_at, created_at, updatedAt')
-                    .eq('email', activeEmail)
-                    .limit(1);
-                  userSubData = uData2;
-                }
-
-                if (userSubData && userSubData.length > 0 && userSubData[0].plan_id) {
-                  const uSub = userSubData[0];
-                  const expDate = uSub.current_period_end || uSub.subscription_expires_at;
-                  const isNotExpired = !expDate || new Date(expDate) > new Date();
-                  const isActiveStatus = !uSub.subscription_status || uSub.subscription_status === 'active';
-
-                  if (isNotExpired && isActiveStatus) {
-                    const rawKey = uSub.plan_id.toLowerCase();
-                    if (rawKey.includes('pro') || rawKey.includes('professional')) fetchedTier = 'pro';
-                    else if (rawKey.includes('unlimited') || rawKey.includes('ent')) fetchedTier = 'unlimited';
-                    else if (rawKey.includes('enterprise')) fetchedTier = 'enterprise';
-                    else if (rawKey.includes('basic')) fetchedTier = 'basic';
-
-                    if (typeof window !== 'undefined') {
-                      if (uSub.created_at || uSub.updatedAt) {
-                        localStorage.setItem('makbills_sub_activated_at', uSub.created_at || uSub.updatedAt);
-                      }
-                      if (expDate) {
-                        localStorage.setItem('makbills_sub_expires_iso', new Date(expDate).toISOString());
-                      }
-                      localStorage.setItem('makbills_last_active_paid_tier', fetchedTier);
-                    }
-                  }
+                if (uData1 && uData1.length > 0 && uData1[0].updatedAt) {
+                  localStorage.setItem('makbills_sub_activated_at', uData1[0].updatedAt);
                 }
               }
 

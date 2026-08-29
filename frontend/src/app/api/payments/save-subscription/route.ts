@@ -97,18 +97,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Also update the public.users table for backward compatibility & direct query lookup
+    // Also update the public.users table (primary key: uid, timestamp: updatedAt)
     try {
       const userUpdateData = {
-        plan_type: finalPlanType,
-        plan_id: finalPlanType,
-        subscription_status: subStatus,
-        expires_at: expiresDate,
-        current_period_end: expiresDate,
-        subscription_expires_at: expiresDate,
+        updatedAt: now.toISOString(),
       };
 
-      await supabaseAdmin.from('users').update(userUpdateData).eq('id', userId);
       await supabaseAdmin.from('users').update(userUpdateData).eq('uid', userId);
     } catch (userUpdateErr) {
       console.warn('[Save Subscription API] Users table update warning:', userUpdateErr);
