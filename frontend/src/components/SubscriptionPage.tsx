@@ -588,14 +588,17 @@ export default function SubscriptionPage({
         return;
       }
 
-      // Step 3 — Insert to subscriptions using ONLY confirmed columns
-      const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
-      const expiresIso = new Date(Date.now() + fourteenDaysMs).toISOString();
+      // Step 3 — Insert to subscriptions for 1-Month (30 days) Free Trial
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      const expiresIso = new Date(Date.now() + thirtyDaysMs).toISOString();
+
+      const targetPlanType = planId === 'pro' ? 'professional' : 'basic';
+      const targetPlanName = planId === 'pro' ? 'Professional' : 'Basic';
 
       const trialPayload = {
         user_id: user.id,
-        plan_name: 'Free',
-        plan_type: 'free',
+        plan_name: targetPlanName,
+        plan_type: targetPlanType,
         status: 'trialing',
         expires_at: expiresIso,
         renews_at: expiresIso,
@@ -634,7 +637,7 @@ export default function SubscriptionPage({
       const now = new Date();
       localStorage.setItem('makbills_sub_activated_at', now.toISOString());
       localStorage.setItem('makbills_sub_expires_iso', expiresIso);
-      localStorage.setItem('makbills_sub_expires_at', new Date(expiresIso).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) + ' (14-Day Free Trial)');
+      localStorage.setItem('makbills_sub_expires_at', new Date(expiresIso).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) + ' (1-Month Free Trial)');
       localStorage.setItem('makbills_last_active_paid_tier', planId);
 
       if (planId === 'basic') {
