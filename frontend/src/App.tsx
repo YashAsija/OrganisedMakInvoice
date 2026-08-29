@@ -1124,6 +1124,25 @@ export default function App() {
                 subData = subByEmail;
               }
 
+              // 1c. If no subscription record exists at all for this user ID, insert default Starter/Free row
+              if (!subData || subData.length === 0) {
+                try {
+                  const defaultPayload = {
+                    user_id: uid,
+                    plan_name: 'Free',
+                    plan_type: 'free',
+                    status: 'active',
+                    expires_at: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
+                    renews_at: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
+                    updated_at: new Date().toISOString(),
+                  };
+                  await supabase.from('subscriptions').upsert(defaultPayload, { onConflict: 'user_id' });
+                  subData = [defaultPayload];
+                } catch (starterErr) {
+                  console.warn('[Cloud Sync] Starter subscription auto-create warning:', starterErr);
+                }
+              }
+
               if (subData && subData.length > 0) {
                 const sub = subData[0];
                 const now = new Date();
