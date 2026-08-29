@@ -567,37 +567,106 @@ export default function SubscriptionPage({
                   new Date(expiresIsoRaw).getTime() <= Date.now()
                 );
 
-                const handleStartTrial = (planId: 'basic' | 'pro') => {
-                  const now = new Date();
-                  const expires = new Date();
-                  expires.setDate(now.getDate() + 30);
-                  
-                  localStorage.setItem('makbills_sub_activated_at', now.toISOString());
-                  localStorage.setItem('makbills_sub_expires_iso', expires.toISOString());
-                  localStorage.setItem('makbills_sub_expires_at', expires.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) + ' (1-Month Free Trial)');
-                  localStorage.setItem('makbills_last_active_paid_tier', planId);
-                  
-                  if (planId === 'basic') {
-                    localStorage.setItem('makbills_trial_used_basic', expires.toISOString());
-                    onUpgrade('basic');
-                    setShowSuccessModal('basic_trial');
-                  } else {
-                    localStorage.setItem('makbills_trial_used_pro', expires.toISOString());
-                    onUpgrade('pro');
-                    setShowSuccessModal('pro_trial');
-                  }
-                };
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const handleStartTrial = async (planId: 'basic' | 'pro') => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      // Step 1 — Refresh session before any DB operation
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        await supabase.auth.refreshSession();
+      }
+
+      // Step 2 — Get authenticated user ID
+      const { data: { user }, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !user) {
+        console.error('[Free Trial Authentication Error] User not logged in', userErr);
+        alert('Authentication required to start free trial. Please log in.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Step 3 — Insert to subscriptions using ONLY confirmed columns
+      const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+      const expiresIso = new Date(Date.now() + fourteenDaysMs).toISOString();
+
+      const trialPayload = {
+        user_id: user.id,
+        plan_name: 'Free',
+        plan_type: 'free',
+        status: 'trialing',
+        expires_at: expiresIso,
+        renews_at: expiresIso,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Step 4 — Execute upsert/insert and handle error explicitly
+      const { error: insertError } = await supabase
+        .from('subscriptions')
+        .upsert(trialPayload, { onConflict: 'user_id' });
+
+      if (insertError) {
+        console.error('[Free Trial Insert Error] Full error object:', insertError);
+        alert('Failed to activate trial: ' + (insertError.message || JSON.stringify(insertError)));
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Step 5 — Verification SELECT to confirm row exists
+      try {
+        const { data: verify, error: verifyErr } = await supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        if (verifyErr) {
+          console.error('[Subscription Verify Error] Row verification failed:', verifyErr);
+        } else {
+          console.log('[Subscription Verify] Confirmed row exists:', verify);
+        }
+      } catch (vErr) {
+        console.error('[Subscription Verify Exception]', vErr);
+      }
+
+      // Step 6 — On success: update local state & show success UI
+      const now = new Date();
+      localStorage.setItem('makbills_sub_activated_at', now.toISOString());
+      localStorage.setItem('makbills_sub_expires_iso', expiresIso);
+      localStorage.setItem('makbills_sub_expires_at', new Date(expiresIso).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) + ' (14-Day Free Trial)');
+      localStorage.setItem('makbills_last_active_paid_tier', planId);
+
+      if (planId === 'basic') {
+        localStorage.setItem('makbills_trial_used_basic', expiresIso);
+        onUpgrade('basic');
+        setShowSuccessModal('basic_trial');
+      } else {
+        localStorage.setItem('makbills_trial_used_pro', expiresIso);
+        onUpgrade('pro');
+        setShowSuccessModal('pro_trial');
+      }
+    } catch (e: any) {
+      console.error('[Free Trial Activation Error] Unhandled exception:', e);
+      alert('Failed to activate trial: ' + (e?.message || 'Unknown error'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
                 return (
                   <div className="space-y-2 mt-2">
                     {(canTrialBasic || canTrialPro) && (
                       <button
                         type="button"
+                        disabled={isSubmitting}
                         onClick={() => handleStartTrial(plan.id as 'basic' | 'pro')}
-                        className="w-full py-2.5 font-extrabold text-xs rounded-xl cursor-pointer transition-all bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5"
+                        className={`w-full py-2.5 font-extrabold text-xs rounded-xl transition-all text-white shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 ${
+                          isSubmitting ? 'bg-emerald-800 opacity-60 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 active:scale-98 cursor-pointer'
+                        }`}
                       >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Start 1-Month Free Trial</span>
+                        <Sparkles className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-spin' : ''}`} />
+                        <span>{isSubmitting ? 'Activating Trial...' : 'Start 1-Month Free Trial'}</span>
                       </button>
                     )}
 

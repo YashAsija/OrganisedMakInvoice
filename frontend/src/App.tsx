@@ -1127,26 +1127,20 @@ export default function App() {
               if (subData && subData.length > 0) {
                 const sub = subData[0];
                 const now = new Date();
-                const expDate = sub.current_period_end || sub.subscription_expires_at;
+                const expDate = sub.expires_at || sub.renews_at || sub.current_period_end;
                 const isNotExpired = !expDate || new Date(expDate) > now;
-                const isActiveStatus = !sub.status || sub.status === 'active';
+                const isActiveStatus = !sub.status || sub.status === 'active' || sub.status === 'trialing';
 
-                if (isNotExpired && isActiveStatus && (sub.plan_key || sub.plan_id)) {
-                  const rawKey = (sub.plan_key || sub.plan_id).toLowerCase();
-                  if (rawKey.includes('pro') || rawKey.includes('professional')) fetchedTier = 'pro';
-                  else if (rawKey.includes('unlimited') || rawKey.includes('ent')) fetchedTier = 'unlimited';
-                  else if (rawKey.includes('enterprise')) fetchedTier = 'enterprise';
+                if (isNotExpired && isActiveStatus && (sub.plan_type || sub.plan_name || sub.plan_key || sub.plan_id)) {
+                  const rawKey = (sub.plan_type || sub.plan_name || sub.plan_key || sub.plan_id).toLowerCase();
+                  if (rawKey.includes('enterprise') || rawKey.includes('unlimited')) fetchedTier = 'unlimited';
+                  else if (rawKey.includes('professional') || rawKey.includes('pro')) fetchedTier = 'pro';
                   else if (rawKey.includes('basic')) fetchedTier = 'basic';
 
-                  if (typeof window !== 'undefined') {
-                    if (sub.created_at || sub.updated_at) {
-                      localStorage.setItem('makbills_sub_activated_at', sub.created_at || sub.updated_at);
-                    }
-                    if (expDate) {
-                      localStorage.setItem('makbills_sub_expires_iso', new Date(expDate).toISOString());
-                    }
-                    localStorage.setItem('makbills_last_active_paid_tier', fetchedTier);
+                  if (expDate) {
+                    localStorage.setItem('makbills_sub_expires_iso', new Date(expDate).toISOString());
                   }
+                  localStorage.setItem('makbills_last_active_paid_tier', fetchedTier);
                 }
               }
 

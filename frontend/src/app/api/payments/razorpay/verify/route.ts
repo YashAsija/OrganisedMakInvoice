@@ -66,46 +66,63 @@ export async function POST(req: NextRequest) {
     const subIdToSave = razorpay_subscription_id || razorpay_order_id || razorpay_payment_id;
 
     if (userId || userEmail) {
-      await supabaseAdmin.from('subscriptions').upsert(
-        {
-          user_id: userId || null,
-          user_email: userEmail || null,
-          gateway: 'razorpay',
-          gateway_sub_id: subIdToSave,
-          plan_key: planKey || 'basic',
-          billing_cycle: billingMode || (isOrderOrOnetime ? 'yearly_onetime' : 'monthly'),
-          status: 'active',
-          auto_renew: !isOrderOrOnetime,
-          subscription_expires_at: expiresAt,
-          current_period_end: expiresAt,
-          updated_at: now.toISOString(),
-        },
-        { onConflict: 'gateway_sub_id' }
-      );
+      const rawPlanKey = (planKey || 'basic').toLowerCase();
+      const normalizedPlanKey = rawPlanKey.includes('pro') ? 'professional' : rawPlanKey.includes('unlimited') ? 'enterprise' : (rawPlanKey.includes('starter') || rawPlanKey.includes('basic') || rawPlanKey.includes('professional') || rawPlanKey.includes('enterprise')) ? rawPlanKey : 'basic';
 
-      if (userId) {
-        // Update users table matching both uid and id column conventions
-        await supabaseAdmin.from('users').update({
-          gateway: 'razorpay',
-          gateway_subscription_id: subIdToSave,
-          plan_id: planKey || 'basic',
-          subscription_status: 'active',
-          auto_renew: !isOrderOrOnetime,
-          subscription_expires_at: expiresAt,
-          current_period_end: expiresAt,
-        }).eq('uid', userId);
+      let resolvedUserId: string | null = userId || null;
+      if (userEmail) {
+        try {
+          const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+          if (authUsers && authUsers.users) {
+            const match = authUsers.users.find(u => u.email?.toLowerCase() === userEmail.toLowerCase());
+            if (match) resolvedUserId = match.id;
+          }
+        } catch (e) {
+          console.warn('[Razorpay Verify] Auth user lookup warning:', e);
+        }
       }
 
+      const finalPlanType = normalizedPlanKey;
+      const finalPlanName = normalizedPlanKey === 'professional' ? 'Professional' : normalizedPlanKey === 'enterprise' ? 'Enterprise' : normalizedPlanKey === 'basic' ? 'Basic' : 'Free';
+
+      const payload = {
+        user_id: resolvedUserId,
+        plan_name: finalPlanName,
+        plan_type: finalPlanType,
+        status: 'active',
+        expires_at: expiresAt,
+        renews_at: expiresAt,
+        authorized_token_node: subIdToSave || null,
+        updated_at: now.toISOString(),
+      };
+
+      if (resolvedUserId) {
+        const { error } = await supabaseAdmin
+          .from('subscriptions')
+          .upsert(payload, { onConflict: 'user_id' });
+
+        if (error) {
+          console.error('[Paid Subscription Save Error]', error);
+          return NextResponse.json({ error: error.message, success: false }, { status: 500 });
+        }
+      }
+
+      const userUpdateData = {
+        gateway: 'razorpay',
+        gateway_subscription_id: subIdToSave,
+        plan_id: normalizedPlanKey,
+        subscription_status: 'active',
+        auto_renew: !isOrderOrOnetime,
+        subscription_expires_at: expiresAt,
+        current_period_end: expiresAt,
+      };
+
+      if (userId) {
+        await supabaseAdmin.from('users').update(userUpdateData).eq('id', userId);
+        await supabaseAdmin.from('users').update(userUpdateData).eq('uid', userId);
+      }
       if (userEmail) {
-        await supabaseAdmin.from('users').update({
-          gateway: 'razorpay',
-          gateway_subscription_id: subIdToSave,
-          plan_id: planKey || 'basic',
-          subscription_status: 'active',
-          auto_renew: !isOrderOrOnetime,
-          subscription_expires_at: expiresAt,
-          current_period_end: expiresAt,
-        }).eq('email', userEmail);
+        await supabaseAdmin.from('users').update(userUpdateData).eq('email', userEmail);
       }
     }
 

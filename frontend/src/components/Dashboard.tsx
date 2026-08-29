@@ -390,39 +390,19 @@ export default function Dashboard({
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-        await supabase.from('users').update({
-          plan_id: tier,
-          subscription_status: 'active',
-          current_period_end: expiresAt,
-          subscription_expires_at: expiresAt,
-        }).eq('uid', user.id);
-
-        if (user.email) {
-          await supabase.from('users').update({
-            plan_id: tier,
-            subscription_status: 'active',
-            current_period_end: expiresAt,
-            subscription_expires_at: expiresAt,
-          }).eq('email', user.email);
-        }
-
-        await supabase.from('subscriptions').upsert(
-          {
-            user_id: user.id,
-            user_email: user.email || null,
-            gateway: 'razorpay',
-            gateway_sub_id: `manual_sub_${user.id}_${Date.now()}`,
-            plan_key: tier,
-            billing_cycle: 'yearly_onetime',
+        await fetch('/api/payments/save-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            userEmail: user.email,
+            planKey: tier,
+            billingMode: 'yearly_onetime',
             status: 'active',
-            auto_renew: false,
-            subscription_expires_at: expiresAt,
-            current_period_end: expiresAt,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'gateway_sub_id' }
-        );
+            gateway: 'razorpay',
+            gatewaySubId: `sub_${user.id}`,
+          }),
+        });
       }
     } catch (e) {
       console.warn('[handleUpgrade] Failed to sync tier update to cloud:', e);

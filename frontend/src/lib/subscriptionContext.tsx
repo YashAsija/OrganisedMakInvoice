@@ -52,12 +52,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const fetchSubscriptionData = useCallback(async (uid: string) => {
     setIsSyncing(true);
     try {
-      // Fetch active subscription
+      // Fetch active or trialing subscription
       const { data: subData } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', uid)
-        .eq('status', 'active')
+        .in('status', ['active', 'trialing'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -68,42 +68,47 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       if (!activeSub) {
         const { data: userData } = await supabase
           .from('users')
-          .select('subscription_status, plan_id, gateway, gateway_subscription_id, current_period_end, auto_renew')
+          .select('subscription_status, plan_id, current_period_end')
           .eq('id', uid)
           .maybeSingle();
 
-        if (userData && (userData.subscription_status === 'active' || userData.plan_id)) {
-          const planKey = (userData.plan_id || 'basic').toLowerCase();
+        if (userData && (userData.subscription_status === 'active' || userData.subscription_status === 'trialing' || userData.plan_id)) {
+          const rawPlan = (userData.plan_id || 'free').toLowerCase();
+          const pType = rawPlan.includes('pro') ? 'professional' : rawPlan.includes('unlimited') || rawPlan.includes('enterprise') ? 'enterprise' : rawPlan.includes('basic') ? 'basic' : 'free';
+          const pName = pType === 'professional' ? 'Professional' : pType === 'enterprise' ? 'Enterprise' : pType === 'basic' ? 'Basic' : 'Free';
+          const statusVal = userData.subscription_status || 'active';
+          const expDate = userData.current_period_end || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
           const fallbackSub = {
             id: `usr_${uid}`,
             user_id: uid,
-            gateway: userData.gateway || 'razorpay',
-            gateway_sub_id: userData.gateway_subscription_id || `sub_${uid}`,
-            plan_key: planKey,
-            billing_cycle: 'monthly',
-            status: userData.subscription_status || 'active',
-            auto_renew: userData.auto_renew ?? true,
-            current_period_end: userData.current_period_end || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            plan_name: pName,
+            plan_type: pType,
+            status: statusVal,
+            expires_at: expDate,
+            renews_at: expDate,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           };
           activeSub = fallbackSub as any;
 
-          // Self-heal: insert missing subscription row so Realtime triggers immediately
-          await supabase.from('subscriptions').upsert(
-            {
-              user_id: uid,
-              gateway: fallbackSub.gateway,
-              gateway_sub_id: fallbackSub.gateway_sub_id,
-              plan_key: planKey,
-              billing_cycle: 'monthly',
-              status: 'active',
-              auto_renew: true,
-              current_period_end: fallbackSub.current_period_end,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'user_id' }
-          );
+          // Self-heal: insert missing subscription row matching confirmed schema
+          try {
+            await supabase.from('subscriptions').upsert(
+              {
+                user_id: uid,
+                plan_name: pName,
+                plan_type: pType,
+                status: statusVal,
+                expires_at: expDate,
+                renews_at: expDate,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'user_id' }
+            );
+          } catch (e) {
+            console.error('[SubscriptionContext Self-Heal Error]', e);
+          }
         }
       }
 

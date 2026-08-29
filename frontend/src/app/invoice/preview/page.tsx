@@ -322,8 +322,40 @@ function InvoicePreviewContent() {
   // Auto-trigger print dialog when ?print=1 is in the URL
   useEffect(() => {
     if (autoPrint && invoice && !loading && profile) {
-      const triggerPrint = () => {
-        window.print();
+      const triggerPrint = async () => {
+        try {
+          const pdfBlob = await exportInvoicePDFAsync(invoice, (profile ?? {}) as BusinessProfile, 'blob');
+          if (pdfBlob instanceof Blob) {
+            const blobUrl = URL.createObjectURL(pdfBlob);
+            const existingFrame = document.getElementById('invoice-print-iframe');
+            if (existingFrame) existingFrame.remove();
+            
+            const iframe = document.createElement('iframe');
+            iframe.id = 'invoice-print-iframe';
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            iframe.src = blobUrl;
+            
+            iframe.onload = () => {
+              setTimeout(() => {
+                try {
+                  iframe.contentWindow?.focus();
+                  iframe.contentWindow?.print();
+                } catch (e) {
+                  window.open(blobUrl, '_blank');
+                }
+              }, 300);
+            };
+            
+            document.body.appendChild(iframe);
+          }
+        } catch (e) {
+          console.error('Auto print failed:', e);
+        }
       };
       const timer = setTimeout(triggerPrint, 300);
       return () => clearTimeout(timer);
@@ -370,28 +402,37 @@ function InvoicePreviewContent() {
             Download PDF
           </button>
           <button
-            onClick={() => {
+            onClick={async () => {
               try {
-                const styleId = 'preview-print-style';
-                let styleEl = document.getElementById(styleId);
-                if (!styleEl) {
-                  styleEl = document.createElement('style');
-                  styleEl.id = styleId;
-                  styleEl.innerHTML = `
-                    @media print {
-                      body > *:not(.invoice-print-sheet) { display: none !important; }
-                      .invoice-print-sheet { display: block !important; position: static !important; transform: none !important; }
-                      @page { size: A4; margin: 10mm; }
-                      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    }
-                  `;
-                  document.head.appendChild(styleEl);
+                const pdfBlob = await exportInvoicePDFAsync(invoice, (profile ?? {}) as BusinessProfile, 'blob');
+                if (pdfBlob instanceof Blob) {
+                  const blobUrl = URL.createObjectURL(pdfBlob);
+                  const existingFrame = document.getElementById('invoice-print-iframe');
+                  if (existingFrame) existingFrame.remove();
+                  
+                  const iframe = document.createElement('iframe');
+                  iframe.id = 'invoice-print-iframe';
+                  iframe.style.position = 'fixed';
+                  iframe.style.right = '0';
+                  iframe.style.bottom = '0';
+                  iframe.style.width = '0';
+                  iframe.style.height = '0';
+                  iframe.style.border = '0';
+                  iframe.src = blobUrl;
+                  
+                  iframe.onload = () => {
+                    setTimeout(() => {
+                      try {
+                        iframe.contentWindow?.focus();
+                        iframe.contentWindow?.print();
+                      } catch (e) {
+                        window.open(blobUrl, '_blank');
+                      }
+                    }, 300);
+                  };
+                  
+                  document.body.appendChild(iframe);
                 }
-                window.onafterprint = () => {
-                  const injected = document.getElementById(styleId);
-                  if (injected) injected.remove();
-                };
-                window.print();
               } catch (err: any) {
                 alert('Failed to print: ' + (err.message || err.toString()));
               }

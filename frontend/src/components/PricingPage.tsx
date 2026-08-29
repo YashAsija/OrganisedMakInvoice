@@ -345,7 +345,24 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
             email: userEmail,
             plan: tier.name,
             mode: selectedMode,
-            onSuccess: async () => {
+            onSuccess: async (verifyPayload?: any) => {
+              if (verifyPayload && verifyPayload.razorpay_payment_id) {
+                try {
+                  await fetch('/api/payments/razorpay/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      ...verifyPayload,
+                      planKey: tier.name.toLowerCase(),
+                      billingMode: selectedMode,
+                      userId: userId,
+                      userEmail: userEmail,
+                    }),
+                  });
+                } catch (e) {
+                  console.error('Failed to verify payment and sync subscription:', e);
+                }
+              }
               await refetch();
               handleNavigate('/dashboard?upgraded=1');
             },
@@ -370,7 +387,24 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
             email: userEmail,
             plan: tier.name,
             mode: selectedMode,
-            onSuccess: async () => {
+            onSuccess: async (verifyPayload?: any) => {
+              if (verifyPayload && verifyPayload.razorpay_payment_id) {
+                try {
+                  await fetch('/api/payments/razorpay/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      ...verifyPayload,
+                      planKey: tier.name.toLowerCase(),
+                      billingMode: selectedMode,
+                      userId: userId,
+                      userEmail: userEmail,
+                    }),
+                  });
+                } catch (e) {
+                  console.error('Failed to verify subscription payment:', e);
+                }
+              }
               await refetch();
               handleNavigate('/dashboard?upgraded=1');
             },

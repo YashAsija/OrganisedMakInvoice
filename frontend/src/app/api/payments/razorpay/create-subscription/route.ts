@@ -72,6 +72,8 @@ export async function POST(req: NextRequest) {
           userId: userId || '',
           userEmail: userEmail || '',
           planId: planId || 'basic',
+          planKey: body.plan || body.planKey || 'basic',
+          billingMode: body.mode || body.billingMode || 'monthly',
         },
       }),
     });
