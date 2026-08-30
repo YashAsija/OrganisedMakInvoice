@@ -93,6 +93,7 @@ export async function POST(req: NextRequest) {
         expires_at: expiresAt,
         renews_at: expiresAt,
         authorized_token_node: subIdToSave || null,
+        user_email: userEmail || null,
         updated_at: now.toISOString(),
       };
 

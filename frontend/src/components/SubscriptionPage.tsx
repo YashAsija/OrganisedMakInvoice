@@ -602,6 +602,8 @@ export default function SubscriptionPage({
         status: 'trialing',
         expires_at: expiresIso,
         renews_at: expiresIso,
+        user_email: user.email || null,
+        user_phone: user.phone || null,
         updated_at: new Date().toISOString(),
       };
 

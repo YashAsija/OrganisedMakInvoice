@@ -1134,6 +1134,8 @@ export default function App() {
                     status: 'active',
                     expires_at: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
                     renews_at: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
+                    user_email: activeEmail || null,
+                    user_phone: currentUser?.phone || null,
                     updated_at: new Date().toISOString(),
                   };
                   await supabase.from('subscriptions').upsert(defaultPayload, { onConflict: 'user_id' });

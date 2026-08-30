@@ -65,6 +65,27 @@ export async function POST(req: NextRequest) {
       finalPlanName = 'Free';
     }
 
+    // Fetch auth user email and phone to attach to subscription record
+    let userEmail: string | null = body.userEmail || body.email || null;
+    let userPhone: string | null = body.userPhone || body.phone || null;
+
+    try {
+      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (authUser?.user) {
+        userEmail = authUser.user.email || userEmail;
+        userPhone = authUser.user.phone || userPhone;
+      }
+      if (!userEmail || !userPhone) {
+        const { data: pubUser } = await supabaseAdmin.from('users').select('email, phone, mobile').eq('uid', userId).maybeSingle();
+        if (pubUser) {
+          userEmail = userEmail || pubUser.email || null;
+          userPhone = userPhone || pubUser.phone || pubUser.mobile || null;
+        }
+      }
+    } catch (lookupErr) {
+      console.warn('[Save Subscription] Email/Phone lookup warning:', lookupErr);
+    }
+
     // Exact confirmed Supabase schema payload for subscriptions table
     const subPayload = {
       user_id: userId,
@@ -74,6 +95,8 @@ export async function POST(req: NextRequest) {
       expires_at: expiresDate,
       renews_at: expiresDate,
       authorized_token_node: authorizedTokenNode || null,
+      user_email: userEmail,
+      user_phone: userPhone,
       updated_at: now.toISOString(),
     };
 
