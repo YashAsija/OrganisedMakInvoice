@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabaseClient';
 
 export const PLANS = {
   free: {
@@ -71,6 +71,8 @@ export interface Subscription {
   expires_at: string | null;
   renews_at: string | null;
   authorized_token_node: string | null;
+  user_email?: string | null;
+  user_phone?: string | null;
   trial_used_plans?: string[];
   trial_started_at?: string | null;
   created_at: string;
@@ -119,12 +121,41 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const channelRef = useRef<any>(null);
 
-  // Sync / fetch subscription & usage for given user ID
+  // FIX 3: refreshSubscription must always fetch directly from Supabase
+  const refreshSubscription = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (!error && data) {
+        console.log('[refreshSubscription] Fresh data:', data);
+        setSubscription(data as Subscription);
+      }
+
+      const now = new Date().toISOString();
+      const { data: usageData } = await supabase
+        .from('subscription_usage')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('period_end', now)
+        .order('period_start', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (usageData) setUsage(usageData as SubscriptionUsage);
+    } catch (err) {
+      console.error('[refreshSubscription] Error:', err);
+    }
+  }, [userId]);
+
+  // Initial fetch and row creation if missing
   const fetchSubscriptionData = useCallback(async (uid: string) => {
     try {
-      // 1. Fetch Subscription
       const { data: subData } = await supabase
         .from('subscriptions')
         .select('*')
@@ -134,8 +165,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       let activeSub = subData as Subscription | null;
 
       if (!activeSub) {
+        const { data: { user } } = await supabase.auth.getUser();
         const defaultSubPayload = {
           user_id: uid,
+          user_email: user?.email || null,
+          user_phone: user?.phone || null,
           plan_name: 'Free',
           plan_type: 'free' as const,
           status: 'active' as const,
@@ -156,7 +190,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
       setSubscription(activeSub);
 
-      // 2. Fetch or initialize active usage row for current period
       const now = new Date();
       const pStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const pEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
@@ -199,72 +232,168 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   // Trial expiry check
   const checkAndExpireTrials = useCallback(async () => {
-    if (!subscription) return;
-    if (subscription.status !== 'trialing') return;
-    
+    if (!subscription || subscription.status !== 'trialing') return;
     const now = new Date();
-    const expiresAt = subscription.expires_at ? new Date(subscription.expires_at) : null;
-    
-    if (expiresAt && now > expiresAt) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        
-        const { data: updated } = await supabase
-          .from('subscriptions')
-          .upsert({
-            user_id: user.id,
-            plan_name: 'Free',
-            plan_type: 'free',
-            status: 'expired',
-            expires_at: expiresAt.toISOString(),
-            updated_at: now.toISOString(),
-          }, { onConflict: 'user_id' })
-          .select()
-          .single();
+    if (!subscription.expires_at || now <= new Date(subscription.expires_at)) return;
 
-        if (updated) setSubscription(updated as Subscription);
-      } catch (e) {
-        console.error('[Trial Expiry Error]', e);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase.from('subscriptions').upsert({
+        user_id: user.id,
+        plan_name: 'Free',
+        plan_type: 'free',
+        status: 'expired',
+        expires_at: subscription.expires_at,
+        updated_at: now.toISOString(),
+        trial_used_plans: subscription.trial_used_plans,
+      }, { onConflict: 'user_id' });
+
+      await refreshSubscription();
+    } catch (e) {
+      console.error('[Trial Expiry Error]', e);
+    }
+  }, [subscription, refreshSubscription]);
+
+  // FIX 2: Production-Grade Realtime Setup with reconnects, retry backoff, window focus, & 30s polling
+  useEffect(() => {
+    if (!userId) return;
+
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let retryTimeout: NodeJS.Timeout | null = null;
+    let retryCount = 0;
+    const MAX_RETRIES = 5;
+
+    const setupChannel = () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
       }
-    }
-  }, [subscription]);
 
-  // Realtime multi-device synchronization
-  const setupRealtimeSync = useCallback((uid: string) => {
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
+      const channelName = `sub-${userId}-${Date.now()}`;
+      console.log('[Realtime] Setting up channel:', channelName);
+
+      channel = supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'subscriptions',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            console.log('[Realtime] Subscription change received:', payload);
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              setSubscription(payload.new as Subscription);
+            }
+            if (payload.eventType === 'DELETE') {
+              refreshSubscription();
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'subscription_usage',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            console.log('[Realtime] Usage change received:', payload);
+            if (payload.new) setUsage(payload.new as SubscriptionUsage);
+          }
+        )
+        .subscribe((status, err) => {
+          console.log('[Realtime] Status:', status, 'Error:', err);
+
+          if (status === 'SUBSCRIBED') {
+            setIsSyncing(false);
+            retryCount = 0;
+            console.log('[Realtime] ✅ Connected successfully');
+          }
+
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            setIsSyncing(true);
+            console.warn('[Realtime] ⚠️ Connection issue:', status);
+            if (retryCount < MAX_RETRIES) {
+              retryCount++;
+              const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+              console.log(`[Realtime] Retrying in ${delay}ms (attempt ${retryCount})`);
+              retryTimeout = setTimeout(setupChannel, delay);
+            }
+          }
+
+          if (status === 'CLOSED') {
+            setIsSyncing(true);
+            console.warn('[Realtime] Channel closed');
+          }
+        });
+    };
 
     setIsSyncing(true);
+    setupChannel();
 
-    const channel = supabase
-      .channel(`sub-sync-${uid}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'subscriptions', filter: `user_id=eq.${uid}` },
-        (payload: any) => {
-          if (payload.new) {
-            setSubscription(payload.new as Subscription);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'subscription_usage', filter: `user_id=eq.${uid}` },
-        (payload: any) => {
-          if (payload.new) {
-            setUsage(payload.new as SubscriptionUsage);
-          }
-        }
-      )
-      .subscribe((status) => {
-        setIsSyncing(status !== 'SUBSCRIBED');
-      });
+    const handleFocus = async () => {
+      console.log('[Sync] Window focused — refreshing subscription');
+      await refreshSubscription();
+      checkAndExpireTrials();
+    };
 
-    channelRef.current = channel;
-  }, []);
+    const handleOnline = () => {
+      console.log('[Sync] Network restored — reconnecting realtime');
+      setupChannel();
+    };
+
+    const pollInterval = setInterval(() => {
+      console.log('[Sync] Poll tick — refreshing subscription');
+      refreshSubscription();
+    }, 30000);
+
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      console.log('[Realtime] Cleaning up channel');
+      if (channel) supabase.removeChannel(channel);
+      if (retryTimeout) clearTimeout(retryTimeout);
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [userId, refreshSubscription, checkAndExpireTrials]);
+
+  // Initial auth state tracking
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+        fetchSubscriptionData(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+        setUserId(session.user.id);
+        fetchSubscriptionData(session.user.id);
+      }
+      if (event === 'SIGNED_OUT') {
+        setSubscription(null);
+        setUsage(null);
+        setUserId(null);
+        setIsLoading(false);
+      }
+    });
+
+    return () => {
+      authListener.unsubscribe();
+    };
+  }, [fetchSubscriptionData]);
 
   // Trial Helper Functions
   const canStartTrial = useCallback((planType: 'basic' | 'professional'): boolean => {
@@ -296,6 +425,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         .from('subscriptions')
         .upsert({
           user_id: user.id,
+          user_email: user.email || null,
+          user_phone: user.phone || null,
           plan_name: planNames[planType],
           plan_type: planType,
           status: 'trialing',
@@ -362,6 +493,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       .from('subscriptions')
       .upsert({
         user_id: user.id,
+        user_email: user.email || null,
+        user_phone: user.phone || null,
         plan_name: planName,
         plan_type: mappedPlanType,
         status: 'active',
@@ -459,55 +592,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     if (limit === Infinity) return true;
     return (usage?.reports_used ?? 0) < limit;
   }, [getReportLimit, usage]);
-
-  const refreshSubscription = useCallback(async () => {
-    if (userId) await fetchSubscriptionData(userId);
-  }, [userId, fetchSubscriptionData]);
-
-  // Auth Initialization & Window Focus Listeners
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUserId(session.user.id);
-        fetchSubscriptionData(session.user.id);
-        setupRealtimeSync(session.user.id);
-      } else {
-        setIsLoading(false);
-      }
-    });
-
-    const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-        setUserId(session.user.id);
-        fetchSubscriptionData(session.user.id);
-        setupRealtimeSync(session.user.id);
-      }
-      if (event === 'SIGNED_OUT') {
-        setSubscription(null);
-        setUsage(null);
-        setUserId(null);
-        setIsLoading(false);
-        if (channelRef.current) {
-          supabase.removeChannel(channelRef.current);
-          channelRef.current = null;
-        }
-      }
-    });
-
-    const handleFocus = () => {
-      checkAndExpireTrials();
-    };
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      authListener.unsubscribe();
-      window.removeEventListener('focus', handleFocus);
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
-    };
-  }, [fetchSubscriptionData, setupRealtimeSync, checkAndExpireTrials]);
 
   const rawKey = (subscription?.plan_type || subscription?.plan_name || 'free').toLowerCase();
   const planKey = (rawKey.includes('pro') ? 'professional' : rawKey.includes('basic') ? 'basic' : rawKey.includes('ent') ? 'enterprise' : 'free') as 'free' | 'basic' | 'professional' | 'enterprise';
