@@ -413,7 +413,7 @@ export default function SubscriptionPage({
               <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                 <span>Expires / Renews:</span>
                 <span className="font-mono font-extrabold">
-                  {getExpiryLabel(subscriptionRecord)}
+                  {getExpiryLabel(ctxSub)}
                 </span>
               </div>
             </div>
