@@ -1695,6 +1695,10 @@ export default function App() {
         await syncUserData(session?.user ?? null, event);
         if (session?.user?.id) {
           triggerBackgroundSync();
+          if (typeof window !== 'undefined' && window.location.search.includes('code=')) {
+            const cleanUrl = window.location.pathname === '/' ? '/dashboard' : window.location.pathname;
+            window.history.replaceState(null, '', cleanUrl);
+          }
         }
       }
     );
@@ -1729,7 +1733,7 @@ export default function App() {
 
         const { data: { session } } = await supabase.auth.getSession();
         
-        // If there is an OAuth hash or recovery hash, DO NOT end loading. Wait for event.
+        // If there is an OAuth hash or recovery hash or PKCE code, wait for onAuthStateChange to exchange it, but clean URL once session is ready.
         if (typeof window !== 'undefined' && (window.location.hash.includes('access_token=') || window.location.hash.includes('type=recovery'))) {
           return;
         }
@@ -1739,6 +1743,10 @@ export default function App() {
         } else if (session.user) {
           await syncUserData(session.user, 'INITIAL_GET_SESSION');
           triggerBackgroundSync();
+          if (typeof window !== 'undefined' && window.location.search.includes('code=')) {
+            const cleanUrl = window.location.pathname;
+            window.history.replaceState(null, '', cleanUrl);
+          }
         }
       } catch (err) {
         setIsAuthLoading(false);
