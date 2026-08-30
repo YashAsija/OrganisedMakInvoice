@@ -2378,7 +2378,11 @@ export default function InvoiceModal({
                       setClientState(d.clientState || '');
                       setClientCountry(d.clientCountry || 'India');
                       if (d.hasTransport !== undefined) setHasTransport(d.hasTransport);
+                      try {
+                        localStorage.removeItem('makbills_pending_resume_draft');
+                      } catch { /* ignore */ }
                       setResumableDraft(null);
+                      setResumeBannerDismissed(true);
                       emitNotification('Draft Restored', 'Your previous draft has been loaded.', 'success');
                     } catch { /* ignore */ }
                   }}
@@ -2520,7 +2524,7 @@ export default function InvoiceModal({
                         if (currentWip) {
                           const hasName = currentWip.clientName && currentWip.clientName.trim() !== '' && !currentWip.clientName.startsWith('Guest-') && currentWip.clientName !== 'Quote / Estimate';
                           const hasItems = Array.isArray(currentWip.items) && currentWip.items.length > 0;
-                          if (!isSavedSuccessfullyRef.current && !savedInvoiceForPreview && (!invoice || (invoice as any).status === 'draft') && draftIdRef.current.startsWith('inv_draft_')) {
+                          if (!isSavedSuccessfullyRef.current && !savedInvoiceForPreview && (!invoice || (invoice as any).status === 'draft') && draftIdRef.current.startsWith('inv_draft_') && (hasName || hasItems)) {
                             const draftToSave = {
                               ...currentWip,
                               id: draftIdRef.current,
@@ -2528,7 +2532,9 @@ export default function InvoiceModal({
                               updatedAt: new Date().toISOString()
                             };
                             saveDraftToLocalStorage(draftToSave);
-                            localStorage.setItem('makbills_pending_resume_draft', draftToSave.id);
+                            if (!resumeBannerDismissed) {
+                              localStorage.setItem('makbills_pending_resume_draft', draftToSave.id);
+                            }
                           }
                         }
                         setInvoiceType(newType);
