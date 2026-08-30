@@ -18,6 +18,7 @@ import { openRazorpayCheckout } from '../lib/razorpay';
 import { openPaddleCheckout } from '../lib/paddle';
 import { supabase } from '../lib/supabase';
 import { getExpiryLabel } from '../context/SubscriptionContext';
+import { getExpiryDisplay } from '../lib/subscriptionUtils';
 import { SubscriptionStatus } from './SubscriptionStatus';
 import { useSubscription } from '../hooks/useSubscription';
 import { TrialConfirmModal } from './ui/TrialConfirmModal';
@@ -410,12 +411,15 @@ export default function SubscriptionPage({
                   })()}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                <span>Expires / Renews:</span>
-                <span className="font-mono font-extrabold">
-                  {getExpiryLabel(ctxSub)}
-                </span>
-              </div>
+              {(() => {
+                const expiryInfo = getExpiryDisplay(ctxSub);
+                return (
+                  <div className={`flex items-center gap-1.5 ${expiryInfo.color}`}>
+                    <span>{expiryInfo.label}:</span>
+                    <span className="font-mono font-extrabold">{expiryInfo.value}</span>
+                  </div>
+                );
+              })()}
             </div>
             
             {/* Usage limit meters */}

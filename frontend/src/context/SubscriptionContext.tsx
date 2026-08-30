@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { emitNotification } from '../lib/notifications';
+import { validateSubscriptionPayload, getExpiryDisplay, ExpiryDisplayInfo } from '../lib/subscriptionUtils';
 
 export const PLANS = {
   free: {
@@ -112,26 +113,12 @@ export interface SubscriptionContextType {
   isOnTrial: () => boolean;
   getTrialDaysRemaining: () => number;
   checkAndExpireTrials: () => Promise<void>;
+  getExpiryDisplayInfo: () => ExpiryDisplayInfo;
   getExpiryLabel: (sub: Subscription) => string;
 }
 
 export const getExpiryLabel = (sub: Subscription | null): string => {
-  if (!sub) return 'Free forever';
-  if (!sub.expires_at) return 'Free forever';
-  
-  const dateStr = new Date(sub.expires_at).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short', 
-    year: 'numeric',
-  });
-
-  if (sub.status === 'trialing' || sub.authorized_token_node?.startsWith('trial_')) {
-    return `${dateStr} (1-Month Free Trial)`;
-  }
-  return `${dateStr} (${
-    sub.plan_type === 'free' ? 'Monthly Plan' :
-    sub.plan_name + ' Plan'
-  })`;
+  return getExpiryDisplay(sub).value;
 };
 
 const SubscriptionContext = createContext<SubscriptionContextType | null>(null);
@@ -143,7 +130,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [isSyncing, setIsSyncing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // FIX 3: refreshSubscription — always spread to force re-render
   const refreshSubscription = useCallback(async () => {
     if (!userId) return;
     try {
@@ -164,8 +150,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       ]);
 
       if (subResult.data) {
-        console.log('[Refresh] Subscription:', subResult.data.plan_name, subResult.data.expires_at);
-        setSubscription({ ...subResult.data } as Subscription);
+        const validatedSub = validateSubscriptionPayload({ ...subResult.data });
+        console.log('[Refresh] Subscription:', validatedSub.plan_name, validatedSub.expires_at);
+        setSubscription(validatedSub as Subscription);
       }
 
       if (usageResult.data) {
@@ -177,7 +164,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [userId]);
 
-  // FIX 1: Force fresh fetch from Supabase on EVERY app load — never read local cache
+  // FIX 1: Force fresh fetch on mount & ensure Free plan has null expires_at
   useEffect(() => {
     const initializeSubscription = async () => {
       setIsLoading(true);
@@ -197,18 +184,28 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           .single();
 
         if (sub) {
-          console.log('[Init] Fresh subscription:', sub.plan_name, sub.expires_at);
-          setSubscription({ ...sub } as Subscription);
+          const validatedSub = validateSubscriptionPayload({ ...sub });
+          console.log('[Init] Fresh subscription:', validatedSub.plan_name, validatedSub.expires_at);
+          setSubscription(validatedSub as Subscription);
         } else {
-          const { data: createdSub } = await supabase.from('subscriptions').upsert({
+          // Free plan ALWAYS gets expires_at: null, renews_at: null
+          const freePayload = validateSubscriptionPayload({
             user_id: user.id,
             plan_name: 'Free',
             plan_type: 'free',
             status: 'active',
             expires_at: null,
             renews_at: null,
-          }, { onConflict: 'user_id' }).select().single();
-          if (createdSub) setSubscription({ ...createdSub } as Subscription);
+            updated_at: new Date().toISOString(),
+          });
+
+          const { data: createdSub } = await supabase
+            .from('subscriptions')
+            .upsert(freePayload, { onConflict: 'user_id' })
+            .select()
+            .single();
+
+          if (createdSub) setSubscription(validateSubscriptionPayload(createdSub) as Subscription);
         }
 
         const now = new Date().toISOString();
@@ -251,7 +248,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     initializeSubscription();
   }, []);
 
-  // Trial expiry check
+  // FIX 2: Trial expiry handler — when downgrading to free, set expires_at: null
   const checkAndExpireTrials = useCallback(async () => {
     if (!subscription || subscription.status !== 'trialing') return;
     const now = new Date();
@@ -261,23 +258,25 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      await supabase.from('subscriptions').upsert({
+      const expiredPayload = validateSubscriptionPayload({
         user_id: user.id,
         plan_name: 'Free',
         plan_type: 'free',
         status: 'expired',
-        expires_at: subscription.expires_at,
+        expires_at: null, // NULL when downgrading to free
+        renews_at: null,  // NULL
         updated_at: now.toISOString(),
         trial_used_plans: subscription.trial_used_plans,
-      }, { onConflict: 'user_id' });
+      });
 
+      await supabase.from('subscriptions').upsert(expiredPayload, { onConflict: 'user_id' });
       await refreshSubscription();
     } catch (e) {
       console.error('[Trial Expiry Error]', e);
     }
   }, [subscription, refreshSubscription]);
 
-  // FIX 2: Fix Realtime channel — set up channel only AFTER userId is confirmed
+  // FIX 2: Realtime channel with validateSubscriptionPayload before setting state
   useEffect(() => {
     if (!userId) return;
 
@@ -294,12 +293,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
+          const validated = validateSubscriptionPayload({ ...payload.new });
           console.log('[Realtime] Subscription UPDATE received:', {
-            plan: (payload.new as any).plan_name,
-            expires: (payload.new as any).expires_at,
-            status: (payload.new as any).status,
+            plan: validated.plan_name,
+            expires: validated.expires_at,
+            status: validated.status,
           });
-          setSubscription({ ...payload.new } as Subscription);
+          setSubscription(validated as Subscription);
         }
       )
       .on(
@@ -311,8 +311,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          console.log('[Realtime] Subscription INSERT received:', payload.new);
-          setSubscription({ ...payload.new } as Subscription);
+          const validated = validateSubscriptionPayload({ ...payload.new });
+          console.log('[Realtime] Subscription INSERT received:', validated);
+          setSubscription(validated as Subscription);
         }
       )
       .on(
@@ -387,7 +388,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     };
   }, [userId, refreshSubscription]);
 
-  // Auth state listener
+  // Auth listener
   useEffect(() => {
     const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
@@ -433,22 +434,24 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       const currentTrialUsed = subscription?.trial_used_plans || [];
       const updatedTrialUsed = Array.from(new Set([...currentTrialUsed, planType]));
 
+      const trialPayload = validateSubscriptionPayload({
+        user_id: user.id,
+        user_email: user.email || null,
+        user_phone: user.phone || null,
+        plan_name: planNames[planType],
+        plan_type: planType,
+        status: 'trialing',
+        expires_at: trialEnd.toISOString(),
+        renews_at: trialEnd.toISOString(),
+        trial_started_at: now.toISOString(),
+        trial_used_plans: updatedTrialUsed,
+        authorized_token_node: `trial_${planType}_${user.id}`,
+        updated_at: now.toISOString(),
+      });
+
       const { data: updatedSub, error } = await supabase
         .from('subscriptions')
-        .upsert({
-          user_id: user.id,
-          user_email: user.email || null,
-          user_phone: user.phone || null,
-          plan_name: planNames[planType],
-          plan_type: planType,
-          status: 'trialing',
-          expires_at: trialEnd.toISOString(),
-          renews_at: trialEnd.toISOString(),
-          trial_started_at: now.toISOString(),
-          trial_used_plans: updatedTrialUsed,
-          authorized_token_node: `trial_${planType}_${user.id}`,
-          updated_at: now.toISOString(),
-        }, { onConflict: 'user_id' })
+        .upsert(trialPayload, { onConflict: 'user_id' })
         .select()
         .single();
 
@@ -462,7 +465,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         reports_used: 0,
       });
 
-      if (updatedSub) setSubscription({ ...updatedSub } as Subscription);
+      if (updatedSub) setSubscription(validateSubscriptionPayload(updatedSub) as Subscription);
     } finally {
       setIsLoading(false);
     }
@@ -480,7 +483,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
   }, [subscription]);
 
-  // Upgrade handler
+  // Upgrade handler with validated date calculation (30 days for monthly, 365 days for yearly)
   const upgradeSubscription = useCallback(async (
     planType: string,
     billingMode: 'monthly' | 'yearly',
@@ -493,7 +496,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     };
 
     const days = billingMode === 'monthly' ? 30 : 365;
-    const expiresAt = new Date(Date.now() + days * 86400000).toISOString();
+    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) throw new Error('Authentication required to upgrade');
@@ -501,20 +504,22 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     const mappedPlanType = (planType.toLowerCase().includes('pro') ? 'professional' : planType.toLowerCase().includes('basic') ? 'basic' : planType.toLowerCase().includes('ent') ? 'enterprise' : 'free') as 'free' | 'basic' | 'professional' | 'enterprise';
     const planName = planNames[mappedPlanType] || 'Free';
 
+    const upgradePayload = validateSubscriptionPayload({
+      user_id: user.id,
+      user_email: user.email || null,
+      user_phone: user.phone || null,
+      plan_name: planName,
+      plan_type: mappedPlanType,
+      status: 'active',
+      expires_at: mappedPlanType === 'free' ? null : expiresAt,
+      renews_at: mappedPlanType === 'free' ? null : expiresAt,
+      authorized_token_node: transactionId,
+      updated_at: new Date().toISOString(),
+    });
+
     const { data: updatedSub, error } = await supabase
       .from('subscriptions')
-      .upsert({
-        user_id: user.id,
-        user_email: user.email || null,
-        user_phone: user.phone || null,
-        plan_name: planName,
-        plan_type: mappedPlanType,
-        status: 'active',
-        expires_at: expiresAt,
-        renews_at: expiresAt,
-        authorized_token_node: transactionId,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' })
+      .upsert(upgradePayload, { onConflict: 'user_id' })
       .select()
       .single();
 
@@ -524,12 +529,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     await supabase.from('subscription_usage').insert({
       user_id: user.id,
       period_start: now.toISOString(),
-      period_end: expiresAt,
+      period_end: mappedPlanType === 'free' ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : expiresAt,
       documents_used: 0,
       reports_used: 0,
     });
 
-    if (updatedSub) setSubscription({ ...updatedSub } as Subscription);
+    if (updatedSub) setSubscription(validateSubscriptionPayload(updatedSub) as Subscription);
   }, []);
 
   // Usage tracking methods
@@ -676,7 +681,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       isOnTrial,
       getTrialDaysRemaining,
       checkAndExpireTrials,
-      getExpiryLabel: (sub: Subscription) => getExpiryLabel(sub),
+      getExpiryDisplayInfo: () => getExpiryDisplay(subscription),
+      getExpiryLabel: (sub: Subscription) => getExpiryDisplay(sub).value,
     }}>
       {children}
     </SubscriptionContext.Provider>
