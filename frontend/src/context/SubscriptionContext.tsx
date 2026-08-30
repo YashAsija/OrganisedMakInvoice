@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { emitNotification } from '../lib/notifications';
 
 export const PLANS = {
   free: {
@@ -14,7 +15,7 @@ export const PLANS = {
     description: 'Get started at zero cost. Essential billing and ledger tools.',
     billing_note: 'Free forever. No credit card needed.',
     document_limit: 10,
-    report_limit: 2,
+    report_limit: 1,
   },
   basic: {
     plan_type: 'basic' as const,
@@ -56,7 +57,7 @@ export const PLANS = {
 };
 
 export const PLAN_LIMITS = {
-  free:         { documents: 10,       reports: 2   },
+  free:         { documents: 10,       reports: 1   },
   basic:        { documents: 100,      reports: 20  },
   professional: { documents: 500,      reports: 100 },
   enterprise:   { documents: Infinity, reports: Infinity },
@@ -122,30 +123,48 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [isSyncing, setIsSyncing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // FIX 3: fetchCurrentUsage — always get active period row or create one
+  // FIX 4: fetchCurrentUsage — use UPSERT/single row logic with diagnostic logging
   const fetchCurrentUsage = useCallback(async (uid: string): Promise<SubscriptionUsage | null> => {
-    const now = new Date().toISOString();
-    
-    const { data, error } = await supabase
-      .from('subscription_usage')
-      .select('*')
-      .eq('user_id', uid)
-      .gte('period_end', now)
-      .order('period_start', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    try {
+      const now = new Date().toISOString();
 
-    if (error) {
-      console.error('[fetchCurrentUsage Error]', error);
-      return null;
-    }
+      console.log('[Usage Debug] All usage rows for user:', uid);
+      const { data: allRows } = await supabase
+        .from('subscription_usage')
+        .select('*')
+        .eq('user_id', uid)
+        .order('period_start', { ascending: false });
+      console.log('[Usage Debug] All rows:', JSON.stringify(allRows, null, 2));
 
-    if (!data) {
-      console.log('[Usage] No active period found, creating new one');
+      // Get the single most recent active row
+      const { data, error } = await supabase
+        .from('subscription_usage')
+        .select('*')
+        .eq('user_id', uid)
+        .gte('period_end', now)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[fetchCurrentUsage] Error:', error);
+        return null;
+      }
+
+      console.log('[Usage Debug] Selected row:', JSON.stringify(data, null, 2));
+
+      if (data) {
+        console.log('[fetchCurrentUsage] Found row:', data.id, 
+          'docs:', data.documents_used, 'reports:', data.reports_used);
+        return data as SubscriptionUsage;
+      }
+
+      // No active row — create exactly one
+      console.log('[fetchCurrentUsage] No active row, creating new period');
       const periodStart = new Date();
       const periodEnd = new Date(periodStart.getTime() + 30 * 24 * 60 * 60 * 1000);
-      
-      const { data: newUsage, error: insertErr } = await supabase
+
+      const { data: newRow, error: insertErr } = await supabase
         .from('subscription_usage')
         .insert({
           user_id: uid,
@@ -153,35 +172,54 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           period_end: periodEnd.toISOString(),
           documents_used: 0,
           reports_used: 0,
+          updated_at: new Date().toISOString(),
         })
         .select()
         .single();
 
       if (insertErr) {
-        console.error('[fetchCurrentUsage Insert Error]', insertErr);
+        console.error('[fetchCurrentUsage] Insert error:', insertErr);
+        // If duplicate key error, fetch what's there
+        if (insertErr.code === '23505') {
+          const { data: existing } = await supabase
+            .from('subscription_usage')
+            .select('*')
+            .eq('user_id', uid)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          return existing as SubscriptionUsage;
+        }
         return null;
       }
-      return newUsage as SubscriptionUsage;
-    }
 
-    return data as SubscriptionUsage;
+      return newRow as SubscriptionUsage;
+    } catch (err) {
+      console.error('[fetchCurrentUsage] Exception:', err);
+      return null;
+    }
   }, []);
 
+  // FIX 6: refreshSubscription must always re-fetch usage
   const refreshSubscription = useCallback(async () => {
     if (!userId) return;
     try {
-      const { data, error } = await supabase
+      const { data: sub, error: subErr } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', userId)
         .single();
 
-      if (!error && data) {
-        setSubscription(data as Subscription);
-      }
+      if (!subErr && sub) setSubscription(sub as Subscription);
 
-      const activeUsage = await fetchCurrentUsage(userId);
-      if (activeUsage) setUsage(activeUsage);
+      const usageData = await fetchCurrentUsage(userId);
+      if (usageData) {
+        console.log('[refreshSubscription] Usage refreshed:', {
+          documents: usageData.documents_used,
+          reports: usageData.reports_used,
+        });
+        setUsage(usageData);
+      }
     } catch (err) {
       console.error('[refreshSubscription] Error:', err);
     }
@@ -258,7 +296,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [subscription, refreshSubscription]);
 
-  // FIX 4: Realtime listener for subscription_usage correctly handling INSERT, UPDATE, & DELETE
+  // FIX 5: Realtime listener for subscription_usage with distinct UPDATE and INSERT event listeners
   useEffect(() => {
     if (!userId) return;
 
@@ -299,29 +337,48 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         .on(
           'postgres_changes',
           {
-            event: '*',
+            event: 'UPDATE',
             schema: 'public',
             table: 'subscription_usage',
             filter: `user_id=eq.${userId}`,
           },
           (payload) => {
-            console.log('[Realtime] Usage change:', payload.eventType, payload.new);
-            
-            if (payload.eventType === 'INSERT') {
+            const newUsage = payload.new as SubscriptionUsage;
+            console.log('[Realtime] Usage sync received:', {
+              id: newUsage.id,
+              documents_used: newUsage.documents_used,
+              reports_used: newUsage.reports_used,
+            });
+            if (!usage || newUsage.id === usage.id || newUsage.user_id === userId) {
+              setUsage(newUsage);
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'subscription_usage',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            console.log('[Realtime] Usage INSERT received:', payload.new);
+            if (payload.new && (payload.new as any).user_id === userId) {
               setUsage(payload.new as SubscriptionUsage);
             }
-            
-            if (payload.eventType === 'UPDATE') {
-              setUsage(payload.new as SubscriptionUsage);
-              console.log('[Realtime] Usage synced:', {
-                documents: (payload.new as any).documents_used,
-                reports: (payload.new as any).reports_used,
-              });
-            }
-            
-            if (payload.eventType === 'DELETE') {
-              fetchCurrentUsage(userId).then(u => { if (u) setUsage(u); });
-            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'subscription_usage',
+            filter: `user_id=eq.${userId}`,
+          },
+          () => {
+            fetchCurrentUsage(userId).then(u => { if (u) setUsage(u); });
           }
         )
         .subscribe((status, err) => {
@@ -365,13 +422,20 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       setupChannel();
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[Sync] Tab became visible — force refreshing usage');
+        refreshSubscription();
+      }
+    };
+
     const pollInterval = setInterval(() => {
-      console.log('[Sync] Poll tick — refreshing subscription');
-      refreshSubscription();
-    }, 30000);
+      fetchCurrentUsage(userId).then(u => { if (u) setUsage(u); });
+    }, 10000); // 10 seconds for usage sync
 
     window.addEventListener('focus', handleFocus);
     window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       console.log('[Realtime] Cleaning up channel');
@@ -380,6 +444,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       clearInterval(pollInterval);
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [userId, refreshSubscription, checkAndExpireTrials, fetchCurrentUsage]);
 
@@ -536,73 +601,92 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     if (updatedSub) setSubscription(updatedSub as Subscription);
   }, []);
 
-  // FIX 1: trackDocumentUsage — always write to Supabase FIRST and return Promise<boolean>
+  // FIX 2: trackDocumentUsage — write to Supabase, never local state
   const trackDocumentUsage = useCallback(async (): Promise<boolean> => {
-    if (!userId || !usage) return false;
-    
-    const limit = PLAN_LIMITS[subscription?.plan_type || 'free'].documents;
-    if (usage.documents_used >= limit) {
-      console.warn('[Usage] Document limit reached:', usage.documents_used, 'Limit:', limit);
+    if (!userId) {
+      console.error('[trackDocumentUsage] No userId');
+      return false;
+    }
+
+    // Always fetch fresh usage row first — never trust local state for limits
+    const freshUsage = await fetchCurrentUsage(userId);
+    if (!freshUsage) {
+      console.error('[trackDocumentUsage] No usage row found');
+      return false;
+    }
+
+    const planType = (subscription?.plan_type || 'free') as keyof typeof PLAN_LIMITS;
+    const limit = PLAN_LIMITS[planType].documents;
+
+    console.log('[trackDocumentUsage] Current:', freshUsage.documents_used, '/ Limit:', limit);
+
+    if (freshUsage.documents_used >= limit) {
+      emitNotification('Document Limit Reached', `You have used ${freshUsage.documents_used}/${limit} documents. Upgrade to create more.`, 'error');
       return false;
     }
 
     try {
-      const newCount = usage.documents_used + 1;
-      
       const { data, error } = await supabase
         .from('subscription_usage')
         .update({
-          documents_used: newCount,
+          documents_used: freshUsage.documents_used + 1,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', usage.id)
+        .eq('id', freshUsage.id)
         .select()
         .single();
 
-      if (error) throw error;
-      
+      if (error) {
+        console.error('[trackDocumentUsage] Supabase error:', error);
+        throw error;
+      }
+
+      console.log('[trackDocumentUsage] Updated to:', data.documents_used);
       setUsage(data as SubscriptionUsage);
-      console.log('[Usage] Document tracked:', newCount);
       return true;
     } catch (err: any) {
-      console.error('[trackDocumentUsage Error]', err);
+      console.error('[trackDocumentUsage] Failed:', err);
+      emitNotification('Usage Error', 'Failed to track usage', 'error');
       return false;
     }
-  }, [userId, usage, subscription]);
+  }, [userId, subscription, fetchCurrentUsage]);
 
-  // FIX 2: trackReportUsage — always write to Supabase FIRST and return Promise<boolean>
+  // FIX 3: trackReportUsage — exact same pattern
   const trackReportUsage = useCallback(async (): Promise<boolean> => {
-    if (!userId || !usage) return false;
+    if (!userId) return false;
 
-    const limit = PLAN_LIMITS[subscription?.plan_type || 'free'].reports;
-    if (usage.reports_used >= limit) {
-      console.warn('[Usage] Report limit reached:', usage.reports_used, 'Limit:', limit);
+    const freshUsage = await fetchCurrentUsage(userId);
+    if (!freshUsage) return false;
+
+    const planType = (subscription?.plan_type || 'free') as keyof typeof PLAN_LIMITS;
+    const limit = PLAN_LIMITS[planType].reports;
+
+    if (freshUsage.reports_used >= limit) {
+      emitNotification('Report Limit Reached', `You have used ${freshUsage.reports_used}/${limit} reports. Upgrade to generate more.`, 'error');
       return false;
     }
 
     try {
-      const newCount = usage.reports_used + 1;
-
       const { data, error } = await supabase
         .from('subscription_usage')
         .update({
-          reports_used: newCount,
+          reports_used: freshUsage.reports_used + 1,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', usage.id)
+        .eq('id', freshUsage.id)
         .select()
         .single();
 
       if (error) throw error;
 
       setUsage(data as SubscriptionUsage);
-      console.log('[Usage] Report tracked:', newCount);
       return true;
     } catch (err: any) {
-      console.error('[trackReportUsage Error]', err);
+      console.error('[trackReportUsage] Failed:', err);
+      emitNotification('Usage Error', 'Failed to track usage', 'error');
       return false;
     }
-  }, [userId, usage, subscription]);
+  }, [userId, subscription, fetchCurrentUsage]);
 
   const currentPlanType = (subscription?.plan_type || 'free') as keyof typeof PLAN_LIMITS;
   
@@ -611,7 +695,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, [currentPlanType]);
 
   const getReportLimit = useCallback(() => {
-    return PLAN_LIMITS[currentPlanType]?.reports ?? 2;
+    return PLAN_LIMITS[currentPlanType]?.reports ?? 1;
   }, [currentPlanType]);
 
   const canCreateDocument = useCallback(() => {
