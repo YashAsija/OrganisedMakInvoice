@@ -617,6 +617,18 @@ export default function SubscriptionPage({
         return;
       }
 
+      // Broadcast subscription update to all other devices logged into this account
+      try {
+        const channel = supabase.channel(`subscription_updates:${user.id}`);
+        await channel.send({
+          type: 'broadcast',
+          event: 'subscription_changed',
+          payload: { tier: targetPlanType, expiresAt: expiresIso },
+        });
+      } catch (bcErr) {
+        console.warn('[Realtime Broadcast Warning]', bcErr);
+      }
+
       // Step 5 — Verification SELECT to confirm row exists
       try {
         const { data: verify, error: verifyErr } = await supabase

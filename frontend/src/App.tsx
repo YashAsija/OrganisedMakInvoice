@@ -1203,9 +1203,9 @@ export default function App() {
 
           await syncCloudSubscriptionTier();
 
-          // 1c. Realtime listener for Subscription table & User updates (Strictly Isolated Per-User Account)
+          // 1c. Realtime listener for Subscription table, Broadcast, & User updates (Strictly Isolated Per-User Account)
           const subscriptionChannel = supabase
-            .channel(`subscriptions_realtime:${uid}:${Date.now()}`)
+            .channel(`subscription_updates:${uid}`)
             .on(
               'postgres_changes',
               { event: '*', schema: 'public', table: 'subscriptions' },
@@ -1226,21 +1226,30 @@ export default function App() {
                 syncCloudSubscriptionTier();
               }
             )
+            .on(
+              'broadcast',
+              { event: 'subscription_changed' },
+              () => {
+                syncCloudSubscriptionTier();
+              }
+            )
             .subscribe();
           activeChannels.push(subscriptionChannel);
 
-          // 1d. Focus re-check & periodic poll (Guarantees multi-device sync even without WebSocket support)
+          // 1d. Focus re-check, visibilitychange & fast periodic poll (Guarantees multi-device sync across laptops, phones, tablets)
           const handleWindowFocus = () => {
             syncCloudSubscriptionTier();
           };
           window.addEventListener('focus', handleWindowFocus);
+          window.addEventListener('visibilitychange', handleWindowFocus);
           const subPollInterval = setInterval(() => {
             syncCloudSubscriptionTier();
-          }, 15_000);
+          }, 5_000);
 
           activeChannels.push({
             unsubscribe: () => {
               window.removeEventListener('focus', handleWindowFocus);
+              window.removeEventListener('visibilitychange', handleWindowFocus);
               clearInterval(subPollInterval);
             }
           });
