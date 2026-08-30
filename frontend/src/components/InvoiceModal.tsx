@@ -9,6 +9,7 @@ import { LivePreview } from './TemplateBuilder/LivePreview';
 import { Country, State } from 'country-state-city';
 import { TEMPLATE_PRESETS, getDefaultTemplatePreset } from '../lib/templatePresets';
 import { supabase } from '../lib/supabase';
+import { useSubscription } from '../hooks/useSubscription';
 import { emitNotification } from '../lib/notifications';
 import { SmartBillingBox } from './SmartBillingBox';
 import { getDocumentTypeDefaults } from '../lib/docTypeDefaults';
@@ -120,6 +121,7 @@ export default function InvoiceModal({
   const [activeMode, setActiveMode] = useState<'edit' | 'preview' | 'editable'>('editable');
   const [savedInvoiceForPreview, setSavedInvoiceForPreview] = useState<Invoice | null>(null);
   const [isAiBoxHighlighted, setIsAiBoxHighlighted] = useState<boolean>(isTutorialHighlight);
+  const { trackDocumentUsage } = useSubscription();
 
   useEffect(() => {
     setIsAiBoxHighlighted(isTutorialHighlight);
@@ -1972,6 +1974,12 @@ export default function InvoiceModal({
 
   const handleSaveSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check usage limit for brand new documents
+    if (!invoice || invoice.status === 'draft') {
+      const allowed = await trackDocumentUsage();
+      if (!allowed) return;
+    }
 
     if (items.length === 0) {
       setShowLineItemsError(true);

@@ -100,8 +100,8 @@ export interface SubscriptionContextType {
   upgradeSubscription: (planType: string, billingMode: 'monthly' | 'yearly', transactionId: string) => Promise<void>;
   refreshSubscription: () => Promise<void>;
   refetch: () => Promise<void>;
-  trackDocumentUsage: () => Promise<void>;
-  trackReportUsage: () => Promise<void>;
+  trackDocumentUsage: () => Promise<boolean>;
+  trackReportUsage: () => Promise<boolean>;
   getDocumentLimit: () => number;
   getReportLimit: () => number;
   canCreateDocument: () => boolean;
@@ -122,7 +122,51 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [isSyncing, setIsSyncing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // FIX 3: refreshSubscription must always fetch directly from Supabase
+  // FIX 3: fetchCurrentUsage — always get active period row or create one
+  const fetchCurrentUsage = useCallback(async (uid: string): Promise<SubscriptionUsage | null> => {
+    const now = new Date().toISOString();
+    
+    const { data, error } = await supabase
+      .from('subscription_usage')
+      .select('*')
+      .eq('user_id', uid)
+      .gte('period_end', now)
+      .order('period_start', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[fetchCurrentUsage Error]', error);
+      return null;
+    }
+
+    if (!data) {
+      console.log('[Usage] No active period found, creating new one');
+      const periodStart = new Date();
+      const periodEnd = new Date(periodStart.getTime() + 30 * 24 * 60 * 60 * 1000);
+      
+      const { data: newUsage, error: insertErr } = await supabase
+        .from('subscription_usage')
+        .insert({
+          user_id: uid,
+          period_start: periodStart.toISOString(),
+          period_end: periodEnd.toISOString(),
+          documents_used: 0,
+          reports_used: 0,
+        })
+        .select()
+        .single();
+
+      if (insertErr) {
+        console.error('[fetchCurrentUsage Insert Error]', insertErr);
+        return null;
+      }
+      return newUsage as SubscriptionUsage;
+    }
+
+    return data as SubscriptionUsage;
+  }, []);
+
   const refreshSubscription = useCallback(async () => {
     if (!userId) return;
     try {
@@ -133,27 +177,16 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         .single();
 
       if (!error && data) {
-        console.log('[refreshSubscription] Fresh data:', data);
         setSubscription(data as Subscription);
       }
 
-      const now = new Date().toISOString();
-      const { data: usageData } = await supabase
-        .from('subscription_usage')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('period_end', now)
-        .order('period_start', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (usageData) setUsage(usageData as SubscriptionUsage);
+      const activeUsage = await fetchCurrentUsage(userId);
+      if (activeUsage) setUsage(activeUsage);
     } catch (err) {
       console.error('[refreshSubscription] Error:', err);
     }
-  }, [userId]);
+  }, [userId, fetchCurrentUsage]);
 
-  // Initial fetch and row creation if missing
   const fetchSubscriptionData = useCallback(async (uid: string) => {
     try {
       const { data: subData } = await supabase
@@ -190,45 +223,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
       setSubscription(activeSub);
 
-      const now = new Date();
-      const pStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const pEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
-
-      const { data: usageData } = await supabase
-        .from('subscription_usage')
-        .select('*')
-        .eq('user_id', uid)
-        .gte('period_start', pStart)
-        .order('period_start', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      let activeUsage = usageData as SubscriptionUsage | null;
-
-      if (!activeUsage) {
-        const { data: createdUsage } = await supabase
-          .from('subscription_usage')
-          .upsert({
-            user_id: uid,
-            period_start: pStart,
-            period_end: pEnd,
-            documents_used: 0,
-            reports_used: 0,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'user_id,period_start' })
-          .select()
-          .maybeSingle();
-
-        activeUsage = createdUsage as SubscriptionUsage | null;
-      }
-
+      const activeUsage = await fetchCurrentUsage(uid);
       setUsage(activeUsage);
     } catch (err) {
       console.error('[SubscriptionContext] Fetch error:', err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [fetchCurrentUsage]);
 
   // Trial expiry check
   const checkAndExpireTrials = useCallback(async () => {
@@ -256,7 +258,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [subscription, refreshSubscription]);
 
-  // FIX 2: Production-Grade Realtime Setup with reconnects, retry backoff, window focus, & 30s polling
+  // FIX 4: Realtime listener for subscription_usage correctly handling INSERT, UPDATE, & DELETE
   useEffect(() => {
     if (!userId) return;
 
@@ -303,8 +305,23 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
             filter: `user_id=eq.${userId}`,
           },
           (payload) => {
-            console.log('[Realtime] Usage change received:', payload);
-            if (payload.new) setUsage(payload.new as SubscriptionUsage);
+            console.log('[Realtime] Usage change:', payload.eventType, payload.new);
+            
+            if (payload.eventType === 'INSERT') {
+              setUsage(payload.new as SubscriptionUsage);
+            }
+            
+            if (payload.eventType === 'UPDATE') {
+              setUsage(payload.new as SubscriptionUsage);
+              console.log('[Realtime] Usage synced:', {
+                documents: (payload.new as any).documents_used,
+                reports: (payload.new as any).reports_used,
+              });
+            }
+            
+            if (payload.eventType === 'DELETE') {
+              fetchCurrentUsage(userId).then(u => { if (u) setUsage(u); });
+            }
           }
         )
         .subscribe((status, err) => {
@@ -364,9 +381,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('online', handleOnline);
     };
-  }, [userId, refreshSubscription, checkAndExpireTrials]);
+  }, [userId, refreshSubscription, checkAndExpireTrials, fetchCurrentUsage]);
 
-  // Initial auth state tracking
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -520,56 +536,73 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     if (updatedSub) setSubscription(updatedSub as Subscription);
   }, []);
 
-  // Usage tracking methods
-  const trackDocumentUsage = useCallback(async () => {
-    if (!userId) return;
-    const now = new Date();
-    const pStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const pEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+  // FIX 1: trackDocumentUsage — always write to Supabase FIRST and return Promise<boolean>
+  const trackDocumentUsage = useCallback(async (): Promise<boolean> => {
+    if (!userId || !usage) return false;
+    
+    const limit = PLAN_LIMITS[subscription?.plan_type || 'free'].documents;
+    if (usage.documents_used >= limit) {
+      console.warn('[Usage] Document limit reached:', usage.documents_used, 'Limit:', limit);
+      return false;
+    }
 
-    const curCount = usage?.documents_used ?? 0;
-    const updatedCount = curCount + 1;
+    try {
+      const newCount = usage.documents_used + 1;
+      
+      const { data, error } = await supabase
+        .from('subscription_usage')
+        .update({
+          documents_used: newCount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', usage.id)
+        .select()
+        .single();
 
-    const { data } = await supabase
-      .from('subscription_usage')
-      .upsert({
-        user_id: userId,
-        period_start: pStart,
-        period_end: pEnd,
-        documents_used: updatedCount,
-        reports_used: usage?.reports_used ?? 0,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,period_start' })
-      .select()
-      .maybeSingle();
+      if (error) throw error;
+      
+      setUsage(data as SubscriptionUsage);
+      console.log('[Usage] Document tracked:', newCount);
+      return true;
+    } catch (err: any) {
+      console.error('[trackDocumentUsage Error]', err);
+      return false;
+    }
+  }, [userId, usage, subscription]);
 
-    if (data) setUsage(data as SubscriptionUsage);
-  }, [userId, usage]);
+  // FIX 2: trackReportUsage — always write to Supabase FIRST and return Promise<boolean>
+  const trackReportUsage = useCallback(async (): Promise<boolean> => {
+    if (!userId || !usage) return false;
 
-  const trackReportUsage = useCallback(async () => {
-    if (!userId) return;
-    const now = new Date();
-    const pStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const pEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+    const limit = PLAN_LIMITS[subscription?.plan_type || 'free'].reports;
+    if (usage.reports_used >= limit) {
+      console.warn('[Usage] Report limit reached:', usage.reports_used, 'Limit:', limit);
+      return false;
+    }
 
-    const curCount = usage?.reports_used ?? 0;
-    const updatedCount = curCount + 1;
+    try {
+      const newCount = usage.reports_used + 1;
 
-    const { data } = await supabase
-      .from('subscription_usage')
-      .upsert({
-        user_id: userId,
-        period_start: pStart,
-        period_end: pEnd,
-        documents_used: usage?.documents_used ?? 0,
-        reports_used: updatedCount,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,period_start' })
-      .select()
-      .maybeSingle();
+      const { data, error } = await supabase
+        .from('subscription_usage')
+        .update({
+          reports_used: newCount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', usage.id)
+        .select()
+        .single();
 
-    if (data) setUsage(data as SubscriptionUsage);
-  }, [userId, usage]);
+      if (error) throw error;
+
+      setUsage(data as SubscriptionUsage);
+      console.log('[Usage] Report tracked:', newCount);
+      return true;
+    } catch (err: any) {
+      console.error('[trackReportUsage Error]', err);
+      return false;
+    }
+  }, [userId, usage, subscription]);
 
   const currentPlanType = (subscription?.plan_type || 'free') as keyof typeof PLAN_LIMITS;
   

@@ -356,7 +356,7 @@ export default function Dashboard({
 
   const { confirm } = useConfirm();
   const { expenses: supabaseExpenses, stats: expenseStats } = useExpenses();
-  const { subscription: subRecord, refetch: refetchSubscription } = useSubscription();
+  const { subscription: subRecord, refetch: refetchSubscription, trackDocumentUsage, trackReportUsage } = useSubscription();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -11306,21 +11306,15 @@ export default function Dashboard({
                   <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 shrink-0 self-end md:self-auto">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         if (reportedInvoices.length === 0) { alert("No billing records match the specified document selection and interval."); return; }
 
                         // Check Report Downloads Quota for current 1-month activation period
                         const currentCount = getBillingCycleReportCount();
                         const limits = getTierLimits(subscriptionTier);
 
-                        if (currentCount >= limits.reportsPerMonth) {
-                          const errorMsg = `Subscription period accounting report limit reached (${limits.reportsPerMonth} report(s)/period on ${subscriptionTier.toUpperCase()} plan). Upgrade your plan to download more reports.`;
-                          emitNotification('Quota Exceeded 🔒', errorMsg, 'error');
-                          if (typeof window !== 'undefined') {
-                            window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
-                          }
-                          return;
-                        }
+                        const allowed = await trackReportUsage();
+                        if (!allowed) return;
 
                         // Increment report count within active activation cycle & export
                         incrementBillingCycleReportCount();
