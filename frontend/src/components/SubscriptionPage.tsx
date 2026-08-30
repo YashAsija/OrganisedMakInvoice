@@ -17,6 +17,7 @@ import { getCurrentBillingCycleWindow } from '../lib/subscriptionGuard';
 import { openRazorpayCheckout } from '../lib/razorpay';
 import { openPaddleCheckout } from '../lib/paddle';
 import { supabase } from '../lib/supabase';
+import { getExpiryLabel } from '../context/SubscriptionContext';
 import { SubscriptionStatus } from './SubscriptionStatus';
 import { useSubscription } from '../hooks/useSubscription';
 import { TrialConfirmModal } from './ui/TrialConfirmModal';
@@ -412,7 +413,7 @@ export default function SubscriptionPage({
               <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                 <span>Expires / Renews:</span>
                 <span className="font-mono font-extrabold">
-                  {typeof window !== 'undefined' ? (localStorage.getItem('makbills_sub_expires_at') || 'Active Subscription') : 'Active Subscription'}
+                  {getExpiryLabel(subscriptionRecord)}
                 </span>
               </div>
             </div>

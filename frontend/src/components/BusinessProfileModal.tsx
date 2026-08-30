@@ -4,6 +4,7 @@ import { BusinessProfile } from '../types';
 import { Country, State } from 'country-state-city';
 import { supabase } from '../lib/supabase';
 import { emitNotification } from '../lib/notifications';
+import { useSubscription, getExpiryLabel } from '../context/SubscriptionContext';
 
 interface BusinessProfileModalProps {
   profile: BusinessProfile;
@@ -3147,11 +3148,12 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               enterprise: 'Unlimited document generation, unlimited report downloads, bulk actions, and enterprise features.',
             };
 
+            const { subscription } = useSubscription();
             const currentPlanName = planDisplayNames[subscriptionTier] || 'MakInvoices Starter Plan';
             const currentPlanType = planTypes[subscriptionTier] || 'Starter Plan (Free Tier)';
             const currentDescription = planDescriptions[subscriptionTier] || 'Standard billing suite environment.';
             const currentStatus = subscriptionTier === 'free' ? 'Active Free Plan' : 'Active Subscription';
-            const currentRenewal = (typeof window !== 'undefined' && localStorage.getItem('makbills_sub_expires_at')) || (subscriptionTier === 'free' ? 'Free Forever' : 'Renews Monthly / Annually');
+            const currentRenewal = getExpiryLabel(subscription);
 
             return (
               <div className="space-y-6 animate-fade-in text-[#0f172a] dark:text-[#e2e8f0]">

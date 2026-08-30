@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { emitNotification } from '../lib/notifications';
 
@@ -112,7 +112,27 @@ export interface SubscriptionContextType {
   isOnTrial: () => boolean;
   getTrialDaysRemaining: () => number;
   checkAndExpireTrials: () => Promise<void>;
+  getExpiryLabel: (sub: Subscription) => string;
 }
+
+export const getExpiryLabel = (sub: Subscription | null): string => {
+  if (!sub) return 'Free forever';
+  if (!sub.expires_at) return 'Free forever';
+  
+  const dateStr = new Date(sub.expires_at).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short', 
+    year: 'numeric',
+  });
+
+  if (sub.status === 'trialing' || sub.authorized_token_node?.startsWith('trial_')) {
+    return `${dateStr} (1-Month Free Trial)`;
+  }
+  return `${dateStr} (${
+    sub.plan_type === 'free' ? 'Monthly Plan' :
+    sub.plan_name + ' Plan'
+  })`;
+};
 
 const SubscriptionContext = createContext<SubscriptionContextType | null>(null);
 
@@ -123,152 +143,113 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [isSyncing, setIsSyncing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // FIX 4: fetchCurrentUsage — use UPSERT/single row logic with diagnostic logging
-  const fetchCurrentUsage = useCallback(async (uid: string): Promise<SubscriptionUsage | null> => {
-    try {
-      const now = new Date().toISOString();
-
-      console.log('[Usage Debug] All usage rows for user:', uid);
-      const { data: allRows } = await supabase
-        .from('subscription_usage')
-        .select('*')
-        .eq('user_id', uid)
-        .order('period_start', { ascending: false });
-      console.log('[Usage Debug] All rows:', JSON.stringify(allRows, null, 2));
-
-      // Get the single most recent active row
-      const { data, error } = await supabase
-        .from('subscription_usage')
-        .select('*')
-        .eq('user_id', uid)
-        .gte('period_end', now)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[fetchCurrentUsage] Error:', error);
-        return null;
-      }
-
-      console.log('[Usage Debug] Selected row:', JSON.stringify(data, null, 2));
-
-      if (data) {
-        console.log('[fetchCurrentUsage] Found row:', data.id, 
-          'docs:', data.documents_used, 'reports:', data.reports_used);
-        return data as SubscriptionUsage;
-      }
-
-      // No active row — create exactly one
-      console.log('[fetchCurrentUsage] No active row, creating new period');
-      const periodStart = new Date();
-      const periodEnd = new Date(periodStart.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-      const { data: newRow, error: insertErr } = await supabase
-        .from('subscription_usage')
-        .insert({
-          user_id: uid,
-          period_start: periodStart.toISOString(),
-          period_end: periodEnd.toISOString(),
-          documents_used: 0,
-          reports_used: 0,
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (insertErr) {
-        console.error('[fetchCurrentUsage] Insert error:', insertErr);
-        // If duplicate key error, fetch what's there
-        if (insertErr.code === '23505') {
-          const { data: existing } = await supabase
-            .from('subscription_usage')
-            .select('*')
-            .eq('user_id', uid)
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          return existing as SubscriptionUsage;
-        }
-        return null;
-      }
-
-      return newRow as SubscriptionUsage;
-    } catch (err) {
-      console.error('[fetchCurrentUsage] Exception:', err);
-      return null;
-    }
-  }, []);
-
-  // FIX 6: refreshSubscription must always re-fetch usage
+  // FIX 3: refreshSubscription — always spread to force re-render
   const refreshSubscription = useCallback(async () => {
     if (!userId) return;
     try {
-      const { data: sub, error: subErr } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+      const [subResult, usageResult] = await Promise.all([
+        supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', userId)
+          .single(),
+        supabase
+          .from('subscription_usage')
+          .select('*')
+          .eq('user_id', userId)
+          .gte('period_end', new Date().toISOString())
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
-      if (!subErr && sub) setSubscription(sub as Subscription);
+      if (subResult.data) {
+        console.log('[Refresh] Subscription:', subResult.data.plan_name, subResult.data.expires_at);
+        setSubscription({ ...subResult.data } as Subscription);
+      }
 
-      const usageData = await fetchCurrentUsage(userId);
-      if (usageData) {
-        console.log('[refreshSubscription] Usage refreshed:', {
-          documents: usageData.documents_used,
-          reports: usageData.reports_used,
-        });
-        setUsage(usageData);
+      if (usageResult.data) {
+        console.log('[Refresh] Usage:', usageResult.data.documents_used, usageResult.data.reports_used);
+        setUsage({ ...usageResult.data } as SubscriptionUsage);
       }
     } catch (err) {
       console.error('[refreshSubscription] Error:', err);
     }
-  }, [userId, fetchCurrentUsage]);
+  }, [userId]);
 
-  const fetchSubscriptionData = useCallback(async (uid: string) => {
-    try {
-      const { data: subData } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', uid)
-        .maybeSingle();
-
-      let activeSub = subData as Subscription | null;
-
-      if (!activeSub) {
+  // FIX 1: Force fresh fetch from Supabase on EVERY app load — never read local cache
+  useEffect(() => {
+    const initializeSubscription = async () => {
+      setIsLoading(true);
+      try {
         const { data: { user } } = await supabase.auth.getUser();
-        const defaultSubPayload = {
-          user_id: uid,
-          user_email: user?.email || null,
-          user_phone: user?.phone || null,
-          plan_name: 'Free',
-          plan_type: 'free' as const,
-          status: 'active' as const,
-          expires_at: null,
-          renews_at: null,
-          trial_used_plans: [],
-          updated_at: new Date().toISOString(),
-        };
+        if (!user) {
+          setIsLoading(false);
+          return;
+        }
 
-        const { data: createdSub } = await supabase
+        setUserId(user.id);
+
+        const { data: sub } = await supabase
           .from('subscriptions')
-          .upsert(defaultSubPayload, { onConflict: 'user_id' })
-          .select()
+          .select('*')
+          .eq('user_id', user.id)
           .single();
 
-        activeSub = (createdSub as Subscription) || (defaultSubPayload as any);
+        if (sub) {
+          console.log('[Init] Fresh subscription:', sub.plan_name, sub.expires_at);
+          setSubscription({ ...sub } as Subscription);
+        } else {
+          const { data: createdSub } = await supabase.from('subscriptions').upsert({
+            user_id: user.id,
+            plan_name: 'Free',
+            plan_type: 'free',
+            status: 'active',
+            expires_at: null,
+            renews_at: null,
+          }, { onConflict: 'user_id' }).select().single();
+          if (createdSub) setSubscription({ ...createdSub } as Subscription);
+        }
+
+        const now = new Date().toISOString();
+        const { data: usageData } = await supabase
+          .from('subscription_usage')
+          .select('*')
+          .eq('user_id', user.id)
+          .gte('period_end', now)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (usageData) {
+          console.log('[Init] Fresh usage:', usageData.documents_used, usageData.reports_used);
+          setUsage({ ...usageData } as SubscriptionUsage);
+        } else {
+          const periodStart = new Date();
+          const periodEnd = new Date(periodStart.getTime() + 30 * 24 * 60 * 60 * 1000);
+          const { data: newUsage } = await supabase
+            .from('subscription_usage')
+            .insert({
+              user_id: user.id,
+              period_start: periodStart.toISOString(),
+              period_end: periodEnd.toISOString(),
+              documents_used: 0,
+              reports_used: 0,
+              updated_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+          if (newUsage) setUsage({ ...newUsage } as SubscriptionUsage);
+        }
+      } catch (err) {
+        console.error('[Init] Error:', err);
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      setSubscription(activeSub);
-
-      const activeUsage = await fetchCurrentUsage(uid);
-      setUsage(activeUsage);
-    } catch (err) {
-      console.error('[SubscriptionContext] Fetch error:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [fetchCurrentUsage]);
+    initializeSubscription();
+  }, []);
 
   // Trial expiry check
   const checkAndExpireTrials = useCallback(async () => {
@@ -296,172 +277,122 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [subscription, refreshSubscription]);
 
-  // FIX 5: Realtime listener for subscription_usage with distinct UPDATE and INSERT event listeners
+  // FIX 2: Fix Realtime channel — set up channel only AFTER userId is confirmed
   useEffect(() => {
     if (!userId) return;
 
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    let retryTimeout: NodeJS.Timeout | null = null;
-    let retryCount = 0;
-    const MAX_RETRIES = 5;
+    console.log('[Realtime] Setting up channel for userId:', userId);
 
-    const setupChannel = () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-        channel = null;
-      }
+    const channel = supabase
+      .channel(`makinvoices-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'subscriptions',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('[Realtime] Subscription UPDATE received:', {
+            plan: (payload.new as any).plan_name,
+            expires: (payload.new as any).expires_at,
+            status: (payload.new as any).status,
+          });
+          setSubscription({ ...payload.new } as Subscription);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'subscriptions',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('[Realtime] Subscription INSERT received:', payload.new);
+          setSubscription({ ...payload.new } as Subscription);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'subscription_usage',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('[Realtime] Usage UPDATE received:', {
+            documents: (payload.new as any).documents_used,
+            reports: (payload.new as any).reports_used,
+          });
+          setUsage({ ...payload.new } as SubscriptionUsage);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'subscription_usage',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('[Realtime] Usage INSERT received:', payload.new);
+          setUsage({ ...payload.new } as SubscriptionUsage);
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('[Realtime] Status:', status, err || '');
+        setIsSyncing(status !== 'SUBSCRIBED');
 
-      const channelName = `sub-${userId}-${Date.now()}`;
-      console.log('[Realtime] Setting up channel:', channelName);
-
-      channel = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'subscriptions',
-            filter: `user_id=eq.${userId}`,
-          },
-          (payload) => {
-            console.log('[Realtime] Subscription change received:', payload);
-            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-              setSubscription(payload.new as Subscription);
-            }
-            if (payload.eventType === 'DELETE') {
-              refreshSubscription();
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'subscription_usage',
-            filter: `user_id=eq.${userId}`,
-          },
-          (payload) => {
-            const newUsage = payload.new as SubscriptionUsage;
-            console.log('[Realtime] Usage sync received:', {
-              id: newUsage.id,
-              documents_used: newUsage.documents_used,
-              reports_used: newUsage.reports_used,
-            });
-            if (!usage || newUsage.id === usage.id || newUsage.user_id === userId) {
-              setUsage(newUsage);
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'subscription_usage',
-            filter: `user_id=eq.${userId}`,
-          },
-          (payload) => {
-            console.log('[Realtime] Usage INSERT received:', payload.new);
-            if (payload.new && (payload.new as any).user_id === userId) {
-              setUsage(payload.new as SubscriptionUsage);
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'subscription_usage',
-            filter: `user_id=eq.${userId}`,
-          },
-          () => {
-            fetchCurrentUsage(userId).then(u => { if (u) setUsage(u); });
-          }
-        )
-        .subscribe((status, err) => {
-          console.log('[Realtime] Status:', status, 'Error:', err);
-
-          if (status === 'SUBSCRIBED') {
-            setIsSyncing(false);
-            retryCount = 0;
-            console.log('[Realtime] ✅ Connected successfully');
-          }
-
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            setIsSyncing(true);
-            console.warn('[Realtime] ⚠️ Connection issue:', status);
-            if (retryCount < MAX_RETRIES) {
-              retryCount++;
-              const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
-              console.log(`[Realtime] Retrying in ${delay}ms (attempt ${retryCount})`);
-              retryTimeout = setTimeout(setupChannel, delay);
-            }
-          }
-
-          if (status === 'CLOSED') {
-            setIsSyncing(true);
-            console.warn('[Realtime] Channel closed');
-          }
-        });
-    };
-
-    setIsSyncing(true);
-    setupChannel();
-
-    const handleFocus = async () => {
-      console.log('[Sync] Window focused — refreshing subscription');
-      await refreshSubscription();
-      checkAndExpireTrials();
-    };
-
-    const handleOnline = () => {
-      console.log('[Sync] Network restored — reconnecting realtime');
-      setupChannel();
-    };
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] ✅ Listening for changes on userId:', userId);
+          refreshSubscription();
+        }
+      });
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('[Sync] Tab became visible — force refreshing usage');
+        console.log('[Sync] Tab visible — refreshing');
         refreshSubscription();
       }
     };
 
-    const pollInterval = setInterval(() => {
-      fetchCurrentUsage(userId).then(u => { if (u) setUsage(u); });
-    }, 10000); // 10 seconds for usage sync
+    const handleFocus = () => {
+      console.log('[Sync] Window focused — refreshing');
+      refreshSubscription();
+    };
 
+    const handleOnline = () => {
+      console.log('[Sync] Back online — refreshing');
+      refreshSubscription();
+    };
+
+    const poll = setInterval(refreshSubscription, 15000);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
     window.addEventListener('online', handleOnline);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      console.log('[Realtime] Cleaning up channel');
-      if (channel) supabase.removeChannel(channel);
-      if (retryTimeout) clearTimeout(retryTimeout);
-      clearInterval(pollInterval);
+      console.log('[Realtime] Removing channel for userId:', userId);
+      supabase.removeChannel(channel);
+      clearInterval(poll);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('online', handleOnline);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [userId, refreshSubscription, checkAndExpireTrials, fetchCurrentUsage]);
+  }, [userId, refreshSubscription]);
 
+  // Auth state listener
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUserId(session.user.id);
-        fetchSubscriptionData(session.user.id);
-      } else {
-        setIsLoading(false);
-      }
-    });
-
     const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
         setUserId(session.user.id);
-        fetchSubscriptionData(session.user.id);
+        refreshSubscription();
       }
       if (event === 'SIGNED_OUT') {
         setSubscription(null);
@@ -474,7 +405,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return () => {
       authListener.unsubscribe();
     };
-  }, [fetchSubscriptionData]);
+  }, [refreshSubscription]);
 
   // Trial Helper Functions
   const canStartTrial = useCallback((planType: 'basic' | 'professional'): boolean => {
@@ -531,7 +462,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         reports_used: 0,
       });
 
-      if (updatedSub) setSubscription(updatedSub as Subscription);
+      if (updatedSub) setSubscription({ ...updatedSub } as Subscription);
     } finally {
       setIsLoading(false);
     }
@@ -598,18 +529,25 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       reports_used: 0,
     });
 
-    if (updatedSub) setSubscription(updatedSub as Subscription);
+    if (updatedSub) setSubscription({ ...updatedSub } as Subscription);
   }, []);
 
-  // FIX 2: trackDocumentUsage — write to Supabase, never local state
+  // Usage tracking methods
   const trackDocumentUsage = useCallback(async (): Promise<boolean> => {
     if (!userId) {
       console.error('[trackDocumentUsage] No userId');
       return false;
     }
 
-    // Always fetch fresh usage row first — never trust local state for limits
-    const freshUsage = await fetchCurrentUsage(userId);
+    const { data: freshUsage } = await supabase
+      .from('subscription_usage')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('period_end', new Date().toISOString())
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     if (!freshUsage) {
       console.error('[trackDocumentUsage] No usage row found');
       return false;
@@ -617,8 +555,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
     const planType = (subscription?.plan_type || 'free') as keyof typeof PLAN_LIMITS;
     const limit = PLAN_LIMITS[planType].documents;
-
-    console.log('[trackDocumentUsage] Current:', freshUsage.documents_used, '/ Limit:', limit);
 
     if (freshUsage.documents_used >= limit) {
       emitNotification('Document Limit Reached', `You have used ${freshUsage.documents_used}/${limit} documents. Upgrade to create more.`, 'error');
@@ -636,26 +572,29 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         .select()
         .single();
 
-      if (error) {
-        console.error('[trackDocumentUsage] Supabase error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('[trackDocumentUsage] Updated to:', data.documents_used);
-      setUsage(data as SubscriptionUsage);
+      setUsage({ ...data } as SubscriptionUsage);
       return true;
     } catch (err: any) {
       console.error('[trackDocumentUsage] Failed:', err);
       emitNotification('Usage Error', 'Failed to track usage', 'error');
       return false;
     }
-  }, [userId, subscription, fetchCurrentUsage]);
+  }, [userId, subscription]);
 
-  // FIX 3: trackReportUsage — exact same pattern
   const trackReportUsage = useCallback(async (): Promise<boolean> => {
     if (!userId) return false;
 
-    const freshUsage = await fetchCurrentUsage(userId);
+    const { data: freshUsage } = await supabase
+      .from('subscription_usage')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('period_end', new Date().toISOString())
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     if (!freshUsage) return false;
 
     const planType = (subscription?.plan_type || 'free') as keyof typeof PLAN_LIMITS;
@@ -679,14 +618,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
       if (error) throw error;
 
-      setUsage(data as SubscriptionUsage);
+      setUsage({ ...data } as SubscriptionUsage);
       return true;
     } catch (err: any) {
       console.error('[trackReportUsage] Failed:', err);
       emitNotification('Usage Error', 'Failed to track usage', 'error');
       return false;
     }
-  }, [userId, subscription, fetchCurrentUsage]);
+  }, [userId, subscription]);
 
   const currentPlanType = (subscription?.plan_type || 'free') as keyof typeof PLAN_LIMITS;
   
@@ -737,6 +676,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       isOnTrial,
       getTrialDaysRemaining,
       checkAndExpireTrials,
+      getExpiryLabel: (sub: Subscription) => getExpiryLabel(sub),
     }}>
       {children}
     </SubscriptionContext.Provider>
