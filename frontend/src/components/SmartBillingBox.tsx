@@ -100,7 +100,7 @@ export function SmartBillingBox({ activeTemplate, setters, existingState, isAllo
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-                Auto-fill invoice templates instantly from plain English text with Gemini AI. Upgrade to Professional plan to unlock.
+                Auto-fill invoice templates instantly from plain English text with AI. Upgrade to Professional plan to unlock.
               </p>
             </div>
           </div>

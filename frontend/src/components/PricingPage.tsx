@@ -104,7 +104,7 @@ const TIERS: Tier[] = [
     features: [
       '140 Documents / month total quota',
       '15 Accounting Reports / month',
-      'AI Smart Billing Feature with Gemini Parsing',
+      'AI Smart Billing Feature with AI Document Parsing',
       '24*7 Dedicated MakInvoices AI Assistant Support',
       'Automated Recurring Invoice Scheduler',
       'Bulk Database Management & Bulk Ledger Actions',
@@ -986,7 +986,7 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
                     <td colSpan={5} style={{ padding: '10px 16px', fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase', color: isDark ? '#38bdf8' : '#0284c7' }}>AI Features &amp; Automation</td>
                   </tr>
                   <tr style={{ borderBottom: `1px solid ${isDark ? '#1b264f' : '#f1f5f9'}` }}>
-                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>AI Smart Billing Feature (Gemini Document Parsing)</td>
+                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>AI Smart Billing Feature (AI Document Parsing)</td>
                     <td style={{ padding: '14px 16px', textAlign: 'center', color: '#ef4444', fontWeight: 800 }}>✕</td>
                     <td style={{ padding: '14px 16px', textAlign: 'center', color: '#ef4444', fontWeight: 800 }}>✕</td>
                     <td style={{ padding: '14px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 800 }}>✓</td>

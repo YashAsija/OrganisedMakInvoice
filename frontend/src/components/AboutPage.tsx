@@ -385,7 +385,7 @@ export default function AboutPage({ theme, onNavigate, onGoogleLogin }: AboutPag
                 <div className="evo-card">
                   <div className="evo-card-icon"><Sparkles className="w-5 h-5" /></div>
                   <h4>AI Smart Billing Engine</h4>
-                  <p>Leverages Google Gemini 2.5 AI to let users draft complete multi-item invoices simply by describing transactions in plain text.</p>
+                  <p>Leverages Advanced AI to let users draft complete multi-item invoices simply by describing transactions in plain text.</p>
                 </div>
               </div>
             </div>
@@ -506,13 +506,13 @@ export default function AboutPage({ theme, onNavigate, onGoogleLogin }: AboutPag
                 </div>
                 <div>
                   <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white">
-                    Engineered with Next.js 16, Supabase &amp; Gemini 2.5
+                    Engineered with Next.js 16, Supabase &amp; Advanced AI
                   </h2>
                   <p className="text-xs font-mono text-slate-400 uppercase tracking-wider mt-0.5">High Performance Tech Stack</p>
                 </div>
               </div>
               <p className="text-slate-600 dark:text-slate-300 text-base leading-relaxed">
-                MakInvoices couples high-speed Next.js 16 Turbopack rendering with Supabase PostgreSQL Row Level Security (RLS) and Google Gemini 2.5 natural language processing.
+                MakInvoices couples high-speed Next.js 16 Turbopack rendering with Supabase PostgreSQL Row Level Security (RLS) and natural language processing.
               </p>
               <div className="bg-slate-100 dark:bg-slate-900/60 p-4 rounded-xl font-mono text-xs text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 space-y-2">
                 <div className="text-sky-500 font-bold">// Core Tech Highlights</div>
@@ -540,7 +540,7 @@ export default function AboutPage({ theme, onNavigate, onGoogleLogin }: AboutPag
                 <div>
                   <span className="font-mono text-xs font-bold text-sky-500 bg-sky-500/10 px-2.5 py-1 rounded-full border border-sky-500/20">Phase 3</span>
                   <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white mt-2">Ledgers, Customer Sync &amp; AI Integration</h3>
-                  <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">Expanded into full sales/purchase ledgers, customer profiles database, PIN security, and Gemini AI smart billing.</p>
+                  <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">Expanded into full sales/purchase ledgers, customer profiles database, PIN security, and AI smart billing.</p>
                 </div>
               </div>
             </div>

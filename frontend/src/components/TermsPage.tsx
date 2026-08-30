@@ -429,8 +429,8 @@ export default function TermsPage({ theme, onNavigate, onGoogleLogin }: TermsPag
               <h2>10. AI Smart Billing Assistant &amp; Signature Canvas Exclusions</h2>
             </div>
             <div className="terms-card-body">
-              <h3>10.1 Gemini Generative Assistant Limitations</h3>
-              <p>MakInvoices embeds large language models (specifically Gemini AI) to assist you with quick-billing prompts, line-item extraction, quantity accumulation, and ledger sorting. You acknowledge that AI outputs can occasionally present incorrect, incomplete, or mismatched invoice configurations. You are solely responsible for reviewing all draft records before saving or dispatching invoices.</p>
+              <h3>10.1 Generative Assistant Limitations</h3>
+              <p>MakInvoices embeds large language models to assist you with quick-billing prompts, line-item extraction, quantity accumulation, and ledger sorting. You acknowledge that AI outputs can occasionally present incorrect, incomplete, or mismatched invoice configurations. You are solely responsible for reviewing all draft records before saving or dispatching invoices.</p>
               
               <h3>10.2 Signature Canvas Authority</h3>
               <p>The vector signature canvas translates touch/mouse coordinates into vector paths stored within the invoice object. By applying a signature via this canvas, you represent and warrant that the signing individual possesses full authorization to sign documents on behalf of your entity. Signatures captured via our vector canvas are designated as valid electronic signatures under international digital transaction laws (including the US ESIGN Act and India's Information Technology Act).</p>

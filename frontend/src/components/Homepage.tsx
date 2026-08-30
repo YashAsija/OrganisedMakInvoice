@@ -502,7 +502,7 @@ export default function Homepage({
             <div className="mode-body font-mono text-xs">
               {activeOverviewMode === 'simple' ? (
                 <>
-                  <div className="line"><span>Gemini Prompting</span><span>Natural language parser active</span></div>
+                  <div className="line"><span>AI Smart Prompting</span><span>Natural language parser active</span></div>
                   <div className="line"><span>Quantity Auto-sum</span><span>Merges duplicate row quantities</span></div>
                   <div className="line"><span>Interactive Layers</span><span>Live client, item, and tax inputs</span></div>
                   <div className="line"><span>Multi-ledger Logging</span><span>Automated sales & purchase logs</span></div>
@@ -532,7 +532,7 @@ export default function Homepage({
             <p className="block-sub">Nine tools, one dashboard — built so beginners and accountants both feel at home.</p>
           </div>
           <div className="feat-grid">
-            <div className="feat-card"><div className="tab font-mono">AI</div><h3>Gemini Smart Billing</h3><p>Describe transactions naturally. Gemini drafts line items, rates, and updates total fields in your active invoice instantly.</p></div>
+            <div className="feat-card"><div className="tab font-mono">AI</div><h3>AI Smart Billing</h3><p>Describe transactions naturally. AI drafts line items, rates, and updates total fields in your active invoice instantly.</p></div>
             <div className="feat-card"><div className="tab font-mono">AI</div><h3>MakInvoices Live AI Chat</h3><p>AI Support trained on vector embeddings. Get instant guidance on A4 printing layout fixes, smart billing configurations, and exports.</p></div>
             <div className="feat-card"><div className="tab font-mono">Inventory</div><h3>Smart Quantity Sync</h3><p>Adding existing items via the smart billing prompt automatically increments and accumulates quantities rather than creating repeated rows.</p></div>
             <div className="feat-card"><div className="tab font-mono">Ledger</div><h3>Sales &amp; Purchase Ledgers</h3><p>Track both sales and purchases from the sidebar menu, complete with multi-column sorting and flexible filter options.</p></div>
@@ -558,7 +558,7 @@ export default function Homepage({
                 <tr><th>Capability</th><th className="brand">MakInvoices</th><th>Traditional ERP</th><th>Basic Invoice Apps</th><th>Spreadsheets</th></tr>
               </thead>
               <tbody>
-                <tr><td>Gemini Smart Billing Prompting</td><td className="yes">Yes (Built-in)</td><td className="no">No</td><td className="no">No</td><td className="no">No</td></tr>
+                <tr><td>AI Smart Billing Prompting</td><td className="yes">Yes (Built-in)</td><td className="no">No</td><td className="no">No</td><td className="no">No</td></tr>
                 <tr><td>Smart Quantity Auto-Sum Sync</td><td className="yes">Yes</td><td className="mid">Manual setting</td><td className="no">No</td><td className="no">No</td></tr>
                 <tr><td>Flexible Simple/Advanced Templates</td><td className="yes">Yes (Toggleable)</td><td className="mid">Rigid styles</td><td className="mid">Fixed templates</td><td className="yes">Yes</td></tr>
                 <tr><td>Multi-Rate Tax Auto-Splits</td><td className="yes">Yes (Automatic)</td><td className="yes">Yes</td><td className="mid">Manual entry</td><td className="no">No</td></tr>

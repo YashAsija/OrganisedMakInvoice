@@ -528,7 +528,7 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
           {/* Mini feature list */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, borderTop: `1px solid ${theme === 'dark' ? '#223269' : '#bae6fd'}`, paddingTop: 28 }}>
             {([
-              { icon: <Zap style={{ width: 15, height: 15 }} />, title: 'Gemini Smart Billing', desc: 'Natural language invoice drafting in seconds.' },
+              { icon: <Zap style={{ width: 15, height: 15 }} />, title: 'AI Smart Billing', desc: 'Natural language invoice drafting in seconds.' },
               { icon: <BarChart2 style={{ width: 15, height: 15 }} />, title: 'Sales & Purchase Ledgers', desc: 'Full transaction history with multi-column filters.' },
               { icon: <Lock style={{ width: 15, height: 15 }} />, title: 'Bank-Grade Security', desc: '256-bit encrypted data via Supabase.' }
             ] as { icon: React.ReactNode; title: string; desc: string }[]).map((f, i) => (

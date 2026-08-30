@@ -457,7 +457,7 @@ export default function Dashboard({
       tab: 'invoices',
       action: 'open_invoice_modal',
       tag: '4. AI Smart Billing',
-      description: 'Describe billing transactions in natural text or voice (e.g. "Bill Acme: 5 Laptops @ $1200, 18% GST"). Gemini AI automatically extracts client info, line items, rates, and CGST/SGST/IGST tax splits directly into your active invoice canvas.',
+      description: 'Describe billing transactions in natural text or voice (e.g. "Bill Acme: 5 Laptops @ $1200, 18% GST"). AI automatically extracts client info, line items, rates, and CGST/SGST/IGST tax splits directly into your active invoice canvas.',
       highlightText: 'The highlighted "AI Smart Billing" prompt box at the top of the Quick Bill canvas.',
       tip: 'Type or click the microphone icon to dictate complete billing details naturally.'
     },
@@ -8032,12 +8032,12 @@ export default function Dashboard({
                     <Sparkles className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-base text-slate-900 dark:text-white">Gemini Smart Prompt Generator</h3>
+                    <h3 className="font-bold text-base text-slate-900 dark:text-white">AI Smart Prompt Generator</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Type or speak billing details to auto-populate invoice line items</p>
                   </div>
                 </div>
                 <span className="text-[10px] font-extrabold px-2.5 py-1 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-full border border-sky-500/20 uppercase tracking-wider">
-                  Gemini 2.5 Flash
+                  AI Billing Engine
                 </span>
               </div>
 

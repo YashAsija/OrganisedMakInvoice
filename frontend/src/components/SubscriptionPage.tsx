@@ -120,7 +120,7 @@ const PLANS = [
     features: [
       { text: '140 Documents / month total quota', included: true },
       { text: '15 Accounting Reports / month', included: true },
-      { text: 'AI Smart Billing Feature with Gemini Parsing', included: true },
+      { text: 'AI Smart Billing Feature with AI Document Parsing', included: true },
       { text: '24*7 Dedicated MakInvoices AI Assistant Support', included: true },
       { text: 'Automated Recurring Invoice Scheduler', included: true },
       { text: 'Bulk Database Management & Bulk Ledger Actions', included: true },
@@ -934,7 +934,7 @@ export default function SubscriptionPage({
                 <td colSpan={5} className="p-3 px-4 font-black uppercase tracking-wider text-[10px] text-[#0284c7] dark:text-[#38bdf8]">AI Features &amp; Automation</td>
               </tr>
               <tr>
-                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">AI Smart Billing Feature (Gemini Document Parsing)</td>
+                <td className="p-4 font-medium text-slate-700 dark:text-slate-200">AI Smart Billing Feature (AI Document Parsing)</td>
                 <td className="p-4 text-center text-rose-500 font-bold">✕</td>
                 <td className="p-4 text-center text-rose-500 font-bold">✕</td>
                 <td className="p-4 text-center text-emerald-500 font-bold">✓</td>
