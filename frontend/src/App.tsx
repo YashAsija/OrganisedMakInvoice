@@ -1146,54 +1146,28 @@ export default function App() {
               if (subData && subData.length > 0) {
                 const sub = subData[0];
                 const now = new Date();
-                const expDate = sub.expires_at || sub.renews_at || sub.current_period_end;
+                const expDate = sub.expires_at || sub.renews_at;
                 const isNotExpired = !expDate || new Date(expDate) > now;
                 const isActiveStatus = !sub.status || sub.status === 'active' || sub.status === 'trialing';
 
-                if (isNotExpired && isActiveStatus && (sub.plan_type || sub.plan_name || sub.plan_key || sub.plan_id)) {
-                  const rawKey = (sub.plan_type || sub.plan_name || sub.plan_key || sub.plan_id).toLowerCase();
+                if (isNotExpired && isActiveStatus && (sub.plan_type || sub.plan_name)) {
+                  const rawKey = (sub.plan_type || sub.plan_name).toLowerCase();
                   if (rawKey.includes('enterprise') || rawKey.includes('unlimited')) fetchedTier = 'unlimited';
                   else if (rawKey.includes('professional') || rawKey.includes('pro')) fetchedTier = 'pro';
                   else if (rawKey.includes('basic')) fetchedTier = 'basic';
+                  else fetchedTier = 'free';
 
                   if (expDate) {
                     localStorage.setItem('makbills_sub_expires_iso', new Date(expDate).toISOString());
                   }
                   localStorage.setItem('makbills_last_active_paid_tier', fetchedTier);
+                } else {
+                  fetchedTier = 'free';
+                  localStorage.removeItem('makbills_last_active_paid_tier');
                 }
               }
 
-              // 2. Fallback check on users table if subscriptions table didn't yield an active tier
-              if (fetchedTier === 'free') {
-                const { data: uData1 } = await supabase
-                  .from('users')
-                  .select('uid, email, name, updatedAt')
-                  .eq('uid', uid)
-                  .limit(1);
-
-                if (uData1 && uData1.length > 0 && uData1[0].updatedAt) {
-                  localStorage.setItem('makbills_sub_activated_at', uData1[0].updatedAt);
-                }
-              }
-
-              // 3. Fallback check local active window (for active trial or reclaimed plan active within window)
-              if (fetchedTier === 'free' && typeof window !== 'undefined') {
-                const localTier = localStorage.getItem('makbills_subscription_tier');
-                const lastPaidTier = localStorage.getItem('makbills_last_active_paid_tier');
-                const expiresIsoRaw = localStorage.getItem('makbills_sub_expires_iso');
-
-                const rawTier = (localTier && localTier !== 'free' ? localTier : lastPaidTier) as string | null;
-
-                if (rawTier && rawTier !== 'free') {
-                  const isNotExpired = !expiresIsoRaw || new Date(expiresIsoRaw).getTime() > Date.now();
-                  if (isNotExpired) {
-                    if (rawTier === 'pro' || rawTier === 'professional') fetchedTier = 'pro';
-                    else if (rawTier === 'unlimited' || rawTier === 'enterprise' || rawTier === 'ent') fetchedTier = 'unlimited';
-                    else if (rawTier === 'basic') fetchedTier = 'basic';
-                  }
-                }
-              }
-
+              // Update state & local storage from database single source of truth
               setSubscriptionTier(fetchedTier);
               localStorage.setItem('makbills_subscription_tier', fetchedTier);
             } catch (err) {
