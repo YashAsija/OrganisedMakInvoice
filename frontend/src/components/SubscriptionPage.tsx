@@ -18,6 +18,8 @@ import { openRazorpayCheckout } from '../lib/razorpay';
 import { openPaddleCheckout } from '../lib/paddle';
 import { supabase } from '../lib/supabase';
 import { SubscriptionStatus } from './SubscriptionStatus';
+import { useSubscription } from '../hooks/useSubscription';
+import { TrialConfirmModal } from './ui/TrialConfirmModal';
 
 interface SubscriptionPageProps {
   theme: 'light' | 'dark';
@@ -166,6 +168,7 @@ export default function SubscriptionPage({
   subscriptionTier, 
   onUpgrade 
 }: SubscriptionPageProps) {
+  const { subscription: ctxSub, isLoading: isCtxLoading, isRealtimeSyncing } = useSubscription();
   const [isYearly, setIsYearly] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState<string | null>(null);
@@ -177,6 +180,7 @@ export default function SubscriptionPage({
   const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
   const [userId, setUserId] = useState<string | undefined>(undefined);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly_recurring' | 'yearly_onetime'>('monthly');
+  const [trialModalPlan, setTrialModalPlan] = useState<'basic' | 'professional' | null>(null);
 
   // Fetch current authenticated user to pass userId and userEmail to checkout
   useEffect(() => {
@@ -341,9 +345,18 @@ export default function SubscriptionPage({
       <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#111a36] p-6 sm:p-8 md:p-10 border border-[#bae6fd]/60 dark:border-[#223269]/60 shadow-xs">
         {/* Glow Effects */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-[#0284c7]/5 dark:bg-[#0284c7]/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-        
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+
+        {isCtxLoading ? (
+          <div className="space-y-4 animate-pulse py-4">
+            <div className="h-6 w-36 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+            <div className="h-10 w-72 bg-slate-200 dark:bg-slate-800 rounded-xl" />
+            <div className="h-4 w-96 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+          </div>
+        ) : (
+          <>
+            <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-4">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] rounded-full text-[10px] font-black uppercase tracking-wider border border-[#bae6fd]/50 dark:border-[#223269]/50">
               <Crown className="w-3 h-3" />
@@ -450,6 +463,8 @@ export default function SubscriptionPage({
             </div>
           </div>
         </div>
+        </>
+        )}
       </div>
 
 
@@ -1048,6 +1063,19 @@ export default function SubscriptionPage({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Trial Confirmation Modal */}
+      {trialModalPlan && (
+        <TrialConfirmModal
+          planType={trialModalPlan}
+          isOpen={Boolean(trialModalPlan)}
+          onClose={() => setTrialModalPlan(null)}
+          onConfirmSuccess={() => {
+            onUpgrade(trialModalPlan === 'professional' ? 'pro' : 'basic');
+            setShowSuccessModal(`${trialModalPlan}_trial`);
+          }}
+        />
       )}
 
     </div>

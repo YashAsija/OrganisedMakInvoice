@@ -299,6 +299,23 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
         if (error) throw error;
 
         if (data.user && !data.session) {
+          // Immediately upsert Starter subscription on signup
+          try {
+            await supabase.from('subscriptions').upsert({
+              user_id: data.user.id,
+              plan_name: 'Free',
+              plan_type: 'free',
+              status: 'active',
+              expires_at: null,
+              renews_at: null,
+              user_email: formData.email || null,
+              user_phone: formData.phone || null,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id' });
+          } catch (subErr) {
+            console.warn('[Signup Subscription Warning]', subErr);
+          }
+
           setSuccessMsg("Account created! Please check your inbox to verify your email address.");
           setIsLoading(false);
         } else if (data.user) {
@@ -315,6 +332,24 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
             updatedAt: new Date().toISOString()
           };
           await supabase.from('users').upsert(initProf);
+
+          // Immediately upsert Starter subscription on signup
+          try {
+            await supabase.from('subscriptions').upsert({
+              user_id: data.user.id,
+              plan_name: 'Free',
+              plan_type: 'free',
+              status: 'active',
+              expires_at: null,
+              renews_at: null,
+              user_email: formData.email || null,
+              user_phone: formData.phone || null,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id' });
+          } catch (subErr) {
+            console.warn('[Signup Subscription Warning]', subErr);
+          }
+
           localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(initProf));
           setSuccessMsg('Welcome aboard! Redirecting...');
           setTimeout(() => {

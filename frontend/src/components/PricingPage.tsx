@@ -5,7 +5,9 @@ import { supabase } from '../lib/supabase';
 import { detectRegion, Region } from '../lib/detectRegion';
 import { openRazorpayCheckout } from '../lib/razorpay';
 import { openPaddleCheckout } from '../lib/paddle';
-import { useSubscription } from '../lib/subscriptionContext';
+import { useSubscription as useLegacySubscription } from '../lib/subscriptionContext';
+import { useSubscription } from '../hooks/useSubscription';
+import { TrialConfirmModal } from './ui/TrialConfirmModal';
 
 // Throw error early if environment variables are not set
 const clientToken = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
@@ -163,7 +165,8 @@ const FAQS = [
 ];
 
 export default function PricingPage({ theme, onNavigate, country }: PricingPageProps) {
-  const { subscription, isActive, planKey, isLoading: subLoading, refetch } = useSubscription();
+  const { subscription, isActive, planKey, isLoading: subLoading, canStartTrial, refetch } = useSubscription();
+  const [trialModalPlan, setTrialModalPlan] = useState<'basic' | 'professional' | null>(null);
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
   const [yearlySubMode, setYearlySubMode] = useState<Record<string, 'yearly_recurring' | 'yearly_onetime'>>({
     Basic: 'yearly_recurring',
@@ -784,6 +787,15 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
                     <button className={`pr-btn ${popular ? 'solid' : 'ghost'}`} disabled style={{ opacity: 0.7, cursor: 'default' }}>
                       ✓ Current Plan
                     </button>
+                  ) : (plan.name === 'Basic' || plan.name === 'Professional') && canStartTrial(plan.name.toLowerCase() as 'basic' | 'professional') ? (
+                    <button
+                      type="button"
+                      className="pr-btn solid"
+                      style={{ background: '#16a34a', borderColor: '#15803d', color: '#fff' }}
+                      onClick={() => setTrialModalPlan(plan.name.toLowerCase() as 'basic' | 'professional')}
+                    >
+                      Start Free Trial →
+                    </button>
                   ) : (
                     <button
                       type="button"
@@ -798,6 +810,18 @@ export default function PricingPage({ theme, onNavigate, country }: PricingPageP
               );
             })}
           </div>
+
+          {/* Trial Modal */}
+          {trialModalPlan && (
+            <TrialConfirmModal
+              planType={trialModalPlan}
+              isOpen={Boolean(trialModalPlan)}
+              onClose={() => setTrialModalPlan(null)}
+              onConfirmSuccess={() => {
+                refetch();
+              }}
+            />
+          )}
 
           {/* Full Comparison Table */}
           <div style={{ marginTop: '80px', textAlign: 'left' }}>

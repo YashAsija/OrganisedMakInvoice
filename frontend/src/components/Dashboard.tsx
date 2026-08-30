@@ -3,7 +3,7 @@ import { getFinancialYearShort, getNextInvoiceNumber } from './InvoiceModal';
 import { useExpenses } from '../hooks/useExpenses';
 import { ExpensesPage } from './ExpensesPage';
 import { supabase } from '../lib/supabase';
-import { useSubscription } from '../lib/subscriptionContext';
+import { useSubscription } from '../hooks/useSubscription';
 
 import * as XLSX from 'xlsx';
 
@@ -164,7 +164,10 @@ import {
   Send
 
 } from 'lucide-react';
-
+import { PlanSyncIndicator } from './PlanSyncIndicator';
+import { PlanBadge } from './ui/PlanBadge';
+import { TrialBanner } from './ui/TrialBanner';
+import { TrialExpiredBanner } from './ui/TrialExpiredBanner';
 import { useConfirm } from './ConfirmContext';
 
 import { Invoice, BusinessProfile, PresetItem, InvoiceStatus, ClientProfile, Expense } from '../types';
@@ -353,7 +356,7 @@ export default function Dashboard({
 
   const { confirm } = useConfirm();
   const { expenses: supabaseExpenses, stats: expenseStats } = useExpenses();
-  const { refetch: refetchSubscription } = useSubscription();
+  const { subscription: subRecord, refetch: refetchSubscription } = useSubscription();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -7617,6 +7620,9 @@ export default function Dashboard({
 
           
 
+          {/* Realtime Plan Sync Indicator Component */}
+          <PlanSyncIndicator />
+
           <div className="w-px h-6 bg-[#bae6fd] dark:bg-[#223269] hidden sm:block"></div>
 
           {/* Pending-sync indicator — shown when cloud writes are queued */}
@@ -7633,21 +7639,14 @@ export default function Dashboard({
           <div className="relative" id="profile-dropdown-container">
 
             <button 
-
               onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-
               className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] border border-transparent hover:border-[#bae6fd] dark:hover:border-[#223269] transition-all cursor-pointer group"
-
             >
-
               <div className="w-[32px] h-[32px] rounded-full bg-[#e0f2fe] dark:bg-[#1b264f] border border-[#bae6fd] dark:border-[#223269] text-[#0284c7] dark:text-[#38bdf8] flex items-center justify-center text-[12px] font-bold shadow-sm">
-
                 {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'MK'}
-
               </div>
 
               <ChevronDown className="w-4 h-4 text-[#0284c7]/60 group-hover:text-[#0284c7] dark:text-[#38bdf8]/50 dark:group-hover:text-[#38bdf8] hidden sm:block transition-colors" />
-
             </button>
 
 
@@ -7938,7 +7937,9 @@ export default function Dashboard({
 
       </div>
 
-
+      {/* Trial Banners */}
+      <TrialBanner onUpgradeClick={() => setActiveTab('subscription')} />
+      <TrialExpiredBanner onUpgradeClick={() => setActiveTab('subscription')} />
 
       {/* Dynamic Main Responsive Workspace - Grid layout turns dual-column on desktop */}
       <main className="w-full max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4 pt-1.5 md:pt-3 space-y-4 xl:space-y-0 xl:flex xl:gap-6 xl:items-start overflow-hidden">
