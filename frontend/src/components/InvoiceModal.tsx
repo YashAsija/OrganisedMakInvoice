@@ -1975,12 +1975,13 @@ export default function InvoiceModal({
   const handleSaveSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Step 1: Check document creation limit before saving
+    // Step 1: Track document limit safely before saving
     if (!invoice || invoice.status === 'draft') {
-      const allowed = await canCreateDocument;
-      if (allowed === false) {
-        emitNotification('Document Limit Reached', 'You have reached your document quota. Please upgrade your plan to create more documents.', 'error');
-        return;
+      try {
+        const allowed = await trackDocumentUsage();
+        if (allowed === false) return;
+      } catch (e) {
+        console.warn('[handleSaveSubmit] trackDocumentUsage exception, proceeding with save:', e);
       }
     }
 
