@@ -2248,6 +2248,13 @@ export default function InvoiceModal({
         ...finalInvoiceObj,
         selectedCopies
       } as any);
+
+      // Route to full-page invoice preview portal
+      if (typeof window !== 'undefined' && finalInvoiceId) {
+        setTimeout(() => {
+          window.location.href = `/invoice/preview?id=${finalInvoiceId}`;
+        }, 400);
+      }
     } catch (saveErr) {
       // Save blocked by quota guard or database error — do not show success UI/notification
       console.warn('[InvoiceModal] Save cancelled or failed:', saveErr);
