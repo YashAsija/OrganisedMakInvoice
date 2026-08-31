@@ -220,8 +220,19 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
       if (sub) {
         const validatedSub = validateSubscriptionPayload({ ...sub });
-        console.log('[Refresh] Current plan:', validatedSub.plan_name, validatedSub.plan_type, validatedSub.status);
-        setSubscription(validatedSub as Subscription);
+        setSubscription(prev => {
+          if (
+            prev &&
+            prev.id === validatedSub.id &&
+            prev.plan_type === validatedSub.plan_type &&
+            prev.status === validatedSub.status &&
+            prev.expires_at === validatedSub.expires_at
+          ) {
+            return prev;
+          }
+          console.log('[Refresh] Updating subscription state:', validatedSub.plan_name);
+          return validatedSub as Subscription;
+        });
       }
 
       const { data: usageData } = await supabase
@@ -234,7 +245,18 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         .maybeSingle();
 
       if (usageData) {
-        setUsage({ ...usageData } as SubscriptionUsage);
+        setUsage(prev => {
+          if (
+            prev &&
+            prev.id === usageData.id &&
+            prev.documents_used === usageData.documents_used &&
+            prev.reports_used === usageData.reports_used
+          ) {
+            return prev;
+          }
+          console.log('[Refresh] Updating usage state:', usageData.documents_used, usageData.reports_used);
+          return { ...usageData } as SubscriptionUsage;
+        });
       }
     } catch (err) {
       console.error('[Refresh] Unexpected error:', err);
@@ -350,7 +372,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     };
 
     initializeSubscription();
-  }, [checkAndExpireTrials]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Read-only syncSubscription helper
   const syncSubscription = useCallback(async (uid: string) => {
@@ -511,7 +534,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('online', handleOnline);
     };
-  }, [userId, refreshSubscription]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   // Read-only onAuthStateChange — NEVER writes Free plan
   useEffect(() => {
@@ -547,7 +571,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return () => {
       authListener.unsubscribe();
     };
-  }, [syncSubscription, checkAndExpireTrials]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const canStartTrial = useCallback((planType: 'basic' | 'professional'): boolean => {
     if (!subscription) return true;
