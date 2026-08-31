@@ -584,8 +584,8 @@ export default function SubscriptionPage({
 
               {(() => {
                 const trialUsedPlans = ctxSub?.trial_used_plans || [];
-                const isBasicTrialClaimed = trialUsedPlans.includes('basic') || Boolean(typeof window !== 'undefined' && localStorage.getItem('makbills_trial_used_basic'));
-                const isProTrialClaimed = trialUsedPlans.includes('professional') || Boolean(typeof window !== 'undefined' && localStorage.getItem('makbills_trial_used_pro'));
+                const isBasicTrialClaimed = trialUsedPlans.includes('basic');
+                const isProTrialClaimed = trialUsedPlans.includes('professional');
 
                 const canTrialBasic = plan.id === 'basic' && !isBasicTrialClaimed && !isActive;
                 const canTrialPro = plan.id === 'pro' && !isProTrialClaimed && !isActive;
