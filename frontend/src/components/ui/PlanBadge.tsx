@@ -5,9 +5,17 @@ import { useSubscription } from '../../hooks/useSubscription';
 import { Clock, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export function PlanBadge() {
-  const { subscription, planKey, isOnTrial, getTrialDaysRemaining } = useSubscription();
+  const { subscription, planKey, isOnTrial, getTrialDaysRemaining, isLoading } = useSubscription();
 
-  const daysRemaining = getTrialDaysRemaining();
+  console.log('[PlanBadge] Rendering with plan:', subscription?.plan_type, '| isLoading:', isLoading);
+
+  if (isLoading || !subscription) {
+    return (
+      <div className="inline-flex items-center">
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-200/50 dark:bg-slate-800/50 animate-pulse w-20 h-5" />
+      </div>
+    );
+  }
 
   if (subscription?.status === 'expired') {
     return (

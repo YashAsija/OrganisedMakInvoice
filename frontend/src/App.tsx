@@ -473,13 +473,7 @@ export default function App() {
     updatedAt: new Date().toISOString()
   });
 
-  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise'>(() => {
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('makbills_subscription_tier');
-      return (cached as 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise') || 'free';
-    }
-    return 'free';
-  });
+  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise' | null>(null);
 
   useEffect(() => {
     const handleSubChange = (e: any) => {

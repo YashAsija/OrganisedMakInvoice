@@ -378,7 +378,7 @@ export default function SubscriptionPage({
           <div className="bg-[#f4f9ff] dark:bg-[#0b1329] rounded-2xl p-5 border border-[#bae6fd]/50 dark:border-[#223269]/50 shrink-0 w-full md:w-80 shadow-3xs hover:shadow-2xs transition-shadow">
             <div className="flex justify-between items-center">
               <span className="text-[9px] text-[#64748b] dark:text-[#94a3b8] uppercase tracking-widest font-extrabold block">Current Status</span>
-              {activeTier !== 'free' && (
+              {activeTier !== 'free' && !isCtxLoading && (
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -386,19 +386,28 @@ export default function SubscriptionPage({
               )}
             </div>
             
-            <div className="flex items-baseline gap-2 mt-1.5">
-              <span className="text-lg font-black text-[#0f172a] dark:text-white capitalize">{activeTier} Plan</span>
-            </div>
-            
-            <p className="text-[10px] text-[#64748b] dark:text-[#94a3b8] mt-1 font-medium">
-              {activeTier === 'free' 
-                ? 'Starter: Limit of 10 documents & 1 report/mo.' 
-                : activeTier === 'basic'
-                  ? 'Basic: Limit of 60 documents & 5 reports/mo.'
-                  : activeTier === 'pro' 
-                    ? 'Professional: Limit of 140 documents & 15 reports/mo with AI Smart Billing.'
-                    : 'Enterprise: Unlimited documents & reports fully unlocked.'}
-            </p>
+            {isCtxLoading || !ctxSub ? (
+              <div className="animate-pulse space-y-2 mt-2">
+                <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-32" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-48" />
+              </div>
+            ) : (
+              <>
+                <div className="flex items-baseline gap-2 mt-1.5">
+                  <span className="text-lg font-black text-[#0f172a] dark:text-white capitalize">{activeTier} Plan</span>
+                </div>
+                
+                <p className="text-[10px] text-[#64748b] dark:text-[#94a3b8] mt-1 font-medium">
+                  {activeTier === 'free' 
+                    ? 'Starter: Limit of 10 documents & 1 report/mo.' 
+                    : activeTier === 'basic'
+                      ? 'Basic: Limit of 60 documents & 5 reports/mo.'
+                      : activeTier === 'pro' 
+                        ? 'Professional: Limit of 140 documents & 15 reports/mo with AI Smart Billing.'
+                        : 'Enterprise: Unlimited documents & reports fully unlocked.'}
+                </p>
+              </>
+            )}
 
             <div className="mt-2 text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/50 px-2.5 py-1 rounded-lg border border-sky-200 dark:border-sky-800/50 flex items-center justify-between gap-1.5 flex-wrap">
               <div className="flex items-center gap-1.5">
