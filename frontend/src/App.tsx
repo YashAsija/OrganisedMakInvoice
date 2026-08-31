@@ -3567,7 +3567,7 @@ export default function App() {
           setIsOnboarding(false);
         }}
         onSave={handleSaveProfile}
-        subscriptionTier={subscriptionTier}
+        subscriptionTier={subscriptionTier || 'free'}
       />
 
       <InvoiceModal
@@ -3583,7 +3583,7 @@ export default function App() {
         onClose={() => setIsInvoiceEditorOpen(false)}
         onSave={handleSaveInvoice}
         userId={user?.id || null}
-        subscriptionTier={subscriptionTier}
+        subscriptionTier={subscriptionTier || 'free'}
       />
 
       {/* PIN Setup Modal */}
