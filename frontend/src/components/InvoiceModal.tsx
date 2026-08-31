@@ -2176,14 +2176,13 @@ export default function InvoiceModal({
       try {
         localStorage.removeItem('makbills_pending_resume_draft');
         setResumableDraft(null);
+        // Only clean up temporary drafts from local storage, ensure finalInvoiceObj remains present
         const storageKey = getStorageKey();
         const raw = localStorage.getItem(storageKey);
         if (raw) {
           const all = JSON.parse(raw) as any[];
-          // Remove temporary draft entry if it was a temp inv_draft_ prefix or matches current draft
-          const filtered = all.filter((i: any) => !(i.id === savedDraftId || (savedDraftId.startsWith('inv_draft_') && i.id === savedDraftId)));
+          const filtered = all.filter((i: any) => i.id !== savedDraftId || i.id === finalInvoiceObj.id);
           localStorage.setItem(storageKey, JSON.stringify(filtered));
-          localStorage.setItem('invoice_maker_invoices', JSON.stringify(filtered));
         }
       } catch { /* ignore */ }
       // Also clean up temporary draft from Supabase (ONLY if savedDraftId was a temp draft)
