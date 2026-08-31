@@ -170,7 +170,7 @@ export default function SubscriptionPage({
   subscriptionTier, 
   onUpgrade 
 }: SubscriptionPageProps) {
-  const { subscription: ctxSub, isLoading: isCtxLoading, isRealtimeSyncing } = useSubscription();
+  const { subscription: ctxSub, isLoading: isCtxLoading, isRealtimeSyncing, startTrial } = useSubscription();
   const [isYearly, setIsYearly] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState<string | null>(null);
@@ -571,8 +571,9 @@ export default function SubscriptionPage({
               </div>
 
               {(() => {
-                const isBasicTrialClaimed = Boolean(typeof window !== 'undefined' && localStorage.getItem('makbills_trial_used_basic'));
-                const isProTrialClaimed = Boolean(typeof window !== 'undefined' && localStorage.getItem('makbills_trial_used_pro'));
+                const trialUsedPlans = ctxSub?.trial_used_plans || [];
+                const isBasicTrialClaimed = trialUsedPlans.includes('basic') || Boolean(typeof window !== 'undefined' && localStorage.getItem('makbills_trial_used_basic'));
+                const isProTrialClaimed = trialUsedPlans.includes('professional') || Boolean(typeof window !== 'undefined' && localStorage.getItem('makbills_trial_used_pro'));
 
                 const canTrialBasic = plan.id === 'basic' && !isBasicTrialClaimed && !isActive;
                 const canTrialPro = plan.id === 'pro' && !isProTrialClaimed && !isActive;
@@ -596,123 +597,29 @@ export default function SubscriptionPage({
                   new Date(expiresIsoRaw).getTime() <= Date.now()
                 );
 
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-
-  const handleStartTrial = async (planId: 'basic' | 'pro') => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      // Step 1 — Refresh session before any DB operation
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        await supabase.auth.refreshSession();
-      }
-
-      // Step 2 — Get authenticated user ID
-      const { data: { user }, error: userErr } = await supabase.auth.getUser();
-      if (userErr || !user) {
-        console.error('[Free Trial Authentication Error] User not logged in', userErr);
-        alert('Authentication required to start free trial. Please log in.');
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Step 3 — Insert to subscriptions for 1-Month (30 days) Free Trial
-      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-      const expiresIso = new Date(Date.now() + thirtyDaysMs).toISOString();
-
-      const targetPlanType = planId === 'pro' ? 'professional' : 'basic';
-      const targetPlanName = planId === 'pro' ? 'Professional' : 'Basic';
-
-      const trialPayload = {
-        user_id: user.id,
-        plan_name: targetPlanName,
-        plan_type: targetPlanType,
-        status: 'trialing',
-        expires_at: expiresIso,
-        renews_at: expiresIso,
-        user_email: user.email || null,
-        user_phone: user.phone || null,
-        updated_at: new Date().toISOString(),
-      };
-
-      // Step 4 — Execute upsert/insert and handle error explicitly
-      const { error: insertError } = await supabase
-        .from('subscriptions')
-        .upsert(trialPayload, { onConflict: 'user_id' });
-
-      if (insertError) {
-        console.error('[Free Trial Insert Error] Full error object:', insertError);
-        alert('Failed to activate trial: ' + (insertError.message || JSON.stringify(insertError)));
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Broadcast subscription update to all other devices logged into this account
-      try {
-        const channel = supabase.channel(`subscription_updates:${user.id}`);
-        await channel.send({
-          type: 'broadcast',
-          event: 'subscription_changed',
-          payload: { tier: targetPlanType, expiresAt: expiresIso },
-        });
-      } catch (bcErr) {
-        console.warn('[Realtime Broadcast Warning]', bcErr);
-      }
-
-      // Step 5 — Verification SELECT to confirm row exists
-      try {
-        const { data: verify, error: verifyErr } = await supabase
-          .from('subscriptions')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-        if (verifyErr) {
-          console.error('[Subscription Verify Error] Row verification failed:', verifyErr);
-        } else {
-          console.log('[Subscription Verify] Confirmed row exists:', verify);
-        }
-      } catch (vErr) {
-        console.error('[Subscription Verify Exception]', vErr);
-      }
-
-      // Step 6 — On success: update local state & show success UI
-      const now = new Date();
-      localStorage.setItem('makbills_sub_activated_at', now.toISOString());
-      localStorage.setItem('makbills_sub_expires_iso', expiresIso);
-      localStorage.setItem('makbills_sub_expires_at', new Date(expiresIso).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) + ' (1-Month Free Trial)');
-      localStorage.setItem('makbills_last_active_paid_tier', planId);
-
-      if (planId === 'basic') {
-        localStorage.setItem('makbills_trial_used_basic', expiresIso);
-        onUpgrade('basic');
-        setShowSuccessModal('basic_trial');
-      } else {
-        localStorage.setItem('makbills_trial_used_pro', expiresIso);
-        onUpgrade('pro');
-        setShowSuccessModal('pro_trial');
-      }
-    } catch (e: any) {
-      console.error('[Free Trial Activation Error] Unhandled exception:', e);
-      alert('Failed to activate trial: ' + (e?.message || 'Unknown error'));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
                 return (
                   <div className="space-y-2 mt-2">
                     {(canTrialBasic || canTrialPro) && (
                       <button
                         type="button"
-                        disabled={isSubmitting}
-                        onClick={() => handleStartTrial(plan.id as 'basic' | 'pro')}
+                        disabled={isCtxLoading}
+                        onClick={async () => {
+                          try {
+                            const targetPlan = plan.id === 'pro' ? 'professional' : 'basic';
+                            await startTrial(targetPlan);
+                            localStorage.setItem(`makbills_trial_used_${plan.id}`, new Date().toISOString());
+                            onUpgrade(plan.id as any);
+                            setShowSuccessModal(`${plan.id}_trial`);
+                          } catch (err: any) {
+                            alert('Trial activation error: ' + (err?.message || 'Failed to start trial'));
+                          }
+                        }}
                         className={`w-full py-2.5 font-extrabold text-xs rounded-xl transition-all text-white shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 ${
-                          isSubmitting ? 'bg-emerald-800 opacity-60 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 active:scale-98 cursor-pointer'
+                          isCtxLoading ? 'bg-emerald-800 opacity-60 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 active:scale-98 cursor-pointer'
                         }`}
                       >
-                        <Sparkles className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-spin' : ''}`} />
-                        <span>{isSubmitting ? 'Activating Trial...' : 'Start 1-Month Free Trial'}</span>
+                        <Sparkles className={`w-3.5 h-3.5 ${isCtxLoading ? 'animate-spin' : ''}`} />
+                        <span>{isCtxLoading ? 'Activating Trial...' : 'Start 1-Month Free Trial'}</span>
                       </button>
                     )}
 

@@ -1,0 +1,488 @@
+@import "tailwindcss";
+
+/* ==========================================
+   GLOBAL RESPONSIVE LAYOUT FIXES
+   Prevents horizontal overflow on all devices
+   ========================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  min-height: 100dvh;
+}
+
+/* Prevent absolute decorative elements from causing scrollbar */
+body {
+  position: relative;
+}
+
+/* Safe area insets for mobile devices (notches, home bars) */
+@supports (padding: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Ensure images never overflow containers */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Prevent inputs from expanding beyond viewport on iOS and improve touch tap response */
+input,
+textarea,
+select,
+button,
+a,
+[role="button"] {
+  max-width: 100%;
+  touch-action: manipulation;
+}
+
+@theme {
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Custom palette system variables registered in the Tailwind build so they produce real utility classes */
+  --color-slate-50: var(--color-slate-50);
+  --color-slate-100: var(--color-slate-100);
+  --color-slate-150: var(--color-slate-150);
+  --color-slate-200: var(--color-slate-200);
+  --color-slate-205: var(--color-slate-205);
+  --color-slate-350: var(--color-slate-350);
+  --color-slate-405: var(--color-slate-405);
+  --color-slate-450: var(--color-slate-450);
+  --color-slate-550: var(--color-slate-550);
+  --color-slate-650: var(--color-slate-650);
+  --color-slate-705: var(--color-slate-705);
+  --color-slate-750: var(--color-slate-750);
+  --color-slate-805: var(--color-slate-805);
+  --color-slate-850: var(--color-slate-850);
+  --color-slate-900: var(--color-slate-900);
+  --color-slate-950: var(--color-slate-950);
+
+  /* Custom pallet system variables */
+  --color-beige-50: #FAF8F5;
+  --color-beige-100: #F4EFE6;
+  --color-beige-200: #EADFC9;
+  --color-french-beige: #A79277;
+  --color-french-beige-dark: #8C7558;
+  --color-french-beige-light: #D1C7BD;
+
+  /* Map standard Sky buttons & brand elements */
+  --color-sky-50: var(--color-sky-50);
+  --color-sky-100: var(--color-sky-100);
+  --color-sky-102: var(--color-sky-102);
+  --color-sky-305: var(--color-sky-305);
+  --color-sky-600: var(--color-sky-600);
+  --color-sky-650: var(--color-sky-650);
+  --color-sky-700: var(--color-sky-700);
+  --color-sky-750: var(--color-sky-750);
+  --color-sky-800: var(--color-sky-800);
+  --color-sky-850: var(--color-sky-850);
+  --color-sky-955: var(--color-sky-955);
+}
+
+/* ROOT/LIGHT CONTEXT (Aesthetic Warm Beige, French Beige & Creamy White theme) */
+:root {
+  --color-slate-50: #FCFAF7; /* Gorgeous warm off-white cream background */
+  --color-slate-100: #F4EFE6; /* Luxurious classic soft beige */
+  --color-slate-150: #EADFC9; /* Medium-light French beige detail line */
+  --color-slate-200: #E5D9C4; /* Soft beige borders */
+  --color-slate-205: #D1C7BD; /* Balanced light detail contrast variable */
+  --color-slate-350: #998369; /* Descriptions in French beige */
+  --color-slate-405: #8C7558; /* French beige labels */
+  --color-slate-450: #7C664C;
+  --color-slate-550: #6B553D;
+  --color-slate-650: #5C4A36;
+  --color-slate-705: #493B2B; /* Deep organic dark wood text */
+  --color-slate-750: #352B20;
+  --color-slate-805: #2C231A;
+  --color-slate-850: #E5D9C4; /* Fallback light outline */
+  --color-slate-900: #FFFFFF; /* Card backgrounds are pure clean white */
+  --color-slate-950: #F2EBE1; /* Aux light beige */
+
+  /* Map standard Sky buttons & brand elements to highly readable French Beige */
+  --color-sky-50: #FCFAF7;
+  --color-sky-102: #F4EFE6;
+  --color-sky-100: #F4EFE6;
+  --color-sky-305: #D1C7BD;
+  --color-sky-600: #8C7558; /* HIGH contrast legible French beige button background */
+  --color-sky-650: #735F48;
+  --color-sky-700: #5C4A36;
+  --color-sky-750: #493B2B;
+  --color-sky-800: #352B20;
+  --color-sky-850: #2C231A;
+  --color-sky-955: #EADFC9;
+
+  --color-teal-300: #8C7558;
+  --color-teal-850: #493B2B;
+}
+
+/* DARK CONTEXT (Aesthetic Premium Carbon Black, Deep Greys & Luminous White Text theme) */
+.dark, html.dark, .dark :root {
+  --color-slate-50: #080808; /* Premium pitch-black base canvas */
+  --color-slate-100: #121212; /* Auxiliary dark elements */
+  --color-slate-150: #1F1F1F; /* High-end dark gray guides */
+  --color-slate-205: #2E2E2E;
+  --color-slate-200: #262626; /* Clean charcoal borders */
+  --color-slate-350: #6B6B6B;
+  --color-slate-405: #9E9E9E; /* Clear supporting details */
+  --color-slate-450: #AEAEAE;
+  --color-slate-550: #CCCCCC;
+  --color-slate-650: #E0E0E0;
+  --color-slate-705: #F0F0F0;
+  --color-slate-750: #F9F9F9;
+  --color-slate-805: #FFFFFF; /* High legibility black / white text swaps */
+  --color-slate-850: #262626; /* Dark gray borders */
+  --color-slate-900: #161616; /* Clean elevated dark panel cards */
+  --color-slate-950: #0B0B0B; /* Deep pitch dark cards inner */
+
+  /* Enable bright clear slate-blue colors for dark mode primary elements */
+  --color-sky-50: #161616;
+  --color-sky-102: #212121;
+  --color-sky-100: #212121;
+  --color-sky-305: #60A5FA;
+  --color-sky-600: #2563EB; /* Premium radiant cobalt dark mode links/buttons */
+  --color-sky-650: #1D4ED8;
+  --color-sky-700: #1D4ED8;
+  --color-sky-750: #1E40AF;
+  --color-sky-800: #1E3A8A;
+  --color-sky-850: #172554;
+  --color-sky-955: #111827;
+
+  --color-teal-300: #2DD4BF;
+  --color-teal-850: #115E59;
+}
+
+/* Default elements configurations */
+body {
+  background-color: #FAF8F5;
+  color: #352B20;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark body {
+  background-color: #080808 !important;
+  color: #F5F5F5 !important;
+}
+
+.dark .bg-white:not(.paper-sheet-light *) {
+  background-color: #161616 !important;
+}
+
+/* Make sure modal elements and tables are highly legible */
+.dark table:not(.paper-sheet-light *) {
+  color: #E5E7EB;
+}
+
+/* Smooth active feedback */
+button, [role="button"] {
+  transition: transform 0.1s ease, background-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+button:active, [role="button"]:active {
+  transform: scale(0.98);
+}
+
+/* Safe area padding utilities */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.px-safe { 
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right); 
+}
+
+/* Sidebar Animation */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes toastProgress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Global keyboard accessibility */
+*:focus-visible {
+  outline: 2px solid var(--color-sky-500, #0ea5e9);
+  outline-offset: 2px;
+}
+
+@variant dark (.dark &);
+
+/* ==========================================
+   HIGH-QUALITY PRINT MEDIA QUERIES
+   ========================================== */
+@media print {
+  @page {
+    size: A4;
+    margin: 0 !important;
+  }
+  /* Hide standard headers, sidebars, backgrounds, modals, tabs and buttons */
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide entire workspace wrapper content */
+  body > div, 
+  #root, 
+  #invoice-editor,
+  form,
+  .fixed,
+  button {
+    visibility: hidden !important;
+  }
+
+  /* Make sure the precise sheet content is isolated and fully visible */
+  body {
+    visibility: hidden !important;
+  }
+
+  .invoice-print-sheet,
+  .invoice-print-sheet * {
+    visibility: visible !important;
+  }
+
+  .invoice-print-sheet {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    transform: none !important;
+    z-index: 99999 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide interactive or secondary helper components during physical print */
+  .hide-on-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Keep line-height and text spacing crisp on physical paper */
+  tr, td, th {
+    page-break-inside: avoid !important;
+  }
+}
+
+/* ==========================================
+   SCROLLBAR REMOVAL (Hides scrollbar globally)
+   ========================================== */
+*::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+div::-webkit-scrollbar,
+section::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+* {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+.editable-placeholder:empty::before,
+.editable-placeholder.is-empty::before {
+  content: attr(data-placeholder) !important;
+  color: #94a3b8 !important; /* slate-400 */
+  opacity: 0.7 !important;
+  display: inline-block !important;
+}
+
+/* ===========================================================================
+   PAPER DOCUMENT PREVIEW SHEET (100% UNTOUCHED BY DARK MODE OVERRIDES)
+   Guarantees all document template colors, borders, text, backgrounds,
+   badges, inputs, and inline styles remain 100% identical to light mode.
+   =========================================================================== */
+.paper-sheet-light,
+.dark .paper-sheet-light,
+[data-theme="dark"] .paper-sheet-light {
+  color-scheme: light !important;
+  background-color: #ffffff !important;
+  color: #0f172a;
+
+  --color-slate-50: #f8fafc !important;
+  --color-slate-100: #f1f5f9 !important;
+  --color-slate-150: #e2e8f0 !important;
+  --color-slate-200: #e2e8f0 !important;
+  --color-slate-205: #e2e8f0 !important;
+  --color-slate-300: #cbd5e1 !important;
+  --color-slate-350: #cbd5e1 !important;
+  --color-slate-400: #94a3b8 !important;
+  --color-slate-405: #94a3b8 !important;
+  --color-slate-450: #64748b !important;
+  --color-slate-500: #64748b !important;
+  --color-slate-550: #475569 !important;
+  --color-slate-600: #475569 !important;
+  --color-slate-650: #334155 !important;
+  --color-slate-700: #334155 !important;
+  --color-slate-705: #1e293b !important;
+  --color-slate-750: #1e293b !important;
+  --color-slate-800: #1e293b !important;
+  --color-slate-805: #0f172a !important;
+  --color-slate-850: #e2e8f0 !important;
+  --color-slate-900: #0f172a !important;
+  --color-slate-950: #020617 !important;
+
+  --color-gray-50: #f9fafb !important;
+  --color-gray-100: #f3f4f6 !important;
+  --color-gray-200: #e5e7eb !important;
+  --color-gray-300: #d1d5db !important;
+  --color-gray-400: #9ca3af !important;
+  --color-gray-500: #6b7280 !important;
+  --color-gray-600: #4b5563 !important;
+  --color-gray-700: #374151 !important;
+  --color-gray-800: #1f2937 !important;
+  --color-gray-900: #111827 !important;
+
+  --color-zinc-50: #fafafa !important;
+  --color-zinc-100: #f4f4f5 !important;
+  --color-zinc-200: #e4e4e7 !important;
+  --color-zinc-300: #d4d4d8 !important;
+  --color-zinc-400: #a1a1aa !important;
+  --color-zinc-500: #71717a !important;
+  --color-zinc-600: #52525b !important;
+  --color-zinc-700: #39393d !important;
+  --color-zinc-800: #27272a !important;
+  --color-zinc-900: #18181b !important;
+
+  --color-sky-50: #f0f9ff !important;
+  --color-sky-100: #e0f2fe !important;
+  --color-sky-200: #bae6fd !important;
+  --color-sky-300: #7dd3fc !important;
+  --color-sky-400: #38bdf8 !important;
+  --color-sky-500: #0ea5e9 !important;
+  --color-sky-600: #0284c7 !important;
+  --color-sky-700: #0369a1 !important;
+  --color-sky-800: #075985 !important;
+  --color-sky-900: #0c4a6e !important;
+}
+
+.paper-sheet-light,
+.paper-sheet-light *,
+.paper-sheet-light ::before,
+.paper-sheet-light ::after {
+  color-scheme: light !important;
+}
+
+/* Ensure outer paper containers maintain light background */
+.dark .paper-sheet-light.bg-white,
+.paper-sheet-light.bg-white,
+.dark .paper-sheet-light .invoice-pdf-page,
+.paper-sheet-light .invoice-pdf-page,
+.dark .paper-sheet-light .invoice-live-preview,
+.paper-sheet-light .invoice-live-preview {
+  background-color: #ffffff !important;
+}
+
+/* Force light background & text on fillable interactive fields inside paper sheet */
+.paper-sheet-light input:not([type="checkbox"]):not([type="radio"]),
+.paper-sheet-light select,
+.paper-sheet-light textarea {
+  background-color: #f8fafc;
+  color: #0f172a;
+  -webkit-text-fill-color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.paper-sheet-light .editable-placeholder {
+  background-color: #f8fafc;
+  border-color: #7dd3fc;
+}
+
+.paper-sheet-light .editable-placeholder:hover,
+.paper-sheet-light [contenteditable="true"]:hover,
+.paper-sheet-light input:not([type="checkbox"]):not([type="radio"]):hover,
+.paper-sheet-light select:hover,
+.paper-sheet-light textarea:hover {
+  background-color: #f1f5f9;
+}
+
+.paper-sheet-light .editable-placeholder:focus,
+.paper-sheet-light [contenteditable="true"]:focus,
+.paper-sheet-light input:not([type="checkbox"]):not([type="radio"]):focus,
+.paper-sheet-light select:focus,
+.paper-sheet-light textarea:focus {
+  background-color: #ffffff;
+  color: #0f172a;
+  -webkit-text-fill-color: #0f172a;
+  border-color: #0284c7;
+  outline-color: #0284c7;
+}
+
+/* Elevate dark mode secondary & muted text legibility */
+.dark .text-zinc-400:not(.paper-sheet-light *),
+.dark .text-slate-400:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-400:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-400:not(.paper-sheet-light *) {
+  color: #cbd5e1 !important; /* Slate 300 - High contrast crisp text */
+}
+
+.dark .text-zinc-500:not(.paper-sheet-light *),
+.dark .text-slate-500:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-500:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-500:not(.paper-sheet-light *) {
+  color: #cbd5e1 !important; /* Slate 300 - Clear legible text */
+}
+
+.dark .text-zinc-600:not(.paper-sheet-light *),
+.dark .text-slate-600:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-600:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-600:not(.paper-sheet-light *) {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-zinc-700:not(.paper-sheet-light *),
+.dark .text-slate-700:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-700:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-700:not(.paper-sheet-light *) {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-slate-800:not(.paper-sheet-light *),
+.dark .text-slate-900:not(.paper-sheet-light *),
+.dark .text-slate-950:not(.paper-sheet-light *),
+.dark .text-zinc-800:not(.paper-sheet-light *),
+.dark .text-zinc-900:not(.paper-sheet-light *),
+.dark .text-gray-800:not(.paper-sheet-light *),
+.dark .text-gray-900:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-800:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-900:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-950:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-800:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-900:not(.paper-sheet-light *),
+[data-theme="dark"] .text-gray-800:not(.paper-sheet-light *),
+[data-theme="dark"] .text-gray-900:not(.paper-sheet-light *) {
+  color: #f8fafc !important;
+}

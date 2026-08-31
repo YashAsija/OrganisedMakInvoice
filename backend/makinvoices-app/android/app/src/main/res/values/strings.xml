@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MakInvoices</string>
+    <string name="title_activity_main">MakInvoices</string>
+    <string name="package_name">com.makinvoices.app</string>
+    <string name="custom_url_scheme">com.makinvoices.app</string>
+</resources>

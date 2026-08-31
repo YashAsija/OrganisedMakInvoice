@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Users Collection rules
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      // Invoices Subcollection
+      match /invoices/{invoiceId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // PresetItems Subcollection
+      match /presetItems/{presetItemId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Clients Subcollection
+      match /clients/{clientId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Expenses Subcollection
+      match /expenses/{expenseId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+  }
+}
