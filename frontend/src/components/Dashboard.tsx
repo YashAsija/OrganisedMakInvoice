@@ -5460,7 +5460,9 @@ export default function Dashboard({
 
     const fy = getFinancialYearShort(today);
     const prefix = prefixMap[section] || 'INV';
-    const num = `${prefix}-${fy}-${paddedNum}`;
+    const docTypeKey = typeMap[section] || 'invoice';
+    const startingInput = startingMap[section] || '1';
+    const num = getNextInvoiceNumber(prefix, startingInput, invoices, docTypeKey, today);
 
 
 
