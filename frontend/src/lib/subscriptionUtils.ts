@@ -9,30 +9,18 @@ export interface ExpiryDisplayInfo {
 export const validateSubscriptionPayload = (payload: any): any => {
   if (!payload) return payload;
 
-  // Free plan must never have expiry
-  if (payload.plan_type === 'free') {
-    payload.expires_at = null;
-    payload.renews_at = null;
+  // NEVER modify paid plan payloads
+  if (['basic', 'professional', 'enterprise'].includes(payload.plan_type)) {
+    console.log('[Validate] Paid plan — skipping validation:', payload.plan_type);
     return payload;
   }
 
-  // If expires_at is set, validate it's a reasonable date
-  if (payload.expires_at) {
-    const date = new Date(payload.expires_at);
-    const now = new Date();
-    const maxAllowed = new Date(now.getTime() + 2 * 365 * 24 * 60 * 60 * 1000);
-    
-    if (isNaN(date.getTime())) {
-      console.error('[validatePayload] Invalid date:', payload.expires_at);
-      payload.expires_at = null;
-      payload.renews_at = null;
-    } else if (date > maxAllowed) {
-      console.error('[validatePayload] Date too far in future:', payload.expires_at);
-      payload.expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      payload.renews_at = payload.expires_at;
-    }
+  // Free plan must have null expiry
+  if (payload.plan_type === 'free') {
+    payload.expires_at = null;
+    payload.renews_at = null;
   }
-  
+
   return payload;
 };
 

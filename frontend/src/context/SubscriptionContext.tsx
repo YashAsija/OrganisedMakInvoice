@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { emitNotification } from '../lib/notifications';
 import { validateSubscriptionPayload, getExpiryDisplay, ExpiryDisplayInfo } from '../lib/subscriptionUtils';
@@ -99,7 +99,7 @@ export interface SubscriptionContextType {
   isRealtimeSyncing: boolean;
   isActive: boolean;
   planKey: 'free' | 'basic' | 'professional' | 'enterprise';
-  upgradeSubscription: (planType: string, billingMode: 'monthly' | 'yearly', transactionId: string) => Promise<void>;
+  upgradeSubscription: (planType: string, billingMode: 'monthly' | 'yearly', transactionId: string) => Promise<Subscription>;
   refreshSubscription: () => Promise<void>;
   refetch: () => Promise<void>;
   trackDocumentUsage: () => Promise<boolean>;
@@ -130,8 +130,16 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [isSyncing, setIsSyncing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
+  // FIX 1: Lock flag to prevent race conditions during upgrades / trials
+  const isUpgradingRef = useRef(false);
+
+  // FIX 3: Respect lock in refreshSubscription
   const refreshSubscription = useCallback(async () => {
     if (!userId) return;
+    if (isUpgradingRef.current) {
+      console.log('[Refresh] Blocked — upgrade in progress');
+      return;
+    }
     try {
       const [subResult, usageResult] = await Promise.all([
         supabase
@@ -164,9 +172,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [userId]);
 
-  // FIX 1: Force fresh fetch on mount & ensure Free plan has null expires_at
+  // FIX 1: Respect lock in initializeSubscription & sync logic
   useEffect(() => {
     const initializeSubscription = async () => {
+      if (isUpgradingRef.current) {
+        console.log('[Init] Blocked — upgrade in progress');
+        return;
+      }
       setIsLoading(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -185,10 +197,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
         if (sub) {
           const validatedSub = validateSubscriptionPayload({ ...sub });
-          console.log('[Init] Fresh subscription:', validatedSub.plan_name, validatedSub.expires_at);
+          console.log('[Init] Fresh subscription from DB:', validatedSub.plan_name, validatedSub.expires_at);
           setSubscription(validatedSub as Subscription);
         } else {
-          // Free plan ALWAYS gets expires_at: null, renews_at: null
+          console.log('[Init] No subscription found — creating Free starter');
           const freePayload = validateSubscriptionPayload({
             user_id: user.id,
             plan_name: 'Free',
@@ -248,12 +260,29 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     initializeSubscription();
   }, []);
 
-  // FIX 2: Trial expiry handler — when downgrading to free, set expires_at: null
+  // FIX 2: checkAndExpireTrials — MUST NEVER Touch Active Paid Plans
   const checkAndExpireTrials = useCallback(async () => {
-    if (!subscription || subscription.status !== 'trialing') return;
+    if (!subscription) return;
+    
+    // SAFETY: Never touch active paid plans
+    if (subscription.status === 'active' && subscription.plan_type !== 'free') {
+      console.log('[ExpireCheck] Active paid plan — skipping expiry check:', subscription.plan_type);
+      return;
+    }
+    
+    // Only check plans that are actually trialing
+    if (subscription.status !== 'trialing') {
+      console.log('[ExpireCheck] Not trialing — skipping:', subscription.status);
+      return;
+    }
+    
     const now = new Date();
-    if (!subscription.expires_at || now <= new Date(subscription.expires_at)) return;
+    if (!subscription.expires_at || now <= new Date(subscription.expires_at)) {
+      console.log('[ExpireCheck] Trial still active — skipping expiry');
+      return;
+    }
 
+    console.log('[ExpireCheck] Trial expired — downgrading to free');
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -263,8 +292,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         plan_name: 'Free',
         plan_type: 'free',
         status: 'expired',
-        expires_at: null, // NULL when downgrading to free
-        renews_at: null,  // NULL
+        expires_at: null,
+        renews_at: null,
         updated_at: now.toISOString(),
         trial_used_plans: subscription.trial_used_plans,
       });
@@ -276,7 +305,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [subscription, refreshSubscription]);
 
-  // FIX 2: Realtime channel with validateSubscriptionPayload before setting state
+  // Realtime channel listener with lock check
   useEffect(() => {
     if (!userId) return;
 
@@ -293,6 +322,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
+          if (isUpgradingRef.current) {
+            console.log('[Realtime] Subscription UPDATE received but blocked by upgrade lock');
+            return;
+          }
           const validated = validateSubscriptionPayload({ ...payload.new });
           console.log('[Realtime] Subscription UPDATE received:', {
             plan: validated.plan_name,
@@ -311,6 +344,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
+          if (isUpgradingRef.current) {
+            console.log('[Realtime] Subscription INSERT received but blocked by upgrade lock');
+            return;
+          }
           const validated = validateSubscriptionPayload({ ...payload.new });
           console.log('[Realtime] Subscription INSERT received:', validated);
           setSubscription(validated as Subscription);
@@ -388,11 +425,34 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     };
   }, [userId, refreshSubscription]);
 
-  // Auth listener
+  // FIX 4: Auth state listener — NEVER overwrite existing subscription with Free plan
   useEffect(() => {
-    const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+        console.log('[Auth] Auth state event:', event, 'userId:', session.user.id);
         setUserId(session.user.id);
+
+        const { data: currentSub } = await supabase
+          .from('subscriptions')
+          .select('plan_type, status, plan_name')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        console.log('[Auth] Current DB subscription:', currentSub?.plan_name, currentSub?.status);
+
+        if (!currentSub) {
+          console.log('[Auth] New user — creating Free starter subscription');
+          const freePayload = validateSubscriptionPayload({
+            user_id: session.user.id,
+            plan_name: 'Free',
+            plan_type: 'free',
+            status: 'active',
+            expires_at: null,
+            renews_at: null,
+            updated_at: new Date().toISOString(),
+          });
+          await supabase.from('subscriptions').upsert(freePayload, { onConflict: 'user_id' });
+        }
         refreshSubscription();
       }
       if (event === 'SIGNED_OUT') {
@@ -417,11 +477,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return true;
   }, [subscription]);
 
+  // FIX 6: startTrial uses lock and verifies DB write
   const startTrial = useCallback(async (planType: 'basic' | 'professional') => {
     if (!canStartTrial(planType)) {
       throw new Error(subscription?.trial_used_plans?.includes(planType) ? `Trial already used for ${planType}` : 'Ineligible for trial');
     }
 
+    isUpgradingRef.current = true;
     setIsLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -449,13 +511,17 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         updated_at: now.toISOString(),
       });
 
-      const { data: updatedSub, error } = await supabase
+      const { error } = await supabase
         .from('subscriptions')
-        .upsert(trialPayload, { onConflict: 'user_id' })
-        .select()
-        .single();
+        .upsert(trialPayload, { onConflict: 'user_id' });
 
       if (error) throw error;
+
+      const { data: verifiedSub } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
       await supabase.from('subscription_usage').insert({
         user_id: user.id,
@@ -465,9 +531,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         reports_used: 0,
       });
 
-      if (updatedSub) setSubscription(validateSubscriptionPayload(updatedSub) as Subscription);
+      if (verifiedSub) setSubscription(validateSubscriptionPayload(verifiedSub) as Subscription);
     } finally {
       setIsLoading(false);
+      setTimeout(() => {
+        isUpgradingRef.current = false;
+        console.log('[Trial] Lock released — normal sync resumed');
+      }, 5000);
     }
   }, [subscription, canStartTrial]);
 
@@ -483,58 +553,111 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
   }, [subscription]);
 
-  // Upgrade handler with validated date calculation (30 days for monthly, 365 days for yearly)
+  // FIX 5: upgradeSubscription with lock + strict DB write verification
   const upgradeSubscription = useCallback(async (
     planType: string,
     billingMode: 'monthly' | 'yearly',
     transactionId: string
-  ) => {
+  ): Promise<Subscription> => {
+    isUpgradingRef.current = true;
+    setIsLoading(true);
+
     const planNames: Record<string, string> = {
       basic: 'Basic',
       professional: 'Professional',
       enterprise: 'Enterprise',
     };
+    const prices: Record<string, { monthly: number; yearly: number }> = {
+      basic: { monthly: 199, yearly: 1990 },
+      professional: { monthly: 299, yearly: 2990 },
+      enterprise: { monthly: 599, yearly: 5990 },
+    };
 
-    const days = billingMode === 'monthly' ? 30 : 365;
-    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-    const { data: { user } } = await supabase.auth.getUser();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
 
-    if (!user) throw new Error('Authentication required to upgrade');
+      const mappedPlanType = (planType.toLowerCase().includes('pro') ? 'professional' : planType.toLowerCase().includes('basic') ? 'basic' : planType.toLowerCase().includes('ent') ? 'enterprise' : 'free') as 'free' | 'basic' | 'professional' | 'enterprise';
+      const planName = planNames[mappedPlanType] || 'Free';
 
-    const mappedPlanType = (planType.toLowerCase().includes('pro') ? 'professional' : planType.toLowerCase().includes('basic') ? 'basic' : planType.toLowerCase().includes('ent') ? 'enterprise' : 'free') as 'free' | 'basic' | 'professional' | 'enterprise';
-    const planName = planNames[mappedPlanType] || 'Free';
+      const days = billingMode === 'monthly' ? 30 : 365;
+      const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 
-    const upgradePayload = validateSubscriptionPayload({
-      user_id: user.id,
-      user_email: user.email || null,
-      user_phone: user.phone || null,
-      plan_name: planName,
-      plan_type: mappedPlanType,
-      status: 'active',
-      expires_at: mappedPlanType === 'free' ? null : expiresAt,
-      renews_at: mappedPlanType === 'free' ? null : expiresAt,
-      authorized_token_node: transactionId,
-      updated_at: new Date().toISOString(),
-    });
+      console.log('[Upgrade] Upserting:', mappedPlanType, 'expires:', expiresAt);
 
-    const { data: updatedSub, error } = await supabase
-      .from('subscriptions')
-      .upsert(upgradePayload, { onConflict: 'user_id' })
-      .select()
-      .single();
+      const upgradePayload = validateSubscriptionPayload({
+        user_id: user.id,
+        user_email: user.email || null,
+        user_phone: user.phone || null,
+        plan_name: planName,
+        plan_type: mappedPlanType,
+        status: 'active',
+        expires_at: mappedPlanType === 'free' ? null : expiresAt,
+        renews_at: mappedPlanType === 'free' ? null : expiresAt,
+        authorized_token_node: transactionId || `manual_${mappedPlanType}_${Date.now()}`,
+        updated_at: new Date().toISOString(),
+      });
 
-    if (error) throw error;
+      const { error: upsertError } = await supabase
+        .from('subscriptions')
+        .upsert(upgradePayload, { onConflict: 'user_id' });
 
-    const now = new Date();
-    await supabase.from('subscription_usage').insert({
-      user_id: user.id,
-      period_start: now.toISOString(),
-      period_end: mappedPlanType === 'free' ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : expiresAt,
-      documents_used: 0,
-      reports_used: 0,
-    });
+      if (upsertError) {
+        console.error('[Upgrade] Upsert failed:', upsertError);
+        throw upsertError;
+      }
 
-    if (updatedSub) setSubscription(validateSubscriptionPayload(updatedSub) as Subscription);
+      // VERIFY write actually succeeded by reading back from DB
+      const { data: verifiedSub, error: verifyError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (verifyError || !verifiedSub) {
+        throw new Error('Could not verify subscription upgrade');
+      }
+
+      if (verifiedSub.plan_type !== mappedPlanType) {
+        throw new Error(
+          `Upgrade verification failed: DB shows ${verifiedSub.plan_type} not ${mappedPlanType}`
+        );
+      }
+
+      console.log('[Upgrade] ✅ Verified in DB:', verifiedSub.plan_name);
+
+      // Set state from verified DB data
+      setSubscription({ ...verifiedSub } as Subscription);
+
+      // Create new usage period
+      const now = new Date();
+      await supabase.from('subscription_usage').insert({
+        user_id: user.id,
+        period_start: now.toISOString(),
+        period_end: mappedPlanType === 'free' ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : expiresAt,
+        documents_used: 0,
+        reports_used: 0,
+      });
+
+      emitNotification(
+        `✅ Upgraded to ${planName}!`,
+        `Active on all devices. ${billingMode === 'monthly' ? 'Monthly' : 'Annual'} Plan`,
+        'success'
+      );
+
+      return verifiedSub as Subscription;
+    } catch (err: any) {
+      console.error('[Upgrade] Failed:', err);
+      emitNotification('Upgrade Failed', err.message || 'Payment upgrade failed', 'error');
+      throw err;
+    } finally {
+      setIsLoading(false);
+      // Release lock after 5 seconds — enough for all async operations to settle
+      setTimeout(() => {
+        isUpgradingRef.current = false;
+        console.log('[Upgrade] Lock released — normal sync resumed');
+      }, 5000);
+    }
   }, []);
 
   // Usage tracking methods
