@@ -818,51 +818,65 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   const trackDocumentUsage = useCallback(async (): Promise<boolean> => {
     if (!userId) {
-      console.error('[trackDocumentUsage] No userId');
-      return false;
-    }
-
-    const { data: freshUsage } = await supabase
-      .from('subscription_usage')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('period_end', new Date().toISOString())
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!freshUsage) {
-      console.error('[trackDocumentUsage] No usage row found');
-      return false;
-    }
-
-    const planType = (subscription?.plan_type || 'free') as keyof typeof PLAN_LIMITS;
-    const limit = PLAN_LIMITS[planType].documents;
-
-    if (freshUsage.documents_used >= limit) {
-      emitNotification('Document Limit Reached', `You have used ${freshUsage.documents_used}/${limit} documents. Upgrade to create more.`, 'error');
-      return false;
+      console.warn('[trackDocumentUsage] No userId present, allowing local save');
+      return true;
     }
 
     try {
-      const { data, error } = await supabase
+      let { data: freshUsage } = await supabase
         .from('subscription_usage')
-        .update({
-          documents_used: freshUsage.documents_used + 1,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', freshUsage.id)
-        .select()
-        .single();
+        .select('*')
+        .eq('user_id', userId)
+        .gte('period_end', new Date().toISOString())
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (!freshUsage) {
+        console.warn('[trackDocumentUsage] No usage row found — initializing default row');
+        const now = new Date();
+        const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const { data: createdUsage } = await supabase
+          .from('subscription_usage')
+          .insert({
+            user_id: userId,
+            period_start: now.toISOString(),
+            period_end: periodEnd.toISOString(),
+            documents_used: 0,
+            reports_used: 0,
+          })
+          .select()
+          .single();
+        freshUsage = createdUsage;
+      }
 
-      setUsage({ ...data } as SubscriptionUsage);
+      const planType = (subscription?.plan_type || 'free') as keyof typeof PLAN_LIMITS;
+      const limit = (PLAN_LIMITS[planType] || PLAN_LIMITS.free).documents;
+
+      if (freshUsage && freshUsage.documents_used >= limit) {
+        emitNotification('Document Limit Reached', `You have used ${freshUsage.documents_used}/${limit} documents. Upgrade to create more.`, 'error');
+        return false;
+      }
+
+      if (freshUsage) {
+        const { data, error } = await supabase
+          .from('subscription_usage')
+          .update({
+            documents_used: freshUsage.documents_used + 1,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', freshUsage.id)
+          .select()
+          .single();
+
+        if (!error && data) {
+          setUsage({ ...data } as SubscriptionUsage);
+        }
+      }
       return true;
     } catch (err: any) {
-      console.error('[trackDocumentUsage] Failed:', err);
-      emitNotification('Usage Error', 'Failed to track usage', 'error');
-      return false;
+      console.error('[trackDocumentUsage] Non-fatal exception:', err);
+      return true;
     }
   }, [userId, subscription]);
 
