@@ -567,7 +567,7 @@ export default function InvoiceModal({
       setClientAddress(invoice.clientAddress);
       setNotes(invoice.notes);
       setInvoiceTerms(invoice.invoiceTerms || '');
-      setStatus(invoice.status);
+      setStatus(invoice.status === 'draft' ? 'pending' : invoice.status);
       setItems(invoice.items);
       setDiscountType(invoice.discountType || 'none');
       setDiscountValue(invoice.discountValue || 0);
@@ -2121,7 +2121,7 @@ export default function InvoiceModal({
       isFreightAdded,
       taxTotal: roundedTaxTotal,
       grandTotal: calculatedGrandTotal,
-      status: status === 'draft' ? 'pending' : status,
+      status: (status === 'draft' || !status) ? 'pending' : status,
       paidDate: status === 'paid' ? (invoice?.paidDate || new Date().toISOString().split('T')[0]) : undefined,
       items,
       createdAt: (invoice && (invoice.id || '').trim() !== '') ? invoice.createdAt : new Date().toISOString(),
