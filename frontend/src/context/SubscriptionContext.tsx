@@ -115,6 +115,8 @@ export interface SubscriptionContextType {
   checkAndExpireTrials: (currentSub?: Subscription | null) => Promise<void>;
   getExpiryDisplayInfo: () => ExpiryDisplayInfo;
   getExpiryLabel: (sub: Subscription) => string;
+  showWelcomeTrialModal: boolean;
+  dismissWelcomeTrialModal: (userId?: string) => void;
 }
 
 export const getExpiryLabel = (sub: Subscription | null): string => {
@@ -129,6 +131,15 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [showWelcomeTrialModal, setShowWelcomeTrialModal] = useState(false);
+
+  const dismissWelcomeTrialModal = useCallback((targetUid?: string) => {
+    const uidToUse = targetUid || userId;
+    if (uidToUse && typeof window !== 'undefined') {
+      localStorage.setItem(`welcome_trial_shown_${uidToUse}`, 'true');
+    }
+    setShowWelcomeTrialModal(false);
+  }, [userId]);
 
   const isUpgradingRef = useRef(false);
 
@@ -303,9 +314,16 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           console.log('[Init] ✅ Found existing subscription:', existingSub.plan_name);
           const validatedSub = validateSubscriptionPayload({ ...existingSub });
           setSubscription(validatedSub as Subscription);
+          setIsLoading(false);
 
           if (existingSub.status === 'trialing') {
             await checkAndExpireTrials(validatedSub as Subscription);
+          } else if (existingSub.plan_type === 'free' && (!existingSub.trial_used_plans || existingSub.trial_used_plans.length === 0)) {
+            const shownKey = `welcome_trial_shown_${uid}`;
+            if (typeof window !== 'undefined' && !localStorage.getItem(shownKey)) {
+              console.log('[WelcomeTrial] Showing modal for user:', uid);
+              setTimeout(() => setShowWelcomeTrialModal(true), 1200);
+            }
           }
         } else {
           console.log('[Init] No subscription found — creating Free starter for new user');
@@ -325,11 +343,20 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
           if (insertError) {
             console.error('[Init] Failed to create starter subscription:', insertError);
+            setIsLoading(false);
             return;
           }
 
           console.log('[Init] ✅ Created Free starter subscription');
-          setSubscription(validateSubscriptionPayload(newSub) as Subscription);
+          const validatedNewSub = validateSubscriptionPayload(newSub) as Subscription;
+          setSubscription(validatedNewSub);
+          setIsLoading(false);
+
+          const shownKey = `welcome_trial_shown_${uid}`;
+          if (typeof window !== 'undefined' && !localStorage.getItem(shownKey)) {
+            console.log('[WelcomeTrial] Showing modal for new user:', uid);
+            setTimeout(() => setShowWelcomeTrialModal(true), 1200);
+          }
         }
 
         const now = new Date().toISOString();
@@ -934,6 +961,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       checkAndExpireTrials,
       getExpiryDisplayInfo: () => getExpiryDisplay(subscription),
       getExpiryLabel: (sub: Subscription) => getExpiryDisplay(sub).value,
+      showWelcomeTrialModal,
+      dismissWelcomeTrialModal,
     }}>
       {children}
     </SubscriptionContext.Provider>

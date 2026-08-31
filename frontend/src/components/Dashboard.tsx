@@ -195,6 +195,7 @@ import SupportPage from './SupportPage';
 import SupportChatPage from './SupportChatPage';
 
 import SubscriptionPage from './SubscriptionPage';
+import WelcomeTrialModal from './ui/WelcomeTrialModal';
 
 
 
@@ -356,7 +357,7 @@ export default function Dashboard({
 
   const { confirm } = useConfirm();
   const { expenses: supabaseExpenses, stats: expenseStats } = useExpenses();
-  const { subscription: subRecord, refetch: refetchSubscription, trackDocumentUsage, trackReportUsage } = useSubscription();
+  const { subscription: subRecord, refetch: refetchSubscription, trackDocumentUsage, trackReportUsage, showWelcomeTrialModal, dismissWelcomeTrialModal } = useSubscription();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -17005,6 +17006,12 @@ export default function Dashboard({
               </div>
             </div>
           </div>
+        )}
+
+        {showWelcomeTrialModal && (
+          <WelcomeTrialModal
+            onClose={() => dismissWelcomeTrialModal(subRecord?.user_id)}
+          />
         )}
 
     </div>

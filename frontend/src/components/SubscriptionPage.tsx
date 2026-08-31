@@ -386,27 +386,30 @@ export default function SubscriptionPage({
               )}
             </div>
             
-            {isCtxLoading || !ctxSub ? (
-              <div className="animate-pulse space-y-2 mt-2">
-                <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-32" />
-                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-48" />
-              </div>
+            {/* Plan name section */}
+            {!ctxSub?.plan_name && isCtxLoading ? (
+              <div className="animate-pulse h-6 bg-slate-200 dark:bg-slate-800 rounded w-32 mt-1.5" />
             ) : (
-              <>
-                <div className="flex items-baseline gap-2 mt-1.5">
-                  <span className="text-lg font-black text-[#0f172a] dark:text-white capitalize">{activeTier} Plan</span>
-                </div>
-                
-                <p className="text-[10px] text-[#64748b] dark:text-[#94a3b8] mt-1 font-medium">
-                  {activeTier === 'free' 
-                    ? 'Starter: Limit of 10 documents & 1 report/mo.' 
-                    : activeTier === 'basic'
-                      ? 'Basic: Limit of 60 documents & 5 reports/mo.'
-                      : activeTier === 'pro' 
-                        ? 'Professional: Limit of 140 documents & 15 reports/mo with AI Smart Billing.'
-                        : 'Enterprise: Unlimited documents & reports fully unlocked.'}
-                </p>
-              </>
+              <div className="flex items-baseline gap-2 mt-1.5">
+                <span className="text-lg font-black text-[#0f172a] dark:text-white capitalize">
+                  {ctxSub?.plan_name === 'Free' ? 'Starter' : ctxSub?.plan_name || activeTier} Plan
+                </span>
+              </div>
+            )}
+            
+            {/* Subtitle section */}
+            {!ctxSub && isCtxLoading ? (
+              <div className="animate-pulse h-4 bg-slate-200 dark:bg-slate-800 rounded w-48 mt-1" />
+            ) : (
+              <p className="text-[10px] text-[#64748b] dark:text-[#94a3b8] mt-1 font-medium">
+                {activeTier === 'free' 
+                  ? 'Starter: Limit of 10 documents & 1 report/mo.' 
+                  : activeTier === 'basic'
+                    ? 'Basic: Limit of 60 documents & 5 reports/mo.'
+                    : activeTier === 'pro' 
+                      ? 'Professional: Limit of 140 documents & 15 reports/mo with AI Smart Billing.'
+                      : 'Enterprise: Unlimited documents & reports fully unlocked.'}
+              </p>
             )}
 
             <div className="mt-2 text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/50 px-2.5 py-1 rounded-lg border border-sky-200 dark:border-sky-800/50 flex items-center justify-between gap-1.5 flex-wrap">
@@ -527,7 +530,14 @@ export default function SubscriptionPage({
                 
                 <div className="text-[#64748b] dark:text-[#94a3b8] text-[10px] font-black uppercase tracking-wider mb-1">{plan.tier}</div>
                 <div className="flex justify-between items-start">
-                  <h3 className="text-lg font-black text-[#0f172a] dark:text-white leading-tight">{plan.name}</h3>
+                  <div>
+                    <h3 className="text-lg font-black text-[#0f172a] dark:text-white leading-tight">{plan.name}</h3>
+                    {(plan.id === 'basic' || plan.id === 'pro') && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[9.5px] font-extrabold mt-1">
+                        ✓ 1 Month Free Trial Available
+                      </span>
+                    )}
+                  </div>
                   {isActive && (
                     <span className="text-[9px] px-2 py-0.5 bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] rounded-full font-bold">Active</span>
                   )}
@@ -551,7 +561,9 @@ export default function SubscriptionPage({
                   <span className="text-xs text-[#64748b] dark:text-[#94a3b8]">{isYearly ? '/yr' : '/mo'}</span>
                 </div>
                 <p className="text-[10px] font-mono text-[#64748b] dark:text-zinc-500 min-h-[24px]">
-                  {isYearly ? plan.annualNote : plan.monthlyNote}
+                  {(plan.id === 'basic' || plan.id === 'pro')
+                    ? `Try free for 30 days, then ${isYearly ? plan.annual : plan.monthly}${isYearly ? '/yr' : '/mo'}`
+                    : (isYearly ? plan.annualNote : plan.monthlyNote)}
                 </p>
 
                 <div className="border-t border-[#bae6fd]/30 dark:border-[#223269]/30 pt-4 space-y-2.5 mb-6 flex-1">
