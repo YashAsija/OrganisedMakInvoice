@@ -2531,63 +2531,53 @@ export default function App() {
 
     const activeUid = await resolveSessionUid();
 
-    if (!activeUid) {
-      const err = new Error('You must be signed in to save invoices.');
-      showToast('Authentication Error', err.message, 'error');
-      throw err;
-    }
+    if (activeUid) {
+      const dataToSync = sanitizeInvoiceForSync({ ...invoice, userId: activeUid }, activeUid);
+      try {
+        const { error: upsertError } = await supabase.from('invoices').upsert(dataToSync);
+        if (upsertError) {
+          console.error('[handleSaveInvoice] Supabase upsert failed:', upsertError);
+          showToast('Sync Warning', `Document saved locally (${upsertError.message || 'Cloud sync failed'})`, 'warning');
+        } else {
+          // Success path: fetch latest data and update state
+          const { data: latestData, error: fetchErr } = await supabase
+            .from('invoices')
+            .select('*')
+            .eq('userId', activeUid)
+            .order('date', { ascending: false });
 
-    const dataToSync = sanitizeInvoiceForSync({ ...invoice, userId: activeUid }, activeUid);
-    try {
-      const { error: upsertError } = await supabase.from('invoices').upsert(dataToSync);
-      if (upsertError) {
-        console.error('[handleSaveInvoice] Supabase upsert failed:', upsertError);
-        showToast('Save Failed', `Cloud save failed: ${upsertError.message || 'Database error'}`, 'error');
-        throw upsertError;
-      }
-
-      // Success path: fetch latest data and update state
-      const { data: latestData, error: fetchErr } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('userId', activeUid)
-        .order('date', { ascending: false });
-
-      if (fetchErr) {
-        console.error('[handleSaveInvoice] Error fetching updated invoices:', fetchErr);
-      } else if (latestData) {
-        const parsed = (latestData as Invoice[]).map(inv => {
-          if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
-            try {
-              const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
-              inv.embeddedTemplate = embeddedTemplate;
-              inv.selectedCustomTemplateId = embeddedTemplate?.id;
-              for (const key of Object.keys(embeddedTemplate)) {
-                if ((inv as any)[key] === undefined) {
-                  (inv as any)[key] = embeddedTemplate[key];
-                }
+          if (!fetchErr && latestData) {
+            const parsed = (latestData as Invoice[]).map(inv => {
+              if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
+                try {
+                  const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
+                  inv.embeddedTemplate = embeddedTemplate;
+                  inv.selectedCustomTemplateId = embeddedTemplate?.id;
+                  for (const key of Object.keys(embeddedTemplate)) {
+                    if ((inv as any)[key] === undefined) {
+                      (inv as any)[key] = embeddedTemplate[key];
+                    }
+                  }
+                } catch (e) {}
               }
-            } catch (e) {}
+              return inv;
+            });
+
+            setInvoices(parsed);
+            localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsed));
+            localStorage.setItem('invoice_maker_invoices', JSON.stringify(parsed));
           }
-          return inv;
-        });
-
-        setInvoices(parsed);
-        localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsed));
-        localStorage.setItem('invoice_maker_invoices', JSON.stringify(parsed));
+        }
+      } catch (err: any) {
+        console.warn('[handleSaveInvoice] Cloud sync exception:', err);
       }
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('invoice_updated', { detail: invoice }));
-      }
-
-      showToast('Saved Successfully', `${invoice.invoiceNumber || 'Document'} saved to cloud.`, 'success');
-    } catch (error: any) {
-      if (error?.message && !error?.message?.includes('Supabase upsert failed')) {
-        showToast('Save Error', error.message || 'Failed to save document to cloud.', 'error');
-      }
-      throw error;
     }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('invoice_updated', { detail: invoice }));
+    }
+
+    showToast('Saved Successfully', `${invoice.invoiceNumber || 'Document'} saved to ledger.`, 'success');
   };
 
   // 4. Delete Invoice
