@@ -2074,7 +2074,7 @@ export default function InvoiceModal({
     }
 
     let finalInvoiceNumber = invoiceNumber;
-    if (status === 'draft') {
+    if (!finalInvoiceNumber || status === 'draft' || (invoice && invoice.status === 'draft')) {
       const config = getDocTypeConfig(invoiceType);
       finalInvoiceNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, invoiceType);
     }
