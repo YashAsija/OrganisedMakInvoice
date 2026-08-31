@@ -51,10 +51,11 @@ export function TrialBanner({ onUpgradeClick }: TrialBannerProps) {
             <button
               type="button"
               onClick={onUpgradeClick}
-              className="px-3.5 py-1.5 bg-white text-slate-900 dark:text-slate-900 font-black text-xs rounded-xl shadow-md hover:bg-slate-100 hover:text-slate-950 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+              style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
+              className="px-4 py-1.5 font-black text-xs rounded-xl shadow-lg hover:bg-slate-100 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 border border-white/40"
             >
-              <span className="text-slate-900 font-black">Upgrade Now</span>
-              <ArrowRight className="w-3.5 h-3.5 text-slate-900" />
+              <span style={{ color: '#0f172a' }} className="font-extrabold text-slate-900">Upgrade Now</span>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-900" style={{ color: '#0f172a' }} />
             </button>
           )}
           <button
