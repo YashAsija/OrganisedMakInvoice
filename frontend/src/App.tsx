@@ -3554,7 +3554,7 @@ export default function App() {
         onDeleteExpense={handleDeleteExpense}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        subscriptionTier={subscriptionTier}
+        subscriptionTier={subscriptionTier || 'free'}
       />
 
       {/* Sub-modals Settings View selectors */}
