@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown, Loader2, ChevronDown, Smartphone, Mail, FileDown, Printer, Package, Lock } from 'lucide-react';
+import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown, Loader2, ChevronDown, Smartphone, Mail, FileDown, Printer, Package, Lock, ExternalLink } from 'lucide-react';
 import { Invoice, TaxClassification, InvoiceItem, InvoiceStatus, DiscountType, PresetItem, ClientProfile, RecurringInterval, BusinessProfile, InvoiceTemplate } from '../types';
 import { EditableField } from './EditableField';
 import { exportInvoicePDFAsync } from '../lib/pdfExporter';
@@ -2248,13 +2248,6 @@ export default function InvoiceModal({
         ...finalInvoiceObj,
         selectedCopies
       } as any);
-
-      // Route to full-page invoice preview portal
-      if (typeof window !== 'undefined' && finalInvoiceId) {
-        setTimeout(() => {
-          window.location.href = `/invoice/preview?id=${finalInvoiceId}`;
-        }, 400);
-      }
     } catch (saveErr) {
       // Save blocked by quota guard or database error — do not show success UI/notification
       console.warn('[InvoiceModal] Save cancelled or failed:', saveErr);
@@ -4369,7 +4362,20 @@ export default function InvoiceModal({
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/50">
+                <div className="pt-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/50 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (savedInvoiceForPreview?.id) {
+                        window.location.href = `/invoice/preview?id=${savedInvoiceForPreview.id}`;
+                      }
+                    }}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all active:scale-[0.97] cursor-pointer shadow-md shadow-emerald-950/10 flex items-center justify-center gap-1.5"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>View Full Page Preview</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -4377,7 +4383,7 @@ export default function InvoiceModal({
                       setSavedInvoiceForPreview(null);
                       onClose();
                     }}
-                    className="w-full py-3 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl text-xs font-bold transition-all active:scale-[0.97] cursor-pointer shadow-md shadow-sky-950/10"
+                    className="w-full py-2.5 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl text-xs font-bold transition-all active:scale-[0.97] cursor-pointer shadow-md shadow-sky-950/10"
                   >
                     Finish and Close
                   </button>
