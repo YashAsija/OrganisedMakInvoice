@@ -2448,9 +2448,9 @@ export default function App() {
         return !isNaN(dTime) && dTime >= effectiveStartTime && dTime < endTime;
       }).length;
 
-      const limits = getTierLimits(subscriptionTier);
+      const limits = getTierLimits(subscriptionTier || 'free');
       if (monthlyDocCount >= limits.documentsPerMonth) {
-        const errorMsg = `Subscription period document creation limit reached (${limits.documentsPerMonth} docs/period on ${subscriptionTier.toUpperCase()} plan). Upgrade your plan to create more documents.`;
+        const errorMsg = `Subscription period document creation limit reached (${limits.documentsPerMonth} docs/period on ${(subscriptionTier || 'free').toUpperCase()} plan). Upgrade your plan to create more documents.`;
         showToast('Quota Exceeded 🔒', errorMsg, 'error');
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
