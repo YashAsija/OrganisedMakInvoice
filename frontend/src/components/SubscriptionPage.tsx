@@ -622,7 +622,7 @@ export default function SubscriptionPage({
                   }
 
                   if (plan.id === 'unlimited') {
-                    const isEntActive = activeTier === 'unlimited' || activeTier === 'enterprise';
+                    const isEntActive = activeTier === 'unlimited' || (activeTier as string) === 'enterprise';
                     return {
                       label: isEntActive ? 'Currently Active' : 'Get Enterprise',
                       disabled: isEntActive,
