@@ -948,8 +948,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               return (
                 <div key="shipTo" style={{ ...getSectionStyle('shipTo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginBottom: '0px', marginTop: amigoIndex === 2 ? '-1px' : '5px' }}>
                   <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${isVertical ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
-                    <div className={`flex justify-between items-center ${isVertical ? 'mb-1' : 'w-full mb-0'}`}>
-                      <h3 className={`font-bold ${isShipCompact ? 'text-[9.5px] mb-0.5' : 'text-[11px]'} text-gray-800 uppercase whitespace-nowrap`}>{isPurchase ? 'SHIP FROM' : 'SHIPPED TO'}</h3>
+                    <div className={`flex justify-between items-center ${isVertical ? `${isShipCompact ? 'mb-0.5' : 'mb-1'}` : 'w-full mb-0'}`}>
+                      <h3 className={`font-bold ${isShipCompact ? 'text-[9.5px]' : 'text-[11px]'} text-gray-800 uppercase whitespace-nowrap`}>{isPurchase ? 'SHIP FROM' : 'SHIPPED TO'}</h3>
                       {isInteractive && onCopyBillingToShipping && (
                         <button
                           type="button"
