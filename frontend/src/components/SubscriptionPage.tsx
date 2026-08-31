@@ -589,6 +589,7 @@ export default function SubscriptionPage({
 
                 const canTrialBasic = plan.id === 'basic' && !isBasicTrialClaimed && !isActive;
                 const canTrialPro = plan.id === 'pro' && !isProTrialClaimed && !isActive;
+                const isTrialEligible = canTrialBasic || canTrialPro;
 
                 // Check active valid subscription window for reclaim vs renew
                 const lastPaidTier = typeof window !== 'undefined' ? localStorage.getItem('makbills_last_active_paid_tier') : null;
@@ -609,84 +610,119 @@ export default function SubscriptionPage({
                   new Date(expiresIsoRaw).getTime() <= Date.now()
                 );
 
+                const getButtonConfig = () => {
+                  if (plan.id === 'free') {
+                    const isFreeActive = activeTier === 'free';
+                    return {
+                      label: isFreeActive ? 'Currently Active' : 'Downgrade to Free',
+                      disabled: isFreeActive,
+                      variant: 'ghost',
+                      action: isFreeActive ? undefined : () => setShowDowngradeConfirm(true),
+                    };
+                  }
+
+                  if (plan.id === 'unlimited') {
+                    const isEntActive = activeTier === 'unlimited' || activeTier === 'enterprise';
+                    return {
+                      label: isEntActive ? 'Currently Active' : 'Get Enterprise',
+                      disabled: isEntActive,
+                      variant: isEntActive ? 'ghost' : 'outline',
+                      action: isEntActive ? undefined : () => triggerCheckout('enterprise', isYearly ? 'yearly_recurring' : 'monthly'),
+                    };
+                  }
+
+                  if (isActive) {
+                    return {
+                      label: 'Currently Active',
+                      disabled: true,
+                      variant: 'ghost',
+                      action: undefined,
+                    };
+                  }
+
+                  if (ctxSub?.status === 'trialing' && ((plan.id === 'basic' && ctxSub.plan_type === 'basic') || (plan.id === 'pro' && ctxSub.plan_type === 'professional'))) {
+                    const daysLeft = ctxSub.expires_at ? Math.max(0, Math.ceil((new Date(ctxSub.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
+                    return {
+                      label: `Trial Active — ${daysLeft} days left`,
+                      disabled: true,
+                      variant: 'amber',
+                      action: undefined,
+                    };
+                  }
+
+                  if (isTrialEligible) {
+                    return {
+                      label: 'Start Free Trial →',
+                      disabled: false,
+                      variant: 'green',
+                      action: () => setTrialModalPlan(plan.id === 'pro' ? 'professional' : 'basic'),
+                    };
+                  }
+
+                  if (isWithinActivationWindow) {
+                    return {
+                      label: `Reclaim ${plan.name} Plan`,
+                      disabled: false,
+                      variant: 'outline',
+                      action: () => {
+                        onUpgrade(plan.id as any);
+                        setShowSuccessModal(plan.id);
+                      },
+                    };
+                  }
+
+                  if (isExpiredPaidPlan) {
+                    return {
+                      label: `Renew ${plan.name} Plan`,
+                      disabled: false,
+                      variant: 'outline',
+                      action: () => triggerCheckout(plan.id === 'pro' ? 'professional' : 'basic', isYearly ? 'yearly_recurring' : 'monthly'),
+                    };
+                  }
+
+                  return {
+                    label: `Get ${plan.name}`,
+                    disabled: false,
+                    variant: 'outline',
+                    action: () => triggerCheckout(plan.id === 'pro' ? 'professional' : 'basic', isYearly ? 'yearly_recurring' : 'monthly'),
+                  };
+                };
+
+                const config = getButtonConfig();
+
+                const getButtonStyle = (variant: string) => {
+                  switch (variant) {
+                    case 'ghost':
+                      return 'bg-[#e0f2fe] dark:bg-zinc-800/60 border-transparent text-[#64748b] dark:text-[#94a3b8] cursor-default';
+                    case 'amber':
+                      return 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 cursor-default font-extrabold';
+                    case 'green':
+                      return 'bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-md shadow-emerald-600/20 active:scale-98 cursor-pointer';
+                    case 'outline':
+                    default:
+                      return plan.popular
+                        ? 'bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] active:scale-98 text-white shadow-md shadow-[#0284c7]/20 font-bold'
+                        : 'border-[#bae6fd]/60 dark:border-[#223269]/60 hover:bg-[#e0f2fe]/40 dark:hover:bg-[#1b264f]/40 text-[#0284c7] dark:text-[#38bdf8] font-bold';
+                  }
+                };
+
                 return (
                   <div className="space-y-2 mt-2">
-                    {(canTrialBasic || canTrialPro) && (
-                      <button
-                        type="button"
-                        disabled={isCtxLoading}
-                        onClick={async () => {
-                          try {
-                            const targetPlan = plan.id === 'pro' ? 'professional' : 'basic';
-                            await startTrial(targetPlan);
-                            localStorage.setItem(`makbills_trial_used_${plan.id}`, new Date().toISOString());
-                            onUpgrade(plan.id as any);
-                            setShowSuccessModal(`${plan.id}_trial`);
-                          } catch (err: any) {
-                            alert('Trial activation error: ' + (err?.message || 'Failed to start trial'));
-                          }
-                        }}
-                        className={`w-full py-2.5 font-extrabold text-xs rounded-xl transition-all text-white shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 ${
-                          isCtxLoading ? 'bg-emerald-800 opacity-60 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 active:scale-98 cursor-pointer'
-                        }`}
-                      >
-                        <Sparkles className={`w-3.5 h-3.5 ${isCtxLoading ? 'animate-spin' : ''}`} />
-                        <span>{isCtxLoading ? 'Activating Trial...' : 'Start 1-Month Free Trial'}</span>
-                      </button>
-                    )}
-
                     <button
                       type="button"
-                      disabled={isActive || loadingPlan !== null}
-                      onClick={() => {
-                        if (plan.id === 'free') {
-                          setShowDowngradeConfirm(true);
-                          return;
-                        }
-
-                        // Reclaim active plan without payment IF within valid activation time window
-                        if (isWithinActivationWindow) {
-                          onUpgrade(plan.id as any);
-                          setShowSuccessModal(plan.id);
-                          return;
-                        }
-
-                        // Otherwise (expired or new subscription), trigger paid payment checkout / renewal
-                        const mappedKey = (plan.id === 'pro' ? 'professional' : plan.id === 'unlimited' ? 'enterprise' : plan.id) as 'basic' | 'professional' | 'enterprise';
-                        const mode = isYearly ? 'yearly_recurring' : 'monthly';
-                        triggerCheckout(mappedKey, mode);
-                      }}
-                      className={`w-full py-2.5 font-bold text-xs rounded-xl cursor-pointer transition-all border flex items-center justify-center gap-2 ${
-                        isActive
-                          ? 'bg-[#e0f2fe] dark:bg-zinc-800/60 border-transparent text-[#64748b] dark:text-[#94a3b8] dark:text-zinc-500 cursor-default'
-                          : plan.popular && !(canTrialBasic || canTrialPro)
-                            ? 'bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] active:scale-98 text-white shadow-md shadow-[#0284c7]/20'
-                            : 'border-[#bae6fd]/60 dark:border-[#223269]/60 hover:bg-[#e0f2fe]/40 dark:hover:bg-[#1b264f]/40 text-[#0284c7] dark:text-[#38bdf8]'
-                      }`}
+                      disabled={config.disabled || loadingPlan !== null}
+                      onClick={config.action}
+                      className={`w-full py-2.5 text-xs rounded-xl transition-all border flex items-center justify-center gap-2 ${getButtonStyle(config.variant)}`}
                     >
                       {loadingPlan === plan.id ? (
                         <>
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                           <span>Processing...</span>
                         </>
-                      ) : isActive ? (
-                        'Currently Active'
-                      ) : plan.id === 'free' ? (
-                        'Downgrade to Free'
-                      ) : isWithinActivationWindow ? (
-                        <>
-                          <Zap className="w-3.5 h-3.5 fill-[#0284c7] dark:fill-[#38bdf8]" />
-                          <span>Reclaim {plan.name} Plan</span>
-                        </>
-                      ) : isExpiredPaidPlan ? (
-                        <>
-                          <CreditCard className="w-3.5 h-3.5" />
-                          <span>Renew {plan.name} Plan</span>
-                        </>
                       ) : (
                         <>
-                          <CreditCard className="w-3.5 h-3.5" />
-                          <span>{(canTrialBasic || canTrialPro) ? `Buy Paid ${plan.name}` : `Get ${plan.name}`}</span>
+                          {config.variant === 'green' && <Sparkles className="w-3.5 h-3.5" />}
+                          <span>{config.label}</span>
                         </>
                       )}
                     </button>

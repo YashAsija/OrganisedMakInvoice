@@ -79,10 +79,10 @@ export function WelcomeTrialModal({ onClose, onUpgrade }: WelcomeTrialModalProps
 
                 <ul className="space-y-2 mb-6">
                   <li className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-semibold">
-                    <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> 100 Documents / Month
+                    <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> 60 Documents / Month
                   </li>
                   <li className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-semibold">
-                    <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> 20 Accounting Reports
+                    <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> 5 Accounting Reports
                   </li>
                   <li className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-semibold">
                     <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> Custom Layout Templates
@@ -130,10 +130,10 @@ export function WelcomeTrialModal({ onClose, onUpgrade }: WelcomeTrialModalProps
 
                 <ul className="space-y-2 mb-6">
                   <li className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-semibold">
-                    <Check className="w-3.5 h-3.5 text-purple-500 shrink-0" /> 500 Documents / Month
+                    <Check className="w-3.5 h-3.5 text-purple-500 shrink-0" /> 140 Documents / Month
                   </li>
                   <li className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-semibold">
-                    <Check className="w-3.5 h-3.5 text-purple-500 shrink-0" /> 100 Accounting Reports
+                    <Check className="w-3.5 h-3.5 text-purple-500 shrink-0" /> 15 Accounting Reports
                   </li>
                   <li className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-semibold">
                     <Check className="w-3.5 h-3.5 text-purple-500 shrink-0" /> AI Document Parsing

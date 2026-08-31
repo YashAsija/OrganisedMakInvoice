@@ -13,8 +13,8 @@ export function UsageBar({ showUpgradeCta = true, onUpgradeClick }: UsageBarProp
 
   const PLAN_LIMITS = {
     free:         { documents: 10,       reports: 1   },
-    basic:        { documents: 100,      reports: 20  },
-    professional: { documents: 500,      reports: 100 },
+    basic:        { documents: 60,       reports: 5   },
+    professional: { documents: 140,      reports: 15  },
     enterprise:   { documents: Infinity, reports: Infinity },
   };
 
