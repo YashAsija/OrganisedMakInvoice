@@ -1127,19 +1127,36 @@ export default function App() {
               // 1c. If no subscription record exists at all for this user ID, insert default Starter/Free row
               if (!subData || subData.length === 0) {
                 try {
-                  const defaultPayload = {
-                    user_id: uid,
-                    plan_name: 'Free',
-                    plan_type: 'free',
-                    status: 'active',
-                    expires_at: null,
-                    renews_at: null,
-                    user_email: activeEmail || null,
-                    user_phone: currentUser?.phone || null,
-                    updated_at: new Date().toISOString(),
-                  };
-                  await supabase.from('subscriptions').upsert(defaultPayload, { onConflict: 'user_id' });
-                  subData = [defaultPayload];
+                  const lockKey = `upgrade_lock_${uid}`;
+                  const lockTime = typeof window !== 'undefined' ? localStorage.getItem(lockKey) : null;
+                  if (lockTime && Date.now() - parseInt(lockTime) < 10000) {
+                    console.warn('[App Sync] Skipping Free plan write — upgrade lock active for user:', uid);
+                  } else {
+                    const { data: currentSub } = await supabase
+                      .from('subscriptions')
+                      .select('plan_type, status')
+                      .eq('user_id', uid)
+                      .maybeSingle();
+
+                    if (currentSub && ['basic', 'professional', 'enterprise'].includes(currentSub.plan_type) && currentSub.status === 'active') {
+                      console.warn('[App Sync] Blocked Free plan overwrite — user has active paid plan:', currentSub.plan_type);
+                    } else {
+                      console.log('[App Sync] No subscription found — upserting default Starter/Free payload');
+                      const defaultPayload = {
+                        user_id: uid,
+                        plan_name: 'Free',
+                        plan_type: 'free',
+                        status: 'active',
+                        expires_at: null,
+                        renews_at: null,
+                        user_email: activeEmail || null,
+                        user_phone: currentUser?.phone || null,
+                        updated_at: new Date().toISOString(),
+                      };
+                      await supabase.from('subscriptions').upsert(defaultPayload, { onConflict: 'user_id' });
+                      subData = [defaultPayload];
+                    }
+                  }
                 } catch (starterErr) {
                   console.warn('[Cloud Sync] Starter subscription auto-create warning:', starterErr);
                 }

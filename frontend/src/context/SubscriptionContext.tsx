@@ -130,14 +130,23 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [isSyncing, setIsSyncing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // FIX 1: Lock flag to prevent race conditions during upgrades / trials
   const isUpgradingRef = useRef(false);
 
-  // FIX 3: Respect lock in refreshSubscription
+  const isUpgradeLocked = (uid: string | null): boolean => {
+    if (!uid) return false;
+    const lockKey = `upgrade_lock_${uid}`;
+    const lockTime = typeof window !== 'undefined' ? localStorage.getItem(lockKey) : null;
+    if (lockTime && Date.now() - parseInt(lockTime) < 10000) {
+      console.warn('[LOCK] Upgrade lock active for user:', uid);
+      return true;
+    }
+    return false;
+  };
+
   const refreshSubscription = useCallback(async () => {
     if (!userId) return;
-    if (isUpgradingRef.current) {
-      console.log('[Refresh] Blocked — upgrade in progress');
+    if (isUpgradingRef.current || isUpgradeLocked(userId)) {
+      console.log('[Refresh] Blocked — upgrade in progress / lock active');
       return;
     }
     try {
@@ -172,14 +181,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [userId]);
 
-  // FIX 1: Respect lock in initializeSubscription & sync logic
   useEffect(() => {
     const initializeSubscription = async () => {
-      if (isUpgradingRef.current) {
-        console.log('[Init] Blocked — upgrade in progress');
-        return;
-      }
-      setIsLoading(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -188,6 +191,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         }
 
         setUserId(user.id);
+
+        if (isUpgradingRef.current || isUpgradeLocked(user.id)) {
+          console.log('[Init] Blocked — upgrade in progress / lock active');
+          setIsLoading(false);
+          return;
+        }
+
+        setIsLoading(true);
 
         const { data: sub } = await supabase
           .from('subscriptions')
@@ -200,24 +211,39 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           console.log('[Init] Fresh subscription from DB:', validatedSub.plan_name, validatedSub.expires_at);
           setSubscription(validatedSub as Subscription);
         } else {
-          console.log('[Init] No subscription found — creating Free starter');
-          const freePayload = validateSubscriptionPayload({
-            user_id: user.id,
-            plan_name: 'Free',
-            plan_type: 'free',
-            status: 'active',
-            expires_at: null,
-            renews_at: null,
-            updated_at: new Date().toISOString(),
-          });
+          // GUARD against overwriting paid plan
+          if (isUpgradeLocked(user.id)) {
+            console.warn('[Init] Blocked Free plan creation — upgrade lock active for user:', user.id);
+          } else {
+            const { data: currentSub } = await supabase
+              .from('subscriptions')
+              .select('plan_type, status')
+              .eq('user_id', user.id)
+              .maybeSingle();
 
-          const { data: createdSub } = await supabase
-            .from('subscriptions')
-            .upsert(freePayload, { onConflict: 'user_id' })
-            .select()
-            .single();
+            if (currentSub && ['basic', 'professional', 'enterprise'].includes(currentSub.plan_type) && currentSub.status === 'active') {
+              console.warn('[Init] Blocked Free plan overwrite — user has active paid plan:', currentSub.plan_type);
+            } else {
+              console.log('[Init] No subscription found — creating Free starter');
+              const freePayload = validateSubscriptionPayload({
+                user_id: user.id,
+                plan_name: 'Free',
+                plan_type: 'free',
+                status: 'active',
+                expires_at: null,
+                renews_at: null,
+                updated_at: new Date().toISOString(),
+              });
 
-          if (createdSub) setSubscription(validateSubscriptionPayload(createdSub) as Subscription);
+              const { data: createdSub } = await supabase
+                .from('subscriptions')
+                .upsert(freePayload, { onConflict: 'user_id' })
+                .select()
+                .single();
+
+              if (createdSub) setSubscription(validateSubscriptionPayload(createdSub) as Subscription);
+            }
+          }
         }
 
         const now = new Date().toISOString();
@@ -260,17 +286,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     initializeSubscription();
   }, []);
 
-  // FIX 2: checkAndExpireTrials — MUST NEVER Touch Active Paid Plans
   const checkAndExpireTrials = useCallback(async () => {
     if (!subscription) return;
     
-    // SAFETY: Never touch active paid plans
     if (subscription.status === 'active' && subscription.plan_type !== 'free') {
       console.log('[ExpireCheck] Active paid plan — skipping expiry check:', subscription.plan_type);
       return;
     }
     
-    // Only check plans that are actually trialing
     if (subscription.status !== 'trialing') {
       console.log('[ExpireCheck] Not trialing — skipping:', subscription.status);
       return;
@@ -286,6 +309,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      if (isUpgradeLocked(user.id)) {
+        console.warn('[ExpireCheck] Skipping trial expiry downgrade — upgrade lock active for user:', user.id);
+        return;
+      }
 
       const expiredPayload = validateSubscriptionPayload({
         user_id: user.id,
@@ -305,7 +333,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [subscription, refreshSubscription]);
 
-  // Realtime channel listener with lock check
   useEffect(() => {
     if (!userId) return;
 
@@ -322,7 +349,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          if (isUpgradingRef.current) {
+          if (isUpgradingRef.current || isUpgradeLocked(userId)) {
             console.log('[Realtime] Subscription UPDATE received but blocked by upgrade lock');
             return;
           }
@@ -344,7 +371,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          if (isUpgradingRef.current) {
+          if (isUpgradingRef.current || isUpgradeLocked(userId)) {
             console.log('[Realtime] Subscription INSERT received but blocked by upgrade lock');
             return;
           }
@@ -425,12 +452,17 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     };
   }, [userId, refreshSubscription]);
 
-  // FIX 4: Auth state listener — NEVER overwrite existing subscription with Free plan
   useEffect(() => {
     const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
         console.log('[Auth] Auth state event:', event, 'userId:', session.user.id);
         setUserId(session.user.id);
+
+        if (isUpgradeLocked(session.user.id)) {
+          console.warn('[Auth] Skipping Free plan check — upgrade lock active for user:', session.user.id);
+          refreshSubscription();
+          return;
+        }
 
         const { data: currentSub } = await supabase
           .from('subscriptions')
@@ -468,7 +500,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     };
   }, [refreshSubscription]);
 
-  // Trial Helper Functions
   const canStartTrial = useCallback((planType: 'basic' | 'professional'): boolean => {
     if (!subscription) return true;
     if (['basic', 'professional', 'enterprise'].includes(subscription.plan_type) && subscription.status === 'active') return false;
@@ -477,7 +508,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return true;
   }, [subscription]);
 
-  // FIX 6: startTrial uses lock and verifies DB write
   const startTrial = useCallback(async (planType: 'basic' | 'professional') => {
     if (!canStartTrial(planType)) {
       throw new Error(subscription?.trial_used_plans?.includes(planType) ? `Trial already used for ${planType}` : 'Ineligible for trial');
@@ -488,6 +518,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
+
+      const lockKey = `upgrade_lock_${user.id}`;
+      localStorage.setItem(lockKey, Date.now().toString());
 
       const planNames = { basic: 'Basic', professional: 'Professional' };
       const now = new Date();
@@ -536,10 +569,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       setIsLoading(false);
       setTimeout(() => {
         isUpgradingRef.current = false;
+        if (userId) localStorage.removeItem(`upgrade_lock_${userId}`);
         console.log('[Trial] Lock released — normal sync resumed');
-      }, 5000);
+      }, 10000);
     }
-  }, [subscription, canStartTrial]);
+  }, [subscription, canStartTrial, userId]);
 
   const isOnTrial = useCallback((): boolean => {
     return subscription?.status === 'trialing';
@@ -553,7 +587,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
   }, [subscription]);
 
-  // FIX 5: upgradeSubscription with lock + strict DB write verification
+  // FIX: upgradeSubscription with distributed localStorage lock + double verification loop
   const upgradeSubscription = useCallback(async (
     planType: string,
     billingMode: 'monthly' | 'yearly',
@@ -573,17 +607,21 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       enterprise: { monthly: 599, yearly: 5990 },
     };
 
+    let userObjId = '';
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
+      userObjId = user.id;
+
+      const lockKey = `upgrade_lock_${user.id}`;
+      localStorage.setItem(lockKey, Date.now().toString());
 
       const mappedPlanType = (planType.toLowerCase().includes('pro') ? 'professional' : planType.toLowerCase().includes('basic') ? 'basic' : planType.toLowerCase().includes('ent') ? 'enterprise' : 'free') as 'free' | 'basic' | 'professional' | 'enterprise';
       const planName = planNames[mappedPlanType] || 'Free';
 
       const days = billingMode === 'monthly' ? 30 : 365;
       const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-
-      console.log('[Upgrade] Upserting:', mappedPlanType, 'expires:', expiresAt);
 
       const upgradePayload = validateSubscriptionPayload({
         user_id: user.id,
@@ -598,6 +636,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         updated_at: new Date().toISOString(),
       });
 
+      console.log('[Upgrade] Writing to DB:', upgradePayload);
+
       const { error: upsertError } = await supabase
         .from('subscriptions')
         .upsert(upgradePayload, { onConflict: 'user_id' });
@@ -607,29 +647,45 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         throw upsertError;
       }
 
-      // VERIFY write actually succeeded by reading back from DB
-      const { data: verifiedSub, error: verifyError } = await supabase
+      // Wait 500ms then verify DB write
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const { data: verified, error: verifyError } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', user.id)
         .single();
 
-      if (verifyError || !verifiedSub) {
-        throw new Error('Could not verify subscription upgrade');
+      console.log('[Upgrade] DB verification result:', verified?.plan_name, verified?.plan_type);
+
+      if (verifyError || !verified || verified.plan_type !== mappedPlanType) {
+        console.error('[Upgrade] DB was overwritten or unverified! Re-writing paid plan...');
+        await supabase
+          .from('subscriptions')
+          .upsert({
+            ...upgradePayload,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' });
+
+        const { data: verified2 } = await supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!verified2 || verified2.plan_type !== mappedPlanType) {
+          throw new Error(
+            `Upgrade failed: DB shows ${verified2?.plan_type} instead of ${mappedPlanType}. ` +
+            `Another process is overwriting the subscription.`
+          );
+        }
       }
 
-      if (verifiedSub.plan_type !== mappedPlanType) {
-        throw new Error(
-          `Upgrade verification failed: DB shows ${verifiedSub.plan_type} not ${mappedPlanType}`
-        );
-      }
+      const finalSub = verified || upgradePayload;
+      console.log('[Upgrade] ✅ Verified in DB:', finalSub.plan_name);
 
-      console.log('[Upgrade] ✅ Verified in DB:', verifiedSub.plan_name);
+      setSubscription({ ...finalSub } as Subscription);
 
-      // Set state from verified DB data
-      setSubscription({ ...verifiedSub } as Subscription);
-
-      // Create new usage period
       const now = new Date();
       await supabase.from('subscription_usage').insert({
         user_id: user.id,
@@ -641,26 +697,25 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
       emitNotification(
         `✅ Upgraded to ${planName}!`,
-        `Active on all devices. ${billingMode === 'monthly' ? 'Monthly' : 'Annual'} Plan`,
+        `Active on all your devices. ₹${prices[mappedPlanType]?.[billingMode] || 0}/${billingMode === 'monthly' ? 'mo' : 'yr'}`,
         'success'
       );
 
-      return verifiedSub as Subscription;
+      return finalSub as Subscription;
     } catch (err: any) {
       console.error('[Upgrade] Failed:', err);
       emitNotification('Upgrade Failed', err.message || 'Payment upgrade failed', 'error');
       throw err;
     } finally {
       setIsLoading(false);
-      // Release lock after 5 seconds — enough for all async operations to settle
       setTimeout(() => {
         isUpgradingRef.current = false;
+        if (userObjId) localStorage.removeItem(`upgrade_lock_${userObjId}`);
         console.log('[Upgrade] Lock released — normal sync resumed');
-      }, 5000);
+      }, 10000);
     }
   }, []);
 
-  // Usage tracking methods
   const trackDocumentUsage = useCallback(async (): Promise<boolean> => {
     if (!userId) {
       console.error('[trackDocumentUsage] No userId');
