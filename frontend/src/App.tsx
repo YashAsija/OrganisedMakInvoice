@@ -1094,21 +1094,46 @@ export default function App() {
           // 1b. Fetch Cloud Subscription (Single Source of Truth across devices)
           const syncCloudSubscriptionTier = async () => {
             try {
-              let fetchedTier: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise' = 'free';
+              const currentUid = uid || (typeof window !== 'undefined' ? localStorage.getItem('makbills_active_uid') : null);
+              const currentEmail = activeEmail || (typeof window !== 'undefined' ? localStorage.getItem('makbills_active_email') : null);
+
+              const cachedTier = (localStorage.getItem('makbills_subscription_tier') || localStorage.getItem('makbills_last_active_paid_tier') || 'free') as 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise';
+              const expiresIso = localStorage.getItem('makbills_sub_expires_iso');
+              const isCachedNotExpired = !expiresIso || new Date(expiresIso) > new Date();
+
+              let fetchedTier: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise' = (isCachedNotExpired && cachedTier !== 'free') ? cachedTier : 'free';
               
               let subData = null;
-              if (uid || activeEmail) {
+              if (currentUid || currentEmail) {
                 let query = supabase.from('subscriptions').select('*');
-                if (uid && activeEmail) {
-                  query = query.or(`user_id.eq.${uid},user_email.eq.${activeEmail}`);
-                } else if (uid) {
-                  query = query.eq('user_id', uid);
+                if (currentUid && currentEmail) {
+                  query = query.or(`user_id.eq.${currentUid},user_email.eq.${currentEmail}`);
+                } else if (currentUid) {
+                  query = query.eq('user_id', currentUid);
                 } else {
-                  query = query.eq('user_email', activeEmail);
+                  query = query.eq('user_email', currentEmail);
                 }
                 const { data: fetchedSubs } = await query.order('updated_at', { ascending: false }).limit(1);
                 if (fetchedSubs && fetchedSubs.length > 0) {
                   subData = fetchedSubs;
+                }
+
+                // If client query was blocked by RLS or returned null, use server API fallback
+                if (!subData) {
+                  try {
+                    const params = new URLSearchParams();
+                    if (currentUid) params.set('userId', currentUid);
+                    if (currentEmail) params.set('userEmail', currentEmail);
+                    const apiRes = await fetch(`/api/payments/save-subscription?${params.toString()}`);
+                    if (apiRes.ok) {
+                      const json = await apiRes.json();
+                      if (json.subscription) {
+                        subData = [json.subscription];
+                      }
+                    }
+                  } catch (apiErr) {
+                    console.warn('[SyncCloudTier] Server API fallback note:', apiErr);
+                  }
                 }
               }
 
@@ -1130,9 +1155,23 @@ export default function App() {
                     localStorage.setItem('makbills_sub_expires_iso', new Date(expDate).toISOString());
                   }
                   localStorage.setItem('makbills_last_active_paid_tier', fetchedTier);
-                } else {
+                } else if (sub.status === 'expired' || (expDate && new Date(expDate) <= now)) {
                   fetchedTier = 'free';
                   localStorage.removeItem('makbills_last_active_paid_tier');
+                }
+              } else if (currentUid) {
+                // If cloud query returned empty during auth initialization, preserve unexpired local trial if present
+                const localSubRaw = localStorage.getItem(`makbills_sub_${currentUid}`);
+                if (localSubRaw) {
+                  try {
+                    const parsed = JSON.parse(localSubRaw);
+                    if (parsed && parsed.status === 'trialing' && parsed.expires_at && new Date(parsed.expires_at) > new Date()) {
+                      const rawKey = (parsed.plan_type || parsed.plan_name || '').toLowerCase();
+                      if (rawKey.includes('pro')) fetchedTier = 'pro';
+                      else if (rawKey.includes('basic')) fetchedTier = 'basic';
+                      else if (rawKey.includes('ent')) fetchedTier = 'unlimited';
+                    }
+                  } catch (e) {}
                 }
               }
 

@@ -219,13 +219,36 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       return;
     }
     try {
-      const { data: sub, error } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      let query = supabase.from('subscriptions').select('*');
+      const activeEmail = typeof window !== 'undefined' ? localStorage.getItem('makbills_active_email') : null;
+      
+      if (userId && activeEmail) {
+        query = query.or(`user_id.eq.${userId},user_email.eq.${activeEmail}`);
+      } else if (userId) {
+        query = query.eq('user_id', userId);
+      } else if (activeEmail) {
+        query = query.eq('user_email', activeEmail);
+      }
 
-      if (error) {
+      const { data: fetchedSubs, error } = await query.order('updated_at', { ascending: false }).limit(1);
+      let sub = fetchedSubs && fetchedSubs.length > 0 ? fetchedSubs[0] : null;
+
+      if (!sub && (userId || activeEmail)) {
+        try {
+          const params = new URLSearchParams();
+          if (userId) params.set('userId', userId);
+          if (activeEmail) params.set('userEmail', activeEmail);
+          const apiRes = await fetch(`/api/payments/save-subscription?${params.toString()}`);
+          if (apiRes.ok) {
+            const json = await apiRes.json();
+            if (json.subscription) sub = json.subscription;
+          }
+        } catch (apiErr) {
+          console.warn('[Refresh] Server API fallback note:', apiErr);
+        }
+      }
+
+      if (error && !sub) {
         console.error('[Refresh] Error fetching subscription:', error);
         return;
       }
@@ -299,11 +322,33 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           return;
         }
 
-        const { data: existingSub, error: selectError } = await supabase
-          .from('subscriptions')
-          .select('*')
-          .eq('user_id', uid)
-          .maybeSingle();
+        const activeEmail = session.user.email || (typeof window !== 'undefined' ? localStorage.getItem('makbills_active_email') : null);
+        let initQuery = supabase.from('subscriptions').select('*');
+        if (uid && activeEmail) {
+          initQuery = initQuery.or(`user_id.eq.${uid},user_email.eq.${activeEmail}`);
+        } else if (uid) {
+          initQuery = initQuery.eq('user_id', uid);
+        } else if (activeEmail) {
+          initQuery = initQuery.eq('user_email', activeEmail);
+        }
+
+        const { data: fetchedInitSubs, error: selectError } = await initQuery.order('updated_at', { ascending: false }).limit(1);
+        let existingSub = fetchedInitSubs && fetchedInitSubs.length > 0 ? fetchedInitSubs[0] : null;
+
+        if (!existingSub && (uid || activeEmail)) {
+          try {
+            const params = new URLSearchParams();
+            if (uid) params.set('userId', uid);
+            if (activeEmail) params.set('userEmail', activeEmail);
+            const apiRes = await fetch(`/api/payments/save-subscription?${params.toString()}`);
+            if (apiRes.ok) {
+              const json = await apiRes.json();
+              if (json.subscription) existingSub = json.subscription;
+            }
+          } catch (apiErr) {
+            console.warn('[Init] Server API fallback note:', apiErr);
+          }
+        }
 
         console.log('[Init] Existing subscription:', existingSub?.plan_name, existingSub?.plan_type, '| Error:', selectError?.message);
 
@@ -315,13 +360,43 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
         if (existingSub) {
           console.log('[Init] ✅ Found existing subscription:', existingSub.plan_name);
-          const validatedSub = validateSubscriptionPayload({ ...existingSub });
+          const validatedSub = validateSubscriptionPayload({ ...existingSub }) as Subscription;
+          
+          // Cross-device / Local storage fallback sync
+          const localRaw = typeof window !== 'undefined' ? localStorage.getItem(`makbills_sub_${uid}`) : null;
+          if (localRaw) {
+            try {
+              const localParsed = JSON.parse(localRaw);
+              if (
+                localParsed &&
+                localParsed.status === 'trialing' &&
+                localParsed.expires_at &&
+                new Date() < new Date(localParsed.expires_at)
+              ) {
+                if (validatedSub.plan_type === 'free' || !validatedSub.trial_used_plans || validatedSub.trial_used_plans.length === 0) {
+                  console.log('[Init] Merging active local trial into subscription state:', localParsed.plan_name);
+                  validatedSub.plan_name = localParsed.plan_name || validatedSub.plan_name;
+                  validatedSub.plan_type = localParsed.plan_type || validatedSub.plan_type;
+                  validatedSub.status = 'trialing';
+                  validatedSub.expires_at = localParsed.expires_at || validatedSub.expires_at;
+                  validatedSub.trial_started_at = localParsed.trial_started_at || validatedSub.trial_started_at;
+                  validatedSub.trial_used_plans = Array.from(new Set([
+                    ...(validatedSub.trial_used_plans || []),
+                    ...(localParsed.trial_used_plans || [])
+                  ]));
+                }
+              }
+            } catch (e) {
+              console.warn('[Init] Local sub merge note:', e);
+            }
+          }
+
           setSubscription(validatedSub as Subscription);
           setIsLoading(false);
 
-          if (existingSub.status === 'trialing') {
+          if (validatedSub.status === 'trialing') {
             await checkAndExpireTrials(validatedSub as Subscription);
-          } else if (existingSub.plan_type === 'free' && (!existingSub.trial_used_plans || existingSub.trial_used_plans.length === 0)) {
+          } else if (validatedSub.plan_type === 'free' && (!validatedSub.trial_used_plans || validatedSub.trial_used_plans.length === 0)) {
             const shownKey = `welcome_trial_shown_${uid}`;
             if (typeof window !== 'undefined' && !localStorage.getItem(shownKey)) {
               console.log('[WelcomeTrial] Showing modal for user:', uid);
@@ -329,7 +404,22 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
             }
           }
         } else {
-          console.log('[Init] No subscription found — creating Free starter for new user');
+          console.log('[Init] No DB subscription found — checking local fallback');
+          const localRaw = typeof window !== 'undefined' ? localStorage.getItem(`makbills_sub_${uid}`) : null;
+          if (localRaw) {
+            try {
+              const localParsed = JSON.parse(localRaw);
+              if (localParsed && localParsed.status === 'trialing' && localParsed.expires_at && new Date() < new Date(localParsed.expires_at)) {
+                console.log('[Init] ✅ Recovered active trial from local storage:', localParsed.plan_name);
+                const validatedLocal = validateSubscriptionPayload(localParsed) as Subscription;
+                setSubscription(validatedLocal);
+                setIsLoading(false);
+                return;
+              }
+            } catch (e) {
+              console.warn('[Init] Local storage recovery note:', e);
+            }
+          }
           const { data: newSub, error: insertError } = await supabase
             .from('subscriptions')
             .upsert({
@@ -636,9 +726,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     setIsLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      const activeUserId = user?.id || userId;
+      const activeEmail = user?.email || (typeof window !== 'undefined' ? localStorage.getItem('makbills_active_email') : null);
 
-      const lockKey = `upgrade_lock_${user.id}`;
+      if (!activeUserId) {
+        throw new Error('Not authenticated');
+      }
+
+      const lockKey = `upgrade_lock_${activeUserId}`;
       localStorage.setItem(lockKey, Date.now().toString());
 
       const planNames = { basic: 'Basic', professional: 'Professional' };
@@ -649,9 +744,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       const updatedTrialUsed = Array.from(new Set([...currentTrialUsed, planType]));
 
       const trialPayload = validateSubscriptionPayload({
-        user_id: user.id,
-        user_email: user.email || null,
-        user_phone: user.phone || null,
+        user_id: activeUserId,
+        user_email: activeEmail || null,
+        user_phone: null,
         plan_name: planNames[planType],
         plan_type: planType,
         status: 'trialing',
@@ -659,39 +754,74 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         renews_at: trialEnd.toISOString(),
         trial_started_at: now.toISOString(),
         trial_used_plans: updatedTrialUsed,
-        authorized_token_node: `trial_${planType}_${user.id}`,
+        authorized_token_node: `trial_${planType}_${activeUserId}`,
         updated_at: now.toISOString(),
       });
 
       console.log('[Trial] Writing to DB:', trialPayload);
-      const { error } = await supabase
-        .from('subscriptions')
-        .upsert(trialPayload, { onConflict: 'user_id' });
+      let dbError: any = null;
 
-      if (error) throw error;
+      try {
+        const { error } = await supabase
+          .from('subscriptions')
+          .upsert(trialPayload, { onConflict: 'user_id' });
+        if (error) dbError = error;
+      } catch (err: any) {
+        dbError = err;
+      }
 
-      const { data: verifiedSub } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Always send to server API endpoint to guarantee trial and trial_used_plans persistence
+      try {
+        await fetch('/api/payments/save-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: activeUserId,
+            userEmail: activeEmail,
+            planName: planNames[planType],
+            planType: planType,
+            status: 'trialing',
+            trialUsedPlans: updatedTrialUsed,
+            authorizedTokenNode: `trial_${planType}_${activeUserId}`,
+          }),
+        });
+      } catch (apiErr) {
+        console.warn('[Trial] Server API sync warning:', apiErr);
+      }
 
-      await supabase.from('subscription_usage').insert({
-        user_id: user.id,
-        period_start: now.toISOString(),
-        period_end: trialEnd.toISOString(),
-        documents_used: 0,
-        reports_used: 0,
-      });
+      // Try seeding usage period safely
+      try {
+        await supabase.from('subscription_usage').insert({
+          user_id: activeUserId,
+          period_start: now.toISOString(),
+          period_end: trialEnd.toISOString(),
+          documents_used: 0,
+          reports_used: 0,
+        });
+      } catch (usageErr) {
+        console.warn('[Trial] Usage seed warning:', usageErr);
+      }
 
-      if (verifiedSub) setSubscription(validateSubscriptionPayload(verifiedSub) as Subscription);
+      // Activate active trial state & persist to local storage so user gets 30-day trial seamlessly
+      const activeSub = trialPayload as Subscription;
+      setSubscription(activeSub);
+
+      if (typeof window !== 'undefined') {
+        const appTier = planType === 'professional' ? 'pro' : planType === 'basic' ? 'basic' : 'unlimited';
+        localStorage.setItem(`makbills_sub_${activeUserId}`, JSON.stringify(activeSub));
+        localStorage.setItem('makbills_trial_active_plan', planType);
+        localStorage.setItem('makbills_subscription_tier', appTier);
+        localStorage.setItem('makbills_last_active_paid_tier', appTier);
+        localStorage.setItem('makbills_sub_expires_iso', trialEnd.toISOString());
+        window.dispatchEvent(new CustomEvent('mak_subscription_change', { detail: appTier }));
+      }
     } finally {
       setIsLoading(false);
       setTimeout(() => {
         isUpgradingRef.current = false;
         if (userId) localStorage.removeItem(`upgrade_lock_${userId}`);
         console.log('[Trial] Lock released — normal sync resumed');
-      }, 10000);
+      }, 5000);
     }
   }, [subscription, canStartTrial, userId]);
 

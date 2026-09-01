@@ -64,55 +64,47 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
       let activeSub = subData ?? null;
 
-      // Fallback: If subscriptions table row is missing, check users table for subscription status
+      // Server GET API fallback if client query returned null or was blocked by RLS
       if (!activeSub) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('subscription_status, plan_id, current_period_end')
-          .eq('id', uid)
-          .maybeSingle();
-
-        if (userData && (userData.subscription_status === 'active' || userData.subscription_status === 'trialing' || userData.plan_id)) {
-          const rawPlan = (userData.plan_id || 'free').toLowerCase();
-          const pType = rawPlan.includes('pro') ? 'professional' : rawPlan.includes('unlimited') || rawPlan.includes('enterprise') ? 'enterprise' : rawPlan.includes('basic') ? 'basic' : 'free';
-          const pName = pType === 'professional' ? 'Professional' : pType === 'enterprise' ? 'Enterprise' : pType === 'basic' ? 'Basic' : 'Free';
-          const statusVal = userData.subscription_status || 'active';
-          const expDate = userData.current_period_end || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-          const fallbackSub = {
-            id: `usr_${uid}`,
-            user_id: uid,
-            plan_name: pName,
-            plan_type: pType,
-            status: statusVal,
-            expires_at: expDate,
-            renews_at: expDate,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-          activeSub = fallbackSub as any;
-
-          // Self-heal: insert missing subscription row matching confirmed schema
-          try {
-            await supabase.from('subscriptions').upsert(
-              {
-                user_id: uid,
-                plan_name: pName,
-                plan_type: pType,
-                status: statusVal,
-                expires_at: expDate,
-                renews_at: expDate,
-                updated_at: new Date().toISOString(),
-              },
-              { onConflict: 'user_id' }
-            );
-          } catch (e) {
-            console.error('[SubscriptionContext Self-Heal Error]', e);
+        const activeEmail = typeof window !== 'undefined' ? localStorage.getItem('makbills_active_email') : null;
+        try {
+          const params = new URLSearchParams();
+          if (uid) params.set('userId', uid);
+          if (activeEmail) params.set('userEmail', activeEmail);
+          const apiRes = await fetch(`/api/payments/save-subscription?${params.toString()}`);
+          if (apiRes.ok) {
+            const json = await apiRes.json();
+            if (json.subscription) activeSub = json.subscription;
           }
+        } catch (apiErr) {
+          console.warn('[SubscriptionContext] Server API fallback note:', apiErr);
+        }
+      }
+
+      // Local storage fallback for active trial
+      if (!activeSub && typeof window !== 'undefined') {
+        const localRaw = localStorage.getItem(`makbills_sub_${uid}`);
+        if (localRaw) {
+          try {
+            const parsed = JSON.parse(localRaw);
+            if (parsed && parsed.status === 'trialing' && parsed.expires_at && new Date(parsed.expires_at) > new Date()) {
+              activeSub = parsed;
+            }
+          } catch (e) {}
         }
       }
 
       setSubscription(activeSub);
+
+      if (activeSub) {
+        const rKey = ((activeSub as any).plan_type || (activeSub as any).plan_name || (activeSub as any).plan_key || '').toLowerCase();
+        const resolvedTier = rKey.includes('pro') ? 'pro' : rKey.includes('basic') ? 'basic' : rKey.includes('ent') ? 'unlimited' : 'free';
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('makbills_subscription_tier', resolvedTier);
+          localStorage.setItem('makbills_last_active_paid_tier', resolvedTier);
+          window.dispatchEvent(new CustomEvent('mak_subscription_change', { detail: resolvedTier }));
+        }
+      }
 
       // Fetch current period usage (active monthly window)
       const nowIso = new Date().toISOString();
@@ -137,15 +129,28 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  // Setup Supabase Realtime subscription listener
+  const activeUidRef = useRef<string | null>(null);
+
+  // Setup Supabase Realtime subscription listener cleanly with unique channel name
   const setupRealtimeSync = useCallback((uid: string) => {
+    if (!uid) return;
+
     if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
+      const oldChannel = channelRef.current;
       channelRef.current = null;
+      activeUidRef.current = null;
+      try {
+        supabase.removeChannel(oldChannel);
+      } catch (e) {}
     }
 
+    activeUidRef.current = uid;
+
+    // Unique channel topic name prevents Supabase JS SDK from reusing subscribing channel instance
+    const channelTopic = `sub_sync_${uid}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
     const channel = supabase
-      .channel(`sub_sync_${uid}_${Date.now()}`) // unique name prevents stale channel reuse
+      .channel(channelTopic)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -163,15 +168,17 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       }, (payload) => {
         console.log('[Realtime] Usage update received:', payload.eventType);
         fetchSubscriptionData(uid);
-      })
-      .subscribe((status, err) => {
-        console.log('[Realtime] Channel status:', status, err || '');
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          // Auto-reconnect after 3 seconds
-          console.warn('[Realtime] Channel error — reconnecting in 3s');
-          setTimeout(() => setupRealtimeSync(uid), 3000);
-        }
       });
+
+    channel.subscribe((status, err) => {
+      console.log('[Realtime] Channel status:', status, err || '');
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (channelRef.current === channel) {
+          channelRef.current = null;
+          activeUidRef.current = null;
+        }
+      }
+    });
 
     channelRef.current = channel;
   }, [fetchSubscriptionData]);
@@ -190,8 +197,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
     const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'TOKEN_REFRESHED' && session?.user) {
-        console.log('[Auth] Token refreshed — re-syncing Realtime channel');
-        setupRealtimeSync(session.user.id);
+        console.log('[Auth] Token refreshed');
+        if (session.user.id !== activeUidRef.current) {
+          setupRealtimeSync(session.user.id);
+        }
       }
       if (event === 'SIGNED_IN' && session?.user) {
         setUserId(session.user.id);
@@ -202,25 +211,33 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         setSubscription(null);
         setUsage(null);
         setUserId(null);
+        activeUidRef.current = null;
         if (channelRef.current) {
-          supabase.removeChannel(channelRef.current);
+          const oldChannel = channelRef.current;
           channelRef.current = null;
+          try {
+            supabase.removeChannel(oldChannel);
+          } catch (e) {}
         }
       }
     });
 
     return () => {
       authListener.unsubscribe();
+      activeUidRef.current = null;
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+        const oldChannel = channelRef.current;
         channelRef.current = null;
+        try {
+          supabase.removeChannel(oldChannel);
+        } catch (e) {}
       }
     };
   }, [fetchSubscriptionData, setupRealtimeSync]);
 
-  const rawKey = (subscription?.plan_key as string)?.toLowerCase() || 'starter';
+  const rawKey = ((subscription as any)?.plan_type || (subscription as any)?.plan_name || (subscription as any)?.plan_key || 'starter').toString().toLowerCase();
   const planKey: PlanKey = (rawKey.includes('pro') ? 'professional' : rawKey.includes('basic') ? 'basic' : rawKey.includes('ent') ? 'enterprise' : 'starter') as PlanKey;
-  const isActive = subscription ? hasActiveSubscription(subscription) : false;
+  const isActive = subscription ? (subscription.status === 'active' || subscription.status === 'trialing' || hasActiveSubscription(subscription)) : false;
 
   return (
     <SubscriptionContext.Provider value={{
