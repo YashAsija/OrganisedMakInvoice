@@ -217,82 +217,14 @@ export default function InvoiceModal({
   const [clientGstin, setClientGstin] = useState('');
   const [clientPan, setClientPan] = useState('');
   const [clientCompanyName, setClientCompanyName] = useState('');
-  const [isGstLoading, setIsGstLoading] = useState(false);
-
-  const handleGSTData = (result: any) => {
-    if (!result || !result.success) return;
-
-    const compName = result.companyName || result.tradeName || result.legalName || '';
-    const custName = result.customerName || result.legalName || result.tradeName || compName;
-    const tradeName = result.tradeName || compName;
-    const panStr = result.pan || (result.gstin ? result.gstin.substring(2, 12) : '');
-
-    // Step 2 Structured Address mapping logic
-    let fullAddr = '';
-    if (result.address && typeof result.address === 'object') {
-      const line1 = [result.address.plot, result.address.building, result.address.street].filter(Boolean).join(', ');
-      const line2 = [result.address.locality, result.address.city].filter(Boolean).join(', ');
-      const hasStructuredAddress = line1.length > 0 || line2.length > 0;
-      fullAddr = hasStructuredAddress ? [line1, line2].filter(Boolean).join(', ') : (result.address.fullAddress || result.address.full || '');
-      if (result.address.state) {
-        setClientState(result.address.state);
-        setPlaceOfSupply(result.address.state);
-      }
-    } else if (typeof result.address === 'string') {
-      fullAddr = result.address;
-    }
-
-    if (compName) setClientCompanyName(compName);
-    if (custName) setClientName(custName);
-    if (fullAddr) setClientAddress(fullAddr);
-    if (result.state) {
-      setClientState(result.state);
-      setPlaceOfSupply(result.state);
-    }
-    setClientCountry('India');
-    if (panStr) setClientPan(panStr);
-
-    emitNotification(
-      'GST Details Auto-Populated',
-      `Auto-filled details for ${compName || custName} (${result.address?.city || result.state || 'India'})`,
-      'success'
-    );
-  };
-
-  const handleGstAutoPopulate = async (gstVal: string) => {
+  const updateClientGst = (gstVal: string) => {
     const cleanGst = gstVal.trim().toUpperCase();
     setClientGstin(cleanGst);
-
-    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-    if (!cleanGst || !gstRegex.test(cleanGst)) return;
-
-    // Check 24hr TTL cache
-    const cacheKey = `gst_${cleanGst}`;
-    try {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        const { data, ts } = JSON.parse(cached);
-        if (Date.now() - ts < 86400000) {
-          handleGSTData(data);
-          return;
-        }
+    if (!clientPan && cleanGst.length >= 12) {
+      const extractedPan = cleanGst.substring(2, 12);
+      if (/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(extractedPan)) {
+        setClientPan(extractedPan);
       }
-    } catch (e) {}
-
-    setIsGstLoading(true);
-    try {
-      const res = await fetch(`/api/gst/${encodeURIComponent(cleanGst)}`);
-      const result = await res.json();
-      if (result.success) {
-        try {
-          localStorage.setItem(cacheKey, JSON.stringify({ data: result, ts: Date.now() }));
-        } catch (e) {}
-        handleGSTData(result);
-      }
-    } catch (err) {
-      console.warn('[InvoiceModal] GST lookup error:', err);
-    } finally {
-      setIsGstLoading(false);
     }
   };
   const [placeOfSupply, setPlaceOfSupply] = useState('');
@@ -3211,22 +3143,16 @@ export default function InvoiceModal({
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {activeTemplate.config.client?.fields.includes('gstin') && (
-                          <div className="relative">
+                          <div>
                             <label htmlFor="col-client-gstin" className="sr-only">Client GSTIN / UIN</label>
                             <input
                               id="col-client-gstin"
                               type="text"
                               value={clientGstin}
-                              onChange={(e) => handleGstAutoPopulate(e.target.value)}
-                              onBlur={(e) => handleGstAutoPopulate(e.target.value)}
-                              placeholder="Client GSTIN / UIN (Auto-fills details)"
-                              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none uppercase tracking-wider pr-9"
+                              onChange={(e) => updateClientGst(e.target.value)}
+                              placeholder="Client GSTIN / UIN"
+                              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none uppercase tracking-wider"
                             />
-                            {isGstLoading && (
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                <Loader2 className="w-4 h-4 text-[#0284c7] animate-spin" />
-                              </div>
-                            )}
                           </div>
                         )}
                         <div>
@@ -4245,7 +4171,7 @@ export default function InvoiceModal({
                           if (field === 'clientPhone') setClientPhone(val);
                           if (field === 'clientAddress') setClientAddress(val);
                           if (field === 'clientGstin' || field === 'clientGST') {
-                            handleGstAutoPopulate(val);
+                            updateClientGst(val);
                           }
                           if (field === 'clientState') setClientState(val);
                           if (field === 'clientCountry') setClientCountry(val);

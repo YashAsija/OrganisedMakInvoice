@@ -57,7 +57,7 @@ export const GSTInput: React.FC<GSTInputProps> = ({
     setGstin(value);
   }, [value]);
 
-  const validateAndFetch = async (val: string, forceRefetch = false) => {
+  const validateAndFetch = (val: string) => {
     const cleanGst = val.trim().toUpperCase();
     setErrorMessage('');
 
@@ -74,66 +74,10 @@ export const GSTInput: React.FC<GSTInputProps> = ({
       return;
     }
 
-    if (cleanGst.length !== 15 || !gstRegex.test(cleanGst)) {
-      setStatusState('idle');
-      return;
-    }
-
-    // STEP 2.5: Caching (localStorage with 24hr TTL)
-    const cacheKey = `gst_${cleanGst}`;
-    if (!forceRefetch) {
-      try {
-        const cachedStr = localStorage.getItem(cacheKey);
-        if (cachedStr) {
-          const { data, ts } = JSON.parse(cachedStr);
-          if (Date.now() - ts < CACHE_TTL_MS) {
-            setStatusState('success');
-            setFetchedData(data);
-            if (onDataFetched) onDataFetched(data);
-            return;
-          }
-        }
-      } catch (e) {}
-    }
-
-    setStatusState('loading');
-
-    try {
-      const res = await fetch(`/api/utils/gst-lookup?gstin=${encodeURIComponent(cleanGst)}`);
-      if (res.status === 404) {
-        setStatusState('error');
-        setErrorMessage('GSTIN not found');
-        return;
-      }
-      if (res.status === 408) {
-        setStatusState('error');
-        setErrorMessage('GST portal timeout, try again');
-        return;
-      }
-      if (res.status === 429) {
-        setStatusState('error');
-        setErrorMessage('Too many requests, try again later');
-        return;
-      }
-      if (!res.ok) {
-        setStatusState('error');
-        setErrorMessage('Failed to fetch GST details');
-        return;
-      }
-
-      const data: GSTData = await res.json();
+    if (cleanGst.length === 15 && gstRegex.test(cleanGst)) {
       setStatusState('success');
-      setFetchedData(data);
-
-      // Save to localStorage with timestamp
-      try {
-        localStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() }));
-      } catch (e) {}
-
-      if (onDataFetched) onDataFetched(data);
-    } catch (err) {
-      setStatusState('error');
-      setErrorMessage('Network error fetching GST data');
+    } else {
+      setStatusState('idle');
     }
   };
 
@@ -194,22 +138,8 @@ export const GSTInput: React.FC<GSTInputProps> = ({
 
         {/* Status Icons */}
         <div className="absolute right-3 flex items-center space-x-1.5 pointer-events-auto">
-          {statusState === 'loading' && (
-            <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
-          )}
-
           {statusState === 'success' && (
-            <>
-              <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <button
-                type="button"
-                onClick={() => validateAndFetch(gstin, true)}
-                title="Re-fetch GST details"
-                className="p-1 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded transition-colors text-slate-400 hover:text-indigo-600"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-              </button>
-            </>
+            <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           )}
 
           {statusState === 'error' && (
@@ -225,18 +155,10 @@ export const GSTInput: React.FC<GSTInputProps> = ({
         </p>
       )}
 
-      {/* Cancelled GST Warning Badge */}
-      {statusState === 'success' && fetchedData?.status?.toLowerCase() === 'cancelled' && (
-        <div className="mt-1.5 p-2 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center space-x-2 text-amber-800 dark:text-amber-300 text-[11.5px]">
-          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
-          <span>⚠ This GSTIN is cancelled — verify before proceeding</span>
-        </div>
-      )}
-
-      {/* Success Toast / Banner */}
-      {statusState === 'success' && fetchedData?.status?.toLowerCase() !== 'cancelled' && (
+      {/* Success Banner */}
+      {statusState === 'success' && (
         <p className="mt-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
-          <span>✓ Details auto-filled from GST Registry</span>
+          <span>✓ Valid GSTIN Format</span>
         </p>
       )}
 
