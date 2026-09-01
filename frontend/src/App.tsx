@@ -1097,62 +1097,18 @@ export default function App() {
               let fetchedTier: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise' = 'free';
               
               let subData = null;
-              // 1. Try querying subscriptions table by user_id
-              const { data: subById } = await supabase
-                .from('subscriptions')
-                .select('*')
-                .eq('user_id', uid)
-                .order('updated_at', { ascending: false })
-                .limit(1);
-
-              if (subById && subById.length > 0) {
-                subData = subById;
-              } else if (activeEmail) {
-                // 1b. Try querying subscriptions table by user_email
-                const { data: subByEmail } = await supabase
-                  .from('subscriptions')
-                  .select('*')
-                  .eq('user_email', activeEmail)
-                  .order('updated_at', { ascending: false })
-                  .limit(1);
-                subData = subByEmail;
-              }
-
-              // 1c. If no subscription record exists at all for this user ID, insert default Starter/Free row
-              if (!subData || subData.length === 0) {
-                try {
-                  const lockKey = `upgrade_lock_${uid}`;
-                  const lockTime = typeof window !== 'undefined' ? localStorage.getItem(lockKey) : null;
-                  if (lockTime && Date.now() - parseInt(lockTime) < 10000) {
-                    console.warn('[App Sync] Skipping Free plan write — upgrade lock active for user:', uid);
-                  } else {
-                    const { data: currentSub } = await supabase
-                      .from('subscriptions')
-                      .select('plan_type, status')
-                      .eq('user_id', uid)
-                      .maybeSingle();
-
-                    if (currentSub && ['basic', 'professional', 'enterprise'].includes(currentSub.plan_type) && currentSub.status === 'active') {
-                      console.warn('[App Sync] Blocked Free plan overwrite — user has active paid plan:', currentSub.plan_type);
-                    } else {
-                      console.log('[App Sync] No subscription found — upserting default Starter/Free payload');
-                      const defaultPayload = {
-                        user_id: uid,
-                        plan_name: 'Free',
-                        plan_type: 'free',
-                        status: 'active',
-                        expires_at: null,
-                        renews_at: null,
-                        user_email: activeEmail || null,
-                        user_phone: currentUser?.phone || null,
-                        updated_at: new Date().toISOString(),
-                      };
-                      await supabase.from('subscriptions').upsert(defaultPayload, { onConflict: 'user_id' });
-                      subData = [defaultPayload];
-                    }
-                  }
-                } catch (starterErr) {
-                  console.warn('[Cloud Sync] Starter subscription auto-create warning:', starterErr);
+              if (uid || activeEmail) {
+                let query = supabase.from('subscriptions').select('*');
+                if (uid && activeEmail) {
+                  query = query.or(`user_id.eq.${uid},user_email.eq.${activeEmail}`);
+                } else if (uid) {
+                  query = query.eq('user_id', uid);
+                } else {
+                  query = query.eq('user_email', activeEmail);
+                }
+                const { data: fetchedSubs } = await query.order('updated_at', { ascending: false }).limit(1);
+                if (fetchedSubs && fetchedSubs.length > 0) {
+                  subData = fetchedSubs;
                 }
               }
 

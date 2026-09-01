@@ -284,8 +284,12 @@ export default function SubscriptionPage({
     } catch (e) {}
   }, [region]);
 
-  // Normalise mapped subscription tier (enterprise maps to unlimited conceptually for limits check)
-  const activeTier = subscriptionTier === 'enterprise' ? 'unlimited' : subscriptionTier;
+  // Primary source of truth: SubscriptionContext (ctxSub). Fallback to subscriptionTier prop.
+  const rawPlanType = (ctxSub?.plan_type || ctxSub?.plan_name || subscriptionTier || 'free').toLowerCase();
+  const activeTier: 'free' | 'basic' | 'pro' | 'unlimited' = 
+    rawPlanType.includes('enterprise') || rawPlanType.includes('unlimited') ? 'unlimited' :
+    rawPlanType.includes('professional') || rawPlanType.includes('pro') ? 'pro' :
+    rawPlanType.includes('basic') ? 'basic' : 'free';
 
   const triggerCheckout = async (planKey: 'basic' | 'professional' | 'enterprise', mode: 'monthly' | 'yearly_recurring' | 'yearly_onetime') => {
     setLoadingPlan(planKey);
