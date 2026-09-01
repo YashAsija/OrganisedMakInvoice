@@ -16,7 +16,7 @@ import {
   Upload,
 
   Search, 
-
+  ArrowUpDown,
   Sparkles, 
 
   FileText, 
@@ -420,6 +420,11 @@ export default function Dashboard({
   const [draftsOrigin, setDraftsOrigin] = useState<'sales' | 'purchases'>('sales');
 
   const [activeActionMenuId, setActiveActionMenuId] = useState<string | null>(null);
+  const [clientSearchQuery, setClientSearchQuery] = useState<string>('');
+  const [clientSortBy, setClientSortBy] = useState<'name_asc' | 'name_desc' | 'company_asc' | 'company_desc' | 'newest' | 'oldest'>('name_asc');
+
+  const [vendorSearchQuery, setVendorSearchQuery] = useState<string>('');
+  const [vendorSortBy, setVendorSortBy] = useState<'name_asc' | 'name_desc' | 'company_asc' | 'company_desc' | 'newest' | 'oldest'>('name_asc');
   const [actionMenuPosition, setActionMenuPosition] = useState<'down' | 'up'>('down');
   const [actionMenuRect, setActionMenuRect] = useState<{ top: number; bottom: number; left: number; right: number; width: number } | null>(null);
   const [activeSendMenuId, setActiveSendMenuId] = useState<string | null>(null);
@@ -4993,6 +4998,84 @@ export default function Dashboard({
     });
 
   }, [clients, manualPurchaserIds, purchaserNames, purchaserEmails]);
+
+  // Billed Clients Searched & Sorted
+  const displayBilledClients = useMemo(() => {
+    let list = [...billedClientsFiltered];
+    if (clientSearchQuery.trim()) {
+      const q = clientSearchQuery.trim().toLowerCase();
+      list = list.filter(c => 
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.companyName || (c as any).company || '').toLowerCase().includes(q) ||
+        (c.gstin || '').toLowerCase().includes(q) ||
+        (c.phone || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
+        (c.state || '').toLowerCase().includes(q) ||
+        (c.address || '').toLowerCase().includes(q)
+      );
+    }
+    list.sort((a, b) => {
+      if (clientSortBy === 'name_asc') {
+        return (a.name || '').localeCompare(b.name || '');
+      }
+      if (clientSortBy === 'name_desc') {
+        return (b.name || '').localeCompare(a.name || '');
+      }
+      if (clientSortBy === 'company_asc') {
+        return (a.companyName || (a as any).company || a.name || '').localeCompare(b.companyName || (b as any).company || b.name || '');
+      }
+      if (clientSortBy === 'company_desc') {
+        return (b.companyName || (b as any).company || b.name || '').localeCompare(a.companyName || (a as any).company || a.name || '');
+      }
+      if (clientSortBy === 'newest') {
+        return (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      }
+      if (clientSortBy === 'oldest') {
+        return (a.createdAt ? new Date(a.createdAt).getTime() : 0) - (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+      }
+      return 0;
+    });
+    return list;
+  }, [billedClientsFiltered, clientSearchQuery, clientSortBy]);
+
+  // Billed Vendors Searched & Sorted
+  const displayBilledVendors = useMemo(() => {
+    let list = [...purchasersFiltered];
+    if (vendorSearchQuery.trim()) {
+      const q = vendorSearchQuery.trim().toLowerCase();
+      list = list.filter(c => 
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.companyName || (c as any).company || '').toLowerCase().includes(q) ||
+        (c.gstin || '').toLowerCase().includes(q) ||
+        (c.phone || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
+        (c.state || '').toLowerCase().includes(q) ||
+        (c.address || '').toLowerCase().includes(q)
+      );
+    }
+    list.sort((a, b) => {
+      if (vendorSortBy === 'name_asc') {
+        return (a.name || '').localeCompare(b.name || '');
+      }
+      if (vendorSortBy === 'name_desc') {
+        return (b.name || '').localeCompare(a.name || '');
+      }
+      if (vendorSortBy === 'company_asc') {
+        return (a.companyName || (a as any).company || a.name || '').localeCompare(b.companyName || (b as any).company || b.name || '');
+      }
+      if (vendorSortBy === 'company_desc') {
+        return (b.companyName || (b as any).company || b.name || '').localeCompare(a.companyName || (a as any).company || a.name || '');
+      }
+      if (vendorSortBy === 'newest') {
+        return (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      }
+      if (vendorSortBy === 'oldest') {
+        return (a.createdAt ? new Date(a.createdAt).getTime() : 0) - (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+      }
+      return 0;
+    });
+    return list;
+  }, [purchasersFiltered, vendorSearchQuery, vendorSortBy]);
 
 
 
@@ -10617,46 +10700,92 @@ export default function Dashboard({
 
             {/* ─── Page Header ─── */}
 
+            {/* ─── Page Header with Search & Sort ─── */}
+
             <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(2,132,199,0.06)' }}>
 
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-4 sm:p-5 md:p-6">
+              <div className="p-4 sm:p-5 md:p-6">
 
-                {/* Left: Icon + title + description */}
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 
-                <div className="flex items-start gap-4">
+                  {/* Left: Icon + title + description */}
 
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-[#0284c7] dark:bg-[#38bdf8]" style={{ boxShadow: '0 2px 8px rgba(2,132,199,0.3)' }}>
+                  <div className="flex items-start gap-4">
 
-                    <Users2 className="w-5 h-5 text-white dark:text-[#0b1329]" />
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-[#0284c7] dark:bg-[#38bdf8]" style={{ boxShadow: '0 2px 8px rgba(2,132,199,0.3)' }}>
 
-                  </div>
-
-                  <div>
-
-                    <div className="flex items-center gap-2.5 flex-wrap">
-
-                      <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white uppercase tracking-tight leading-none" style={{ fontFamily: "'Fraunces', serif" }}>
-
-                        Billed Clients Ledger Book
-
-                      </h2>
-
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f]/40 dark:border-[#223269]/40 text-[#0284c7] dark:text-[#38bdf8]">
-
-                        {billedClientsFiltered.length} {billedClientsFiltered.length === 1 ? 'Record' : 'Records'}
-
-                      </span>
+                      <Users2 className="w-5 h-5 text-white dark:text-[#0b1329]" />
 
                     </div>
 
-                    <p className="mt-1.5 text-xs text-[#64748b]/70 dark:text-[#94a3b8]/70 max-w-md leading-relaxed">
+                    <div>
 
-                      Manage client profiles for rapid auto-filling during billing creation (Sales Ledger only)
+                      <div className="flex items-center gap-2.5 flex-wrap">
 
-                    </p>
+                        <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white uppercase tracking-tight leading-none" style={{ fontFamily: "'Fraunces', serif" }}>
+
+                          Billed Clients Ledger Book
+
+                        </h2>
+
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f]/40 dark:border-[#223269]/40 text-[#0284c7] dark:text-[#38bdf8]">
+
+                          {displayBilledClients.length} of {billedClientsFiltered.length} {billedClientsFiltered.length === 1 ? 'Record' : 'Records'}
+
+                        </span>
+
+                      </div>
+
+                      <p className="mt-1.5 text-xs text-[#64748b]/70 dark:text-[#94a3b8]/70 max-w-md leading-relaxed">
+
+                        Manage client profiles for rapid auto-filling during billing creation (Sales Ledger only)
+
+                      </p>
+
+                    </div>
 
                   </div>
 
+                </div>
+
+                {/* ─── Search & Sort Bar ─── */}
+                <div className="mt-4 pt-4 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]/60 dark:text-[#94a3b8]/60 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={clientSearchQuery}
+                      onChange={(e) => setClientSearchQuery(e.target.value)}
+                      placeholder="Search clients by name, company, GSTIN, phone, email, state..."
+                      className="w-full pl-9 pr-8 py-2 rounded-xl text-xs bg-[#f0f9ff]/70 dark:bg-[#0b1329]/70 border border-[#bae6fd] dark:border-[#223269] text-[#0f172a] dark:text-white placeholder-[#64748b]/50 dark:placeholder-[#94a3b8]/50 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/40 transition-all"
+                    />
+                    {clientSearchQuery && (
+                      <button
+                        onClick={() => setClientSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                        title="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="relative flex items-center shrink-0">
+                    <ArrowUpDown className="w-3.5 h-3.5 absolute left-3 text-[#0284c7] dark:text-[#38bdf8] pointer-events-none" />
+                    <select
+                      value={clientSortBy}
+                      onChange={(e: any) => setClientSortBy(e.target.value)}
+                      className="pl-8 pr-8 py-2 rounded-xl text-xs font-bold bg-[#f0f9ff]/70 dark:bg-[#0b1329]/70 border border-[#bae6fd] dark:border-[#223269] text-[#0f172a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]/40 cursor-pointer transition-all appearance-none"
+                    >
+                      <option value="name_asc">Sort: Name (A - Z)</option>
+                      <option value="name_desc">Sort: Name (Z - A)</option>
+                      <option value="company_asc">Sort: Company (A - Z)</option>
+                      <option value="company_desc">Sort: Company (Z - A)</option>
+                      <option value="newest">Sort: Newest First</option>
+                      <option value="oldest">Sort: Oldest First</option>
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
 
               </div>
@@ -10685,29 +10814,31 @@ export default function Dashboard({
 
                 <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
 
-                  Add profiles to automatically inject contacts, GSTIN numbers, and addresses instantly on invoice templates.
+                  Client profiles will automatically populate here when you create sales invoices and billing documents.
 
                 </p>
 
+              </div>
+
+            ) : displayBilledClients.length === 0 ? (
+
+              <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl p-10 text-center relative overflow-hidden">
+                <Search className="w-8 h-8 mx-auto mb-2 text-[#0284c7]/50" />
+                <h3 className="text-xs font-bold text-[#0f172a] dark:text-zinc-300 uppercase tracking-wider">No matching clients found</h3>
+                <p className="text-[10px] text-[#64748b] dark:text-zinc-400 mt-1">No client records match "{clientSearchQuery}"</p>
                 <button
-
-                  onClick={() => handleOpenClientEditor(null)}
-
-                  className="mt-4 px-3.5 py-1.5 border border-[#0284c7] hover:bg-[#0284c7] text-[#0284c7] hover:text-white dark:text-[#38bdf8] dark:border-[#223269] dark:hover:bg-[#0284c7] rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer"
-
+                  onClick={() => setClientSearchQuery('')}
+                  className="mt-3 px-3.5 py-1.5 bg-[#f0f9ff] dark:bg-[#1b264f]/40 border border-[#bae6fd] dark:border-[#223269] text-[#0284c7] dark:text-[#38bdf8] text-[10px] font-bold rounded-lg hover:bg-[#e0f2fe]"
                 >
-
-                  Create First Profile
-
+                  Clear Search
                 </button>
-
               </div>
 
             ) : (
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-                {billedClientsFiltered.map(c => (
+                {displayBilledClients.map(c => (
 
                   <div
 
@@ -10875,48 +11006,92 @@ export default function Dashboard({
 
             
 
-            {/* ─── Page Header ─── */}
+            {/* ─── Page Header with Search & Sort ─── */}
 
             <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(2,132,199,0.06)' }}>
 
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-4 sm:p-5 md:p-6">
+              <div className="p-4 sm:p-5 md:p-6">
 
-                {/* Left: Icon + title + description */}
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 
-                <div className="flex items-start gap-4">
+                  {/* Left: Icon + title + description */}
 
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-[#0284c7] dark:bg-[#38bdf8]" style={{ boxShadow: '0 2px 8px rgba(2,132,199,0.3)' }}>
+                  <div className="flex items-start gap-4">
 
-                    <Users2 className="w-5 h-5 text-white dark:text-[#0b1329]" />
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-[#0284c7] dark:bg-[#38bdf8]" style={{ boxShadow: '0 2px 8px rgba(2,132,199,0.3)' }}>
 
-                  </div>
-
-                  <div>
-
-                    <div className="flex items-center gap-2.5 flex-wrap">
-
-                      <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white uppercase tracking-tight leading-none" style={{ fontFamily: "'Fraunces', serif" }}>
-
-                        Billed Vendors Directory
-
-                      </h2>
-
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f]/40 dark:border-[#223269]/40 text-[#0284c7] dark:text-[#38bdf8]">
-
-                        {purchasersFiltered.length} {purchasersFiltered.length === 1 ? 'Record' : 'Records'}
-
-                      </span>
+                      <Users2 className="w-5 h-5 text-white dark:text-[#0b1329]" />
 
                     </div>
 
-                    <p className="mt-1.5 text-xs text-[#64748b]/70 dark:text-[#94a3b8]/70 max-w-md leading-relaxed">
+                    <div>
 
-                      Manage vendor and supplier profiles captured from your purchases ledger bills, POs, and debit notes
+                      <div className="flex items-center gap-2.5 flex-wrap">
 
-                    </p>
+                        <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white uppercase tracking-tight leading-none" style={{ fontFamily: "'Fraunces', serif" }}>
+
+                          Billed Vendors Directory
+
+                        </h2>
+
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f]/40 dark:border-[#223269]/40 text-[#0284c7] dark:text-[#38bdf8]">
+
+                          {displayBilledVendors.length} of {purchasersFiltered.length} {purchasersFiltered.length === 1 ? 'Record' : 'Records'}
+
+                        </span>
+
+                      </div>
+
+                      <p className="mt-1.5 text-xs text-[#64748b]/70 dark:text-[#94a3b8]/70 max-w-md leading-relaxed">
+
+                        Manage vendor and supplier profiles captured from your purchases ledger bills, POs, and debit notes
+
+                      </p>
+
+                    </div>
 
                   </div>
 
+                </div>
+
+                {/* ─── Search & Sort Bar ─── */}
+                <div className="mt-4 pt-4 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]/60 dark:text-[#94a3b8]/60 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={vendorSearchQuery}
+                      onChange={(e) => setVendorSearchQuery(e.target.value)}
+                      placeholder="Search vendors by name, company, GSTIN, phone, email, state..."
+                      className="w-full pl-9 pr-8 py-2 rounded-xl text-xs bg-[#f0f9ff]/70 dark:bg-[#0b1329]/70 border border-[#bae6fd] dark:border-[#223269] text-[#0f172a] dark:text-white placeholder-[#64748b]/50 dark:placeholder-[#94a3b8]/50 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/40 transition-all"
+                    />
+                    {vendorSearchQuery && (
+                      <button
+                        onClick={() => setVendorSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                        title="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="relative flex items-center shrink-0">
+                    <ArrowUpDown className="w-3.5 h-3.5 absolute left-3 text-[#0284c7] dark:text-[#38bdf8] pointer-events-none" />
+                    <select
+                      value={vendorSortBy}
+                      onChange={(e: any) => setVendorSortBy(e.target.value)}
+                      className="pl-8 pr-8 py-2 rounded-xl text-xs font-bold bg-[#f0f9ff]/70 dark:bg-[#0b1329]/70 border border-[#bae6fd] dark:border-[#223269] text-[#0f172a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]/40 cursor-pointer transition-all appearance-none"
+                    >
+                      <option value="name_asc">Sort: Name (A - Z)</option>
+                      <option value="name_desc">Sort: Name (Z - A)</option>
+                      <option value="company_asc">Sort: Company (A - Z)</option>
+                      <option value="company_desc">Sort: Company (Z - A)</option>
+                      <option value="newest">Sort: Newest First</option>
+                      <option value="oldest">Sort: Oldest First</option>
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
 
               </div>
