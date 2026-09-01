@@ -421,6 +421,7 @@ export default function Dashboard({
 
   const [activeActionMenuId, setActiveActionMenuId] = useState<string | null>(null);
   const [actionMenuPosition, setActionMenuPosition] = useState<'down' | 'up'>('down');
+  const [actionMenuRect, setActionMenuRect] = useState<{ top: number; bottom: number; left: number; right: number; width: number } | null>(null);
   const [activeSendMenuId, setActiveSendMenuId] = useState<string | null>(null);
   const [sendMenuPosition, setSendMenuPosition] = useState<'down' | 'up'>('down');
   // Interactive App Tutorial State & Data
@@ -923,6 +924,26 @@ export default function Dashboard({
     return () => document.removeEventListener('click', handleOutsideClick);
 
   }, [isProfileDropdownOpen, isNotificationsOpen]);
+
+  useEffect(() => {
+    if (!activeActionMenuId) return;
+    const handleScrollOrClickOutside = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.closest('.action-menu-dropdown-box') || target.closest('.action-menu-trigger-btn'))) {
+        return;
+      }
+      setActiveActionMenuId(null);
+      setActionMenuRect(null);
+    };
+    window.addEventListener('scroll', handleScrollOrClickOutside, true);
+    window.addEventListener('resize', handleScrollOrClickOutside, true);
+    window.addEventListener('click', handleScrollOrClickOutside, true);
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrClickOutside, true);
+      window.removeEventListener('resize', handleScrollOrClickOutside, true);
+      window.removeEventListener('click', handleScrollOrClickOutside, true);
+    };
+  }, [activeActionMenuId]);
 
 
 
@@ -8585,20 +8606,33 @@ export default function Dashboard({
                                   </button>
                                 </div>
                               )}
-                            </div>
+                             </div>
 
-                            <button
+                             <button
                                onClick={(e) => {
                                  e.stopPropagation();
-                                 const rect = e.currentTarget.getBoundingClientRect();
-                                 const spaceAbove = rect.top;
-                                 const spaceBelow = window.innerHeight - rect.bottom;
-                                 // Smart auto-flip: Only open UPWARDS if row is in lower half of screen (rect.top > 350) AND space below is tight (< 360)
-                                 const shouldOpenUp = spaceBelow < 360 && spaceAbove > spaceBelow && rect.top > 350;
-                                 setActionMenuPosition(shouldOpenUp ? 'up' : 'down');
-                                 setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id);
+                                 if (activeActionMenuId === inv.id) {
+                                   setActiveActionMenuId(null);
+                                   setActionMenuRect(null);
+                                 } else {
+                                   const rect = e.currentTarget.getBoundingClientRect();
+                                   const spaceAbove = rect.top;
+                                   const spaceBelow = window.innerHeight - rect.bottom;
+                                   // NEVER open UPWARDS if rect.top < 500px! Rows in top/middle area MUST open DOWNWARDS.
+                                   // Only flip UPWARDS if rect.top >= 500px AND spaceBelow < 380px.
+                                   const shouldOpenUp = rect.top >= 500 && spaceBelow < 380 && spaceAbove > spaceBelow;
+                                   setActionMenuPosition(shouldOpenUp ? 'up' : 'down');
+                                   setActionMenuRect({
+                                     top: rect.top,
+                                     bottom: rect.bottom,
+                                     left: rect.left,
+                                     right: rect.right,
+                                     width: rect.width,
+                                   });
+                                   setActiveActionMenuId(inv.id);
+                                 }
                                }}
-                               className="w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
+                               className="action-menu-trigger-btn w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
                                title="More Actions"
                              >
                                <MoreVertical className="w-4 h-4" />
@@ -8606,8 +8640,18 @@ export default function Dashboard({
 
                              {activeActionMenuId === inv.id && (
                                <div 
-                                 className={`absolute right-0 ${actionMenuPosition === 'up' ? 'bottom-full mb-2 slide-in-from-bottom-2' : 'top-full mt-2 slide-in-from-top-2'} z-[99999] w-56 sm:w-60 max-h-[min(380px,calc(100vh-140px))] overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269]/70 rounded-2xl shadow-[0_12px_40px_rgba(2,132,199,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] animate-in fade-in duration-150 text-left`}
-                                 onClick={(e) => e.stopPropagation()}
+                                 className="action-menu-dropdown-box fixed z-[9999999] w-56 sm:w-60 overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269]/70 rounded-2xl shadow-[0_16px_45px_rgba(2,132,199,0.22)] dark:shadow-[0_16px_45px_rgba(0,0,0,0.6)] animate-in fade-in duration-150 text-left"
+                                 style={{
+                                   position: 'fixed',
+                                   right: actionMenuRect ? `${Math.max(8, window.innerWidth - actionMenuRect.right)}px` : '16px',
+                                   ...(actionMenuPosition === 'up' ? {
+                                     bottom: actionMenuRect ? `${window.innerHeight - actionMenuRect.top + 6}px` : 'auto',
+                                     maxHeight: actionMenuRect ? `min(380px, calc(${actionMenuRect.top}px - 140px))` : '380px',
+                                   } : {
+                                     top: actionMenuRect ? `${actionMenuRect.bottom + 6}px` : 'auto',
+                                     maxHeight: actionMenuRect ? `calc(100vh - ${actionMenuRect.bottom + 20}px)` : '380px',
+                                   })
+                                 }}
                                >
 
                                 
@@ -9274,14 +9318,26 @@ export default function Dashboard({
                               <button
                                  onClick={(e) => {
                                    e.stopPropagation();
-                                   const rect = e.currentTarget.getBoundingClientRect();
-                                   const spaceAbove = rect.top;
-                                   const spaceBelow = window.innerHeight - rect.bottom;
-                                   const shouldOpenUp = spaceBelow < 360 && spaceAbove > spaceBelow && rect.top > 350;
-                                   setActionMenuPosition(shouldOpenUp ? 'up' : 'down');
-                                   setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id);
+                                   if (activeActionMenuId === inv.id) {
+                                     setActiveActionMenuId(null);
+                                     setActionMenuRect(null);
+                                   } else {
+                                     const rect = e.currentTarget.getBoundingClientRect();
+                                     const spaceAbove = rect.top;
+                                     const spaceBelow = window.innerHeight - rect.bottom;
+                                     const shouldOpenUp = rect.top >= 500 && spaceBelow < 380 && spaceAbove > spaceBelow;
+                                     setActionMenuPosition(shouldOpenUp ? 'up' : 'down');
+                                     setActionMenuRect({
+                                       top: rect.top,
+                                       bottom: rect.bottom,
+                                       left: rect.left,
+                                       right: rect.right,
+                                       width: rect.width,
+                                     });
+                                     setActiveActionMenuId(inv.id);
+                                   }
                                  }}
-                                 className="w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
+                                 className="action-menu-trigger-btn w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
                                  title="More Actions"
                                >
                                  <MoreVertical className="w-4 h-4" />
@@ -9289,7 +9345,18 @@ export default function Dashboard({
 
                                {activeActionMenuId === inv.id && (
                                  <div 
-                                   className={`absolute right-2 sm:right-4 ${actionMenuPosition === 'up' ? 'bottom-full mb-2 slide-in-from-bottom-2' : 'top-full mt-2 slide-in-from-top-2'} z-[99999] w-56 sm:w-60 max-h-[min(380px,calc(100vh-140px))] overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269]/70 rounded-2xl shadow-[0_12px_40px_rgba(2,132,199,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] animate-in fade-in duration-150 text-left`}
+                                   className="action-menu-dropdown-box fixed z-[9999999] w-56 sm:w-60 overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269]/70 rounded-2xl shadow-[0_16px_45px_rgba(2,132,199,0.22)] dark:shadow-[0_16px_45px_rgba(0,0,0,0.6)] animate-in fade-in duration-150 text-left"
+                                   style={{
+                                     position: 'fixed',
+                                     right: actionMenuRect ? `${Math.max(8, window.innerWidth - actionMenuRect.right)}px` : '16px',
+                                     ...(actionMenuPosition === 'up' ? {
+                                       bottom: actionMenuRect ? `${window.innerHeight - actionMenuRect.top + 6}px` : 'auto',
+                                       maxHeight: actionMenuRect ? `min(380px, calc(${actionMenuRect.top}px - 140px))` : '380px',
+                                     } : {
+                                       top: actionMenuRect ? `${actionMenuRect.bottom + 6}px` : 'auto',
+                                       maxHeight: actionMenuRect ? `calc(100vh - ${actionMenuRect.bottom + 20}px)` : '380px',
+                                     })
+                                   }}
                                    onClick={(e) => e.stopPropagation()}
                                  >
                                   {showBinView ? (
