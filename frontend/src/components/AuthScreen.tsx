@@ -317,8 +317,8 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
                 .eq('user_id', data.user.id)
                 .maybeSingle();
 
-              if (currentSub && ['basic', 'professional', 'enterprise'].includes(currentSub.plan_type) && currentSub.status === 'active') {
-                console.warn('[Signup] Blocked Free plan overwrite — user has active paid plan:', currentSub.plan_type);
+              if (currentSub && (currentSub.status === 'active' || currentSub.status === 'trialing')) {
+                console.warn('[Signup] Blocked Free plan overwrite — user has active/trialing subscription:', currentSub.plan_type, currentSub.status);
               } else {
                 console.log('[Signup] Creating Free starter subscription for new user');
                 await supabase.from('subscriptions').upsert({
@@ -368,8 +368,8 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
                 .eq('user_id', data.user.id)
                 .maybeSingle();
 
-              if (currentSub && ['basic', 'professional', 'enterprise'].includes(currentSub.plan_type) && currentSub.status === 'active') {
-                console.warn('[Signup] Blocked Free plan overwrite — user has active paid plan:', currentSub.plan_type);
+              if (currentSub && (currentSub.status === 'active' || currentSub.status === 'trialing')) {
+                console.warn('[Signup] Blocked Free plan overwrite — user has active/trialing subscription:', currentSub.plan_type, currentSub.status);
               } else {
                 console.log('[Signup] Creating Free starter subscription for new user');
                 await supabase.from('subscriptions').upsert({
