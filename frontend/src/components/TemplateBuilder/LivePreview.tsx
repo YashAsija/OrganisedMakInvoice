@@ -20,7 +20,7 @@ import { numberToWords } from '../../lib/numberToWords';
 import { EditableField } from '../EditableField';
 import { Country, State } from 'country-state-city';
 import { ensureAllColumns } from '../../lib/templatePresets';
-import { formatStateWithCode, getStateCode } from '../../lib/stateUtils';
+import { formatStateWithCode, getStateCode, cleanStateName } from '../../lib/stateUtils';
 
 const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, options = [], placeholder = '', list = '' }: any) => {
   const ref = React.useRef<HTMLSpanElement>(null);
@@ -55,7 +55,13 @@ const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, option
   };
 
   if (type === 'select') {
-    const selectedLabel = options.find((opt: any) => opt.value === value)?.label || placeholder || value || '';
+    const matchedOpt = options.find((opt: any) => 
+      opt.value === value || 
+      opt.label === value || 
+      (cleanStateName(opt.value) && cleanStateName(opt.value) === cleanStateName(value))
+    );
+    const selectedLabel = matchedOpt?.label || (value ? formatStateWithCode(value) : placeholder || '');
+    const selectVal = matchedOpt ? matchedOpt.value : (value || '');
 
     return (
       <div className="relative inline-block max-w-[180px] bg-slate-50 outline-dashed outline-1 outline-sky-300/80 hover:bg-slate-200/50 hover:outline-sky-400 focus-within:bg-white focus-within:outline-solid focus-within:outline-2 focus-within:outline-sky-500 rounded px-1 cursor-pointer transition-all print:outline-none print:bg-transparent print:border-none">
@@ -63,7 +69,7 @@ const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, option
           {selectedLabel}
         </span>
         <select
-          value={value || ''}
+          value={selectVal}
           onChange={(e) => onSave(e.target.value)}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
         >

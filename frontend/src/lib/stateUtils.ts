@@ -3,6 +3,8 @@
  * GST State Code resolution & formatting utilities for Indian states
  */
 
+import { Country, State } from 'country-state-city';
+
 export const INDIAN_STATE_NAME_TO_CODE: Record<string, string> = {
   'andaman and nicobar islands': '35',
   'andhra pradesh': '37',
@@ -48,16 +50,21 @@ export const INDIAN_STATE_NAME_TO_CODE: Record<string, string> = {
   'west bengal': '19',
 };
 
+export const cleanStateName = (stateName?: string): string => {
+  if (!stateName || !stateName.trim()) return '';
+  return stateName.replace(/\(\d{2}\)/g, '').trim();
+};
+
 export const getStateCode = (stateName?: string, gstin?: string): string | null => {
   if (gstin && gstin.trim().length >= 2) {
     const prefix = gstin.trim().substring(0, 2);
     if (/^\d{2}$/.test(prefix)) return prefix;
   }
   if (!stateName || !stateName.trim()) return null;
-  const clean = stateName.trim().toLowerCase();
+  const clean = cleanStateName(stateName).toLowerCase();
   
   // Check if stateName already has code in brackets e.g. "Karnataka (29)"
-  const bracketMatch = clean.match(/\((\d{2})\)/);
+  const bracketMatch = stateName.match(/\((\d{2})\)/);
   if (bracketMatch) return bracketMatch[1];
   
   return INDIAN_STATE_NAME_TO_CODE[clean] || null;
@@ -72,5 +79,25 @@ export const formatStateWithCode = (stateName?: string, gstin?: string): string 
   if (/\(\d{2}\)/.test(trimmed)) return trimmed;
   
   const code = getStateCode(trimmed, gstin);
-  return code ? `${trimmed} (${code})` : trimmed;
+  return code ? `${cleanStateName(trimmed)} (${code})` : trimmed;
+};
+
+export const findMatchingStateIso = (rawStateName?: string, countryName?: string): string => {
+  if (!rawStateName || !rawStateName.trim()) return '';
+  const country = countryName && countryName.trim() ? countryName.trim() : 'India';
+  const cCode = Country.getAllCountries().find(c => c.name.toLowerCase() === country.toLowerCase())?.isoCode || 'IN';
+  const states = State.getStatesOfCountry(cCode);
+  if (!states || states.length === 0) return '';
+  
+  const clean = cleanStateName(rawStateName).toLowerCase();
+  const rawLower = rawStateName.trim().toLowerCase();
+  
+  const matched = states.find(s => 
+    s.name.toLowerCase() === clean || 
+    s.isoCode.toLowerCase() === clean ||
+    s.name.toLowerCase() === rawLower ||
+    s.isoCode.toLowerCase() === rawLower
+  );
+  
+  return matched ? matched.isoCode : '';
 };

@@ -15,7 +15,7 @@ import { SmartBillingBox } from './SmartBillingBox';
 import { getDocumentTypeDefaults } from '../lib/docTypeDefaults';
 import { getLocalizationConfig } from '../lib/localizationEngine';
 import { buildClientDetails, persistBilledParty } from '../lib/documentUtils';
-import { formatStateWithCode, getStateCode } from '../lib/stateUtils';
+import { formatStateWithCode, getStateCode, findMatchingStateIso } from '../lib/stateUtils';
 
 
 
@@ -3105,27 +3105,21 @@ export default function InvoiceModal({
                             <label htmlFor="client-state" className="sr-only">Client State</label>
                             <select
                               id="client-state"
-                              value={(() => {
-                                const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode;
-                                if (!cCode) return '';
-                                return State.getStatesOfCountry(cCode).find(s => s.name === clientState)?.isoCode || '';
-                              })()}
+                              value={findMatchingStateIso(clientState, clientCountry || 'India')}
                               onChange={(e) => {
-                                const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode;
-                                if (cCode) {
-                                  const selectedState = State.getStateByCodeAndCountry(e.target.value, cCode);
-                                  if (selectedState) {
-                                    setClientState(selectedState.name);
-                                  }
+                                const cCode = Country.getAllCountries().find(c => c.name.toLowerCase() === (clientCountry || 'India').toLowerCase())?.isoCode || 'IN';
+                                const selectedState = State.getStateByCodeAndCountry(e.target.value, cCode);
+                                if (selectedState) {
+                                  setClientState(selectedState.name);
+                                } else if (e.target.value) {
+                                  setClientState(e.target.value);
                                 }
                               }}
-                              disabled={!clientCountry}
                               className={`w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white font-medium text-[13px] focus:outline-none cursor-pointer disabled:opacity-50 ${!clientState ? 'text-slate-400' : 'text-slate-800 dark:text-white'}`}
                             >
                               <option value="" disabled>Client State</option>
                               {(() => {
-                                const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode;
-                                if (!cCode) return null;
+                                const cCode = Country.getAllCountries().find(c => c.name.toLowerCase() === (clientCountry || 'India').toLowerCase())?.isoCode || 'IN';
                                 return State.getStatesOfCountry(cCode).map((st) => (
                                   <option key={st.isoCode} value={st.isoCode}>{st.name}{getStateCode(st.name) ? ` (${getStateCode(st.name)})` : ''}</option>
                                 ));
@@ -3275,7 +3269,7 @@ export default function InvoiceModal({
                             </h3>
                             <button
                               type="button"
-                              onClick={() => {
+                               onClick={() => {
                                 setShippedToCompanyName(clientCompanyName);
                                 setShippedToName(clientName);
                                 setShippedToEmail(clientEmail);
@@ -3318,27 +3312,21 @@ export default function InvoiceModal({
                             )}
                             {(activeTemplate.config.shipping?.fields.includes('address') || activeTemplate.config.shipping?.fields.includes('state')) && (
                               <select
-                                value={(() => {
-                                  const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode;
-                                  if (!cCode) return '';
-                                  return State.getStatesOfCountry(cCode).find(s => s.name === shippedToState)?.isoCode || '';
-                                })()}
+                                value={findMatchingStateIso(shippedToState, shippedToCountry || 'India')}
                                 onChange={(e) => {
-                                  const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode;
-                                  if (cCode) {
-                                    const selectedState = State.getStateByCodeAndCountry(e.target.value, cCode);
-                                    if (selectedState) {
-                                      setShippedToState(selectedState.name);
-                                    }
+                                  const cCode = Country.getAllCountries().find(c => c.name.toLowerCase() === (shippedToCountry || 'India').toLowerCase())?.isoCode || 'IN';
+                                  const selectedState = State.getStateByCodeAndCountry(e.target.value, cCode);
+                                  if (selectedState) {
+                                    setShippedToState(selectedState.name);
+                                  } else if (e.target.value) {
+                                    setShippedToState(e.target.value);
                                   }
                                 }}
-                                disabled={!shippedToCountry}
                                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none disabled:opacity-50"
                               >
                                 <option value="" disabled>State</option>
                                 {(() => {
-                                  const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode;
-                                  if (!cCode) return null;
+                                  const cCode = Country.getAllCountries().find(c => c.name.toLowerCase() === (shippedToCountry || 'India').toLowerCase())?.isoCode || 'IN';
                                   return State.getStatesOfCountry(cCode).map((st) => (
                                     <option key={st.isoCode} value={st.isoCode}>{st.name}{getStateCode(st.name) ? ` (${getStateCode(st.name)})` : ''}</option>
                                   ));
