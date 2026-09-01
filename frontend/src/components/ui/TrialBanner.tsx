@@ -28,7 +28,7 @@ export function TrialBanner({ onUpgradeClick }: TrialBannerProps) {
   };
 
   return (
-    <div className={`w-full shrink-0 py-2.5 px-3 sm:px-6 transition-all relative z-20 ${getBannerStyle()}`}>
+    <div className={`w-full shrink-0 py-2.5 px-3 sm:px-6 transition-all relative z-10 ${getBannerStyle()}`}>
       <div className="max-w-[1600px] mx-auto flex flex-row items-center justify-between gap-2.5 text-xs sm:text-sm">
         
         {/* Left Side: Icon & Status Text */}

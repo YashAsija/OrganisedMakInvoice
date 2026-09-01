@@ -7923,7 +7923,7 @@ export default function Dashboard({
       <TrialExpiredBanner onUpgradeClick={() => setActiveTab('subscription')} />
 
       {/* Dynamic Main Responsive Workspace - Grid layout turns dual-column on desktop */}
-      <main className="w-full flex-1 min-h-0 max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4 py-2 md:py-3 space-y-4 xl:space-y-0 xl:flex xl:gap-6 xl:items-stretch overflow-hidden">
+      <main className="w-full flex-1 min-h-0 max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4 py-2 md:py-3 space-y-4 xl:space-y-0 xl:flex xl:gap-6 xl:items-stretch relative z-30">
         
         {/* DESKTOP BRANDING & CONTROL SIDEBAR - Visible on xl screens (1280px+) */}
         <div className="hidden xl:block relative shrink-0 h-full">
@@ -8591,9 +8591,10 @@ export default function Dashboard({
                                onClick={(e) => {
                                  e.stopPropagation();
                                  const rect = e.currentTarget.getBoundingClientRect();
+                                 const spaceAbove = rect.top;
                                  const spaceBelow = window.innerHeight - rect.bottom;
-                                 // Smart auto-flip: flip UPWARDS if space below is less than 390px and rect.top > 220px
-                                 const shouldOpenUp = spaceBelow < 390 && rect.top > 220;
+                                 // Smart auto-flip: Only open UPWARDS if row is in lower half of screen (rect.top > 350) AND space below is tight (< 360)
+                                 const shouldOpenUp = spaceBelow < 360 && spaceAbove > spaceBelow && rect.top > 350;
                                  setActionMenuPosition(shouldOpenUp ? 'up' : 'down');
                                  setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id);
                                }}
@@ -8605,7 +8606,7 @@ export default function Dashboard({
 
                              {activeActionMenuId === inv.id && (
                                <div 
-                                 className={`absolute right-0 ${actionMenuPosition === 'up' ? 'bottom-full mb-2 slide-in-from-bottom-2' : 'top-full mt-2 slide-in-from-top-2'} z-[99999] w-56 sm:w-60 max-h-[min(410px,calc(100vh-100px))] overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269]/70 rounded-2xl shadow-[0_12px_40px_rgba(2,132,199,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] animate-in fade-in duration-150 text-left`}
+                                 className={`absolute right-0 ${actionMenuPosition === 'up' ? 'bottom-full mb-2 slide-in-from-bottom-2' : 'top-full mt-2 slide-in-from-top-2'} z-[99999] w-56 sm:w-60 max-h-[min(380px,calc(100vh-140px))] overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269]/70 rounded-2xl shadow-[0_12px_40px_rgba(2,132,199,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] animate-in fade-in duration-150 text-left`}
                                  onClick={(e) => e.stopPropagation()}
                                >
 
@@ -9274,8 +9275,9 @@ export default function Dashboard({
                                  onClick={(e) => {
                                    e.stopPropagation();
                                    const rect = e.currentTarget.getBoundingClientRect();
+                                   const spaceAbove = rect.top;
                                    const spaceBelow = window.innerHeight - rect.bottom;
-                                   const shouldOpenUp = spaceBelow < 390 && rect.top > 220;
+                                   const shouldOpenUp = spaceBelow < 360 && spaceAbove > spaceBelow && rect.top > 350;
                                    setActionMenuPosition(shouldOpenUp ? 'up' : 'down');
                                    setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id);
                                  }}
@@ -9287,7 +9289,7 @@ export default function Dashboard({
 
                                {activeActionMenuId === inv.id && (
                                  <div 
-                                   className={`absolute right-2 sm:right-4 ${actionMenuPosition === 'up' ? 'bottom-full mb-2 slide-in-from-bottom-2' : 'top-full mt-2 slide-in-from-top-2'} z-[99999] w-56 sm:w-60 max-h-[min(410px,calc(100vh-100px))] overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269]/70 rounded-2xl shadow-[0_12px_40px_rgba(2,132,199,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] animate-in fade-in duration-150 text-left`}
+                                   className={`absolute right-2 sm:right-4 ${actionMenuPosition === 'up' ? 'bottom-full mb-2 slide-in-from-bottom-2' : 'top-full mt-2 slide-in-from-top-2'} z-[99999] w-56 sm:w-60 max-h-[min(380px,calc(100vh-140px))] overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269]/70 rounded-2xl shadow-[0_12px_40px_rgba(2,132,199,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] animate-in fade-in duration-150 text-left`}
                                    onClick={(e) => e.stopPropagation()}
                                  >
                                   {showBinView ? (
