@@ -15,6 +15,7 @@ import { SmartBillingBox } from './SmartBillingBox';
 import { getDocumentTypeDefaults } from '../lib/docTypeDefaults';
 import { getLocalizationConfig } from '../lib/localizationEngine';
 import { buildClientDetails, persistBilledParty } from '../lib/documentUtils';
+import { formatStateWithCode, getStateCode } from '../lib/stateUtils';
 
 
 
@@ -3126,7 +3127,7 @@ export default function InvoiceModal({
                                 const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode;
                                 if (!cCode) return null;
                                 return State.getStatesOfCountry(cCode).map((st) => (
-                                  <option key={st.isoCode} value={st.isoCode}>{st.name}</option>
+                                  <option key={st.isoCode} value={st.isoCode}>{st.name}{getStateCode(st.name) ? ` (${getStateCode(st.name)})` : ''}</option>
                                 ));
                               })()}
                             </select>
@@ -3339,7 +3340,7 @@ export default function InvoiceModal({
                                   const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode;
                                   if (!cCode) return null;
                                   return State.getStatesOfCountry(cCode).map((st) => (
-                                    <option key={st.isoCode} value={st.isoCode}>{st.name}</option>
+                                    <option key={st.isoCode} value={st.isoCode}>{st.name}{getStateCode(st.name) ? ` (${getStateCode(st.name)})` : ''}</option>
                                   ));
                                 })()}
                               </select>

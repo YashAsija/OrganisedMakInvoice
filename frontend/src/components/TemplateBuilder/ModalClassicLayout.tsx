@@ -1,5 +1,6 @@
 import React from 'react';
 import { InvoiceTemplate, Invoice, BusinessProfile } from '../../types';
+import { formatStateWithCode } from '../../lib/stateUtils';
 
 interface LivePreviewProps {
   template: InvoiceTemplate;
@@ -209,7 +210,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
                 {config.client.fields.includes('address') && (
                   <>
                     <div className={rowStyle}><span className={labelStyle}>Country</span><span className="mr-2">:</span><span className={valStyle}>{clientCountry}</span></div>
-                    <div className={rowStyle}><span className={labelStyle}>State</span><span className="mr-2">:</span><span className={valStyle}>{clientState}</span></div>
+                    <div className={rowStyle}><span className={labelStyle}>State</span><span className="mr-2">:</span><span className={valStyle}>{formatStateWithCode(clientState, clientGstin)}</span></div>
                     <div className={rowStyle}><span className={labelStyle}>Address</span><span className="mr-2">:</span><span className={valStyle}>{clientAddress}</span></div>
                   </>
                 )}
@@ -240,7 +241,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
                  {config.shipping.fields.includes('address') && (
                    <>
                      <div className={rowStyle}><span className={labelStyle}>Country</span><span className="mr-2">:</span><span className={valStyle}>{shipCountry}</span></div>
-                     <div className={rowStyle}><span className={labelStyle}>State</span><span className="mr-2">:</span><span className={valStyle}>{shipState}</span></div>
+                     <div className={rowStyle}><span className={labelStyle}>State</span><span className="mr-2">:</span><span className={valStyle}>{formatStateWithCode(shipState, shipGstin)}</span></div>
                      <div className={rowStyle}><span className={labelStyle}>Address</span><span className="mr-2">:</span><span className={valStyle}>{shipAddress}</span></div>
                    </>
                  )}

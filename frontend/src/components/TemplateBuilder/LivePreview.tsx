@@ -20,6 +20,7 @@ import { numberToWords } from '../../lib/numberToWords';
 import { EditableField } from '../EditableField';
 import { Country, State } from 'country-state-city';
 import { ensureAllColumns } from '../../lib/templatePresets';
+import { formatStateWithCode, getStateCode } from '../../lib/stateUtils';
 
 const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, options = [], placeholder = '', list = '' }: any) => {
   const ref = React.useRef<HTMLSpanElement>(null);
@@ -243,10 +244,14 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   }, [businessProfile]);
 
   const renderSelectInteractive = (value: string, fieldKey: string, options: any[], placeholder = '') => {
-    if (isInteractive && onUpdateField) {
-      return <InlineEditable value={value} onSave={(v: any) => onUpdateField(fieldKey, v)} type="select" options={options} placeholder={placeholder} />;
+    let formattedVal = value;
+    if ((fieldKey === 'clientState' || fieldKey === 'shippedToState') && value) {
+      formattedVal = formatStateWithCode(value);
     }
-    return value;
+    if (isInteractive && onUpdateField) {
+      return <InlineEditable value={formattedVal} onSave={(v: any) => onUpdateField(fieldKey, v)} type="select" options={options} placeholder={placeholder} />;
+    }
+    return formattedVal;
   };
 
   const renderInteractive = (value: string | number, fieldKey: string, type: 'text' | 'textarea' = 'text', placeholder = '') => {
@@ -877,11 +882,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                     {config.client.fields.includes('address') && (
                       isVertical ? <>
                         <div className={`flex items-center ${isClientCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isClientCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Country</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(clientCountry, 'clientCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</span></div>
-                        <div className={`flex items-center ${isClientCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isClientCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>State</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(clientState, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</span></div>
+                        <div className={`flex items-center ${isClientCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isClientCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>State</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(clientState, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode || '').map(s => ({ label: `${s.name}${getStateCode(s.name) ? ` (${getStateCode(s.name)})` : ''}`, value: s.name })), 'Select State')}</span></div>
                         <div className={`flex items-start ${isClientCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isClientCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Address</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(clientAddr, 'clientAddress', 'textarea', 'Address')}</span></div>
                       </> : <>
                         <div className={`flex items-center ${isClientCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Country:</span>}<span className="text-gray-900 font-bold">{renderSelectInteractive(clientCountry, 'clientCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</span></div>
-                        <div className={`flex items-center ${isClientCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">State:</span>}<span className="text-gray-900 font-bold">{renderSelectInteractive(clientState, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</span></div>
+                        <div className={`flex items-center ${isClientCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">State:</span>}<span className="text-gray-900 font-bold">{renderSelectInteractive(clientState, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode || '').map(s => ({ label: `${s.name}${getStateCode(s.name) ? ` (${getStateCode(s.name)})` : ''}`, value: s.name })), 'Select State')}</span></div>
                         <div className={`flex items-center ${isClientCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Address:</span>}<span className="text-gray-900 font-bold">{renderInteractive(clientAddr, 'clientAddress', 'textarea', 'Address')}</span></div>
                       </>
                     )}
@@ -917,7 +922,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 )}
                 {config.client.fields.includes('address') && <>
                   <div style={{ fontSize: isClientCompact ? '10px' : '12px', margin: isClientCompact ? '0px' : '2px 0' }}>{showLabels && <strong>Country: </strong>}{renderSelectInteractive(clientCountryNM, 'clientCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</div>
-                  <div style={{ fontSize: isClientCompact ? '10px' : '12px', margin: isClientCompact ? '0px' : '2px 0' }}>{showLabels && <strong>State: </strong>}{renderSelectInteractive(clientStateNM, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountryNM)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</div>
+                  <div style={{ fontSize: isClientCompact ? '10px' : '12px', margin: isClientCompact ? '0px' : '2px 0' }}>{showLabels && <strong>State: </strong>}{renderSelectInteractive(clientStateNM, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountryNM)?.isoCode || '').map(s => ({ label: `${s.name}${getStateCode(s.name) ? ` (${getStateCode(s.name)})` : ''}`, value: s.name })), 'Select State')}</div>
                   <p style={{ fontSize: isClientCompact ? '10px' : '12px', margin: isClientCompact ? '0px' : '2px 0', whiteSpace: 'pre-wrap' }}>{renderInteractive(clientAddr, 'clientAddress', 'textarea', 'Address')}</p>
                 </>}
                 {config.client.fields.includes('gstin') && (clientGst || isInteractive) && <p style={{ fontSize: isClientCompact ? '10px' : '12px', margin: isClientCompact ? '0px' : '2px 0' }}>{showLabels && <strong>GSTIN: </strong>}{renderInteractive(clientGst, 'clientGstin', 'text', 'GSTIN')}</p>}
@@ -993,11 +998,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                       {config.shipping.fields.includes('address') && (
                         isVertical ? <>
                           <div className={`flex items-center ${isShipCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isShipCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Country</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(shipCountry, 'shippedToCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</span></div>
-                          <div className={`flex items-center ${isShipCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isShipCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>State</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</span></div>
+                          <div className={`flex items-center ${isShipCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isShipCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>State</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: `${s.name}${getStateCode(s.name) ? ` (${getStateCode(s.name)})` : ''}`, value: s.name })), 'Select State')}</span></div>
                           <div className={`flex items-start ${isShipCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isShipCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Address</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipAddr, 'shippedToAddress', 'textarea', 'Address')}</span></div>
                         </> : <>
                           <div className={`flex items-center ${isShipCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Country:</span>}<span className="text-gray-900 font-bold">{renderSelectInteractive(shipCountry, 'shippedToCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</span></div>
-                          <div className={`flex items-center ${isShipCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">State:</span>}<span className="text-gray-900 font-bold">{renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</span></div>
+                          <div className={`flex items-center ${isShipCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">State:</span>}<span className="text-gray-900 font-bold">{renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: `${s.name}${getStateCode(s.name) ? ` (${getStateCode(s.name)})` : ''}`, value: s.name })), 'Select State')}</span></div>
                           <div className={`flex items-center ${isShipCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Address:</span>}<span className="text-gray-900 font-bold">{renderInteractive(shipAddr, 'shippedToAddress', 'textarea', 'Address')}</span></div>
                         </>
                       )}
@@ -1040,7 +1045,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   )}
                   {config.shipping.fields.includes('address') && <>
                     <div style={{ fontSize: isShipCompact ? '10px' : '12px', margin: isShipCompact ? '0px' : '2px 0' }}>{showLabels && <strong>Country: </strong>}{renderSelectInteractive(shipCountry, 'shippedToCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</div>
-                    <div style={{ fontSize: isShipCompact ? '10px' : '12px', margin: isShipCompact ? '0px' : '2px 0' }}>{showLabels && <strong>State: </strong>}{renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</div>
+                    <div style={{ fontSize: isShipCompact ? '10px' : '12px', margin: isShipCompact ? '0px' : '2px 0' }}>{showLabels && <strong>State: </strong>}{renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: `${s.name}${getStateCode(s.name) ? ` (${getStateCode(s.name)})` : ''}`, value: s.name })), 'Select State')}</div>
                     <p style={{ fontSize: isShipCompact ? '10px' : '12px', margin: isShipCompact ? '0px' : '2px 0', whiteSpace: 'pre-wrap' }}>{renderInteractive(shipAddr, 'shippedToAddress', 'textarea', 'Address')}</p>
                   </>}
                   {config.shipping.fields.includes('gstin') && <p style={{ fontSize: isShipCompact ? '10px' : '12px', margin: isShipCompact ? '0px' : '2px 0' }}>{showLabels && <strong>GSTIN: </strong>}{renderInteractive(shipGst, 'shippedToGstin', 'text', 'GSTIN')}</p>}
