@@ -8588,27 +8588,26 @@ export default function Dashboard({
                             </div>
 
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const spaceBelow = window.innerHeight - rect.bottom;
-                                // ALWAYS open DOWNWARDS for all rows in top 600px of viewport (rect.top <= 600px).
-                                // Only flip UPWARDS for rows near the bottom of the screen where spaceBelow < 300px.
-                                const shouldOpenUp = rect.top > 600 && spaceBelow < 300;
-                                setActionMenuPosition(shouldOpenUp ? 'up' : 'down');
-                                setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id);
-                              }}
-                              className="w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
-                              title="More Actions"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 const rect = e.currentTarget.getBoundingClientRect();
+                                 const spaceBelow = window.innerHeight - rect.bottom;
+                                 // Smart auto-flip: flip UPWARDS if space below is less than 390px and rect.top > 220px
+                                 const shouldOpenUp = spaceBelow < 390 && rect.top > 220;
+                                 setActionMenuPosition(shouldOpenUp ? 'up' : 'down');
+                                 setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id);
+                               }}
+                               className="w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
+                               title="More Actions"
+                             >
+                               <MoreVertical className="w-4 h-4" />
+                             </button>
 
-                            {activeActionMenuId === inv.id && (
-                              <div 
-                                className={`absolute right-0 ${actionMenuPosition === 'up' ? 'bottom-10 slide-in-from-bottom-2' : 'top-10 slide-in-from-top-2'} z-[9999] w-52 max-h-[calc(100vh-140px)] overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in duration-150 text-left`}
-                                onClick={(e) => e.stopPropagation()}
-                              >
+                             {activeActionMenuId === inv.id && (
+                               <div 
+                                 className={`absolute right-0 ${actionMenuPosition === 'up' ? 'bottom-full mb-2 slide-in-from-bottom-2' : 'top-full mt-2 slide-in-from-top-2'} z-[99999] w-56 sm:w-60 max-h-[min(410px,calc(100vh-100px))] overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269]/70 rounded-2xl shadow-[0_12px_40px_rgba(2,132,199,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] animate-in fade-in duration-150 text-left`}
+                                 onClick={(e) => e.stopPropagation()}
+                               >
 
                                 
         {showBinView ? (
@@ -9131,7 +9130,7 @@ export default function Dashboard({
 
                               {inv.recurringSettings?.isRecurring && (
 
-                                <span className="text-[10px]" title={`Auto Repeat ${inv.recurringSettings.interval}`}>ðŸ”„</span>
+                                <span className="text-[10px]" title={`Auto Repeat ${inv.recurringSettings.interval}`}>🔄</span>
 
                               )}
 
@@ -9272,25 +9271,25 @@ export default function Dashboard({
                               </div>
 
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  const spaceBelow = window.innerHeight - rect.bottom;
-                                  const shouldOpenUp = rect.top > 600 && spaceBelow < 300;
-                                  setActionMenuPosition(shouldOpenUp ? 'up' : 'down');
-                                  setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id);
-                                }}
-                                className="w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
-                                title="More Actions"
-                              >
-                                <MoreVertical className="w-4 h-4" />
-                              </button>
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   const rect = e.currentTarget.getBoundingClientRect();
+                                   const spaceBelow = window.innerHeight - rect.bottom;
+                                   const shouldOpenUp = spaceBelow < 390 && rect.top > 220;
+                                   setActionMenuPosition(shouldOpenUp ? 'up' : 'down');
+                                   setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id);
+                                 }}
+                                 className="w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
+                                 title="More Actions"
+                               >
+                                 <MoreVertical className="w-4 h-4" />
+                               </button>
 
-                              {activeActionMenuId === inv.id && (
-                                <div 
-                                  className={`absolute right-4 ${actionMenuPosition === 'up' ? 'bottom-10 slide-in-from-bottom-2' : 'top-10 slide-in-from-top-2'} z-[9999] w-52 max-h-[calc(100vh-140px)] overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in duration-150 text-left`}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
+                               {activeActionMenuId === inv.id && (
+                                 <div 
+                                   className={`absolute right-2 sm:right-4 ${actionMenuPosition === 'up' ? 'bottom-full mb-2 slide-in-from-bottom-2' : 'top-full mt-2 slide-in-from-top-2'} z-[99999] w-56 sm:w-60 max-h-[min(410px,calc(100vh-100px))] overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269]/70 rounded-2xl shadow-[0_12px_40px_rgba(2,132,199,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] animate-in fade-in duration-150 text-left`}
+                                   onClick={(e) => e.stopPropagation()}
+                                 >
                                   {showBinView ? (
           <>
             <button
