@@ -737,33 +737,34 @@ export default function Dashboard({
 
     return 'system';
 
-  };
+  };  const notifStorageKey = userEmail
+    ? `makbills_notifications_${encodeURIComponent(userEmail.toLowerCase().trim())}`
+    : (profile?.email ? `makbills_notifications_${encodeURIComponent(profile.email.toLowerCase().trim())}` : 'makbills_notifications_guest');
 
+  const [notifications, setNotifications] = useState<any[]>([]);
 
-
-  const [notifications, setNotifications] = useState<any[]>(() => {
-
-    const cached = localStorage.getItem('makbills_notifications');
-
+  // Re-sync notifications whenever active user session / account changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const cached = localStorage.getItem(notifStorageKey);
     if (cached) {
-
-      try { return JSON.parse(cached); } catch(e) {}
-
+      try {
+        setNotifications(JSON.parse(cached));
+      } catch {
+        setNotifications([]);
+      }
+    } else {
+      setNotifications([]);
     }
-
-    return [];
-
-  });
-
-
+    // Clear active toasts from previous user session
+    setActiveToasts([]);
+    setExitingToastIds(new Set());
+  }, [notifStorageKey]);
 
   useEffect(() => {
-
-    localStorage.setItem('makbills_notifications', JSON.stringify(notifications));
-
-  }, [notifications]);
-
-
+    if (typeof window === 'undefined' || !notifStorageKey) return;
+    localStorage.setItem(notifStorageKey, JSON.stringify(notifications));
+  }, [notifications, notifStorageKey]);
 
   interface ActiveToast {
 
@@ -813,7 +814,12 @@ export default function Dashboard({
 
     const handleNotification = (e: any) => {
 
-      const { title, message, type } = e.detail;
+      const { title, message, type, userEmail: targetEmail } = e.detail || {};
+
+      // Filter out notifications targeted to a different user account
+      if (targetEmail && userEmail && targetEmail.toLowerCase().trim() !== userEmail.toLowerCase().trim()) {
+        return;
+      }
 
       const notifId = Date.now().toString() + Math.random().toString().slice(2, 6);
 
@@ -848,36 +854,29 @@ export default function Dashboard({
 
 
       // Only add navigation for notifications that lead to a genuinely useful page
-
       if (lowerTitle.includes('bulk upload complete')) {
-
-        // Bulk upload: infer the correct registry tab from the message body
-
         const lowerMsg = (message || '').toLowerCase();
-
         if (lowerMsg.includes('client database')) { actionLabel = 'Go to Client Database'; actionTab = 'master_vendor'; }
-
         else if (lowerMsg.includes('hsn registry')) { actionLabel = 'Go to HSN Registry'; actionTab = 'master_hsn'; }
-
         else if (lowerMsg.includes('transport database')) { actionLabel = 'Go to Transport Database'; actionTab = 'master_transport'; }
-
         else if (lowerMsg.includes('material catalog')) { actionLabel = 'Go to Material Catalog'; actionTab = 'catalog_material'; }
-
         else if (lowerMsg.includes('product category')) { actionLabel = 'Go to Product Category'; actionTab = 'catalog_category'; }
-
       } else if (lowerTitle.includes('default template set')) {
-
         actionLabel = 'Go to Templates';
-
         actionTab = 'invoice_templates';
-
+      } else if (lowerTitle.includes('invoice') || lowerTitle.includes('estimate') || lowerTitle.includes('quote') || lowerTitle.includes('credit note')) {
+        actionLabel = 'View Invoices';
+        actionTab = 'invoices';
+      } else if (lowerTitle.includes('expense')) {
+        actionLabel = 'View Expenses';
+        actionTab = 'expenses';
+      } else if (lowerTitle.includes('client') || lowerTitle.includes('customer')) {
+        actionLabel = 'View Clients';
+        actionTab = 'clients';
+      } else if (lowerTitle.includes('subscription') || lowerTitle.includes('plan') || lowerTitle.includes('trial') || lowerTitle.includes('upgrade') || lowerTitle.includes('limit')) {
+        actionLabel = 'View Subscription';
+        actionTab = 'subscription';
       }
-
-
-
-      // No navigation for: Template Downloaded (CSV file), individual registry CRUD (already on page),
-
-      // Validation Errors, Draft Restored, GL Accounts, Download Failed
 
 
 
@@ -927,7 +926,7 @@ export default function Dashboard({
 
     return () => window.removeEventListener('mak_notification', handleNotification);
 
-  }, []);
+  }, [userEmail]);
 
 
 
