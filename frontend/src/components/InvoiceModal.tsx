@@ -218,14 +218,7 @@ export default function InvoiceModal({
   const [clientPan, setClientPan] = useState('');
   const [clientCompanyName, setClientCompanyName] = useState('');
   const updateClientGst = (gstVal: string) => {
-    const cleanGst = gstVal.trim().toUpperCase();
-    setClientGstin(cleanGst);
-    if (!clientPan && cleanGst.length >= 12) {
-      const extractedPan = cleanGst.substring(2, 12);
-      if (/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(extractedPan)) {
-        setClientPan(extractedPan);
-      }
-    }
+    setClientGstin(gstVal.trim().toUpperCase());
   };
   const [placeOfSupply, setPlaceOfSupply] = useState('');
   const [grRrNo, setGrRrNo] = useState('');

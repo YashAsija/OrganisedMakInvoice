@@ -155,40 +155,6 @@ export const GSTInput: React.FC<GSTInputProps> = ({
         </p>
       )}
 
-      {/* Success Banner */}
-      {statusState === 'success' && (
-        <p className="mt-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
-          <span>✓ Valid GSTIN Format</span>
-        </p>
-      )}
-
-      {/* STEP 2.6: Clear Confirmation Modal Dialog */}
-      {showClearModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-5 max-w-xs w-full border border-slate-200 dark:border-zinc-800 shadow-xl animate-in fade-in duration-200">
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Clear Company Details?</h4>
-            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-              Do you want to clear the auto-filled company details as well?
-            </p>
-            <div className="mt-4 flex items-center justify-end space-x-2">
-              <button
-                type="button"
-                onClick={keepExistingDetails}
-                className="px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg"
-              >
-                No, keep them
-              </button>
-              <button
-                type="button"
-                onClick={confirmClearAll}
-                className="px-3 py-1.5 text-xs font-medium bg-red-600 text-white hover:bg-red-700 rounded-lg shadow-xs"
-              >
-                Yes, clear all
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
