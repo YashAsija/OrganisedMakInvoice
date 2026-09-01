@@ -37,8 +37,16 @@ export const playNotificationChime = () => {
  * Emits a global notification event that the Dashboard can listen to,
  * respecting user notification settings saved in localStorage.
  */
-export const emitNotification = (title: string, message: string, type: NotificationType = 'info') => {
+export const emitNotification = (title: string, message: string, type: NotificationType = 'info', targetEmail?: string) => {
   if (typeof window === 'undefined') return;
+
+  // Resolve target email if not explicitly provided
+  let resolvedEmail = targetEmail;
+  if (!resolvedEmail) {
+    try {
+      resolvedEmail = localStorage.getItem('makbills_custom_email') || undefined;
+    } catch (e) {}
+  }
 
   // Check saved preferences
   const rawPref = localStorage.getItem(NOTIF_STORAGE_KEY);
@@ -122,7 +130,7 @@ export const emitNotification = (title: string, message: string, type: Notificat
   // Handle In-App Toast
   if (inAppEnabled || isSettingsFeedback) {
     const event = new CustomEvent('mak_notification', {
-      detail: { title, message, type }
+      detail: { title, message, type, userEmail: resolvedEmail }
     });
     window.dispatchEvent(event);
   }

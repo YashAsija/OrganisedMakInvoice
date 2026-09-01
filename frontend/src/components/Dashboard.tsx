@@ -724,42 +724,53 @@ export default function Dashboard({
       t.includes('quote') || m.includes('quote') ||
 
       t.includes('word document') || m.includes('word document') ||
-
       t.includes('bulk pdfs') || m.includes('bulk pdfs') ||
-
       t.includes('excel csv') || m.includes('excel csv')
-
     ) {
-
       return 'billing';
-
     }
-
     return 'system';
+  };
 
-  };  const notifStorageKey = userEmail
-    ? `makbills_notifications_${encodeURIComponent(userEmail.toLowerCase().trim())}`
-    : (profile?.email ? `makbills_notifications_${encodeURIComponent(profile.email.toLowerCase().trim())}` : 'makbills_notifications_guest');
+  const activeUserEmail = (userEmail || profile?.email || '').trim().toLowerCase();
+  const notifStorageKey = activeUserEmail
+    ? `makbills_notifications_${encodeURIComponent(activeUserEmail)}`
+    : null;
 
   const [notifications, setNotifications] = useState<any[]>([]);
 
   // Re-sync notifications whenever active user session / account changes
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const cached = localStorage.getItem(notifStorageKey);
-    if (cached) {
-      try {
-        setNotifications(JSON.parse(cached));
-      } catch {
+
+    // Wipe legacy un-scoped notifications key to prevent cross-account leakage
+    try {
+      localStorage.removeItem('makbills_notifications');
+    } catch (e) {}
+
+    if (notifStorageKey) {
+      const cached = localStorage.getItem(notifStorageKey);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          const filtered = Array.isArray(parsed)
+            ? parsed.filter((n: any) => !n.userEmail || n.userEmail.toLowerCase() === activeUserEmail)
+            : [];
+          setNotifications(filtered);
+        } catch {
+          setNotifications([]);
+        }
+      } else {
         setNotifications([]);
       }
     } else {
       setNotifications([]);
     }
+
     // Clear active toasts from previous user session
     setActiveToasts([]);
     setExitingToastIds(new Set());
-  }, [notifStorageKey]);
+  }, [notifStorageKey, activeUserEmail]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !notifStorageKey) return;
@@ -767,91 +778,57 @@ export default function Dashboard({
   }, [notifications, notifStorageKey]);
 
   interface ActiveToast {
-
     id: string;
-
     title: string;
-
     message: string;
-
     type: 'success' | 'info' | 'warning' | 'error';
-
     actionLabel?: string;
-
     actionTab?: string;
-
     timestamp: string;
-
   }
 
-
-
   const [activeToasts, setActiveToasts] = useState<ActiveToast[]>([]);
-
   const [exitingToastIds, setExitingToastIds] = useState<Set<string>>(new Set());
 
-
-
   // Smoothly animate-out a toast, then remove it from DOM after animation ends
-
   const dismissToast = (id: string) => {
-
     setExitingToastIds(prev => new Set(prev).add(id));
-
     setTimeout(() => {
-
       setActiveToasts(prev => prev.filter(t => t.id !== id));
-
       setExitingToastIds(prev => { const s = new Set(prev); s.delete(id); return s; });
-
     }, 400); // matches toastSlideOut duration (0.38s + tiny buffer)
-
   };
 
-
-
   useEffect(() => {
-
     const handleNotification = (e: any) => {
-
       const { title, message, type, userEmail: targetEmail } = e.detail || {};
 
+      // If no active user session is present, DO NOT record or show notifications
+      if (!activeUserEmail) {
+        return;
+      }
+
       // Filter out notifications targeted to a different user account
-      if (targetEmail && userEmail && targetEmail.toLowerCase().trim() !== userEmail.toLowerCase().trim()) {
+      if (targetEmail && targetEmail.trim().toLowerCase() !== activeUserEmail) {
         return;
       }
 
       const notifId = Date.now().toString() + Math.random().toString().slice(2, 6);
-
       const newNotif = {
-
         id: notifId,
-
         title,
-
         message,
-
         type: type || 'info',
-
         timestamp: new Date().toISOString(),
-
-        read: false
-
+        read: false,
+        userEmail: activeUserEmail
       };
 
       setNotifications(prev => [newNotif, ...prev]);
 
-
-
       let actionLabel: string | undefined = undefined;
-
       let actionTab: string | undefined = undefined;
-
-
-
       const lowerTitle = (title || '').toLowerCase();
-
-
 
       // Only add navigation for notifications that lead to a genuinely useful page
       if (lowerTitle.includes('bulk upload complete')) {
@@ -878,60 +855,33 @@ export default function Dashboard({
         actionTab = 'subscription';
       }
 
-
-
       const toastItem: ActiveToast = {
-
         id: notifId,
-
         title,
-
         message,
-
         type: type || 'info',
-
         actionLabel,
-
         actionTab,
-
-        timestamp: new Date().toISOString()
-
+        timestamp: new Date().toISOString(),
       };
-
-
 
       setActiveToasts(prev => [toastItem, ...prev].slice(0, 3));
 
-
-
       // Auto-dismiss: trigger exit animation at 5.6s, remove DOM at 6s
-
       setTimeout(() => {
-
         setExitingToastIds(prev => new Set(prev).add(notifId));
-
       }, 5600);
 
       setTimeout(() => {
-
         setActiveToasts(prev => prev.filter(t => t.id !== notifId));
-
         setExitingToastIds(prev => { const s = new Set(prev); s.delete(notifId); return s; });
-
       }, 6050);
-
     };
 
     window.addEventListener('mak_notification', handleNotification);
-
     return () => window.removeEventListener('mak_notification', handleNotification);
-
-  }, [userEmail]);
-
-
-
+  }, [activeUserEmail]);
   const [hoveredDashboardChartIndex, setHoveredDashboardChartIndex] = useState<number | null>(null);
-
   const [hoveredReportsChartIndex1, setHoveredReportsChartIndex1] = useState<number | null>(null);
 
   const [hoveredReportsChartIndex2, setHoveredReportsChartIndex2] = useState<number | null>(null);

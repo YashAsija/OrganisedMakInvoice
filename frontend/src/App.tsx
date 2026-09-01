@@ -2229,6 +2229,7 @@ export default function App() {
       localStorage.removeItem('invoice_maker_presets');
       localStorage.removeItem('invoice_maker_clients');
       localStorage.removeItem('invoice_maker_expenses');
+      localStorage.removeItem('makbills_notifications');
 
       setUser(null);
       setUserEmail(null);
