@@ -250,7 +250,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         .from('subscription_usage')
         .select('*')
         .eq('user_id', userId)
-        .gte('period_end', new Date().toISOString())
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -342,7 +341,21 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
             .single();
 
           if (insertError) {
-            console.error('[Init] Failed to create starter subscription:', insertError);
+            console.warn('[Init] Supabase insert note: using local Free starter subscription fallback', insertError);
+            const fallbackSub: Subscription = {
+              id: `sub_free_${uid}`,
+              user_id: uid,
+              plan_name: 'Free',
+              plan_type: 'free',
+              status: 'active',
+              expires_at: null,
+              renews_at: null,
+              authorized_token_node: null,
+              trial_used_plans: [],
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+            setSubscription(fallbackSub);
             setIsLoading(false);
             return;
           }
@@ -359,12 +372,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           }
         }
 
-        const now = new Date().toISOString();
         const { data: usageData } = await supabase
           .from('subscription_usage')
           .select('*')
           .eq('user_id', uid)
-          .gte('period_end', now)
           .order('updated_at', { ascending: false })
           .limit(1)
           .maybeSingle();

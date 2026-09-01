@@ -398,7 +398,7 @@ export default function Homepage({
               <span className="text-base font-black tracking-tight text-slate-805 dark:text-white block leading-none">
                 Mak<span style={{ color: '#0ea5e9' }}>Invoices</span>
               </span>
-              <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-500 block tracking-wider uppercase mt-1">Advanced Ledger Hub</span>
+              <span className="text-[9px] font-extrabold text-[#0ea5e9] dark:text-[#38bdf8] block tracking-wider uppercase mt-1">Built Easy. Billed Better.</span>
             </div>
           </div>
           <div className="navlinks">
@@ -420,9 +420,17 @@ export default function Homepage({
       <header className="hero">
         <div className="wrap hero-grid">
           <div>
-            <div className="eyebrow">AI-Powered Billing</div>
-            <h1 className="hero-h1">Billing software that <em>thinks</em> with you — not just for you.</h1>
-            <p className="hero-sub">Build fully editable, interactive invoices layer by layer. Let AI draft the line items. Manage invoices, quotations, purchase orders, debit notes and credit notes — from one dashboard.</p>
+            <div className="eyebrow">Smart Invoicing &amp; Billing Ledger</div>
+            <h1 className="hero-h1">
+              <span className="text-[#0284c7] dark:text-[#38bdf8] font-semibold block text-base sm:text-lg tracking-widest uppercase font-mono mb-2">
+                Built Easy. Billed Better.
+              </span>
+              Built Easy. Billed Better.
+              <span className="block mt-2.5 text-2xl sm:text-3xl md:text-4xl font-normal text-[#0ea5e9] dark:text-[#38bdf8] italic font-serif">
+                Smart Invoicing Simplified.
+              </span>
+            </h1>
+            <p className="hero-sub">Create professional tax-compliant invoices, quick bills, and purchase ledgers effortlessly. Built to make client billing fast, accurate, and completely hassle-free.</p>
             <div className="cta-row">
               <button type="button" className="btn-primary" onClick={() => onNavigate('/signup')}>Create Your First Invoice Free →</button>
               <button type="button" className="btn-secondary" onClick={() => handleNavScroll('features')}>▸ Watch how it works</button>
@@ -673,11 +681,11 @@ export default function Homepage({
                 <img src="/logo.svg" alt="MakInvoices Logo" />
                 <div className="footer-brand-text">
                   <span className="footer-brand-name">Mak<span>Invoices</span></span>
-                  <span className="footer-brand-sub">Advanced Ledger Hub</span>
+                  <span className="footer-brand-sub">Built Easy. Billed Better.</span>
                 </div>
               </div>
               <p className="footer-tagline">
-                Invoicing and billing ledger for freelancers, retailers, <span className="hl">and finance teams</span>. Audit-ready by design.
+                Smart invoicing &amp; GST ledger platform. <span className="hl">Built Easy. Billed Better.</span>
               </p>
             </div>
 

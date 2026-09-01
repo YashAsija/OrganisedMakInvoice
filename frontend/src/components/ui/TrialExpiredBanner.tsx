@@ -16,7 +16,7 @@ export function TrialExpiredBanner({ onUpgradeClick }: TrialExpiredBannerProps) 
   const planName = subscription.plan_name || 'Trial';
 
   return (
-    <div className="w-full py-3 px-4 sm:px-6 bg-gradient-to-r from-rose-600 to-red-700 text-white shadow-lg border-b border-rose-800">
+    <div className="w-full shrink-0 py-3 px-4 sm:px-6 bg-gradient-to-r from-rose-600 to-red-700 text-white shadow-lg border-b border-rose-800 relative z-50">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm">
         <div className="flex items-center gap-2.5">
           <div className="p-1.5 rounded-full bg-white/20 shrink-0">

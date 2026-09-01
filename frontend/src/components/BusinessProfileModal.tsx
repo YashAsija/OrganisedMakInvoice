@@ -25,6 +25,8 @@ const SIGNATURE_FONTS = [
 ];
 
 export default function BusinessProfileModal({ profile, isOpen, isOnboarding = false, onClose, onSave, subscriptionTier = 'free' }: BusinessProfileModalProps) {
+  const { subscription } = useSubscription();
+
   // Tabs State: 'company' | 'banking' | 'billing' | 'subscription' | 'tax'
   type TabType = 'company' | 'banking' | 'billing' | 'subscription' | 'tax';
   const validTabs: TabType[] = ['company', 'banking', 'billing', 'subscription', 'tax'];
@@ -3148,7 +3150,6 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               enterprise: 'Unlimited document generation, unlimited report downloads, bulk actions, and enterprise features.',
             };
 
-            const { subscription } = useSubscription();
             const currentPlanName = planDisplayNames[subscriptionTier] || 'MakInvoices Starter Plan';
             const currentPlanType = planTypes[subscriptionTier] || 'Starter Plan (Free Tier)';
             const currentDescription = planDescriptions[subscriptionTier] || 'Standard billing suite environment.';
@@ -3185,7 +3186,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                           <span className="block text-[9px] font-extrabold text-[#0284c7]/60 dark:text-[#64748b] uppercase tracking-widest">Date of Activation</span>
                           <span className="text-sm font-bold text-[#0284c7] dark:text-sky-400 font-mono">
                             {(() => {
-                              const activatedAt = typeof window !== 'undefined' ? localStorage.getItem('makbills_sub_activated_at') : null;
+                              const activatedAt = subscription?.trial_started_at || subscription?.created_at || (typeof window !== 'undefined' ? localStorage.getItem('makbills_sub_activated_at') : null);
                               const dateObj = activatedAt ? new Date(activatedAt) : new Date();
                               return isNaN(dateObj.getTime()) ? new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
                             })()}

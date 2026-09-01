@@ -234,8 +234,13 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
         
         setSuccessMsg('Successfully authenticated! Redirecting...');
         setTimeout(() => {
-          window.location.href = '/dashboard';
-        }, 1500);
+          if (onNavigate) {
+            onNavigate('/invoices');
+          } else if (typeof window !== 'undefined') {
+            window.history.pushState(null, '', '/invoices');
+            window.dispatchEvent(new Event('popstate'));
+          }
+        }, 800);
       }
     } catch (err: any) {
       setFormErrors({ otp: err.message || 'OTP verification failed.' });
@@ -387,8 +392,13 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
           localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(initProf));
           setSuccessMsg('Welcome aboard! Redirecting...');
           setTimeout(() => {
-            window.location.href = '/dashboard';
-          }, 1500);
+            if (onNavigate) {
+              onNavigate('/invoices');
+            } else if (typeof window !== 'undefined') {
+              window.history.pushState(null, '', '/invoices');
+              window.dispatchEvent(new Event('popstate'));
+            }
+          }, 800);
         }
       } else if (authMode === 'forgot-password') {
         if (!isSupabaseConfigured) {
@@ -431,8 +441,13 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
           if (error) throw error;
           setSuccessMsg('Welcome back! Redirecting...');
           setTimeout(() => {
-            window.location.href = '/dashboard';
-          }, 1500);
+            if (onNavigate) {
+              onNavigate('/invoices');
+            } else if (typeof window !== 'undefined') {
+              window.history.pushState(null, '', '/invoices');
+              window.dispatchEvent(new Event('popstate'));
+            }
+          }, 800);
         }
       }
     } catch (err: any) {

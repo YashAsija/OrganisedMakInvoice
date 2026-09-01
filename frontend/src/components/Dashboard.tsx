@@ -357,7 +357,7 @@ export default function Dashboard({
 
   const { confirm } = useConfirm();
   const { expenses: supabaseExpenses, stats: expenseStats } = useExpenses();
-  const { subscription: subRecord, refetch: refetchSubscription, trackDocumentUsage, trackReportUsage, showWelcomeTrialModal, dismissWelcomeTrialModal } = useSubscription();
+  const { subscription, isOnTrial, refetch: refetchSubscription, trackDocumentUsage, trackReportUsage, showWelcomeTrialModal, dismissWelcomeTrialModal } = useSubscription();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1269,6 +1269,42 @@ export default function Dashboard({
 
 
 
+  // Sync Master Registry Vendor Database (actualVendors) with other views
+
+  useEffect(() => {
+
+    const handleActualVendorSync = () => {
+
+      const cached = localStorage.getItem('makbills_masters_actual_vendors' + suffix);
+
+      if (cached) {
+
+        try {
+
+          setActualVendors(JSON.parse(cached));
+
+        } catch (e) {}
+
+      }
+
+    };
+
+    window.addEventListener('storage', handleActualVendorSync);
+
+    window.addEventListener('makbills_sync_actual_vendors', handleActualVendorSync);
+
+    return () => {
+
+      window.removeEventListener('storage', handleActualVendorSync);
+
+      window.removeEventListener('makbills_sync_actual_vendors', handleActualVendorSync);
+
+    };
+
+  }, [suffix]);
+
+
+
   // Sync Transport Database with other views
 
   useEffect(() => {
@@ -1535,9 +1571,18 @@ export default function Dashboard({
 
 
 
-    const exists = list.some(i => i.id === item.id);
+    // Normalize field aliases to keep gstin/taxId and company/companyName in sync
+    const normalizedItem = {
+      ...item,
+      gstin: item.taxId || item.gstin || '',
+      taxId: item.taxId || item.gstin || '',
+      companyName: item.company || item.companyName || '',
+      company: item.company || item.companyName || '',
+    };
 
-    const updated = exists ? list.map(i => i.id === item.id ? item : i) : [item, ...list];
+    const exists = list.some(i => i.id === normalizedItem.id);
+
+    const updated = exists ? list.map(i => i.id === normalizedItem.id ? normalizedItem : i) : [normalizedItem, ...list];
 
     
 
@@ -2407,64 +2452,26 @@ export default function Dashboard({
 
         description = 'Pre-saved client profiles, company settings, and billing contact information';
 
-        const vendorSignatures = new Set(vendors.map(v => 
-
-          `${v.name?.trim().toLowerCase()}|${(v.email||'').trim().toLowerCase()}|${(v.phone||'').trim()}|${(v.address||'').trim()}`
-
-        ));
-
-        const additionalClients = clients
-
-          .filter(c => !vendorSignatures.has(`${c.name.trim().toLowerCase()}|${(c.email||'').trim().toLowerCase()}|${(c.phone||'').trim()}|${(c.address||'').trim()}`))
-
-          .map(c => ({
-
-            id: c.id,
-
-            name: c.name,
-
-            company: c.companyName,
-
-            email: c.email,
-
-            phone: c.phone,
-
-            address: c.address,
-
-            category: 'Billed Client'
-
-          }));
-
-        list = [...vendors, ...additionalClients];
+        list = vendors;
 
         columns = [
-
           { header: 'Client Name', key: 'name' },
-
           { header: 'Company Name', key: 'company' },
-
           { header: 'Email Address', key: 'email' },
-
           { header: 'Phone Number', key: 'phone' },
-
           { header: 'Category / Tag', key: 'category' }
-
         ];
 
         fields = [
-
           { label: 'Client Name', key: 'name', type: 'text' },
-
-          { label: 'Company / Organization', key: 'company', type: 'text' },
-
-          { label: 'Category / Tag', key: 'category', type: 'text' },
-
-          { label: 'Email Address', key: 'email', type: 'email' },
-
+          { label: 'Company Name', key: 'company', type: 'text' },
+          { label: 'Country', key: 'country', type: 'text' },
+          { label: 'State', key: 'state', type: 'text' },
+          { label: 'Address', key: 'address', type: 'text' },
+          { label: 'GSTIN / Tax No.', key: 'taxId', type: 'text' },
+          { label: 'PAN', key: 'pan', type: 'text' },
           { label: 'Phone Number', key: 'phone', type: 'text' },
-
-          { label: 'Billing Address', key: 'address', type: 'text' }
-
+          { label: 'Email Address', key: 'email', type: 'email' }
         ];
 
         break;
@@ -2475,64 +2482,26 @@ export default function Dashboard({
 
         description = 'Pre-saved vendor and supplier profiles, company configurations, and billing credentials';
 
-        const actualVendorSignatures = new Set(actualVendors.map(v => 
-
-          `${v.name?.trim().toLowerCase()}|${(v.email||'').trim().toLowerCase()}|${(v.phone||'').trim()}|${(v.address||'').trim()}`
-
-        ));
-
-        const additionalVendors = purchasersFiltered
-
-          .filter(c => !actualVendorSignatures.has(`${c.name.trim().toLowerCase()}|${(c.email||'').trim().toLowerCase()}|${(c.phone||'').trim()}|${(c.address||'').trim()}`))
-
-          .map(c => ({
-
-            id: c.id,
-
-            name: c.name,
-
-            company: c.companyName,
-
-            email: c.email,
-
-            phone: c.phone,
-
-            address: c.address,
-
-            category: 'Billed Vendor'
-
-          }));
-
-        list = [...actualVendors, ...additionalVendors];
+        list = actualVendors;
 
         columns = [
-
           { header: 'Vendor Name', key: 'name' },
-
           { header: 'Company Name', key: 'company' },
-
           { header: 'Email Address', key: 'email' },
-
           { header: 'Phone Number', key: 'phone' },
-
           { header: 'Category / Tag', key: 'category' }
-
         ];
 
         fields = [
-
           { label: 'Vendor Name', key: 'name', type: 'text' },
-
-          { label: 'Company / Organization', key: 'company', type: 'text' },
-
-          { label: 'Category / Tag', key: 'category', type: 'text' },
-
-          { label: 'Email Address', key: 'email', type: 'email' },
-
+          { label: 'Company Name', key: 'company', type: 'text' },
+          { label: 'Country', key: 'country', type: 'text' },
+          { label: 'State', key: 'state', type: 'text' },
+          { label: 'Address', key: 'address', type: 'text' },
+          { label: 'GSTIN / Tax No.', key: 'taxId', type: 'text' },
+          { label: 'PAN', key: 'pan', type: 'text' },
           { label: 'Phone Number', key: 'phone', type: 'text' },
-
-          { label: 'Billing Address', key: 'address', type: 'text' }
-
+          { label: 'Email Address', key: 'email', type: 'email' }
         ];
 
         break;
@@ -3575,7 +3544,21 @@ export default function Dashboard({
 
                             <button
 
-                              onClick={() => { setEditingMasterItem(item); setIsMasterModalOpen(true); }}
+                              onClick={() => {
+                                // Normalize field aliases so the edit form always reads the correct keys
+                                const normalized = {
+                                  ...item,
+                                  taxId: item.taxId || item.gstin || '',
+                                  gstin: item.gstin || item.taxId || '',
+                                  company: item.company || item.companyName || '',
+                                  companyName: item.companyName || item.company || '',
+                                  state: item.state || '',
+                                  country: item.country || 'India',
+                                  pan: item.pan || '',
+                                };
+                                setEditingMasterItem(normalized);
+                                setIsMasterModalOpen(true);
+                              }}
 
                               className="p-2 text-[#64748b]/70 hover:text-[#0284c7] dark:text-zinc-500 dark:hover:text-[#38bdf8] hover:bg-[#e0f2fe]/50 dark:hover:bg-zinc-800 rounded-lg transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
 
@@ -3671,7 +3654,20 @@ export default function Dashboard({
 
                         <button
 
-                          onClick={() => { setEditingMasterItem(item); setIsMasterModalOpen(true); }}
+                          onClick={() => {
+                            const normalized = {
+                              ...item,
+                              taxId: item.taxId || item.gstin || '',
+                              gstin: item.gstin || item.taxId || '',
+                              company: item.company || item.companyName || '',
+                              companyName: item.companyName || item.company || '',
+                              state: item.state || '',
+                              country: item.country || 'India',
+                              pan: item.pan || '',
+                            };
+                            setEditingMasterItem(normalized);
+                            setIsMasterModalOpen(true);
+                          }}
 
                           className="p-2 text-[#64748b]/70 hover:text-[#0284c7] dark:text-zinc-500 dark:hover:text-[#38bdf8] bg-[#e0f2fe]/40 hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] rounded-lg transition-all"
 
@@ -3833,17 +3829,19 @@ export default function Dashboard({
 
 
 
-        {/* â”€â”€ Master Registry Form Modal â”€â”€ */}
+        {/* ── Master Registry Form Modal ── */}
 
         {isMasterModalOpen && editingMasterItem && (
 
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
 
-            <div className="w-full max-w-sm bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-3xl flex flex-col max-h-[90vh] shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="w-full max-w-lg bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-3xl flex flex-col max-h-[90vh] shadow-2xl animate-in zoom-in-95 duration-150">
 
               <div className="flex justify-between items-center p-4 sm:p-5 pb-3 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 shrink-0 bg-[#f4f9ff] dark:bg-[#0b1329]/50">
 
-                <h3 className="text-xs font-extrabold text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Record Editor</h3>
+                <h3 className="text-sm font-extrabold text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
+                  {editingMasterItem.id?.startsWith('m_item_') ? 'Add Registry Record' : 'Edit Registry Record'}
+                </h3>
 
                 <button
 
@@ -3853,7 +3851,7 @@ export default function Dashboard({
 
                 >
 
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
 
                 </button>
 
@@ -3861,19 +3859,19 @@ export default function Dashboard({
 
 
 
-              <div className="p-4 sm:p-5 overflow-y-auto">
+              <div className="p-4 sm:p-6 overflow-y-auto">
 
                 <form
 
                   onSubmit={(e) => { e.preventDefault(); handleSaveMasterItem(editingMasterItem); }}
 
-                  className="space-y-3 text-left"
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-left"
 
                 >
 
                   {fields.map((f, idx3) => (
 
-                    <div key={idx3}>
+                    <div key={idx3} className={f.key === 'address' ? 'sm:col-span-2' : ''}>
 
                       <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#64748b] dark:text-zinc-400 mb-1.5">{f.label}</label>
 
@@ -3885,9 +3883,7 @@ export default function Dashboard({
 
                           onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: e.target.value })}
 
-                          className="w-full px-3.5 py-2 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
-
-                          required
+                          className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
 
                         >
 
@@ -3909,11 +3905,13 @@ export default function Dashboard({
 
                           value={editingMasterItem[f.key] || ''}
 
+                          placeholder={`Enter ${f.label.toLowerCase()}`}
+
                           onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: f.type === 'number' ? parseFloat(e.target.value) : e.target.value })}
 
-                          className="w-full px-3.5 py-2 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
+                          className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
 
-                          required
+                          required={f.key === 'name' || f.key === 'company' || idx3 === 0}
 
                         />
 
@@ -3923,7 +3921,7 @@ export default function Dashboard({
 
                   ))}
 
-                  <div className="pt-2 flex justify-end gap-2">
+                  <div className="pt-3 sm:col-span-2 flex justify-end gap-2.5 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 mt-2">
 
                     <button
 
@@ -3931,7 +3929,7 @@ export default function Dashboard({
 
                       onClick={() => { setIsMasterModalOpen(false); setEditingMasterItem(null); }}
 
-                      className="px-3 py-1.5 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] rounded-lg text-[9px] font-bold cursor-pointer transition-colors"
+                      className="px-4 py-2 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] rounded-xl text-xs font-bold cursor-pointer transition-colors"
 
                     >
 
@@ -3943,7 +3941,7 @@ export default function Dashboard({
 
                       type="submit"
 
-                      className="px-4 py-1.5 bg-[#0284c7] dark:bg-[#38bdf8] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] rounded-lg text-[9px] font-bold cursor-pointer transition-all shadow-md shadow-[#0284c7]/20"
+                      className="px-5 py-2 bg-[#0284c7] dark:bg-[#38bdf8] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] rounded-xl text-xs font-black cursor-pointer transition-all shadow-md shadow-[#0284c7]/20"
 
                     >
 
@@ -6816,6 +6814,11 @@ export default function Dashboard({
 
   // --- CLIENT OPERATIONS ---
 
+  const [clientCountry, setClientCountry] = useState('India');
+  const [clientState, setClientState] = useState('');
+  const [clientGstin, setClientGstin] = useState('');
+  const [clientPan, setClientPan] = useState('');
+
   const handleOpenClientEditor = (cl: ClientProfile | null) => {
 
     if (cl) {
@@ -6832,6 +6835,14 @@ export default function Dashboard({
 
       setClientAddress(cl.address || '');
 
+      setClientCountry((cl as any).country || 'India');
+
+      setClientState((cl as any).state || '');
+
+      setClientGstin((cl as any).taxId || (cl as any).gstin || '');
+
+      setClientPan((cl as any).pan || '');
+
     } else {
 
       setEditingClient(null);
@@ -6845,6 +6856,14 @@ export default function Dashboard({
       setClientPhone('');
 
       setClientAddress('');
+
+      setClientCountry('India');
+
+      setClientState('');
+
+      setClientGstin('');
+
+      setClientPan('');
 
     }
 
@@ -6893,6 +6912,16 @@ export default function Dashboard({
       phone: clientPhone.trim(),
 
       address: clientAddress.trim(),
+
+      country: clientCountry.trim() || 'India',
+
+      state: clientState.trim(),
+
+      taxId: clientGstin.trim(),
+
+      gstin: clientGstin.trim(),
+
+      pan: clientPan.trim(),
 
       createdAt: editingClient ? editingClient.createdAt : new Date().toISOString(),
 
@@ -7236,13 +7265,13 @@ export default function Dashboard({
 
   return (
 
-    <div className="h-dvh w-full max-w-full overflow-hidden bg-[#f4f9ff] dark:bg-[#0b1329] text-slate-800 dark:text-slate-100 transition-colors duration-200" style={{fontFamily: "'IBM Plex Sans', sans-serif"}}>
+    <div className="h-dvh w-full max-w-full overflow-hidden bg-[#f4f9ff] dark:bg-[#0b1329] text-slate-800 dark:text-slate-100 transition-colors duration-200 flex flex-col" style={{fontFamily: "'IBM Plex Sans', sans-serif"}}>
 
       
 
       {/* Dynamic Main App Bar Header */}
 
-      <header className="sticky top-0 z-30 w-full bg-[#f4f9ff]/95 dark:bg-[#0b1329]/95 backdrop-blur-sm border-b border-[#bae6fd]/70 dark:border-[#223269] px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-[0_1px_12px_rgba(2,132,199,0.06)] transition-all duration-200">
+      <header className="shrink-0 z-50 w-full bg-[#f4f9ff]/95 dark:bg-[#0b1329]/95 backdrop-blur-sm border-b border-[#bae6fd]/70 dark:border-[#223269] px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-[0_1px_12px_rgba(2,132,199,0.06)] transition-all duration-200">
 
         {/* Left Side: Logo + Mobile Menu Trigger + Breadcrumb */}
 
@@ -7945,12 +7974,12 @@ export default function Dashboard({
       <TrialExpiredBanner onUpgradeClick={() => setActiveTab('subscription')} />
 
       {/* Dynamic Main Responsive Workspace - Grid layout turns dual-column on desktop */}
-      <main className="w-full max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4 pt-1.5 md:pt-3 space-y-4 xl:space-y-0 xl:flex xl:gap-6 xl:items-start overflow-hidden">
+      <main className="w-full flex-1 min-h-0 max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4 py-2 md:py-3 space-y-4 xl:space-y-0 xl:flex xl:gap-6 xl:items-stretch overflow-hidden">
         
         {/* DESKTOP BRANDING & CONTROL SIDEBAR - Visible on xl screens (1280px+) */}
-        <div className="hidden xl:block relative shrink-0">
+        <div className="hidden xl:block relative shrink-0 h-full">
 
-          <aside className={`flex flex-col bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/70 rounded-[1.75rem] shadow-[0_8px_30px_rgba(2,132,199,0.08)] h-[calc(100dvh-92px)] xl:h-[calc(100vh-110px)] overflow-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
+          <aside className={`flex flex-col bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/70 rounded-[1.75rem] shadow-[0_8px_30px_rgba(2,132,199,0.08)] h-full overflow-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
 
             <div className="w-full h-full">
 
@@ -7981,7 +8010,7 @@ export default function Dashboard({
 
 
         {/* RIGHT CENTRAL WORKSPACE PANEL */}
-        <div className="flex-1 min-w-0 w-full m-0 p-0 h-[calc(100dvh-92px)] xl:h-[calc(100vh-110px)] overflow-y-auto pr-1 pb-16 md:pb-12 pb-safe">
+        <div className="flex-1 min-w-0 w-full m-0 p-0 h-full overflow-y-auto pr-1 pb-4 pb-safe">
 
 
 
@@ -8614,7 +8643,10 @@ export default function Dashboard({
                                 e.stopPropagation();
                                 const rect = e.currentTarget.getBoundingClientRect();
                                 const spaceBelow = window.innerHeight - rect.bottom;
-                                setActionMenuPosition(spaceBelow < 220 ? 'up' : 'down');
+                                // ALWAYS open DOWNWARDS for all rows in top 600px of viewport (rect.top <= 600px).
+                                // Only flip UPWARDS for rows near the bottom of the screen where spaceBelow < 300px.
+                                const shouldOpenUp = rect.top > 600 && spaceBelow < 300;
+                                setActionMenuPosition(shouldOpenUp ? 'up' : 'down');
                                 setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id);
                               }}
                               className="w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
@@ -8625,7 +8657,7 @@ export default function Dashboard({
 
                             {activeActionMenuId === inv.id && (
                               <div 
-                                className={`absolute right-0 ${actionMenuPosition === 'up' ? 'bottom-10 slide-in-from-bottom-2' : 'top-10 slide-in-from-top-2'} z-[120] w-52 py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in duration-150 text-left`}
+                                className={`absolute right-0 ${actionMenuPosition === 'up' ? 'bottom-10 slide-in-from-bottom-2' : 'top-10 slide-in-from-top-2'} z-[9999] w-52 max-h-[calc(100vh-140px)] overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in duration-150 text-left`}
                                 onClick={(e) => e.stopPropagation()}
                               >
 
@@ -9295,7 +9327,8 @@ export default function Dashboard({
                                   e.stopPropagation();
                                   const rect = e.currentTarget.getBoundingClientRect();
                                   const spaceBelow = window.innerHeight - rect.bottom;
-                                  setActionMenuPosition(spaceBelow < 220 ? 'up' : 'down');
+                                  const shouldOpenUp = rect.top > 600 && spaceBelow < 300;
+                                  setActionMenuPosition(shouldOpenUp ? 'up' : 'down');
                                   setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id);
                                 }}
                                 className="w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
@@ -9306,7 +9339,7 @@ export default function Dashboard({
 
                               {activeActionMenuId === inv.id && (
                                 <div 
-                                  className={`absolute right-4 ${actionMenuPosition === 'up' ? 'bottom-10 slide-in-from-bottom-2' : 'top-10 slide-in-from-top-2'} z-[120] w-52 py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in duration-150 text-left`}
+                                  className={`absolute right-4 ${actionMenuPosition === 'up' ? 'bottom-10 slide-in-from-bottom-2' : 'top-10 slide-in-from-top-2'} z-[9999] w-52 max-h-[calc(100vh-140px)] overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in duration-150 text-left`}
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   {showBinView ? (
@@ -16438,195 +16471,148 @@ export default function Dashboard({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/65 backdrop-blur-sm overflow-y-auto">
 
           <form 
-
             onSubmit={handleSaveClientForm}
-
-            className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-80 border-slate-200 p-4 space-y-4 text-sans animate-in fade-in duration-200"
-
+            className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-800 p-5 space-y-4 text-sans animate-in fade-in duration-200"
           >
-
             <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
-
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-white">
-
                 {editingClient ? 'Edit Client Profile' : 'Register New Client'}
-
               </h3>
-
               <button
-
                 type="button"
-
                 onClick={() => setIsClientEditorOpen(false)}
-
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-
               >
-
                 <X className="w-4 h-4" />
-
               </button>
-
             </div>
 
-
-
-            <div className="space-y-3 text-xs">
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-
                 <label htmlFor="cl_fname" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Client Full Name *</label>
-
                 <input
-
                   id="cl_fname"
-
                   required
-
                   type="text"
-
                   value={clientName}
-
                   onChange={(e) => setClientName(e.target.value)}
-
                   placeholder="e.g. John Doe"
-
                   className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-
                 />
-
               </div>
 
-
-
               <div>
-
                 <label htmlFor="cl_comp" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Company Name</label>
-
                 <input
-
                   id="cl_comp"
-
                   type="text"
-
                   value={clientCompany}
-
                   onChange={(e) => setClientCompany(e.target.value)}
-
                   placeholder="e.g. Marvelous Widgets Ltd"
-
                   className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-
                 />
-
               </div>
 
-
-
               <div>
-
-                <label htmlFor="cl_em" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Client Email Address</label>
-
+                <label htmlFor="cl_country" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Country</label>
                 <input
-
-                  id="cl_em"
-
-                  type="email"
-
-                  value={clientEmail}
-
-                  onChange={(e) => setClientEmail(e.target.value)}
-
-                  placeholder="e.g. billing@widgets.com"
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-
-                />
-
-              </div>
-
-
-
-              <div>
-
-                <label htmlFor="cl_ph" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Client Phone number</label>
-
-                <input
-
-                  id="cl_ph"
-
+                  id="cl_country"
                   type="text"
-
-                  value={clientPhone}
-
-                  onChange={(e) => setClientPhone(e.target.value)}
-
-                  placeholder="e.g. +1 (555) 019-2834"
-
+                  value={clientCountry}
+                  onChange={(e) => setClientCountry(e.target.value)}
+                  placeholder="e.g. India"
                   className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-
                 />
-
               </div>
-
-
 
               <div>
-
-                <label htmlFor="cl_ad" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Billing Address</label>
-
-                <textarea
-
-                  id="cl_ad"
-
-                  value={clientAddress || ''}
-
-                  onChange={(e) => setClientAddress(e.target.value)}
-
-                  placeholder="e.g. Building 10, Redwood Ave, CA"
-
-                  rows={2}
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none resize-none touch-action-manipulation"
-
+                <label htmlFor="cl_state" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">State</label>
+                <input
+                  id="cl_state"
+                  type="text"
+                  value={clientState}
+                  onChange={(e) => setClientState(e.target.value)}
+                  placeholder="e.g. Maharashtra"
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
                 />
-
               </div>
 
+              <div>
+                <label htmlFor="cl_gstin" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">GSTIN / Tax No.</label>
+                <input
+                  id="cl_gstin"
+                  type="text"
+                  value={clientGstin}
+                  onChange={(e) => setClientGstin(e.target.value)}
+                  placeholder="e.g. 27AAAAA0000A1Z5"
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="cl_pan" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">PAN</label>
+                <input
+                  id="cl_pan"
+                  type="text"
+                  value={clientPan}
+                  onChange={(e) => setClientPan(e.target.value)}
+                  placeholder="e.g. ABCDE1234F"
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="cl_em" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Client Email Address</label>
+                <input
+                  id="cl_em"
+                  type="email"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  placeholder="e.g. billing@widgets.com"
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="cl_ph" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Client Phone number</label>
+                <input
+                  id="cl_ph"
+                  type="text"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
+                  placeholder="e.g. +1 (555) 019-2834"
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label htmlFor="cl_ad" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Billing Address</label>
+                <textarea
+                  id="cl_ad"
+                  value={clientAddress || ''}
+                  onChange={(e) => setClientAddress(e.target.value)}
+                  placeholder="e.g. Building 10, Redwood Ave, CA"
+                  rows={2}
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none resize-none touch-action-manipulation"
+                />
+              </div>
             </div>
-
-
 
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
-
               <button
-
                 type="button"
-
                 onClick={() => setIsClientEditorOpen(false)}
-
                 className="px-3.5 py-1.5 text-xs text-slate-500 font-medium cursor-pointer hover:bg-slate-50"
-
               >
-
                 Cancel
-
               </button>
-
               <button
-
                 type="submit"
-
                 className="px-4.5 py-1.5 bg-sky-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer active:scale-95"
-
               >
-
                 Save Profile
-
               </button>
-
             </div>
-
           </form>
 
         </div>
@@ -17012,7 +16998,7 @@ export default function Dashboard({
 
         {showWelcomeTrialModal && (
           <WelcomeTrialModal
-            onClose={() => dismissWelcomeTrialModal(subRecord?.user_id)}
+            onClose={() => dismissWelcomeTrialModal(subscription?.user_id)}
           />
         )}
 

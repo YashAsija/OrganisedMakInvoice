@@ -1,0 +1,272 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Check, X, RefreshCw, AlertTriangle, Loader2 } from 'lucide-react';
+
+export interface GSTData {
+  gstin: string;
+  legalName: string;
+  tradeName: string;
+  companyName?: string;
+  customerName?: string;
+  address: {
+    building?: string;
+    street?: string;
+    locality?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    full?: string;
+  };
+  businessType?: string;
+  status?: string;
+  registrationDate?: string;
+  stateCode?: string;
+  state?: string;
+  country?: string;
+  pan?: string;
+}
+
+interface GSTInputProps {
+  value?: string;
+  onChange?: (val: string) => void;
+  onDataFetched?: (data: GSTData) => void;
+  onClear?: () => void;
+  placeholder?: string;
+  className?: string;
+  disabled?: boolean;
+}
+
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 Hours TTL
+
+export const GSTInput: React.FC<GSTInputProps> = ({
+  value = '',
+  onChange,
+  onDataFetched,
+  onClear,
+  placeholder = 'Enter 15-digit GSTIN...',
+  className = '',
+  disabled = false
+}) => {
+  const [gstin, setGstin] = useState(value);
+  const [statusState, setStatusState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [fetchedData, setFetchedData] = useState<GSTData | null>(null);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setGstin(value);
+  }, [value]);
+
+  const validateAndFetch = async (val: string, forceRefetch = false) => {
+    const cleanGst = val.trim().toUpperCase();
+    setErrorMessage('');
+
+    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    if (!cleanGst) {
+      setStatusState('idle');
+      setFetchedData(null);
+      return;
+    }
+
+    if (cleanGst.length === 15 && !gstRegex.test(cleanGst)) {
+      setStatusState('error');
+      setErrorMessage('Invalid GSTIN format');
+      return;
+    }
+
+    if (cleanGst.length !== 15 || !gstRegex.test(cleanGst)) {
+      setStatusState('idle');
+      return;
+    }
+
+    // STEP 2.5: Caching (localStorage with 24hr TTL)
+    const cacheKey = `gst_${cleanGst}`;
+    if (!forceRefetch) {
+      try {
+        const cachedStr = localStorage.getItem(cacheKey);
+        if (cachedStr) {
+          const { data, ts } = JSON.parse(cachedStr);
+          if (Date.now() - ts < CACHE_TTL_MS) {
+            setStatusState('success');
+            setFetchedData(data);
+            if (onDataFetched) onDataFetched(data);
+            return;
+          }
+        }
+      } catch (e) {}
+    }
+
+    setStatusState('loading');
+
+    try {
+      const res = await fetch(`/api/utils/gst-lookup?gstin=${encodeURIComponent(cleanGst)}`);
+      if (res.status === 404) {
+        setStatusState('error');
+        setErrorMessage('GSTIN not found');
+        return;
+      }
+      if (res.status === 408) {
+        setStatusState('error');
+        setErrorMessage('GST portal timeout, try again');
+        return;
+      }
+      if (res.status === 429) {
+        setStatusState('error');
+        setErrorMessage('Too many requests, try again later');
+        return;
+      }
+      if (!res.ok) {
+        setStatusState('error');
+        setErrorMessage('Failed to fetch GST details');
+        return;
+      }
+
+      const data: GSTData = await res.json();
+      setStatusState('success');
+      setFetchedData(data);
+
+      // Save to localStorage with timestamp
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() }));
+      } catch (e) {}
+
+      if (onDataFetched) onDataFetched(data);
+    } catch (err) {
+      setStatusState('error');
+      setErrorMessage('Network error fetching GST data');
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVal = e.target.value.toUpperCase();
+
+    // If clearing field when data was previously auto-filled
+    if (gstin && !newVal && fetchedData) {
+      setShowClearModal(true);
+    }
+
+    setGstin(newVal);
+    if (onChange) onChange(newVal);
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      validateAndFetch(newVal);
+    }, 400); // 400ms Debounce
+  };
+
+  const confirmClearAll = () => {
+    setShowClearModal(false);
+    setGstin('');
+    setStatusState('idle');
+    setFetchedData(null);
+    if (onChange) onChange('');
+    if (onClear) onClear();
+  };
+
+  const keepExistingDetails = () => {
+    setShowClearModal(false);
+    setGstin('');
+    setStatusState('idle');
+    if (onChange) onChange('');
+  };
+
+  return (
+    <div className="relative w-full">
+      <div className="relative flex items-center">
+        <input
+          type="text"
+          value={gstin}
+          onChange={handleInputChange}
+          placeholder={placeholder}
+          maxLength={15}
+          disabled={disabled}
+          className={`w-full px-3.5 py-2.5 pr-10 text-[13px] font-medium tracking-wider uppercase rounded-lg border transition-all duration-200 outline-none ${
+            statusState === 'error'
+              ? 'border-red-500 bg-red-50/20 text-red-900 focus:ring-2 focus:ring-red-500/20'
+              : statusState === 'success'
+              ? 'border-emerald-500 bg-emerald-50/10 text-emerald-950 focus:ring-2 focus:ring-emerald-500/20'
+              : 'border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 text-slate-800 dark:text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+          } ${className}`}
+        />
+
+        {/* Status Icons */}
+        <div className="absolute right-3 flex items-center space-x-1.5 pointer-events-auto">
+          {statusState === 'loading' && (
+            <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
+          )}
+
+          {statusState === 'success' && (
+            <>
+              <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <button
+                type="button"
+                onClick={() => validateAndFetch(gstin, true)}
+                title="Re-fetch GST details"
+                className="p-1 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded transition-colors text-slate-400 hover:text-indigo-600"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
+
+          {statusState === 'error' && (
+            <X className="w-4 h-4 text-red-500" />
+          )}
+        </div>
+      </div>
+
+      {/* Inline Error Message */}
+      {statusState === 'error' && errorMessage && (
+        <p className="mt-1 text-[11px] font-medium text-red-600 dark:text-red-400 flex items-center space-x-1">
+          <span>✗ {errorMessage}</span>
+        </p>
+      )}
+
+      {/* Cancelled GST Warning Badge */}
+      {statusState === 'success' && fetchedData?.status?.toLowerCase() === 'cancelled' && (
+        <div className="mt-1.5 p-2 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center space-x-2 text-amber-800 dark:text-amber-300 text-[11.5px]">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+          <span>⚠ This GSTIN is cancelled — verify before proceeding</span>
+        </div>
+      )}
+
+      {/* Success Toast / Banner */}
+      {statusState === 'success' && fetchedData?.status?.toLowerCase() !== 'cancelled' && (
+        <p className="mt-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
+          <span>✓ Details auto-filled from GST Registry</span>
+        </p>
+      )}
+
+      {/* STEP 2.6: Clear Confirmation Modal Dialog */}
+      {showClearModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-5 max-w-xs w-full border border-slate-200 dark:border-zinc-800 shadow-xl animate-in fade-in duration-200">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Clear Company Details?</h4>
+            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+              Do you want to clear the auto-filled company details as well?
+            </p>
+            <div className="mt-4 flex items-center justify-end space-x-2">
+              <button
+                type="button"
+                onClick={keepExistingDetails}
+                className="px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg"
+              >
+                No, keep them
+              </button>
+              <button
+                type="button"
+                onClick={confirmClearAll}
+                className="px-3 py-1.5 text-xs font-medium bg-red-600 text-white hover:bg-red-700 rounded-lg shadow-xs"
+              >
+                Yes, clear all
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

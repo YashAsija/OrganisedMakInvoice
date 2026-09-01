@@ -170,7 +170,7 @@ export default function SubscriptionPage({
   subscriptionTier, 
   onUpgrade 
 }: SubscriptionPageProps) {
-  const { subscription: ctxSub, isLoading: isCtxLoading, isRealtimeSyncing, startTrial } = useSubscription();
+  const { subscription: ctxSub, usage: ctxUsage, isLoading: isCtxLoading, isRealtimeSyncing, startTrial } = useSubscription();
   const [isYearly, setIsYearly] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState<string | null>(null);
@@ -319,16 +319,20 @@ export default function SubscriptionPage({
     const startTime = start.getTime();
     const endTime = end.getTime();
 
+    const activationStr = ctxSub?.trial_started_at || ctxSub?.created_at;
+    const activationTime = activationStr ? new Date(activationStr).getTime() : 0;
+    const effectiveStartTime = Math.max(startTime, isNaN(activationTime) ? 0 : activationTime);
+
     return invoices.filter(inv => {
-      if (inv.status === 'draft') return false; // Drafts are un-published templates, but all created/finalized docs count
+      if (inv.status === 'draft') return false;
       const tsStr = inv.createdAt || inv.date;
       if (!tsStr) return false;
       const dTime = new Date(tsStr).getTime();
-      return !isNaN(dTime) && dTime >= startTime && dTime < endTime;
+      return !isNaN(dTime) && dTime >= effectiveStartTime && dTime < endTime;
     }).length;
   };
 
-  const usageCount = getMonthlyUsage();
+  const usageCount = ctxUsage?.documents_used ?? getMonthlyUsage();
   
   const getActiveLimit = () => {
     if (activeTier === 'free') return 10;
@@ -417,7 +421,7 @@ export default function SubscriptionPage({
                 <span>Date of Activation:</span>
                 <span className="font-mono text-slate-800 dark:text-slate-200">
                   {(() => {
-                    const activatedAt = typeof window !== 'undefined' ? localStorage.getItem('makbills_sub_activated_at') : null;
+                    const activatedAt = ctxSub?.trial_started_at || ctxSub?.created_at || (typeof window !== 'undefined' ? localStorage.getItem('makbills_sub_activated_at') : null);
                     const dateObj = activatedAt ? new Date(activatedAt) : new Date();
                     return isNaN(dateObj.getTime()) ? new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
                   })()}
@@ -532,11 +536,18 @@ export default function SubscriptionPage({
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-lg font-black text-[#0f172a] dark:text-white leading-tight">{plan.name}</h3>
-                    {(plan.id === 'basic' || plan.id === 'pro') && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[9.5px] font-extrabold mt-1">
-                        ✓ 1 Month Free Trial Available
-                      </span>
-                    )}
+                    {(() => {
+                      const trialUsedPlans = ctxSub?.trial_used_plans || [];
+                      const isClaimed = (plan.id === 'basic' && trialUsedPlans.includes('basic')) || (plan.id === 'pro' && trialUsedPlans.includes('professional'));
+                      if ((plan.id === 'basic' || plan.id === 'pro') && !isClaimed) {
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[9.5px] font-extrabold mt-1">
+                            ✓ 1 Month Free Trial Available
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                   {isActive && (
                     <span className="text-[9px] px-2 py-0.5 bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] rounded-full font-bold">Active</span>
@@ -561,9 +572,14 @@ export default function SubscriptionPage({
                   <span className="text-xs text-[#64748b] dark:text-[#94a3b8]">{isYearly ? '/yr' : '/mo'}</span>
                 </div>
                 <p className="text-[10px] font-mono text-[#64748b] dark:text-zinc-500 min-h-[24px]">
-                  {(plan.id === 'basic' || plan.id === 'pro')
-                    ? `Try free for 30 days, then ${isYearly ? plan.annual : plan.monthly}${isYearly ? '/yr' : '/mo'}`
-                    : (isYearly ? plan.annualNote : plan.monthlyNote)}
+                  {(() => {
+                    const trialUsedPlans = ctxSub?.trial_used_plans || [];
+                    const isClaimed = (plan.id === 'basic' && trialUsedPlans.includes('basic')) || (plan.id === 'pro' && trialUsedPlans.includes('professional'));
+                    if ((plan.id === 'basic' || plan.id === 'pro') && !isClaimed) {
+                      return `Try free for 30 days, then ${isYearly ? plan.annual : plan.monthly}${isYearly ? '/yr' : '/mo'}`;
+                    }
+                    return isYearly ? plan.annualNote : plan.monthlyNote;
+                  })()}
                 </p>
 
                 <div className="border-t border-[#bae6fd]/30 dark:border-[#223269]/30 pt-4 space-y-2.5 mb-6 flex-1">

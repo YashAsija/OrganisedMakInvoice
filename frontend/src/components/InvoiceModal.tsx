@@ -14,6 +14,8 @@ import { emitNotification } from '../lib/notifications';
 import { SmartBillingBox } from './SmartBillingBox';
 import { getDocumentTypeDefaults } from '../lib/docTypeDefaults';
 import { getLocalizationConfig } from '../lib/localizationEngine';
+import { buildClientDetails, persistBilledParty } from '../lib/documentUtils';
+
 
 
 interface InvoiceModalProps {
@@ -141,21 +143,45 @@ export default function InvoiceModal({
     };
   }, []);
 
-  // Master Registry Client Database loader
+  // Master Registry Client + Vendor Database loader (merges both, stays fresh via sync events)
   const [registryClients, setRegistryClients] = useState<any[]>([]);
+
+  const loadRegistryClients = useCallback(() => {
+    const suffix = profile?.email ? `_${encodeURIComponent(profile.email)}` : '';
+    const salesRaw = localStorage.getItem('makbills_masters_vendors' + suffix);
+    const purchaseRaw = localStorage.getItem('makbills_masters_actual_vendors' + suffix);
+    const sales: any[] = salesRaw ? (() => { try { return JSON.parse(salesRaw); } catch { return []; } })() : [];
+    const purchase: any[] = purchaseRaw ? (() => { try { return JSON.parse(purchaseRaw); } catch { return []; } })() : [];
+    // Merge deduped by name
+    const seenIds = new Set<string>();
+    const merged: any[] = [];
+    for (const r of [...sales, ...purchase]) {
+      const key = (r.name || r.companyName || r.company || '').toLowerCase().trim();
+      if (key && seenIds.has(key)) continue;
+      if (key) seenIds.add(key);
+      merged.push(r);
+    }
+    setRegistryClients(merged);
+  }, [profile]);
 
   useEffect(() => {
     if (isOpen) {
       setSavedInvoiceForPreview(null);
-      const suffix = profile?.email ? `_${encodeURIComponent(profile.email)}` : '';
-      const cached = localStorage.getItem('makbills_masters_vendors' + suffix);
-      if (cached) {
-        try {
-          setRegistryClients(JSON.parse(cached));
-        } catch (e) { }
-      }
+      loadRegistryClients();
     }
-  }, [isOpen, profile]);
+  }, [isOpen, loadRegistryClients]);
+
+  // Keep registry fresh when other parts of the app save new clients
+  useEffect(() => {
+    const handleSync = () => loadRegistryClients();
+    window.addEventListener('makbills_sync_vendors', handleSync);
+    window.addEventListener('makbills_sync_actual_vendors', handleSync);
+    return () => {
+      window.removeEventListener('makbills_sync_vendors', handleSync);
+      window.removeEventListener('makbills_sync_actual_vendors', handleSync);
+    };
+  }, [loadRegistryClients]);
+
 
   // Client details
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -190,6 +216,85 @@ export default function InvoiceModal({
   const [status, setStatus] = useState<InvoiceStatus>('pending');
   const [clientGstin, setClientGstin] = useState('');
   const [clientPan, setClientPan] = useState('');
+  const [clientCompanyName, setClientCompanyName] = useState('');
+  const [isGstLoading, setIsGstLoading] = useState(false);
+
+  const handleGSTData = (result: any) => {
+    if (!result || !result.success) return;
+
+    const compName = result.companyName || result.tradeName || result.legalName || '';
+    const custName = result.customerName || result.legalName || result.tradeName || compName;
+    const tradeName = result.tradeName || compName;
+    const panStr = result.pan || (result.gstin ? result.gstin.substring(2, 12) : '');
+
+    // Step 2 Structured Address mapping logic
+    let fullAddr = '';
+    if (result.address && typeof result.address === 'object') {
+      const line1 = [result.address.plot, result.address.building, result.address.street].filter(Boolean).join(', ');
+      const line2 = [result.address.locality, result.address.city].filter(Boolean).join(', ');
+      const hasStructuredAddress = line1.length > 0 || line2.length > 0;
+      fullAddr = hasStructuredAddress ? [line1, line2].filter(Boolean).join(', ') : (result.address.fullAddress || result.address.full || '');
+      if (result.address.state) {
+        setClientState(result.address.state);
+        setPlaceOfSupply(result.address.state);
+      }
+    } else if (typeof result.address === 'string') {
+      fullAddr = result.address;
+    }
+
+    if (compName) setClientCompanyName(compName);
+    if (custName) setClientName(custName);
+    if (fullAddr) setClientAddress(fullAddr);
+    if (result.state) {
+      setClientState(result.state);
+      setPlaceOfSupply(result.state);
+    }
+    setClientCountry('India');
+    if (panStr) setClientPan(panStr);
+
+    emitNotification(
+      'GST Details Auto-Populated',
+      `Auto-filled details for ${compName || custName} (${result.address?.city || result.state || 'India'})`,
+      'success'
+    );
+  };
+
+  const handleGstAutoPopulate = async (gstVal: string) => {
+    const cleanGst = gstVal.trim().toUpperCase();
+    setClientGstin(cleanGst);
+
+    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    if (!cleanGst || !gstRegex.test(cleanGst)) return;
+
+    // Check 24hr TTL cache
+    const cacheKey = `gst_${cleanGst}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const { data, ts } = JSON.parse(cached);
+        if (Date.now() - ts < 86400000) {
+          handleGSTData(data);
+          return;
+        }
+      }
+    } catch (e) {}
+
+    setIsGstLoading(true);
+    try {
+      const res = await fetch(`/api/gst/${encodeURIComponent(cleanGst)}`);
+      const result = await res.json();
+      if (result.success) {
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ data: result, ts: Date.now() }));
+        } catch (e) {}
+        handleGSTData(result);
+      }
+    } catch (err) {
+      console.warn('[InvoiceModal] GST lookup error:', err);
+    } finally {
+      setIsGstLoading(false);
+    }
+  };
   const [placeOfSupply, setPlaceOfSupply] = useState('');
   const [grRrNo, setGrRrNo] = useState('');
   const [transport, setTransport] = useState('');
@@ -198,7 +303,6 @@ export default function InvoiceModal({
   const [station, setStation] = useState('');
   const [ewayBillNo, setEwayBillNo] = useState('');
   const [marka, setMarka] = useState('');
-  const [clientCompanyName, setClientCompanyName] = useState('');
   const [shippedToCompanyName, setShippedToCompanyName] = useState('');
   const [shippedToName, setShippedToName] = useState('');
   const [shippedToPhone, setShippedToPhone] = useState('');
@@ -888,10 +992,35 @@ export default function InvoiceModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filter billing clients dynamically
+  // Filter billing clients dynamically — merge saved clients prop with master registry
   const filteredClients = useMemo(() => {
-    if (!clients || clients.length === 0) return [];
-    const sorted = [...clients].sort((a, b) => {
+    // Merge: explicit ClientProfile[] prop + master registry (auto-added from documents)
+    const registryAsProfiles = registryClients.map((r: any) => ({
+      id: r.id || `reg_${Math.random().toString(36).substr(2, 6)}`,
+      name: r.name || r.companyName || r.company || '',
+      companyName: r.companyName || r.company || '',
+      company: r.company || r.companyName || '',
+      email: r.email || '',
+      phone: r.phone || r.mobile || '',
+      address: r.address || '',
+      gstin: r.gstin || r.taxId || '',
+      taxId: r.taxId || r.gstin || '',
+      pan: r.pan || '',
+      state: r.state || '',
+      country: r.country || 'India',
+    }));
+
+    // Merge, prefer clients prop entries over registry for duplicates
+    const seenNames = new Set<string>();
+    const merged: any[] = [];
+    for (const c of [...(clients || []), ...registryAsProfiles]) {
+      const key = (c.name || '').toLowerCase().trim();
+      if (key && seenNames.has(key)) continue;
+      if (key) seenNames.add(key);
+      merged.push(c);
+    }
+
+    const sorted = merged.sort((a, b) => {
       const compA = ((a as any).companyName || (a as any).company || '').toLowerCase();
       const compB = ((b as any).companyName || (b as any).company || '').toLowerCase();
       if (compA && compB && compA !== compB) return compA.localeCompare(compB);
@@ -907,10 +1036,11 @@ export default function InvoiceModal({
       const name = (c.name || '').toLowerCase();
       const email = (c.email || '').toLowerCase();
       const phone = (c.phone || '').toLowerCase();
-      const gstin = ((c as any).gstin || '').toLowerCase();
-      return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q);
+      const gstin = ((c as any).gstin || (c as any).taxId || '').toLowerCase();
+      const pan = ((c as any).pan || '').toLowerCase();
+      return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q) || pan.includes(q);
     });
-  }, [clients, clientSearchQuery]);
+  }, [clients, clientSearchQuery, registryClients]);
 
   // Filter shipping clients dynamically
   const filteredShipClients = useMemo(() => {
@@ -1999,36 +2129,22 @@ export default function InvoiceModal({
 
     const suffix = activeProfile?.email ? `_${encodeURIComponent(activeProfile.email)}` : '';
 
-    // Save/update to master registry client database (vendors)
-    if (currentName && currentName.trim() !== '') {
-      const currentRegistry = JSON.parse(localStorage.getItem('makbills_masters_vendors' + suffix) || '[]');
-      const nameLower = currentName.trim().toLowerCase();
-      const existingIdx = currentRegistry.findIndex((c: any) =>
-        (c.name && c.name.toLowerCase() === nameLower) ||
-        (c.company && c.company.toLowerCase() === nameLower)
-      );
-
-      if (existingIdx > -1) {
-        currentRegistry[existingIdx] = {
-          ...currentRegistry[existingIdx],
-          address: clientAddress || currentRegistry[existingIdx].address || '',
-          email: clientEmail || currentRegistry[existingIdx].email || '',
-          phone: clientPhone || currentRegistry[existingIdx].phone || '',
-        };
-      } else {
-        currentRegistry.push({
-          id: `mat_${Math.random().toString(36).substr(2, 9)}`,
-          name: currentName.trim(),
-          company: currentName.trim(),
-          address: clientAddress || '',
-          email: clientEmail || '',
-          phone: clientPhone || '',
-          category: 'Auto-Added from Invoice'
-        });
-      }
-      localStorage.setItem('makbills_masters_vendors' + suffix, JSON.stringify(currentRegistry));
-      window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
-    }
+    // ─── Persist billed-to details to master registry + Supabase clients table ────
+    const billedDetails = buildClientDetails({
+      clientName: currentName,
+      clientCompanyName,
+      clientEmail,
+      clientPhone,
+      clientAddress,
+      clientCountry,
+      clientState,
+      clientGstin,
+      clientPan,
+    });
+    // Fire-and-forget — do NOT await so save dialog is not blocked
+    persistBilledParty(billedDetails, invoiceType, userId || null, suffix).catch(
+      (err) => console.warn('[InvoiceModal] persistBilledParty error (non-fatal):', err)
+    );
 
     if (shippedToName && shippedToName.trim() !== '') {
       const currentRegistry = JSON.parse(localStorage.getItem('makbills_masters_transports' + suffix) || '[]');
@@ -2928,9 +3044,11 @@ export default function InvoiceModal({
                                         setClientEmail(c.email || '');
                                         setClientPhone(c.phone || '');
                                         setClientAddress(c.address || '');
-                                        setClientPan((c as any).pan || (c as any).taxId || '');
-                                        setClientGstin((c as any).gstin || '');
-                                        setClientCountry((c as any).country || (c as any).clientCountry || '');
+                                        const gstinVal = (c as any).gstin || (c as any).taxId || '';
+                                        const extractedPan = (c as any).pan || (c as any).clientPan || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+                                        setClientPan(extractedPan);
+                                        setClientGstin(gstinVal);
+                                        setClientCountry((c as any).country || (c as any).clientCountry || 'India');
                                         setClientState((c as any).state || (c as any).clientState || '');
                                         setClientSearchQuery(displayName);
                                         setIsClientDropdownOpen(false);
@@ -3087,31 +3205,35 @@ export default function InvoiceModal({
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {activeTemplate.config.client?.fields.includes('gstin') && (
-                          <div>
+                          <div className="relative">
                             <label htmlFor="col-client-gstin" className="sr-only">Client GSTIN / UIN</label>
                             <input
                               id="col-client-gstin"
                               type="text"
                               value={clientGstin}
-                              onChange={(e) => setClientGstin(e.target.value)}
-                              placeholder="Client GSTIN / UIN"
-                              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none"
+                              onChange={(e) => handleGstAutoPopulate(e.target.value)}
+                              onBlur={(e) => handleGstAutoPopulate(e.target.value)}
+                              placeholder="Client GSTIN / UIN (Auto-fills details)"
+                              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none uppercase tracking-wider pr-9"
                             />
+                            {isGstLoading && (
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                <Loader2 className="w-4 h-4 text-[#0284c7] animate-spin" />
+                              </div>
+                            )}
                           </div>
                         )}
-                        {activeTemplate.config.client?.fields.includes('pan') && (
-                          <div>
-                            <label htmlFor="col-client-pan" className="sr-only">Client PAN</label>
-                            <input
-                              id="col-client-pan"
-                              type="text"
-                              value={clientPan}
-                              onChange={(e) => setClientPan(e.target.value)}
-                              placeholder="Client PAN"
-                              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none"
-                            />
-                          </div>
-                        )}
+                        <div>
+                          <label htmlFor="col-client-pan" className="sr-only">Client PAN</label>
+                          <input
+                            id="col-client-pan"
+                            type="text"
+                            value={clientPan}
+                            onChange={(e) => setClientPan(e.target.value.toUpperCase())}
+                            placeholder="Client PAN"
+                            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none uppercase tracking-wider"
+                          />
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between pt-2">
@@ -4099,8 +4221,8 @@ export default function InvoiceModal({
                               if (matched.email) setClientEmail(matched.email);
                               if (matched.phone) setClientPhone(matched.phone);
                               if (matched.address) setClientAddress(matched.address);
-                              if ((matched as any).gstin || (matched as any).clientGstin) {
-                                setClientGstin((matched as any).gstin || (matched as any).clientGstin);
+                              if ((matched as any).taxId || (matched as any).gstin || (matched as any).clientGstin) {
+                                setClientGstin((matched as any).taxId || (matched as any).gstin || (matched as any).clientGstin);
                               }
                               if ((matched as any).state || (matched as any).clientState) {
                                 setClientState((matched as any).state || (matched as any).clientState);
@@ -4116,9 +4238,13 @@ export default function InvoiceModal({
                           if (field === 'clientEmail') setClientEmail(val);
                           if (field === 'clientPhone') setClientPhone(val);
                           if (field === 'clientAddress') setClientAddress(val);
-                          if (field === 'clientGstin') setClientGstin(val);
+                          if (field === 'clientGstin' || field === 'clientGST') {
+                            handleGstAutoPopulate(val);
+                          }
                           if (field === 'clientState') setClientState(val);
                           if (field === 'clientCountry') setClientCountry(val);
+                          if (field === 'clientPan' || field === 'clientPAN' || field === 'pan') setClientPan(val);
+                          if (field === 'clientCompanyName' || field === 'clientCompany') setClientCompanyName(val);
                           if (field === 'shippedToName') {
                             setShippedToName(val);
                             const matched = registryClients.find(c => c.name?.trim().toLowerCase() === val.trim().toLowerCase() || c.company?.trim().toLowerCase() === val.trim().toLowerCase() || c.companyName?.trim().toLowerCase() === val.trim().toLowerCase());

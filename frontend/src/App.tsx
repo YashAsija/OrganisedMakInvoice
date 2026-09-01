@@ -562,12 +562,12 @@ export default function App() {
           }
         }
         if (path !== expectedPath) {
-          window.history.pushState(null, '', expectedPath);
+          window.history.replaceState(null, '', expectedPath);
         }
       } else {
         const expectedPath = publicPath;
         if (path !== expectedPath) {
-          window.history.pushState(null, '', expectedPath);
+          window.history.replaceState(null, '', expectedPath);
         }
       }
     }
@@ -1692,7 +1692,7 @@ export default function App() {
         if (session?.user?.id) {
           triggerBackgroundSync();
           if (typeof window !== 'undefined' && window.location.search.includes('code=')) {
-            const cleanUrl = window.location.pathname === '/' ? '/dashboard' : window.location.pathname;
+            const cleanUrl = (window.location.pathname === '/' || window.location.pathname === '/dashboard') ? '/invoices' : window.location.pathname;
             window.history.replaceState(null, '', cleanUrl);
           }
         }
@@ -2462,55 +2462,113 @@ export default function App() {
     const clientsToUpsert: ClientProfile[] = [];
     let updatedClients = [...clients];
 
-    const processClientDetails = (name?: string, email?: string, phone?: string, address?: string) => {
-      if (!name || name.trim() === '') return;
-      const n = name.trim();
-      const e = (email || '').trim();
-      const p = (phone || '').trim();
-      const a = (address || '').trim();
+    const processClientDetails = (invoice: Invoice) => {
 
-      // Check if EXACT match exists in updatedClients
-      const isClientExact = updatedClients.some((c) => 
-        (c.name.trim().toLowerCase() === n.toLowerCase() || c.companyName?.trim().toLowerCase() === n.toLowerCase()) &&
-        (c.email || '').trim() === e &&
-        (c.phone || '').trim() === p &&
-        (c.address || '').trim() === a
-      );
-      if (isClientExact) return;
+      const n = (invoice.clientName || '').trim();
+      const companyName = (invoice.clientCompanyName || invoice.clientCompany || '').trim();
+      const e = (invoice.clientEmail || '').trim();
+      const p = (invoice.clientPhone || '').trim();
+      const a = (invoice.clientAddress || '').trim();
+      const country = (invoice.clientCountry || 'India').trim();
+      const state = (invoice.clientState || '').trim();
+      const gstin = (invoice.clientGstin || '').trim();
+      const pan = (invoice.clientPan || '').trim();
 
-      // Create new independent client record
-      const clientToSave: ClientProfile = {
-        id: crypto.randomUUID(),
-        userId: user?.id || '',
-        name: n,
-        companyName: n,
-        address: a,
-        email: e,
-        phone: p,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      clientsToUpsert.push(clientToSave);
-      updatedClients = [clientToSave, ...updatedClients];
+      if (!n && !companyName && !e && !gstin) return; // need at least one identifier
+
+      // Upsert matching priority: gstin → email → companyName → name
+      const existingIdx = updatedClients.findIndex((c) => {
+        if (gstin && c.gstin && c.gstin.toLowerCase() === gstin.toLowerCase()) return true;
+        if (e && c.email && c.email.toLowerCase() === e.toLowerCase()) return true;
+        if (companyName && c.companyName && c.companyName.toLowerCase() === companyName.toLowerCase()) return true;
+        if (n && c.name && c.name.toLowerCase() === n.toLowerCase()) return true;
+        return false;
+      });
+
+      const now = new Date().toISOString();
+
+      if (existingIdx > -1) {
+        // UPDATE — merge non-empty values over existing record
+        const existing = updatedClients[existingIdx];
+        const merged: ClientProfile = {
+          ...existing,
+          name: n || existing.name,
+          companyName: companyName || existing.companyName,
+          email: e || existing.email,
+          phone: p || existing.phone,
+          address: a || existing.address,
+          country: country || existing.country,
+          state: state || existing.state,
+          gstin: gstin || existing.gstin,
+          taxId: gstin || existing.taxId,
+          pan: pan || existing.pan,
+          updatedAt: now,
+          _pendingSync: true,
+        };
+        updatedClients[existingIdx] = merged;
+        if (!clientsToUpsert.some(c => c.id === merged.id)) {
+          clientsToUpsert.push(merged);
+        }
+        console.log('[App.tsx] processClientDetails: UPDATED client:', merged.name);
+      } else {
+        // INSERT new record
+        const clientToSave: ClientProfile = {
+          id: crypto.randomUUID(),
+          userId: user?.id || '',
+          name: n || companyName,
+          companyName: companyName || n,
+          address: a,
+          email: e,
+          phone: p,
+          country: country,
+          state: state,
+          gstin: gstin,
+          taxId: gstin,
+          pan: pan,
+          createdAt: now,
+          updatedAt: now,
+          _pendingSync: true,
+        };
+        clientsToUpsert.push(clientToSave);
+        updatedClients = [clientToSave, ...updatedClients];
+        console.log('[App.tsx] processClientDetails: INSERTED client:', clientToSave.name);
+      }
     };
 
-    // 1. Process Bill To
-    processClientDetails(invoice.clientName, invoice.clientEmail, invoice.clientPhone, invoice.clientAddress);
-
-    // 2. Process Ship To
-    processClientDetails(invoice.shippedToName, invoice.shippedToEmail, invoice.shippedToPhone, invoice.shippedToAddress);
+    // Process Bill To — pass full invoice so all fields are available
+    const isPurchaseInvoice = ['purchases', 'purchase_order', 'purchase_debit_note'].includes(invoice.invoiceType || '');
+    if (!isPurchaseInvoice) {
+      // Sales docs: save to clients (billed clients)
+      processClientDetails(invoice);
+    }
 
     // Commit all client state updates and sync to database at once
     if (clientsToUpsert.length > 0) {
-      setClients(updatedClients);
+      setClients(updatedClients.filter(c => !c._pendingDelete));
       localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(updatedClients));
 
       if (user) {
         try {
-          const clientsWithUser = clientsToUpsert.map(c => ({ ...c, userId: user.id }));
-          await supabase.from('clients').upsert(clientsWithUser);
+          const clientsWithUser = clientsToUpsert.map(c => ({
+            ...c,
+            userId: user.id,
+            _pendingSync: undefined,
+            _pendingDelete: undefined,
+          }));
+          const { error: syncErr } = await supabase.from('clients').upsert(clientsWithUser, { onConflict: 'id' });
+          if (syncErr) {
+            console.error('[App.tsx] Failed to sync client profiles to Supabase:', syncErr);
+          } else {
+            console.log('[App.tsx] ✅ Client profiles synced to Supabase:', clientsWithUser.length, 'record(s)');
+            // Clear _pendingSync flag on success
+            const cleared = updatedClients.map(c =>
+              clientsToUpsert.some(u => u.id === c.id) ? { ...c, _pendingSync: undefined } : c
+            );
+            setClients(cleared.filter(c => !c._pendingDelete));
+            localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(cleared));
+          }
         } catch (err) {
-          console.error('Failed to sync client profiles:', err);
+          console.error('[App.tsx] Exception syncing client profiles:', err);
         }
       }
     }
