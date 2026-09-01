@@ -10750,19 +10750,19 @@ export default function Dashboard({
 
                 {/* ─── Search & Sort Bar ─── */}
                 <div className="mt-4 pt-4 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                  <div className="relative flex-1 min-w-[200px]">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]/60 dark:text-[#94a3b8]/60 pointer-events-none" />
+                  <div className="relative flex-1 w-full min-w-0">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0284c7]/70 dark:text-[#38bdf8]/70 pointer-events-none" />
                     <input
                       type="text"
                       value={clientSearchQuery}
                       onChange={(e) => setClientSearchQuery(e.target.value)}
-                      placeholder="Search clients by name, company, GSTIN, phone, email, state..."
-                      className="w-full pl-9 pr-8 py-2 rounded-xl text-xs bg-[#f0f9ff]/70 dark:bg-[#0b1329]/70 border border-[#bae6fd] dark:border-[#223269] text-[#0f172a] dark:text-white placeholder-[#64748b]/50 dark:placeholder-[#94a3b8]/50 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/40 transition-all"
+                      placeholder="Search by name, company, GSTIN, phone, state..."
+                      className="w-full pl-9 pr-8 py-2 rounded-xl text-xs bg-[#f0f9ff]/80 dark:bg-[#0b1329]/80 border border-[#bae6fd] dark:border-[#223269] text-[#0f172a] dark:text-white placeholder-[#64748b]/60 dark:placeholder-[#94a3b8]/60 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/40 transition-all"
                     />
                     {clientSearchQuery && (
                       <button
                         onClick={() => setClientSearchQuery('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
                         title="Clear search"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -10770,21 +10770,21 @@ export default function Dashboard({
                     )}
                   </div>
 
-                  <div className="relative flex items-center shrink-0">
-                    <ArrowUpDown className="w-3.5 h-3.5 absolute left-3 text-[#0284c7] dark:text-[#38bdf8] pointer-events-none" />
+                  <div className="relative flex items-center w-full sm:w-auto bg-[#f0f9ff]/80 dark:bg-[#0b1329]/80 border border-[#bae6fd] dark:border-[#223269] rounded-xl px-3 py-2 text-xs font-bold focus-within:ring-2 focus-within:ring-[#0284c7]/40 transition-all cursor-pointer">
+                    <ArrowUpDown className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8] shrink-0 mr-2 pointer-events-none" />
                     <select
                       value={clientSortBy}
                       onChange={(e: any) => setClientSortBy(e.target.value)}
-                      className="pl-8 pr-8 py-2 rounded-xl text-xs font-bold bg-[#f0f9ff]/70 dark:bg-[#0b1329]/70 border border-[#bae6fd] dark:border-[#223269] text-[#0f172a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]/40 cursor-pointer transition-all appearance-none"
+                      className="w-full bg-transparent text-[#0f172a] dark:text-white font-bold text-xs focus:outline-none cursor-pointer appearance-none pr-5"
                     >
-                      <option value="name_asc">Sort: Name (A - Z)</option>
-                      <option value="name_desc">Sort: Name (Z - A)</option>
-                      <option value="company_asc">Sort: Company (A - Z)</option>
-                      <option value="company_desc">Sort: Company (Z - A)</option>
-                      <option value="newest">Sort: Newest First</option>
-                      <option value="oldest">Sort: Oldest First</option>
+                      <option value="name_asc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Name (A - Z)</option>
+                      <option value="name_desc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Name (Z - A)</option>
+                      <option value="company_asc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Company (A - Z)</option>
+                      <option value="company_desc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Company (Z - A)</option>
+                      <option value="newest" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Newest First</option>
+                      <option value="oldest" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Oldest First</option>
                     </select>
-                    <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 text-slate-400 pointer-events-none" />
+                    <ChevronDown className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8] absolute right-3 pointer-events-none" />
                   </div>
                 </div>
 
@@ -11043,9 +11043,7 @@ export default function Dashboard({
                       </div>
 
                       <p className="mt-1.5 text-xs text-[#64748b]/70 dark:text-[#94a3b8]/70 max-w-md leading-relaxed">
-
                         Manage vendor and supplier profiles captured from your purchases ledger bills, POs, and debit notes
-
                       </p>
 
                     </div>
@@ -11053,22 +11051,20 @@ export default function Dashboard({
                   </div>
 
                 </div>
-
-                {/* ─── Search & Sort Bar ─── */}
                 <div className="mt-4 pt-4 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                  <div className="relative flex-1 min-w-[200px]">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]/60 dark:text-[#94a3b8]/60 pointer-events-none" />
+                  <div className="relative flex-1 w-full min-w-0">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0284c7]/70 dark:text-[#38bdf8]/70 pointer-events-none" />
                     <input
                       type="text"
                       value={vendorSearchQuery}
                       onChange={(e) => setVendorSearchQuery(e.target.value)}
-                      placeholder="Search vendors by name, company, GSTIN, phone, email, state..."
-                      className="w-full pl-9 pr-8 py-2 rounded-xl text-xs bg-[#f0f9ff]/70 dark:bg-[#0b1329]/70 border border-[#bae6fd] dark:border-[#223269] text-[#0f172a] dark:text-white placeholder-[#64748b]/50 dark:placeholder-[#94a3b8]/50 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/40 transition-all"
+                      placeholder="Search vendors, company, GSTIN, phone, state..."
+                      className="w-full pl-9 pr-8 py-2 rounded-xl text-xs bg-[#f0f9ff]/80 dark:bg-[#0b1329]/80 border border-[#bae6fd] dark:border-[#223269] text-[#0f172a] dark:text-white placeholder-[#64748b]/60 dark:placeholder-[#94a3b8]/60 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/40 transition-all"
                     />
                     {vendorSearchQuery && (
                       <button
                         onClick={() => setVendorSearchQuery('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
                         title="Clear search"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -11076,21 +11072,21 @@ export default function Dashboard({
                     )}
                   </div>
 
-                  <div className="relative flex items-center shrink-0">
-                    <ArrowUpDown className="w-3.5 h-3.5 absolute left-3 text-[#0284c7] dark:text-[#38bdf8] pointer-events-none" />
+                  <div className="relative flex items-center w-full sm:w-auto bg-[#f0f9ff]/80 dark:bg-[#0b1329]/80 border border-[#bae6fd] dark:border-[#223269] rounded-xl px-3 py-2 text-xs font-bold focus-within:ring-2 focus-within:ring-[#0284c7]/40 transition-all cursor-pointer">
+                    <ArrowUpDown className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8] shrink-0 mr-2 pointer-events-none" />
                     <select
                       value={vendorSortBy}
                       onChange={(e: any) => setVendorSortBy(e.target.value)}
-                      className="pl-8 pr-8 py-2 rounded-xl text-xs font-bold bg-[#f0f9ff]/70 dark:bg-[#0b1329]/70 border border-[#bae6fd] dark:border-[#223269] text-[#0f172a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]/40 cursor-pointer transition-all appearance-none"
+                      className="w-full bg-transparent text-[#0f172a] dark:text-white font-bold text-xs focus:outline-none cursor-pointer appearance-none pr-5"
                     >
-                      <option value="name_asc">Sort: Name (A - Z)</option>
-                      <option value="name_desc">Sort: Name (Z - A)</option>
-                      <option value="company_asc">Sort: Company (A - Z)</option>
-                      <option value="company_desc">Sort: Company (Z - A)</option>
-                      <option value="newest">Sort: Newest First</option>
-                      <option value="oldest">Sort: Oldest First</option>
+                      <option value="name_asc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Name (A - Z)</option>
+                      <option value="name_desc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Name (Z - A)</option>
+                      <option value="company_asc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Company (A - Z)</option>
+                      <option value="company_desc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Company (Z - A)</option>
+                      <option value="newest" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Newest First</option>
+                      <option value="oldest" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Oldest First</option>
                     </select>
-                    <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 text-slate-400 pointer-events-none" />
+                    <ChevronDown className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8] absolute right-3 pointer-events-none" />
                   </div>
                 </div>
 
@@ -11120,7 +11116,7 @@ export default function Dashboard({
 
                 <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
 
-                  Add profiles manually or create Purchase Bills, POs, and Debit Notes to automatically populate vendors here.
+                  Vendor profiles will automatically populate here when you create purchase bills, POs, and debit notes.
 
                 </p>
 
