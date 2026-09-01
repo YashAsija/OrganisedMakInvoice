@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { emitNotification } from '../lib/notifications';
-import { validateSubscriptionPayload, getExpiryDisplay, ExpiryDisplayInfo } from '../lib/subscriptionUtils';
+import { validateSubscriptionPayload, getExpiryDisplay, ExpiryDisplayInfo, seedUsagePeriods } from '../lib/subscriptionUtils';
 
 export const PLANS = {
   free: {
@@ -77,6 +77,7 @@ export interface Subscription {
   user_phone?: string | null;
   trial_used_plans?: string[];
   trial_started_at?: string | null;
+  activated_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -246,11 +247,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         });
       }
 
+      const nowIso = new Date().toISOString();
       const { data: usageData } = await supabase
         .from('subscription_usage')
         .select('*')
         .eq('user_id', userId)
-        .order('updated_at', { ascending: false })
+        .lte('period_start', nowIso)
+        .gte('period_end', nowIso)
+        .order('period_start', { ascending: false })
         .limit(1)
         .maybeSingle();
 
@@ -372,11 +376,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           }
         }
 
+        const nowIso = new Date().toISOString();
         const { data: usageData } = await supabase
           .from('subscription_usage')
           .select('*')
           .eq('user_id', uid)
-          .order('updated_at', { ascending: false })
+          .lte('period_start', nowIso)
+          .gte('period_end', nowIso)
+          .order('period_start', { ascending: false })
           .limit(1)
           .maybeSingle();
 
@@ -732,8 +739,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       const mappedPlanType = (planType.toLowerCase().includes('pro') ? 'professional' : planType.toLowerCase().includes('basic') ? 'basic' : planType.toLowerCase().includes('ent') ? 'enterprise' : 'free') as 'free' | 'basic' | 'professional' | 'enterprise';
       const planName = planNames[mappedPlanType] || 'Free';
 
+      const now = new Date();
       const days = billingMode === 'monthly' ? 30 : 365;
-      const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+      const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
 
       const upgradePayload = validateSubscriptionPayload({
         user_id: user.id,
@@ -742,10 +750,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         plan_name: planName,
         plan_type: mappedPlanType,
         status: 'active',
+        activated_at: now.toISOString(),
         expires_at: mappedPlanType === 'free' ? null : expiresAt,
         renews_at: mappedPlanType === 'free' ? null : expiresAt,
         authorized_token_node: transactionId || `manual_${mappedPlanType}_${Date.now()}`,
-        updated_at: new Date().toISOString(),
+        updated_at: now.toISOString(),
       });
 
       console.log('[Upgrade] Writing to DB:', upgradePayload);
@@ -797,14 +806,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
       setSubscription({ ...finalSub } as Subscription);
 
-      const now = new Date();
-      await supabase.from('subscription_usage').insert({
-        user_id: user.id,
-        period_start: now.toISOString(),
-        period_end: mappedPlanType === 'free' ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : expiresAt,
-        documents_used: 0,
-        reports_used: 0,
-      });
+      const isYearlyPlan = billingMode === 'yearly';
+      const seededRows = await seedUsagePeriods(supabase, user.id, isYearlyPlan, now);
+      if (seededRows && seededRows.length > 0) {
+        setUsage({ ...seededRows[0] } as SubscriptionUsage);
+      }
 
       emitNotification(
         `✅ Upgraded to ${planName}!`,
@@ -834,12 +840,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
 
     try {
+      const nowIso = new Date().toISOString();
       let { data: freshUsage } = await supabase
         .from('subscription_usage')
         .select('*')
         .eq('user_id', userId)
-        .gte('period_end', new Date().toISOString())
-        .order('updated_at', { ascending: false })
+        .lte('period_start', nowIso)
+        .gte('period_end', nowIso)
+        .order('period_start', { ascending: false })
         .limit(1)
         .maybeSingle();
 
@@ -894,12 +902,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const trackReportUsage = useCallback(async (): Promise<boolean> => {
     if (!userId) return false;
 
+    const nowIso = new Date().toISOString();
     const { data: freshUsage } = await supabase
       .from('subscription_usage')
       .select('*')
       .eq('user_id', userId)
-      .gte('period_end', new Date().toISOString())
-      .order('updated_at', { ascending: false })
+      .lte('period_start', nowIso)
+      .gte('period_end', nowIso)
+      .order('period_start', { ascending: false })
       .limit(1)
       .maybeSingle();
 

@@ -2105,8 +2105,13 @@ export default function InvoiceModal({
   const handleSaveSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Step 1: Track document limit safely before saving
-    if (!invoice || invoice.status === 'draft') {
+    // Step 1: Track document limit safely ONLY for new document creations (edits MUST NOT increment count)
+    const isExistingDocumentEdit = Boolean(
+      (invoice && invoice.id && !invoice.id.startsWith('inv_draft_')) ||
+      (draftIdRef.current && !draftIdRef.current.startsWith('inv_draft_'))
+    );
+
+    if (!isExistingDocumentEdit) {
       try {
         const allowed = await trackDocumentUsage();
         if (allowed === false) return;

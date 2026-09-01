@@ -82,12 +82,22 @@ export async function POST(req: NextRequest) {
     }
 
     // Audit log update in DB
-    const now = new Date().toISOString();
+    const now = new Date();
     await supabaseAdmin.from('subscriptions').update({
       billing_cycle: targetBillingCycle,
       auto_renew: targetBillingCycle === 'yearly_recurring',
-      upgraded_at: now,
+      activated_at: now.toISOString(),
+      upgraded_at: now.toISOString(),
+      updated_at: now.toISOString(),
     }).eq('id', sub.id);
+
+    // Seed 12 fresh monthly usage periods for annual plan
+    try {
+      const { seedUsagePeriods } = await import('@/lib/subscriptionUtils');
+      await seedUsagePeriods(supabaseAdmin, userId, true, now);
+    } catch (seedErr) {
+      console.warn('[Paddle Upgrade] Usage seed warning:', seedErr);
+    }
 
     return NextResponse.json({ success: true, message: 'Switched to Annual billing successfully via Paddle!' });
   } catch (err: any) {

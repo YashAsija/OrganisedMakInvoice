@@ -114,15 +114,15 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
       setSubscription(activeSub);
 
-      // Fetch current period usage
-      const now = new Date();
-      const periodStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      // Fetch current period usage (active monthly window)
+      const nowIso = new Date().toISOString();
 
       const { data: usageData } = await supabase
         .from('subscription_usage')
         .select('*')
         .eq('user_id', uid)
-        .gte('period_start', periodStart)
+        .lte('period_start', nowIso)
+        .gte('period_end', nowIso)
         .order('period_start', { ascending: false })
         .limit(1)
         .maybeSingle();

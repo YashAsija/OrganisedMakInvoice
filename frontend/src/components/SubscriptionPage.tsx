@@ -379,7 +379,7 @@ export default function SubscriptionPage({
             </div>
           </div>
 
-          <div className="bg-[#f4f9ff] dark:bg-[#0b1329] rounded-2xl p-5 border border-[#bae6fd]/50 dark:border-[#223269]/50 shrink-0 w-full md:w-80 shadow-3xs hover:shadow-2xs transition-shadow">
+          <div className="bg-[#f4f9ff] dark:bg-[#0b1329] rounded-2xl p-5 border border-[#bae6fd]/50 dark:border-[#223269]/50 shrink-0 w-full lg:w-80 shadow-3xs hover:shadow-2xs transition-shadow">
             <div className="flex justify-between items-center">
               <span className="text-[9px] text-[#64748b] dark:text-[#94a3b8] uppercase tracking-widest font-extrabold block">Current Status</span>
               {activeTier !== 'free' && !isCtxLoading && (
@@ -421,7 +421,11 @@ export default function SubscriptionPage({
                 <span>Date of Activation:</span>
                 <span className="font-mono text-slate-800 dark:text-slate-200">
                   {(() => {
-                    const activatedAt = ctxSub?.trial_started_at || ctxSub?.created_at || (typeof window !== 'undefined' ? localStorage.getItem('makbills_sub_activated_at') : null);
+                    const activatedAt = ctxSub?.activated_at || 
+                      (ctxSub?.status === 'trialing' ? ctxSub?.trial_started_at : null) || 
+                      (ctxSub?.plan_type !== 'free' ? ctxSub?.updated_at : null) || 
+                      ctxSub?.created_at || 
+                      (typeof window !== 'undefined' ? localStorage.getItem('makbills_sub_activated_at') : null);
                     const dateObj = activatedAt ? new Date(activatedAt) : new Date();
                     return isNaN(dateObj.getTime()) ? new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
                   })()}

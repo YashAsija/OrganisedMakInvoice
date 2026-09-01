@@ -92,6 +92,7 @@ export async function POST(req: NextRequest) {
       plan_name: finalPlanName,
       plan_type: finalPlanType,
       status: subStatus,
+      activated_at: now.toISOString(),
       expires_at: expiresDate,
       renews_at: expiresDate,
       authorized_token_node: authorizedTokenNode || null,
@@ -118,6 +119,14 @@ export async function POST(req: NextRequest) {
         },
         { status: 500 }
       );
+    }
+
+    // Seed fresh usage rows (1 month for monthly, 12 months for yearly)
+    try {
+      const { seedUsagePeriods } = await import('@/lib/subscriptionUtils');
+      await seedUsagePeriods(supabaseAdmin, userId, isYearly, now);
+    } catch (seedErr) {
+      console.warn('[Save Subscription API] Usage seed warning:', seedErr);
     }
 
     // Also update the public.users table (primary key: uid, timestamp: updatedAt)
