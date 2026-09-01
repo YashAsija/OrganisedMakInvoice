@@ -2318,35 +2318,36 @@ export default function InvoiceModal({
           }
         });
       }
-      // ─── Usage tracking: Increment documents_used in subscription_usage table ────
-      try {
-        if (userIdRef.current) {
-          const uId = userIdRef.current;
-          const now = new Date();
-          const pStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-          const pEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+      // ─── Usage tracking: Increment documents_used in subscription_usage table (ONLY for brand new document creations) ────
+      if (savedDraftId.startsWith('inv_draft_')) {
+        try {
+          if (userIdRef.current) {
+            const uId = userIdRef.current;
+            const nowIso = new Date().toISOString();
 
-          supabase
-            .from('subscription_usage')
-            .select('id, documents_used')
-            .eq('user_id', uId)
-            .gte('period_start', pStart)
-            .maybeSingle()
-            .then(({ data: existingUsage }) => {
-              const curCount = existingUsage?.documents_used ?? 0;
-              supabase.from('subscription_usage').upsert({
-                user_id: uId,
-                period_start: pStart,
-                period_end: pEnd,
-                documents_used: curCount + 1,
-                updated_at: new Date().toISOString(),
-              }, { onConflict: 'user_id,period_start' }).then(({ error: usageErr }) => {
-                if (usageErr) console.warn('[Subscription Usage Record Warning]', usageErr);
+            supabase
+              .from('subscription_usage')
+              .select('id, documents_used')
+              .eq('user_id', uId)
+              .lte('period_start', nowIso)
+              .gte('period_end', nowIso)
+              .order('period_start', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+              .then(({ data: existingUsage }) => {
+                if (existingUsage) {
+                  supabase.from('subscription_usage').update({
+                    documents_used: (existingUsage.documents_used ?? 0) + 1,
+                    updated_at: new Date().toISOString(),
+                  }).eq('id', existingUsage.id).then(({ error: usageErr }) => {
+                    if (usageErr) console.warn('[Subscription Usage Record Warning]', usageErr);
+                  });
+                }
               });
-            });
+          }
+        } catch (uErr) {
+          console.warn('[Subscription Usage Record Exception]', uErr);
         }
-      } catch (uErr) {
-        console.warn('[Subscription Usage Record Exception]', uErr);
       }
 
       // Reset draftIdRef to a new temp draft ID
