@@ -7220,7 +7220,7 @@ export default function Dashboard({
 
       {/* Dynamic Main App Bar Header */}
 
-      <header className="shrink-0 z-50 w-full bg-[#f4f9ff]/95 dark:bg-[#0b1329]/95 backdrop-blur-sm border-b border-[#bae6fd]/70 dark:border-[#223269] px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-[0_1px_12px_rgba(2,132,199,0.06)] transition-all duration-200">
+      <header className="shrink-0 relative z-[60] w-full bg-[#f4f9ff]/95 dark:bg-[#0b1329]/95 backdrop-blur-sm border-b border-[#bae6fd]/70 dark:border-[#223269] px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-[0_1px_12px_rgba(2,132,199,0.06)] transition-all duration-200">
 
         {/* Left Side: Logo + Mobile Menu Trigger + Breadcrumb */}
 
@@ -7333,7 +7333,7 @@ export default function Dashboard({
 
             {isNotificationsOpen && (
 
-              <div className="absolute right-[-60px] sm:right-0 mt-3 w-[320px] sm:w-[390px] rounded-2xl bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269] shadow-[0_8px_30px_rgba(2,132,199,0.1)] py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute right-[-60px] sm:right-0 mt-3 w-[320px] sm:w-[390px] rounded-2xl bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269] shadow-[0_8px_30px_rgba(2,132,199,0.1)] py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
 
                 <div className="px-4 py-2.5 border-b border-[#bae6fd]/50 dark:border-[#223269] flex items-center justify-between">
 
@@ -7634,7 +7634,7 @@ export default function Dashboard({
 
             {isProfileDropdownOpen && (
 
-              <div className="absolute right-0 mt-3 w-52 rounded-2xl bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269] shadow-[0_8px_30px_rgba(2,132,199,0.1)] py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute right-0 mt-3 w-52 rounded-2xl bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269] shadow-[0_8px_30px_rgba(2,132,199,0.1)] py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
 
                 <button 
 
