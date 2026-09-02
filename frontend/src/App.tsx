@@ -762,8 +762,8 @@ export default function App() {
 
 
   // --- LOCAL CACHING LOAD MECHANISM (OFFLINE CAPABILITIES) ---
-  const loadLocalData = (emailParam?: string | null) => {
-    if (isCloudLoadedRef.current) {
+  const loadLocalData = (emailParam?: string | null, force: boolean = false) => {
+    if (!force && isCloudLoadedRef.current) {
       console.log('[loadLocalData] Skipping offline sync because cloud data is already loaded and active.');
       return;
     }
@@ -949,6 +949,10 @@ export default function App() {
           setUserEmail(activeEmail);
           const suffix = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
           const uid = currentUser.id;
+
+          // Reset cloud flag and load user data immediately so Sales Ledger & all records appear in 0ms without page refresh!
+          isCloudLoadedRef.current = false;
+          loadLocalData(activeEmail, true);
 
           // 1. Fetch Cloud Profile (users table) + company_settings for full details
           try {
