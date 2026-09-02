@@ -350,7 +350,7 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
               )}
               {(invoiceData?.discountType !== 'none' || (invoiceData?.discountValue || 0) > 0) && (
                 <div className="flex justify-between text-rose-500 font-medium">
-                  <span>Discount {invoiceData?.discountType === 'percent' ? `(${invoiceData?.discountValue}%)` : '(Flat)'}</span>
+                  <span>Discount {invoiceData?.discountType === 'percent' ? `(${typeof invoiceData?.discountValue === 'object' ? 0 : (invoiceData?.discountValue || 0)}%)` : '(Flat)'}</span>
                   <span>-{currencySymbol}{(invoiceData?.discountTotal || invoiceData?.discountValue || 0).toFixed(2)}</span>
                 </div>
               )}

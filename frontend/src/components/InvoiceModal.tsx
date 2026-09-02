@@ -4039,7 +4039,7 @@ export default function InvoiceModal({
 
                       {discountType !== 'none' && (
                         <div className="flex justify-between text-rose-500 font-medium">
-                          <span>Subtotal Discount ({discountType === 'percent' ? `${discountValue}%` : 'Flat'})</span>
+                          <span>Subtotal Discount ({discountType === 'percent' ? `${typeof discountValue === 'object' ? 0 : (discountValue || 0)}%` : 'Flat'})</span>
                           <span>-{currencySymbol}{calculatedDiscountTotal.toFixed(2)}</span>
                         </div>
                       )}
