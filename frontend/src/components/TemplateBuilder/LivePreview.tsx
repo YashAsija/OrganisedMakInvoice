@@ -1473,8 +1473,16 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                               }}
                               title={isInteractive ? 'Click to toggle discount mode (Percent %, Flat Amount, Off)' : ''}
                             >
-                              Discount {isDiscPercent ? (isInteractive ? <span className="inline-flex items-center gap-0.5">({renderInteractive(discVal, 'discountValue', 'text', '0')}%)</span> : `(${discVal}%)`) : isDiscFlat ? '(Flat)' : '(Off)'}
+                              Discount {isDiscFlat ? '(Flat)' : isDiscNone ? '(Off)' : ''}
                             </span>
+                            {isDiscPercent && (
+                              <span
+                                className="inline-flex items-center gap-0.5"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                ({isInteractive ? renderInteractive(discVal, 'discountValue', 'text', '0') : discVal}%)
+                              </span>
+                            )}
                           </div>
                           {(calcDiscTotal > 0 || discVal > 0 || isInteractive) && (
                             <div className="flex items-center">
@@ -1589,8 +1597,16 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         }}
                         title={isInteractive ? 'Click to toggle discount mode (Percent %, Flat Amount, Off)' : ''}
                       >
-                        Discount {isDiscPercent ? (isInteractive ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>({renderInteractive(discVal, 'discountValue', 'text', '0')}%)</span> : `(${discVal}%)`) : isDiscFlat ? '(Flat)' : '(Off)'}
+                        Discount {isDiscFlat ? '(Flat)' : isDiscNone ? '(Off)' : ''}
                       </span>
+                      {isDiscPercent && (
+                        <span
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          ({isInteractive ? renderInteractive(discVal, 'discountValue', 'text', '0') : discVal}%)
+                        </span>
+                      )}
                     </div>
                     {(calcDiscTotal > 0 || discVal > 0 || isInteractive) && (
                       <div style={{ display: 'flex', alignItems: 'center' }}>

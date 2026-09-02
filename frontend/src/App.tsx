@@ -2618,11 +2618,18 @@ export default function App() {
 
           if (!n && !companyName && !e && !gstin) return; // Need at least one identifier
 
+          const pClean = p.replace(/\D/g, '');
+
+          // Cross-match identifiers to prevent duplicate vendor creation
           const existingIdx = existingVendors.findIndex((v) => {
             if (gstin && v.gstin && v.gstin.toLowerCase() === gstin.toLowerCase()) return true;
+            if (pan && v.pan && v.pan.toLowerCase() === pan.toLowerCase()) return true;
             if (e && v.email && v.email.toLowerCase() === e.toLowerCase()) return true;
-            if (companyName && v.company && v.company.toLowerCase() === companyName.toLowerCase()) return true;
-            if (n && v.name && v.name.toLowerCase() === n.toLowerCase()) return true;
+            if (pClean && v.phone && v.phone.replace(/\D/g, '') === pClean && pClean.length >= 7) return true;
+            if (companyName && v.company && companyName.toLowerCase() === v.company.toLowerCase()) return true;
+            if (companyName && v.name && companyName.toLowerCase() === v.name.toLowerCase()) return true;
+            if (n && v.name && n.toLowerCase() === v.name.toLowerCase()) return true;
+            if (n && v.company && n.toLowerCase() === v.company.toLowerCase()) return true;
             return false;
           });
 
@@ -2642,7 +2649,9 @@ export default function App() {
               category: existing.category || 'Vendor',
             };
             existingVendors[existingIdx] = merged;
-            vendorsToUpsert.push(merged);
+            if (!vendorsToUpsert.some(v => v.id === merged.id)) {
+              vendorsToUpsert.push(merged);
+            }
             console.log('[App.tsx] processVendorDetails: UPDATED vendor:', merged.name);
           } else {
             const newVendor = {
@@ -2677,19 +2686,37 @@ export default function App() {
           invoiceObj.clientCountry
         );
 
-        // 2. Process Shipped Vendor / Consignor details if provided
-        if (invoiceObj.shippedToName || invoiceObj.shippedToCompanyName || invoiceObj.shippedToGstin) {
-          upsertOneVendor(
-            invoiceObj.shippedToName,
-            invoiceObj.shippedToCompanyName || invoiceObj.shippedToCompany,
-            invoiceObj.shippedToEmail,
-            invoiceObj.shippedToPhone,
-            invoiceObj.shippedToAddress,
-            invoiceObj.shippedToGstin,
-            invoiceObj.shippedToPan,
-            invoiceObj.shippedToState,
-            invoiceObj.shippedToCountry
+        // 2. Check if Shipped Vendor is distinct before processing to prevent duplicate entries
+        const shippedName = (invoiceObj.shippedToName || '').trim();
+        const shippedComp = (invoiceObj.shippedToCompanyName || invoiceObj.shippedToCompany || '').trim();
+        const shippedGst = (invoiceObj.shippedToGstin || '').trim();
+
+        if (shippedName || shippedComp || shippedGst) {
+          const billedName = (invoiceObj.clientName || '').trim();
+          const billedComp = (invoiceObj.clientCompanyName || invoiceObj.clientCompany || '').trim();
+          const billedGst = (invoiceObj.clientGstin || '').trim();
+          const billedEmail = (invoiceObj.clientEmail || '').trim();
+
+          const isSameAsBilled = Boolean(
+            (shippedGst && billedGst && shippedGst.toLowerCase() === billedGst.toLowerCase()) ||
+            (shippedName && (shippedName.toLowerCase() === billedName.toLowerCase() || shippedName.toLowerCase() === billedComp.toLowerCase())) ||
+            (shippedComp && (shippedComp.toLowerCase() === billedName.toLowerCase() || shippedComp.toLowerCase() === billedComp.toLowerCase())) ||
+            (invoiceObj.shippedToEmail && billedEmail && invoiceObj.shippedToEmail.trim().toLowerCase() === billedEmail.toLowerCase())
           );
+
+          if (!isSameAsBilled) {
+            upsertOneVendor(
+              invoiceObj.shippedToName,
+              invoiceObj.shippedToCompanyName || invoiceObj.shippedToCompany,
+              invoiceObj.shippedToEmail,
+              invoiceObj.shippedToPhone,
+              invoiceObj.shippedToAddress,
+              invoiceObj.shippedToGstin,
+              invoiceObj.shippedToPan,
+              invoiceObj.shippedToState,
+              invoiceObj.shippedToCountry
+            );
+          }
         }
 
         if (vendorsToUpsert.length > 0 && typeof window !== 'undefined') {
