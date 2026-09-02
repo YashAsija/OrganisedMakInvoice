@@ -2453,6 +2453,55 @@ export default function App() {
         }
         throw new Error(errorMsg);
       }
+
+      // CENTRAL DOCUMENT USAGE INCREMENT: Increment documents_used in subscription_usage table in Supabase
+      try {
+        const activeUid = await resolveSessionUid();
+        const effectiveUid = activeUid || user?.id || (typeof window !== 'undefined' ? localStorage.getItem('makbills_user_id') : null);
+        if (effectiveUid && effectiveUid !== 'local_user') {
+          const nowIso = new Date().toISOString();
+          supabase
+            .from('subscription_usage')
+            .select('id, documents_used')
+            .eq('user_id', effectiveUid)
+            .lte('period_start', nowIso)
+            .gte('period_end', nowIso)
+            .order('period_start', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+            .then(({ data: usageRow }) => {
+              if (usageRow) {
+                supabase.from('subscription_usage').update({
+                  documents_used: (usageRow.documents_used ?? 0) + 1,
+                  updated_at: new Date().toISOString(),
+                }).eq('id', usageRow.id).then(({ error: uErr }) => {
+                  if (!uErr) {
+                    console.log('[handleSaveInvoice] Incremented documents_used in DB for user:', effectiveUid);
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('mak_subscription_change'));
+                    }
+                  }
+                });
+              } else {
+                const now = new Date();
+                const pEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+                supabase.from('subscription_usage').insert({
+                  user_id: effectiveUid,
+                  period_start: now.toISOString(),
+                  period_end: pEnd.toISOString(),
+                  documents_used: 1,
+                  reports_used: 0,
+                }).then(() => {
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('mak_subscription_change'));
+                  }
+                });
+              }
+            });
+        }
+      } catch (incErr) {
+        console.warn('[handleSaveInvoice] Usage increment warning:', incErr);
+      }
     }
 
     const clientsToUpsert: ClientProfile[] = [];

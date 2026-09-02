@@ -124,7 +124,7 @@ export default function InvoiceModal({
   const [activeMode, setActiveMode] = useState<'edit' | 'preview' | 'editable'>('editable');
   const [savedInvoiceForPreview, setSavedInvoiceForPreview] = useState<Invoice | null>(null);
   const [isAiBoxHighlighted, setIsAiBoxHighlighted] = useState<boolean>(isTutorialHighlight);
-  const { trackDocumentUsage } = useSubscription();
+  const { canCreateDocument } = useSubscription();
 
   useEffect(() => {
     setIsAiBoxHighlighted(isTutorialHighlight);
@@ -2038,11 +2038,9 @@ export default function InvoiceModal({
     );
 
     if (!isExistingDocumentEdit) {
-      try {
-        const allowed = await trackDocumentUsage();
-        if (allowed === false) return;
-      } catch (e) {
-        console.warn('[handleSaveSubmit] trackDocumentUsage exception, proceeding with save:', e);
+      if (canCreateDocument && !canCreateDocument()) {
+        emitNotification('Document Limit Reached', 'You have reached your document creation limit. Upgrade your plan to create more.', 'error');
+        return;
       }
     }
 
