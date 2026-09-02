@@ -5570,11 +5570,11 @@ export default function Dashboard({
       invoiceTerms: defaults.terms,
 
       status: 'pending',
-
+      isNewDocument: true,
       invoiceType: typeMap[section],
       createdAt: today,
       updatedAt: today
-    };
+    } as any;
 
 
 
@@ -5754,6 +5754,7 @@ export default function Dashboard({
       date: todayStr,
       dueDate: todayStr,
       status: 'pending',
+      isNewDocument: true,
       parentInvoiceId: inv.id || undefined,
 
       // Bill To details (copied 100%)
@@ -9538,6 +9539,8 @@ export default function Dashboard({
                                         ...inv,
 
                                         id: '',
+
+                                        isNewDocument: true,
 
                                         invoiceNumber: getSuccessorInvoiceNumber(inv, invoices),
 

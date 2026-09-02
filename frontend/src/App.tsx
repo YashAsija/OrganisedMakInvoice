@@ -2423,9 +2423,15 @@ export default function App() {
   // 3. Save / Update Invoice
   const handleSaveInvoice = async (invoice: Invoice) => {
     // Document Quota Guard for newly created / published documents
-    const isExistingDoc = invoices.some(inv => inv.id === invoice.id);
-    const isEditingExistingNonDraft = isExistingDoc && invoices.find(inv => inv.id === invoice.id)?.status !== 'draft';
-    const isPublishingNewDoc = invoice.status !== 'draft' && !isEditingExistingNonDraft;
+    const existingInState = invoices.find(inv => inv.id === invoice.id);
+    const isNewDocumentCreation = Boolean(
+      (invoice as any).isNewDocument ||
+      !existingInState ||
+      existingInState.status === 'draft' ||
+      (existingInState as any).isTempDraft ||
+      (existingInState as any).isNewDocument
+    );
+    const isPublishingNewDoc = invoice.status !== 'draft' && isNewDocumentCreation;
 
     if (isPublishingNewDoc) {
       const { start, end } = getCurrentBillingCycleWindow();
