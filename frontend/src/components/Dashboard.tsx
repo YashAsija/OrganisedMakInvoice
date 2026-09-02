@@ -3068,57 +3068,32 @@ export default function Dashboard({
                       let sampleRow: string[] = [];
 
                       if (activeTab === 'master_vendor') {
-
-                        headers = ['Client Name', 'Company Name', 'Category / Tag', 'Email Address', 'Phone Number', 'Billing Address'];
-
-                        sampleRow = ['John Doe', 'Acme Corp', 'VIP Client', 'john@acme.com', '+1 555-0199', '123 Business Rd, New York'];
-
+                        headers = ['Client Name', 'Company Name', 'Category / Tag', 'GSTIN / Tax ID', 'PAN Number', 'Email Address', 'Phone Number', 'State', 'Country', 'Billing Address'];
+                        sampleRow = ['John Doe', 'Acme Solutions Pvt Ltd', 'VIP Client', '07AAAAA0000A1Z5', 'AAAAA0000A', 'john@acme.com', '+91 9876543210', 'Delhi', 'India', 'Plot 12, Okhla Industrial Area Phase 3, New Delhi - 110020'];
                         filename = 'client_database_template.csv';
-
                       } else if (activeTab === 'master_actual_vendor') {
-
-                        headers = ['Vendor Name', 'Company Name', 'Category / Tag', 'Email Address', 'Phone Number', 'Billing Address'];
-
-                        sampleRow = ['Jane Smith', 'Supplies Inc', 'Regular Supplier', 'jane@supplies.com', '+1 555-0245', '456 Vendor Blvd, Boston'];
-
+                        headers = ['Vendor Name', 'Company Name', 'Category / Tag', 'GSTIN / Tax ID', 'PAN Number', 'Email Address', 'Phone Number', 'State', 'Country', 'Billing Address'];
+                        sampleRow = ['Jane Smith', 'Global Supplies Pvt Ltd', 'Regular Supplier', '27BBBBB0000B1Z8', 'BBBBB0000B', 'jane@globalsupplies.com', '+91 9811122233', 'Maharashtra', 'India', '456 Industrial Estate, Andheri East, Mumbai - 400069'];
                         filename = 'vendor_database_template.csv';
-
                       } else if (activeTab === 'master_transport') {
-
                         headers = ['Carrier Name', 'GSTIN / UIN', 'PAN', 'Phone Number', 'Email Address', 'State', 'Country', 'Address Details'];
-
                         sampleRow = ['Safe Express Logistics', '07AAAAS0000A1Z1', 'AAAAS0000A', '+91 9888877777', 'info@safeexpress.com', 'Delhi', 'India', 'Okhla Phase 1, New Delhi'];
-
                         filename = 'transport_database_template.csv';
-
                       } else if (activeTab === 'master_hsn') {
-
                         headers = ['HSN/SAC Code', 'Description', 'Tax Rate (%)'];
-
                         sampleRow = ['998311', 'Management Consulting Services', '18'];
-
                         filename = 'hsn_registry_template.csv';
-
                       } else if (activeTab === 'catalog_material') {
-
                         headers = ['Item Name', 'Standard Rate / Unit Price', 'HSN/SAC Code', 'Unit of Measure (UOM)', 'Category'];
-
                         sampleRow = ['Premium Advisory Service', '150', '998311', 'hour', 'Consulting'];
-
                         filename = 'material_catalog_template.csv';
-
                       } else if (activeTab === 'catalog_category') {
-
                         headers = ['Category Name', 'Description'];
-
                         sampleRow = ['Consulting', 'Advisory and business optimization services'];
-
                         filename = 'product_category_template.csv';
-
                       }
 
-                      const csvContent = [headers.join(','), sampleRow.map(v => `"${v.replace(/"/g, '""')}"`).join(',')].join('\n');
-
+                      const csvContent = '\uFEFF' + [headers.map(h => `"${h.replace(/"/g, '""')}"`).join(','), sampleRow.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(',')].join('\n');
                       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
 
                       const link = document.createElement('a');
@@ -3227,9 +3202,9 @@ export default function Dashboard({
 
                                 const id = `bulk_${activeTab}_${Date.now()}_${index}`;
 
-                                if (activeTab === 'master_vendor') return { id, name: rowData.name || rowData['Client Name'] || 'Unnamed Client', company: rowData.company || rowData['Company Name'] || '', category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || '', email: rowData.email || rowData['Email Address'] || '', phone: rowData.phone || rowData['Phone Number'] || '', address: rowData.address || rowData['Billing Address'] || '' };
+                                if (activeTab === 'master_vendor') return { id, name: rowData.name || rowData['Client Name'] || 'Unnamed Client', company: rowData.company || rowData['Company Name'] || '', category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || '', gstin: rowData.gstin || rowData['GSTIN / Tax ID'] || rowData['GSTIN'] || rowData['Tax ID'] || '', pan: rowData.pan || rowData['PAN Number'] || rowData['PAN'] || '', email: rowData.email || rowData['Email Address'] || '', phone: rowData.phone || rowData['Phone Number'] || '', state: rowData.state || rowData['State'] || '', country: rowData.country || rowData['Country'] || '', address: rowData.address || rowData['Billing Address'] || '' };
 
-                                if (activeTab === 'master_actual_vendor') return { id, name: rowData.name || rowData['Vendor Name'] || 'Unnamed Vendor', company: rowData.company || rowData['Company Name'] || '', category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || '', email: rowData.email || rowData['Email Address'] || '', phone: rowData.phone || rowData['Phone Number'] || '', address: rowData.address || rowData['Billing Address'] || '' };
+                                if (activeTab === 'master_actual_vendor') return { id, name: rowData.name || rowData['Vendor Name'] || 'Unnamed Vendor', company: rowData.company || rowData['Company Name'] || '', category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || '', gstin: rowData.gstin || rowData['GSTIN / Tax ID'] || rowData['GSTIN'] || rowData['Tax ID'] || '', pan: rowData.pan || rowData['PAN Number'] || rowData['PAN'] || '', email: rowData.email || rowData['Email Address'] || '', phone: rowData.phone || rowData['Phone Number'] || '', state: rowData.state || rowData['State'] || '', country: rowData.country || rowData['Country'] || '', address: rowData.address || rowData['Billing Address'] || '' };
 
                                 if (activeTab === 'master_transport') return { id, name: rowData.name || rowData['Transport Name'] || 'Unnamed Carrier', phone: rowData.phone || rowData['Driver Mobile'] || '', vehicleNo: rowData.vehicleNo || rowData['Vehicle No'] || '', ewayBillNo: rowData.ewayBillNo || rowData['E-Way Bill No'] || '', station: rowData.station || rowData['Station'] || '', grRrNo: rowData.grRrNo || rowData['GR/RR No.'] || '' };
 
