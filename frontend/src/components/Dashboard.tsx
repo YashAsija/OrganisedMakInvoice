@@ -15758,7 +15758,7 @@ export default function Dashboard({
 
         return (
 
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-[#0b1329]/80 backdrop-blur-sm overflow-y-auto no-scrollbar">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-6 bg-[#0b1329]/80 backdrop-blur-sm overflow-y-auto no-scrollbar">
 
             <div className="w-full max-w-5xl h-full md:h-[92vh] bg-white dark:bg-[#111a36] rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-[#bae6fd]/30 dark:border-[#223269]/60 animate-in fade-in duration-200 doc-preview-modal invoice-preview-container preview-section no-privacy-blur" data-privacy-exempt="true">
 
