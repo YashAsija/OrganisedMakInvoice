@@ -1932,10 +1932,10 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 md:p-6 lg:p-8 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2.5 sm:p-4 md:p-6 lg:p-8 bg-slate-950/80 backdrop-blur-md overflow-y-auto pb-[env(safe-area-inset-bottom)]">
       <div 
         id="profile-modal" 
-        className="relative w-full max-w-6xl bg-white dark:bg-[#111a36] text-[#0f172a] dark:text-[#e2e8f0] rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 flex flex-col max-h-[90vh] sm:max-h-[85vh] my-auto"
+        className="relative w-full max-w-6xl bg-white dark:bg-[#111a36] text-[#0f172a] dark:text-[#e2e8f0] rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 flex flex-col max-h-[94vh] sm:max-h-[90vh] my-auto"
       >
         {/* Hidden File Picker reference */}
         <input 
@@ -1955,8 +1955,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         />
 
         {/* Modal Header */}
-        <div className="p-4 sm:p-5 md:p-6 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex items-center justify-between bg-[#f4f9ff] dark:bg-[#0b1329]/60 shrink-0 sticky top-0 z-20">
-          <div className="flex items-center gap-2.5">
+        <div className="p-3.5 sm:p-5 md:p-6 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex items-center justify-between bg-[#f4f9ff] dark:bg-[#0b1329]/60 shrink-0 sticky top-0 z-20">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             {activeTab !== 'company' && (
               <button 
                 type="button"
@@ -1965,36 +1965,36 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   else if (activeTab === 'billing') setActiveTab('banking');
                   else if (activeTab === 'banking') setActiveTab('company');
                 }}
-                className="w-10 h-10 rounded-2xl bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] flex items-center justify-center shadow-sm border border-[#bae6fd] dark:border-[#223269] hover:bg-[#bae6fd]/50 transition-all cursor-pointer"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] flex items-center justify-center shadow-sm border border-[#bae6fd] dark:border-[#223269] hover:bg-[#bae6fd]/50 transition-all cursor-pointer"
                 aria-label="Go back"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             )}
-            <div className="w-10 h-10 rounded-2xl bg-[#0284c7] text-white flex items-center justify-center shadow-md shadow-[#0284c7]/30">
-              <Building2 className="w-5 h-5 text-amber-100" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#0284c7] text-white flex items-center justify-center shadow-md shadow-[#0284c7]/30 shrink-0">
+              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-100" />
             </div>
             <div>
-              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-[#0f172a] dark:text-white">Company Settings</h2>
-              <p className="text-[11px] font-medium text-[#0284c7]/70 dark:text-[#38bdf8]/60">Used as the seller details on every invoice.</p>
+              <h2 className="text-base sm:text-xl font-bold tracking-tight text-[#0f172a] dark:text-white leading-tight">Company Settings</h2>
+              <p className="text-[10px] sm:text-[11px] font-medium text-[#0284c7]/70 dark:text-[#38bdf8]/60">Used as the seller details on every invoice.</p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-1.5 rounded-full text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] transition-colors cursor-pointer"
+            className="p-1 sm:p-1.5 rounded-full text-[#0284c7] dark:text-[#38bdf8] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] transition-colors cursor-pointer"
             aria-label="Close settings modal"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
           </button>
         </div>
 
         {/* Modal Form container with Sidebar */}
-        <form onSubmit={handleFormSubmit} className="flex-1 overflow-hidden flex flex-col md:flex-row">
+        <form onSubmit={handleFormSubmit} className="flex-1 overflow-hidden flex flex-col md:flex-row min-h-0">
                 {/* LEFT SIDEBAR (Tabs) */}
-          <div className="md:w-64 lg:w-72 border-b md:border-b-0 md:border-r border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f4f9ff] dark:bg-[#0b1329]/40 flex flex-row md:flex-col p-4 md:p-6 gap-3 overflow-x-auto md:overflow-y-auto shrink-0 hide-scrollbar">
+          <div className="md:w-64 lg:w-72 border-b md:border-b-0 md:border-r border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f4f9ff] dark:bg-[#0b1329]/40 flex flex-row md:flex-col p-2.5 sm:p-4 md:p-6 gap-2 md:gap-3 overflow-x-auto md:overflow-y-auto shrink-0 hide-scrollbar">
             <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7]/60 dark:text-[#38bdf8]/40 mb-2 hidden md:block px-2">Settings Menu</div>
             
-            <div className="relative flex flex-row md:flex-col gap-2 md:gap-3 flex-1 md:flex-none">
+            <div className="relative flex flex-row md:flex-col gap-1.5 sm:gap-2 md:gap-3 flex-1 md:flex-none">
               {/* Vertical stepper connector line behind icons */}
               <div className="absolute left-[27px] top-6 bottom-6 w-[1.5px] bg-[#bae6fd]/60 dark:bg-[#223269]/60 hidden md:block pointer-events-none" />
 

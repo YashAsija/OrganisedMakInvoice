@@ -53,12 +53,12 @@ export function TrialConfirmModal({ planType, isOpen, onClose, onConfirmSuccess 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#111a36] border border-slate-200 dark:border-[#223269] rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/60 backdrop-blur-sm overflow-y-auto pb-[env(safe-area-inset-bottom)] animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-[#111a36] border border-slate-200 dark:border-[#223269] rounded-2xl sm:rounded-3xl max-w-md w-full max-h-[92vh] sm:max-h-[88vh] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 relative">
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 p-1.5 rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>

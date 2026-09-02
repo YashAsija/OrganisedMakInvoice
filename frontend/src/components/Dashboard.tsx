@@ -3785,13 +3785,13 @@ export default function Dashboard({
 
         {isMasterModalOpen && editingMasterItem && (
 
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 bg-slate-950/65 backdrop-blur-sm overflow-y-auto pb-[env(safe-area-inset-bottom)]">
 
-            <div className="w-full max-w-lg bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-3xl flex flex-col max-h-[90vh] shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="w-full max-w-lg bg-white dark:bg-[#111a36] border border-[#bae6fd]/80 dark:border-[#223269]/80 rounded-2xl sm:rounded-3xl flex flex-col max-h-[92vh] sm:max-h-[88vh] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
 
-              <div className="flex justify-between items-center p-4 sm:p-5 pb-3 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 shrink-0 bg-[#f4f9ff] dark:bg-[#0b1329]/50">
+              <div className="flex justify-between items-center px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 shrink-0 bg-[#f4f9ff] dark:bg-[#0b1329]/60">
 
-                <h3 className="text-sm font-extrabold text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
+                <h3 className="text-xs sm:text-sm font-extrabold text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
                   {editingMasterItem.id?.startsWith('m_item_') ? 'Add Registry Record' : 'Edit Registry Record'}
                 </h3>
 
@@ -3799,7 +3799,7 @@ export default function Dashboard({
 
                   onClick={() => { setIsMasterModalOpen(false); setEditingMasterItem(null); }}
 
-                  className="p-1.5 hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#64748b] hover:text-[#0284c7] dark:hover:text-[#38bdf8] rounded-full transition-colors cursor-pointer"
+                  className="p-1 sm:p-1.5 hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#64748b] hover:text-[#0284c7] dark:hover:text-[#38bdf8] rounded-full transition-colors cursor-pointer"
 
                 >
 
@@ -3811,13 +3811,13 @@ export default function Dashboard({
 
 
 
-              <div className="p-4 sm:p-6 overflow-y-auto">
+              <div className="p-3.5 sm:p-5 md:p-6 overflow-y-auto flex-1">
 
                 <form
 
                   onSubmit={(e) => { e.preventDefault(); handleSaveMasterItem(editingMasterItem); }}
 
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-left"
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 text-left text-xs"
 
                 >
 
@@ -3825,7 +3825,7 @@ export default function Dashboard({
 
                     <div key={idx3} className={f.key === 'address' ? 'sm:col-span-2' : ''}>
 
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#64748b] dark:text-zinc-400 mb-1.5">{f.label}</label>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#64748b] dark:text-zinc-400 mb-1 sm:mb-1.5">{f.label}</label>
 
                       {f.type === 'select' ? (
 
@@ -3835,7 +3835,7 @@ export default function Dashboard({
 
                           onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: e.target.value })}
 
-                          className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
+                          className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none cursor-pointer"
 
                         >
 
@@ -3861,7 +3861,7 @@ export default function Dashboard({
 
                           onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: f.type === 'number' ? parseFloat(e.target.value) : e.target.value })}
 
-                          className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
+                          className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
 
                           required={f.key === 'name' || f.key === 'company' || idx3 === 0}
 
@@ -3873,7 +3873,7 @@ export default function Dashboard({
 
                   ))}
 
-                  <div className="pt-3 sm:col-span-2 flex justify-end gap-2.5 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 mt-2">
+                  <div className="pt-3 sm:col-span-2 flex flex-wrap sm:flex-nowrap justify-end gap-2 sm:gap-2.5 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 mt-2">
 
                     <button
 
@@ -3881,7 +3881,7 @@ export default function Dashboard({
 
                       onClick={() => { setIsMasterModalOpen(false); setEditingMasterItem(null); }}
 
-                      className="px-4 py-2 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                      className="flex-1 sm:flex-none px-4 py-2 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] rounded-xl text-xs font-bold cursor-pointer transition-colors"
 
                     >
 
@@ -3893,7 +3893,7 @@ export default function Dashboard({
 
                       type="submit"
 
-                      className="px-5 py-2 bg-[#0284c7] dark:bg-[#38bdf8] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] rounded-xl text-xs font-black cursor-pointer transition-all shadow-md shadow-[#0284c7]/20"
+                      className="flex-1 sm:flex-none px-5 py-2 bg-[#0284c7] dark:bg-[#38bdf8] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] rounded-xl text-xs font-black cursor-pointer transition-all shadow-md shadow-[#0284c7]/20"
 
                     >
 
@@ -16279,13 +16279,13 @@ export default function Dashboard({
 
         return (
 
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-2.5 sm:p-4 md:p-6 bg-slate-950/75 backdrop-blur-sm overflow-y-auto pb-[env(safe-area-inset-bottom)] animate-in fade-in duration-200">
 
             <form
 
               onSubmit={handleSavePayment}
 
-              className="w-full max-w-[440px] bg-white dark:bg-[#111a36] rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.22)] border border-slate-200/80 dark:border-[#223269]/60 overflow-hidden animate-in zoom-in-95 duration-200"
+              className="w-full max-w-[460px] max-h-[92vh] sm:max-h-[88vh] flex flex-col bg-white dark:bg-[#111a36] rounded-2xl sm:rounded-3xl shadow-[0_24px_80px_rgba(0,0,0,0.22)] border border-[#bae6fd]/80 dark:border-[#223269]/60 overflow-hidden animate-in zoom-in-95 duration-200"
 
               onClick={(e) => e.stopPropagation()}
 
@@ -16293,15 +16293,15 @@ export default function Dashboard({
 
               {/* Header */}
 
-              <div className="px-6 pt-5 pb-4 flex items-start justify-between border-b border-slate-100 dark:border-[#223269]/40">
+              <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3.5 sm:pb-4 flex items-start justify-between border-b border-slate-100 dark:border-[#223269]/40 bg-[#f4f9ff]/50 dark:bg-[#0b1329]/40 shrink-0">
 
                 <div>
 
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#0284c7] dark:text-[#38bdf8] mb-0.5">Record Payment</p>
 
-                  <h3 className="text-[17px] font-black text-[#0f172a] dark:text-white leading-tight">{paymentModalInv.clientName || 'Client'}</h3>
+                  <h3 className="text-base sm:text-[17px] font-black text-[#0f172a] dark:text-white leading-tight">{paymentModalInv.clientName || 'Client'}</h3>
 
-                  <div className="flex items-center gap-3 mt-1 text-[11px] font-mono text-slate-400 dark:text-zinc-500">
+                  <div className="flex items-center gap-2 sm:gap-3 mt-1 text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-zinc-500 flex-wrap">
 
                     <span>{paymentModalInv.invoiceNumber}</span>
 
@@ -16333,7 +16333,7 @@ export default function Dashboard({
 
               {/* Body */}
 
-              <div className="px-6 py-5 space-y-4">
+              <div className="px-4 sm:px-6 py-4 sm:py-5 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1">
 
 
 
@@ -16341,13 +16341,13 @@ export default function Dashboard({
 
                 {alreadyPaid > 0 && (
 
-                  <div className="flex items-center justify-between bg-slate-50 dark:bg-[#0b1329]/60 border border-slate-200 dark:border-[#223269]/50 rounded-xl px-4 py-2.5">
+                  <div className="flex items-center justify-between bg-slate-50 dark:bg-[#0b1329]/60 border border-slate-200 dark:border-[#223269]/50 rounded-xl px-3.5 sm:px-4 py-2 sm:py-2.5">
 
                     <div>
 
                       <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-500">Already Paid</p>
 
-                      <p className="text-sm font-black text-[#0f172a] dark:text-white mt-0.5">{sym}{alreadyPaid.toFixed(2)}</p>
+                      <p className="text-xs sm:text-sm font-black text-[#0f172a] dark:text-white mt-0.5">{sym}{alreadyPaid.toFixed(2)}</p>
 
                     </div>
 
@@ -16355,7 +16355,7 @@ export default function Dashboard({
 
                       <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-500">Remaining Balance</p>
 
-                      <p className="text-sm font-black text-amber-500 mt-0.5">{sym}{remaining.toFixed(2)}</p>
+                      <p className="text-xs sm:text-sm font-black text-amber-500 mt-0.5">{sym}{remaining.toFixed(2)}</p>
 
                     </div>
 
@@ -16365,101 +16365,229 @@ export default function Dashboard({
 
 
 
-                {/* Amount + Date row */}
+                {/* Main Payment Amount Input Card */}
 
-                <div className="flex gap-3">
+                <div className="bg-slate-50/80 dark:bg-[#0b1329]/40 border border-slate-200/80 dark:border-[#223269]/50 rounded-2xl p-4 sm:p-4.5 space-y-3">
 
-                  <div className="flex-1">
+                  <div className="flex items-center justify-between">
 
-                    <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
 
-                      <label className="block text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 dark:text-zinc-500">
+                      {isEditingTotalPaid ? 'Edit Total Paid' : (alreadyPaid > 0 ? 'Add Payment Amount' : 'Payment Amount')}
 
-                        {isEditingTotalPaid ? 'Total Paid Amount' : (alreadyPaid > 0 ? 'Amount to Add' : 'Amount Received')}
+                    </label>
 
-                      </label>
+                    <div className="flex items-center gap-1">
+
+                      {alreadyPaid > 0 && (
+
+                        <button
+
+                          type="button"
+
+                          onClick={() => {
+
+                            setIsEditingTotalPaid(!isEditingTotalPaid);
+
+                            if (!isEditingTotalPaid) {
+
+                              setEditTotalPaidAmount(alreadyPaid.toFixed(2));
+
+                            }
+
+                          }}
+
+                          className="text-[10px] font-bold text-[#0284c7] hover:text-[#0369a1] dark:text-[#38bdf8] cursor-pointer hover:underline"
+
+                        >
+
+                          {isEditingTotalPaid ? 'Switch to Add Payment' : 'Edit Total Paid'}
+
+                        </button>
+
+                      )}
+
+                    </div>
+
+                  </div>
+
+
+
+                  {/* Amount Input */}
+
+                  <div className="relative">
+
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lg sm:text-xl font-bold font-mono text-slate-400 dark:text-zinc-500 select-none">
+
+                      {sym}
+
+                    </span>
+
+                    <input
+
+                      type="number"
+
+                      step="0.01"
+
+                      min="0"
+
+                      max={total.toString()}
+
+                      value={isEditingTotalPaid ? editTotalPaidAmount : paymentAmount}
+
+                      onChange={(e) => {
+
+                        if (isEditingTotalPaid) {
+
+                          setEditTotalPaidAmount(e.target.value);
+
+                        } else {
+
+                          setPaymentAmount(e.target.value);
+
+                        }
+
+                      }}
+
+                      placeholder="0.00"
+
+                      className={`w-full pl-9 pr-20 py-2.5 sm:py-3 bg-white dark:bg-[#111a36] border rounded-xl text-base sm:text-lg font-black font-mono text-[#0f172a] dark:text-white placeholder-slate-300 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/20 transition-all ${
+
+                        isOverpay
+
+                          ? 'border-rose-400 dark:border-rose-600 focus:border-rose-500'
+
+                          : 'border-slate-200 dark:border-[#223269]/60 focus:border-[#0284c7] dark:focus:border-[#38bdf8]'
+
+                      }`}
+
+                      autoFocus
+
+                    />
+
+                    {!isEditingTotalPaid && remaining > 0 && (
 
                       <button
 
                         type="button"
 
-                        onClick={handleResetInputs}
+                        onClick={() => setPaymentAmount(remaining.toFixed(2))}
 
-                        className="text-[10px] font-bold text-[#0284c7] hover:underline dark:text-[#38bdf8] flex items-center gap-1 cursor-pointer"
-
-                        title="Clear input values to 0.00"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-sky-50 dark:bg-[#1b264f] hover:bg-sky-100 dark:hover:bg-[#223269] text-[#0284c7] dark:text-[#38bdf8] text-[10px] font-bold rounded-lg transition-all cursor-pointer"
 
                       >
 
-                        <RotateCcw className="w-2.5 h-2.5" />
-
-                        <span>Reset Input</span>
+                        Full
 
                       </button>
-
-                    </div>
-
-                    <div className="relative">
-
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-[#0284c7] dark:text-[#38bdf8] select-none">{sym}</span>
-
-                      <input
-
-                        type="number"
-
-                        step="0.01"
-
-                        min="0"
-
-                        max={remaining}
-
-                        required
-
-                        value={paymentAmount}
-
-                        onChange={(e) => setPaymentAmount(e.target.value)}
-
-                        className={`w-full pl-8 pr-3 py-2.5 text-sm font-bold text-[#0f172a] dark:text-white bg-slate-50 dark:bg-[#0b1329]/80 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
-
-                          isOverpay
-
-                            ? 'border-rose-400 focus:ring-rose-400/20'
-
-                            : 'border-slate-200 dark:border-[#223269]/60 focus:ring-[#0284c7]/25'
-
-                        }`}
-
-                        placeholder="0.00"
-
-                      />
-
-                    </div>
-
-                    {isOverpay && (
-
-                      <p className="text-[9px] font-bold text-rose-500 mt-1">Max allowed: {sym}{remaining.toFixed(2)}</p>
 
                     )}
 
                   </div>
 
-                  <div className="w-[118px]">
 
-                    <label className="block text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 dark:text-zinc-500 mb-1.5">Date</label>
 
-                    <input
+                  {/* Overpay Warning */}
 
-                      type="date"
+                  {isOverpay && (
 
-                      required
+                    <div className="flex items-center gap-1.5 text-rose-500 text-[11px] font-semibold">
 
-                      value={paymentDate}
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
 
-                      onChange={(e) => setPaymentDate(e.target.value)}
+                      <span>Amount exceeds remaining balance of {sym}{remaining.toFixed(2)}</span>
 
-                      className="w-full px-3 py-2.5 text-xs font-bold text-[#0f172a] dark:text-white bg-slate-50 dark:bg-[#0b1329]/80 border border-slate-200 dark:border-[#223269]/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0284c7]/25 transition-all"
+                    </div>
 
-                    />
+                  )}
+
+
+
+                  {/* Quick Preset Buttons (only in Add Payment mode) */}
+
+                  {!isEditingTotalPaid && remaining > 0 && (
+
+                    <div className="grid grid-cols-4 gap-1.5 pt-1">
+
+                      {[
+
+                        { label: '25%',  amt: remaining * 0.25 },
+
+                        { label: '50%',  amt: remaining * 0.50 },
+
+                        { label: '75%',  amt: remaining * 0.75 },
+
+                        { label: 'Full', amt: remaining },
+
+                      ].map(p => (
+
+                        <button
+
+                          key={p.label}
+
+                          type="button"
+
+                          onClick={() => setPaymentAmount(p.amt.toFixed(2))}
+
+                          className="py-1 px-1 text-center bg-white dark:bg-[#111a36] hover:bg-slate-100 dark:hover:bg-[#1b264f] border border-slate-200 dark:border-[#223269]/50 rounded-lg text-[10px] font-mono font-bold text-slate-600 dark:text-zinc-300 transition-all cursor-pointer"
+
+                        >
+
+                          {p.label}
+
+                        </button>
+
+                      ))}
+
+                    </div>
+
+                  )}
+
+                </div>
+
+
+
+                {/* Progress Bar Visualizer */}
+
+                <div className="space-y-1.5">
+
+                  <div className="flex justify-between text-[10px] font-mono text-slate-400 dark:text-zinc-500">
+
+                    <span>Progress: {Math.round(pctTotal)}%</span>
+
+                    <span>Balance Due: <strong className="text-[#0f172a] dark:text-white">{sym}{balanceDue.toFixed(2)}</strong></span>
+
+                  </div>
+
+                  <div className="h-2 bg-slate-100 dark:bg-[#0b1329] rounded-full overflow-hidden flex">
+
+                    {pctAlready > 0 && (
+
+                      <div
+
+                        style={{ width: `${pctAlready}%` }}
+
+                        className="h-full bg-emerald-400 dark:bg-emerald-500 transition-all duration-300"
+
+                        title={`Already paid: ${sym}${alreadyPaid.toFixed(2)}`}
+
+                      />
+
+                    )}
+
+                    {!isEditingTotalPaid && pctTotal > pctAlready && (
+
+                      <div
+
+                        style={{ width: `${pctTotal - pctAlready}%` }}
+
+                        className="h-full bg-sky-400 dark:bg-[#0284c7] transition-all duration-300"
+
+                        title={`This payment: ${sym}${thisAmt.toFixed(2)}`}
+
+                      />
+
+                    )}
 
                   </div>
 
@@ -16467,67 +16595,15 @@ export default function Dashboard({
 
 
 
-                {/* Progress bar — shows cumulative coverage */}
+                {/* Payment Method Selector */}
 
-                {total > 0 && (
+                <div className="space-y-1.5">
 
-                  <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">Payment Mode</label>
 
-                    <div className="flex justify-between items-center mb-1.5">
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
 
-                      <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">Payment Coverage</span>
-
-                      <span className="text-[10px] font-black font-mono" style={{color: isFull ? '#10b981' : isPartial ? '#0284c7' : '#94a3b8'}}>{pctTotal.toFixed(0)}%</span>
-
-                    </div>
-
-                    <div className="h-1.5 rounded-full bg-slate-100 dark:bg-[#223269]/40 overflow-hidden relative">
-
-                      {/* Already paid segment */}
-
-                      {alreadyPaid > 0 && (
-
-                        <div className="absolute left-0 top-0 h-full bg-sky-300 dark:bg-sky-700/60 rounded-full" style={{width: `${pctAlready}%`}} />
-
-                      )}
-
-                      {/* This payment segment */}
-
-                      <div
-
-                        className={`absolute top-0 h-full rounded-full transition-all duration-300 ${isFull ? 'bg-emerald-500' : isPartial ? 'bg-sky-500' : ''}`}
-
-                        style={{left: `${pctAlready}%`, width: `${Math.max(0, pctTotal - pctAlready)}%`}}
-
-                      />
-
-                    </div>
-
-                    {isPartial && !isOverpay && (
-
-                      <p className="text-[9.5px] font-mono text-slate-400 dark:text-zinc-500 mt-1">
-
-                        Remaining after this payment: <span className="font-bold text-amber-500">{sym}{balanceDue.toFixed(2)}</span>
-
-                      </p>
-
-                    )}
-
-                  </div>
-
-                )}
-
-
-
-                {/* Payment Method — clean text tiles, no emojis */}
-
-                <div>
-
-                  <label className="block text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 dark:text-zinc-500 mb-2">Payment Method</label>
-
-                  <div className="grid grid-cols-3 gap-2">
-
-                    {METHODS.map((m) => (
+                    {METHODS.map(m => (
 
                       <button
 
@@ -16537,13 +16613,13 @@ export default function Dashboard({
 
                         onClick={() => setPaymentMethod(m.id)}
 
-                        className={`py-2 px-3 rounded-xl border text-[11px] font-bold tracking-wide transition-all cursor-pointer text-center ${
+                        className={`py-1.5 px-1 text-center rounded-xl text-[10.5px] font-bold transition-all cursor-pointer border ${
 
                           paymentMethod === m.id
 
-                            ? 'bg-[#0284c7] border-[#0284c7] text-white shadow-sm shadow-sky-500/15'
+                            ? 'bg-[#0284c7] text-white border-[#0284c7] shadow-xs'
 
-                            : 'bg-slate-50 dark:bg-[#0b1329]/60 border-slate-200 dark:border-[#223269]/50 text-slate-500 dark:text-zinc-400 hover:border-[#0284c7]/50 hover:text-[#0284c7] dark:hover:text-[#38bdf8] hover:bg-[#f0f9ff] dark:hover:bg-[#0b1329]'
+                            : 'bg-white dark:bg-[#111a36] text-slate-600 dark:text-zinc-300 border-slate-200 dark:border-[#223269]/50 hover:bg-slate-50 dark:hover:bg-[#1b264f]'
 
                         }`}
 
@@ -16561,37 +16637,55 @@ export default function Dashboard({
 
 
 
-                {/* Reference */}
+                {/* Date & Reference Note */}
 
-                <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-                  <label className="block text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 dark:text-zinc-500 mb-1.5">
+                  <div>
 
-                    Reference / Note <span className="normal-case font-normal">(optional)</span>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 mb-1">Payment Date</label>
 
-                  </label>
+                    <input
 
-                  <input
+                      type="date"
 
-                    type="text"
+                      value={paymentDate}
 
-                    value={paymentNote}
+                      onChange={(e) => setPaymentDate(e.target.value)}
 
-                    onChange={(e) => setPaymentNote(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-[#0b1329] border border-slate-200 dark:border-[#223269]/50 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8]"
 
-                    placeholder="Transaction ID, UTR, cheque number…"
+                    />
 
-                    className="w-full px-3 py-2.5 text-xs font-medium text-[#0f172a] dark:text-white bg-slate-50 dark:bg-[#0b1329]/80 border border-slate-200 dark:border-[#223269]/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0284c7]/25 transition-all placeholder:text-slate-300 dark:placeholder:text-zinc-600"
+                  </div>
 
-                  />
+                  <div>
+
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 mb-1">Ref / UTR / Note</label>
+
+                    <input
+
+                      type="text"
+
+                      value={paymentNote}
+
+                      onChange={(e) => setPaymentNote(e.target.value)}
+
+                      placeholder="e.g. UTR12345678"
+
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-[#0b1329] border border-slate-200 dark:border-[#223269]/50 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white placeholder-slate-300 dark:placeholder-zinc-600 focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8]"
+
+                    />
+
+                  </div>
 
                 </div>
 
 
 
-                {/* Live outcome strip */}
+                {/* Result Status Banner */}
 
-                <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl border ${
+                <div className={`flex items-center justify-between px-3.5 py-2 rounded-xl border ${
 
                   isFull
 
@@ -16621,7 +16715,7 @@ export default function Dashboard({
 
               {/* Footer */}
 
-              <div className="px-6 pb-5 pt-1 flex flex-col sm:flex-row gap-2.5">
+              <div className="px-4 sm:px-6 py-3 sm:py-4 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border-t border-slate-100 dark:border-[#223269]/40 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 shrink-0">
 
                 {(alreadyPaid > 0 || paymentModalInv.status === 'paid' || paymentModalInv.status === 'partially_paid') && (
 
@@ -16631,7 +16725,7 @@ export default function Dashboard({
 
                     onClick={handleResetAndSavePayment}
 
-                    className="py-2.5 px-3 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/70 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    className="py-2 sm:py-2.5 px-3 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/70 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all cursor-pointer flex items-center justify-center gap-1.5"
 
                     title="Reset recorded payment to 0.00 (Unpaid / Pending)"
 
@@ -16651,7 +16745,7 @@ export default function Dashboard({
 
                   onClick={() => setPaymentModalInv(null)}
 
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-[#223269]/50 text-slate-500 dark:text-zinc-400 text-xs font-bold hover:bg-slate-50 dark:hover:bg-[#1b264f]/40 transition-all cursor-pointer"
+                  className="flex-1 py-2 sm:py-2.5 rounded-xl border border-slate-200 dark:border-[#223269]/50 text-slate-500 dark:text-zinc-400 text-xs font-bold hover:bg-slate-50 dark:hover:bg-[#1b264f]/40 transition-all cursor-pointer"
 
                 >
 
@@ -16665,7 +16759,7 @@ export default function Dashboard({
 
                   disabled={isOverpay || (!isEditingTotalPaid && thisAmt <= 0 && alreadyPaid === 0)}
 
-                  className={`flex-1 py-2.5 rounded-xl text-white text-xs font-black transition-all cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ${
+                  className={`flex-1 py-2 sm:py-2.5 rounded-xl text-white text-xs font-black transition-all cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ${
 
                     isFull
 
@@ -16705,39 +16799,39 @@ export default function Dashboard({
 
       {isClientEditorOpen && (
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-md overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 bg-slate-950/65 backdrop-blur-md overflow-y-auto pb-[env(safe-area-inset-bottom)]">
 
           <form 
             onSubmit={handleSaveClientForm}
-            className="w-full max-w-lg bg-white dark:bg-[#111a36] rounded-3xl overflow-hidden shadow-2xl shadow-[#0284c7]/10 border border-[#bae6fd]/80 dark:border-[#223269]/80 text-sans animate-in zoom-in-95 duration-150"
+            className="w-full max-w-lg max-h-[92vh] sm:max-h-[88vh] flex flex-col bg-white dark:bg-[#111a36] rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl shadow-[#0284c7]/10 border border-[#bae6fd]/80 dark:border-[#223269]/80 text-sans animate-in zoom-in-95 duration-150"
           >
             {/* Header */}
-            <div className="flex justify-between items-center px-5 py-4 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f4f9ff] dark:bg-[#0b1329]/60">
+            <div className="flex justify-between items-center px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f4f9ff] dark:bg-[#0b1329]/60 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-[#0284c7] text-white flex items-center justify-center font-bold shadow-md shadow-[#0284c7]/20">
                   <UserCheck className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
+                  <h3 className="text-xs sm:text-sm font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
                     {editingClient ? 'Edit Client Profile' : 'Register New Client'}
                   </h3>
-                  <p className="text-[10px] text-[#64748b] dark:text-zinc-400 font-medium">Manage party billing metadata & tax compliance info</p>
+                  <p className="text-[9.5px] sm:text-[10px] text-[#64748b] dark:text-zinc-400 font-medium">Manage party billing metadata & tax compliance info</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsClientEditorOpen(false)}
-                className="p-1.5 hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#64748b] hover:text-[#0284c7] dark:hover:text-[#38bdf8] rounded-full transition-colors cursor-pointer"
+                className="p-1 sm:p-1.5 hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#64748b] hover:text-[#0284c7] dark:hover:text-[#38bdf8] rounded-full transition-colors cursor-pointer"
               >
                 <X className="w-4.5 h-4.5" />
               </button>
             </div>
 
             {/* Form Fields */}
-            <div className="p-5 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+            <div className="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 text-xs">
                 <div>
-                  <label htmlFor="cl_fname" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  <label htmlFor="cl_fname" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1 sm:mb-1.5">
                     Client Full Name *
                   </label>
                   <input
@@ -16747,12 +16841,12 @@ export default function Dashboard({
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
                     placeholder="e.g. John Doe"
-                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                    className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="cl_comp" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  <label htmlFor="cl_comp" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1 sm:mb-1.5">
                     Company Name
                   </label>
                   <input
@@ -16761,12 +16855,12 @@ export default function Dashboard({
                     value={clientCompany}
                     onChange={(e) => setClientCompany(e.target.value)}
                     placeholder="e.g. Marvelous Widgets Ltd"
-                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                    className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="cl_country" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  <label htmlFor="cl_country" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1 sm:mb-1.5">
                     Country
                   </label>
                   <input
@@ -16775,12 +16869,12 @@ export default function Dashboard({
                     value={clientCountry}
                     onChange={(e) => setClientCountry(e.target.value)}
                     placeholder="e.g. India"
-                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                    className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="cl_state" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  <label htmlFor="cl_state" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1 sm:mb-1.5">
                     State
                   </label>
                   <input
@@ -16789,12 +16883,12 @@ export default function Dashboard({
                     value={clientState}
                     onChange={(e) => setClientState(e.target.value)}
                     placeholder="e.g. Maharashtra"
-                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                    className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="cl_gstin" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  <label htmlFor="cl_gstin" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1 sm:mb-1.5">
                     GSTIN / Tax No.
                   </label>
                   <input
@@ -16803,12 +16897,12 @@ export default function Dashboard({
                     value={clientGstin}
                     onChange={(e) => setClientGstin(e.target.value)}
                     placeholder="e.g. 27AAAAA0000A1Z5"
-                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none uppercase"
+                    className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none uppercase"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="cl_pan" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  <label htmlFor="cl_pan" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1 sm:mb-1.5">
                     PAN
                   </label>
                   <input
@@ -16817,12 +16911,12 @@ export default function Dashboard({
                     value={clientPan}
                     onChange={(e) => setClientPan(e.target.value)}
                     placeholder="e.g. ABCDE1234F"
-                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none uppercase"
+                    className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none uppercase"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="cl_em" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  <label htmlFor="cl_em" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1 sm:mb-1.5">
                     Client Email Address
                   </label>
                   <input
@@ -16831,12 +16925,12 @@ export default function Dashboard({
                     value={clientEmail}
                     onChange={(e) => setClientEmail(e.target.value)}
                     placeholder="e.g. billing@widgets.com"
-                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                    className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="cl_ph" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  <label htmlFor="cl_ph" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1 sm:mb-1.5">
                     Client Phone Number
                   </label>
                   <input
@@ -16845,12 +16939,12 @@ export default function Dashboard({
                     value={clientPhone}
                     onChange={(e) => setClientPhone(e.target.value)}
                     placeholder="e.g. +1 (555) 019-2834"
-                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                    className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label htmlFor="cl_ad" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  <label htmlFor="cl_ad" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1 sm:mb-1.5">
                     Billing Address
                   </label>
                   <textarea
@@ -16859,24 +16953,24 @@ export default function Dashboard({
                     onChange={(e) => setClientAddress(e.target.value)}
                     placeholder="e.g. Building 10, Redwood Ave, CA"
                     rows={2}
-                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none resize-none"
+                    className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none resize-none"
                   />
                 </div>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-3.5 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 flex items-center justify-end gap-3">
+            <div className="px-4 sm:px-5 py-3 sm:py-3.5 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 flex items-center justify-end gap-2.5 sm:gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => setIsClientEditorOpen(false)}
-                className="px-4 py-2 bg-white hover:bg-slate-100 dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#64748b] dark:text-[#94a3b8] border border-slate-200 dark:border-[#223269] rounded-xl text-xs font-bold transition-all cursor-pointer"
+                className="px-3.5 sm:px-4 py-2 bg-white hover:bg-slate-100 dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#64748b] dark:text-[#94a3b8] border border-slate-200 dark:border-[#223269] rounded-xl text-xs font-bold transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-[#0284c7]/25 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                className="px-4 sm:px-5 py-2 bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-[#0284c7]/25 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
                 Save Profile
               </button>
@@ -16893,45 +16987,45 @@ export default function Dashboard({
 
       {isExpenseLoggerOpen && (
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-md overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 bg-slate-950/65 backdrop-blur-md overflow-y-auto pb-[env(safe-area-inset-bottom)]">
 
           <form 
             onSubmit={handleSaveExpenseForm}
-            className="w-full max-w-sm bg-white dark:bg-[#111a36] rounded-3xl overflow-hidden shadow-2xl shadow-[#0284c7]/10 border border-[#bae6fd]/80 dark:border-[#223269]/80 text-sans animate-in zoom-in-95 duration-150"
+            className="w-full max-w-sm max-h-[92vh] sm:max-h-[88vh] flex flex-col bg-white dark:bg-[#111a36] rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl shadow-[#0284c7]/10 border border-[#bae6fd]/80 dark:border-[#223269]/80 text-sans animate-in zoom-in-95 duration-150"
           >
             {/* Header */}
-            <div className="flex justify-between items-center px-5 py-4 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f4f9ff] dark:bg-[#0b1329]/60">
+            <div className="flex justify-between items-center px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f4f9ff] dark:bg-[#0b1329]/60 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-[#0284c7] text-white flex items-center justify-center font-bold shadow-md shadow-[#0284c7]/20">
                   <Banknote className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
+                  <h3 className="text-xs sm:text-sm font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
                     Log Business Expense
                   </h3>
-                  <p className="text-[10px] text-[#64748b] dark:text-zinc-400 font-medium">Record operational overheads & vendor payouts</p>
+                  <p className="text-[9.5px] sm:text-[10px] text-[#64748b] dark:text-zinc-400 font-medium">Record operational overheads & vendor payouts</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsExpenseLoggerOpen(false)}
-                className="p-1.5 hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#64748b] hover:text-[#0284c7] dark:hover:text-[#38bdf8] rounded-full transition-colors cursor-pointer"
+                className="p-1 sm:p-1.5 hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#64748b] hover:text-[#0284c7] dark:hover:text-[#38bdf8] rounded-full transition-colors cursor-pointer"
               >
                 <X className="w-4.5 h-4.5" />
               </button>
             </div>
 
             {/* Form Fields */}
-            <div className="p-5 space-y-3.5 text-xs">
+            <div className="p-3.5 sm:p-5 space-y-3 sm:space-y-3.5 text-xs overflow-y-auto flex-1">
               <div>
-                <label htmlFor="exp_cat" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                <label htmlFor="exp_cat" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1 sm:mb-1.5">
                   Expense Category
                 </label>
                 <select
                   id="exp_cat"
                   value={expenseCategory}
                   onChange={(e) => setExpenseCategory(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none cursor-pointer"
+                  className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none cursor-pointer"
                 >
                   <option value="Rent & Overheads">Rent & Overheads</option>
                   <option value="Product Inventory">Product Inventory</option>
@@ -16949,14 +17043,14 @@ export default function Dashboard({
                     placeholder="Enter custom category..."
                     value={customExpenseCategory}
                     onChange={(e) => setCustomExpenseCategory(e.target.value)}
-                    className="w-full px-3.5 py-2.5 mt-2 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                    className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 mt-2 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
                     required
                   />
                 )}
               </div>
 
               <div>
-                <label htmlFor="exp_amt" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                <label htmlFor="exp_amt" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1 sm:mb-1.5">
                   Overhead Cost Amount ({currencySymbol}) *
                 </label>
                 <input
@@ -16968,12 +17062,12 @@ export default function Dashboard({
                   value={expenseAmount}
                   onChange={(e) => setExpenseAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none font-mono"
+                  className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none font-mono"
                 />
               </div>
 
               <div>
-                <label htmlFor="exp_dt" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                <label htmlFor="exp_dt" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1 sm:mb-1.5">
                   Expenditure Date *
                 </label>
                 <input
@@ -16982,12 +17076,12 @@ export default function Dashboard({
                   type="date"
                   value={expenseDate}
                   onChange={(e) => setExpenseDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                  className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
                 />
               </div>
 
               <div>
-                <label htmlFor="exp_desc" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                <label htmlFor="exp_desc" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1 sm:mb-1.5">
                   Expenditure Description
                 </label>
                 <textarea
@@ -16996,23 +17090,23 @@ export default function Dashboard({
                   onChange={(e) => setExpenseDesc(e.target.value)}
                   placeholder="e.g. AWS Multi-Region Node Cloud charges"
                   rows={2}
-                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none resize-none"
+                  className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none resize-none"
                 />
               </div>
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-3.5 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 flex items-center justify-end gap-3">
+            <div className="px-4 sm:px-5 py-3 sm:py-3.5 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 flex items-center justify-end gap-2.5 sm:gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => setIsExpenseLoggerOpen(false)}
-                className="px-4 py-2 bg-white hover:bg-slate-100 dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#64748b] dark:text-[#94a3b8] border border-slate-200 dark:border-[#223269] rounded-xl text-xs font-bold transition-all cursor-pointer"
+                className="px-3.5 sm:px-4 py-2 bg-white hover:bg-slate-100 dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#64748b] dark:text-[#94a3b8] border border-slate-200 dark:border-[#223269] rounded-xl text-xs font-bold transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-[#0284c7]/25 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                className="px-4 sm:px-5 py-2 bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-[#0284c7]/25 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
                 Log Expense
               </button>
