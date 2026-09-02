@@ -8519,7 +8519,7 @@ export default function Dashboard({
 
                                 <span className="bg-sky-50 dark:bg-sky-950/30 text-sky-600 border border-sky-200/40 text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
 
-                                  ðŸ”„ Repeat {inv.recurringSettings.interval}
+                                  <Clock className="w-2.5 h-2.5 inline shrink-0" /> Repeat {inv.recurringSettings.interval}
 
                                 </span>
 
@@ -10845,17 +10845,17 @@ export default function Dashboard({
 
                           <h4 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-tight truncate">{c.name}</h4>
 
-                          {c.companyName && (
+                          {c.companyName && c.companyName.trim().toLowerCase() !== c.name.trim().toLowerCase() && (
 
                             <span 
 
-                              className="text-[9px] bg-[#FCFAF7] dark:bg-zinc-950 text-[#64748b] dark:text-zinc-300 border border-[#e2e8f0]/50 dark:border-zinc-800 font-extrabold px-2 py-0.5 rounded-md inline-block uppercase tracking-wider"
+                              className="text-[9px] bg-[#FCFAF7] dark:bg-zinc-950 text-[#64748b] dark:text-zinc-300 border border-[#e2e8f0]/50 dark:border-zinc-800 font-extrabold px-2 py-0.5 rounded-md inline-flex items-center gap-1 uppercase tracking-wider"
 
                               style={{ boxShadow: '0 1px 2px rgba(110,96,80,0.04)' }}
 
                             >
 
-                              🏢 {c.companyName}
+                              <Briefcase className="w-2.5 h-2.5 text-[#0284c7] dark:text-[#38bdf8] shrink-0" /> {c.companyName}
 
                             </span>
 
@@ -11145,17 +11145,17 @@ export default function Dashboard({
 
                           <h4 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-tight truncate">{c.name}</h4>
 
-                          {c.companyName && (
+                          {c.companyName && c.companyName.trim().toLowerCase() !== c.name.trim().toLowerCase() && (
 
                             <span 
 
-                              className="text-[9px] bg-[#FCFAF7] dark:bg-zinc-950 text-[#64748b] dark:text-zinc-300 border border-[#e2e8f0]/50 dark:border-zinc-800 font-extrabold px-2 py-0.5 rounded-md inline-block uppercase tracking-wider"
+                              className="text-[9px] bg-[#FCFAF7] dark:bg-zinc-950 text-[#64748b] dark:text-[#38bdf8] border border-[#e2e8f0]/50 dark:border-zinc-800 font-extrabold px-2 py-0.5 rounded-md inline-flex items-center gap-1 uppercase tracking-wider"
 
                               style={{ boxShadow: '0 1px 2px rgba(110,96,80,0.04)' }}
 
                             >
 
-                              ðŸ¢ {c.companyName}
+                              <Briefcase className="w-2.5 h-2.5 text-[#0284c7] dark:text-[#38bdf8] shrink-0" /> {c.companyName}
 
                             </span>
 
