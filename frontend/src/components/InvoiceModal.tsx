@@ -2244,38 +2244,6 @@ export default function InvoiceModal({
           }
         });
       }
-      // ─── Usage tracking: Increment documents_used in subscription_usage table (ONLY for brand new document creations) ────
-      if (savedDraftId.startsWith('inv_draft_')) {
-        try {
-          if (userIdRef.current) {
-            const uId = userIdRef.current;
-            const nowIso = new Date().toISOString();
-
-            supabase
-              .from('subscription_usage')
-              .select('id, documents_used')
-              .eq('user_id', uId)
-              .lte('period_start', nowIso)
-              .gte('period_end', nowIso)
-              .order('period_start', { ascending: false })
-              .limit(1)
-              .maybeSingle()
-              .then(({ data: existingUsage }) => {
-                if (existingUsage) {
-                  supabase.from('subscription_usage').update({
-                    documents_used: (existingUsage.documents_used ?? 0) + 1,
-                    updated_at: new Date().toISOString(),
-                  }).eq('id', existingUsage.id).then(({ error: usageErr }) => {
-                    if (usageErr) console.warn('[Subscription Usage Record Warning]', usageErr);
-                  });
-                }
-              });
-          }
-        } catch (uErr) {
-          console.warn('[Subscription Usage Record Exception]', uErr);
-        }
-      }
-
       // Reset draftIdRef to a new temp draft ID
       draftIdRef.current = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
 
