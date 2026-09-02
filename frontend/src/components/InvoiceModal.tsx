@@ -147,32 +147,57 @@ export default function InvoiceModal({
   // Advanced features and billing options
   const [invoiceType, setInvoiceType] = useState<'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'estimate' | 'quote' | 'purchases' | 'purchase_order' | 'purchase_debit_note'>('invoice');
 
-  // Master Registry Client + Vendor Database loader (loads Client DB for Sales, Vendor DB for Purchases)
+  // Master Registry Combined Client + Vendor Database loader (unifies Client DB and Vendor DB)
   const [registryClients, setRegistryClients] = useState<any[]>([]);
 
   const loadRegistryClients = useCallback(() => {
     const suffix = profile?.email ? `_${encodeURIComponent(profile.email)}` : '';
-    const isPurchase = ['purchases', 'purchase_order', 'purchase_debit_note'].includes((invoiceType || '').toLowerCase());
     
-    // For Purchase documents: ONLY load Vendor Database (makbills_masters_actual_vendors)
-    // For Sales documents: ONLY load Client Database (makbills_masters_vendors)
-    const storageKey = isPurchase
-      ? 'makbills_masters_actual_vendors' + suffix
-      : 'makbills_masters_vendors' + suffix;
+    // 1. Load Client Database (makbills_masters_vendors)
+    const rawClients = localStorage.getItem('makbills_masters_vendors' + suffix) || localStorage.getItem('makbills_masters_vendors') || '[]';
+    // 2. Load Vendor Database (makbills_masters_actual_vendors)
+    const rawVendors = localStorage.getItem('makbills_masters_actual_vendors' + suffix) || localStorage.getItem('makbills_masters_actual_vendors') || '[]';
 
-    const raw = localStorage.getItem(storageKey);
-    const list: any[] = raw ? (() => { try { return JSON.parse(raw); } catch { return []; } })() : [];
+    let clientList: any[] = [];
+    let vendorList: any[] = [];
+    try { clientList = JSON.parse(rawClients); } catch { clientList = []; }
+    try { vendorList = JSON.parse(rawVendors); } catch { vendorList = []; }
 
-    const seenIds = new Set<string>();
-    const filtered: any[] = [];
-    for (const r of list) {
-      const key = (r.name || r.companyName || r.company || '').toLowerCase().trim();
-      if (key && seenIds.has(key)) continue;
-      if (key) seenIds.add(key);
-      filtered.push(r);
+    const seenKeys = new Set<string>();
+    const combined: any[] = [];
+
+    // Tag and append Client database records
+    for (const c of (Array.isArray(clientList) ? clientList : [])) {
+      const key = (c.name || c.companyName || c.company || '').toLowerCase().trim();
+      if (!key) continue;
+      seenKeys.add(key);
+      combined.push({
+        ...c,
+        id: c.id || `cl_reg_${Math.random().toString(36).substr(2, 6)}`,
+        partyType: 'Client'
+      });
     }
-    setRegistryClients(filtered);
-  }, [profile, invoiceType]);
+
+    // Tag and append Vendor database records (if not already added)
+    for (const v of (Array.isArray(vendorList) ? vendorList : [])) {
+      const key = (v.name || v.companyName || v.company || '').toLowerCase().trim();
+      if (!key) continue;
+      if (seenKeys.has(key)) {
+        // Find existing and tag as Both if from both databases
+        const existing = combined.find(item => (item.name || item.companyName || item.company || '').toLowerCase().trim() === key);
+        if (existing) existing.partyType = 'Client & Vendor';
+        continue;
+      }
+      seenKeys.add(key);
+      combined.push({
+        ...v,
+        id: v.id || `ven_reg_${Math.random().toString(36).substr(2, 6)}`,
+        partyType: 'Vendor'
+      });
+    }
+
+    setRegistryClients(combined);
+  }, [profile]);
 
   useEffect(() => {
     if (isOpen) {
@@ -181,7 +206,7 @@ export default function InvoiceModal({
     }
   }, [isOpen, loadRegistryClients]);
 
-  // Keep registry fresh when other parts of the app save new clients
+  // Keep registry fresh when other parts of the app save new clients or vendors
   useEffect(() => {
     const handleSync = () => loadRegistryClients();
     window.addEventListener('makbills_sync_vendors', handleSync);
@@ -926,9 +951,9 @@ export default function InvoiceModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filter billing clients dynamically — merge saved clients prop with master registry
+  // Filter billing clients dynamically — merge saved clients prop with master registry (clients + vendors)
   const filteredClients = useMemo(() => {
-    // Merge: explicit ClientProfile[] prop + master registry (auto-added from documents)
+    // Convert registry records (both Client & Vendor databases) into unified profiles
     const registryAsProfiles = registryClients.map((r: any) => ({
       id: r.id || `reg_${Math.random().toString(36).substr(2, 6)}`,
       name: r.name || r.companyName || r.company || '',
@@ -942,16 +967,37 @@ export default function InvoiceModal({
       pan: r.pan || '',
       state: r.state || '',
       country: r.country || 'India',
+      partyType: r.partyType || 'Client',
     }));
 
     // Merge, prefer clients prop entries over registry for duplicates
     const seenNames = new Set<string>();
     const merged: any[] = [];
-    for (const c of [...(clients || []), ...registryAsProfiles]) {
-      const key = (c.name || '').toLowerCase().trim();
+
+    // First add explicit ClientProfile[] prop
+    for (const c of (clients || [])) {
+      const key = (c.name || (c as any).companyName || (c as any).company || '').toLowerCase().trim();
       if (key && seenNames.has(key)) continue;
       if (key) seenNames.add(key);
-      merged.push(c);
+      merged.push({
+        ...c,
+        partyType: (c as any).partyType || 'Client'
+      });
+    }
+
+    // Next add combined registry profiles (client + vendor DB)
+    for (const r of registryAsProfiles) {
+      const key = (r.name || r.companyName || r.company || '').toLowerCase().trim();
+      if (key && seenNames.has(key)) {
+        // Find existing and update partyType if vendor
+        const existing = merged.find(item => (item.name || item.companyName || item.company || '').toLowerCase().trim() === key);
+        if (existing && r.partyType === 'Vendor') {
+          existing.partyType = existing.partyType === 'Client' ? 'Client & Vendor' : 'Vendor';
+        }
+        continue;
+      }
+      if (key) seenNames.add(key);
+      merged.push(r);
     }
 
     const sorted = merged.sort((a, b) => {
@@ -972,14 +1018,15 @@ export default function InvoiceModal({
       const phone = (c.phone || '').toLowerCase();
       const gstin = ((c as any).gstin || (c as any).taxId || '').toLowerCase();
       const pan = ((c as any).pan || '').toLowerCase();
-      return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q) || pan.includes(q);
+      const pType = ((c as any).partyType || '').toLowerCase();
+      return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q) || pan.includes(q) || pType.includes(q);
     });
   }, [clients, clientSearchQuery, registryClients]);
 
-  // Filter shipping clients dynamically
+  // Filter shipping clients dynamically — also benefits from combined client + vendor list
   const filteredShipClients = useMemo(() => {
-    if (!clients || clients.length === 0) return [];
-    const sorted = [...clients].sort((a, b) => {
+    if (!filteredClients || filteredClients.length === 0) return [];
+    const sorted = [...filteredClients].sort((a, b) => {
       const compA = ((a as any).companyName || (a as any).company || '').toLowerCase();
       const compB = ((b as any).companyName || (b as any).company || '').toLowerCase();
       if (compA && compB && compA !== compB) return compA.localeCompare(compB);
@@ -998,7 +1045,7 @@ export default function InvoiceModal({
       const gstin = ((c as any).gstin || '').toLowerCase();
       return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q);
     });
-  }, [clients, shipClientSearchQuery]);
+  }, [filteredClients, shipClientSearchQuery]);
 
   // --- MATERIAL CATALOG DROPDOWN STATE & LOGIC ---
   const [isCatalogDropdownOpen, setIsCatalogDropdownOpen] = useState(false);
@@ -2875,14 +2922,14 @@ export default function InvoiceModal({
                     <div className="space-y-3">
                       <h3 className="text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-1 flex justify-between items-center">
                         <span>Client Details</span>
-                        {clients && clients.length > 0 && (
+                        {(filteredClients.length > 0 || (clients && clients.length > 0) || registryClients.length > 0) && (
                           <span className="text-[9px] font-medium text-sky-500 font-mono">Select Profile to Auto-Fill</span>
                         )}
                       </h3>
 
-                      {clients && clients.length > 0 && (
+                      {(filteredClients.length > 0 || (clients && clients.length > 0) || registryClients.length > 0) && (
                         <div className="bg-sky-50/30 dark:bg-slate-950 p-2.5 rounded-2xl border border-sky-100/20 dark:border-slate-800/65">
-                          <label htmlFor="select-pre-client" className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-1">Populate from Clients:</label>
+                          <label htmlFor="select-pre-client" className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-1">Populate from Clients & Vendors:</label>
                           <div className="relative" ref={clientDropdownRef}>
                             <div className="relative flex items-center">
                               <input
@@ -2894,7 +2941,7 @@ export default function InvoiceModal({
                                   setIsClientDropdownOpen(true);
                                 }}
                                 onFocus={() => setIsClientDropdownOpen(true)}
-                                placeholder="-- Select or type to search client profile --"
+                                placeholder="-- Select or type to search client or vendor profile --"
                                 className="w-full pl-3 pr-16 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 shadow-xs"
                               />
                               <div className="absolute right-1.5 flex items-center gap-1">
@@ -2906,7 +2953,7 @@ export default function InvoiceModal({
                                       setIsClientDropdownOpen(false);
                                     }}
                                     className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                                    title="Clear client filter"
+                                    title="Clear filter"
                                   >
                                     <X className="w-3.5 h-3.5" />
                                   </button>
@@ -2914,7 +2961,7 @@ export default function InvoiceModal({
                                 <button
                                   type="button"
                                   onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
-                                  title="Toggle client list"
+                                  title="Toggle list"
                                   className="p-1 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 cursor-pointer"
                                 >
                                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isClientDropdownOpen ? 'rotate-180 text-sky-500' : ''}`} />
@@ -2927,7 +2974,7 @@ export default function InvoiceModal({
                               <div className="absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 border border-sky-200 dark:border-slate-700 rounded-xl shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800">
                                 <div className="px-3 py-1 bg-sky-50/90 dark:bg-slate-800/90 flex items-center justify-between sticky top-0 backdrop-blur-xs z-10">
                                   <span className="text-[10px] font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider">
-                                    Saved Clients ({filteredClients.length})
+                                    Saved Profiles ({filteredClients.length})
                                   </span>
                                   <button
                                     type="button"
@@ -2940,6 +2987,7 @@ export default function InvoiceModal({
                                 {filteredClients.map((c) => {
                                   const comp = (c as any).companyName || (c as any).company;
                                   const displayName = comp ? `${comp} - ${c.name}` : c.name;
+                                  const pType = (c as any).partyType || 'Client';
                                   return (
                                     <button
                                       key={c.id}
@@ -2962,11 +3010,22 @@ export default function InvoiceModal({
                                       className="w-full px-3 py-2 text-left hover:bg-sky-50 dark:hover:bg-slate-800/90 transition-colors flex items-center justify-between gap-2 group cursor-pointer"
                                     >
                                       <div className="min-w-0 flex-1">
-                                        <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400">
-                                          {displayName}
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400">
+                                            {displayName}
+                                          </span>
+                                          <span className={`px-1.5 py-0.2 text-[8.5px] font-bold rounded-md uppercase tracking-wider ${
+                                            pType === 'Vendor'
+                                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/80 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/40'
+                                              : pType === 'Client & Vendor'
+                                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40'
+                                              : 'bg-sky-100 text-sky-700 dark:bg-sky-950/80 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800/40'
+                                          }`}>
+                                            {pType}
+                                          </span>
                                         </div>
                                         {(c.email || c.phone) && (
-                                          <div className="text-[10px] text-slate-400 truncate">
+                                          <div className="text-[10px] text-slate-400 truncate mt-0.5">
                                             {[c.email, c.phone].filter(Boolean).join(' • ')}
                                           </div>
                                         )}
