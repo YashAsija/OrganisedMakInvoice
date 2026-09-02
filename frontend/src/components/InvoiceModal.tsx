@@ -144,26 +144,35 @@ export default function InvoiceModal({
     };
   }, []);
 
-  // Master Registry Client + Vendor Database loader (merges both, stays fresh via sync events)
+  // Advanced features and billing options
+  const [invoiceType, setInvoiceType] = useState<'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'estimate' | 'quote' | 'purchases' | 'purchase_order' | 'purchase_debit_note'>('invoice');
+
+  // Master Registry Client + Vendor Database loader (loads Client DB for Sales, Vendor DB for Purchases)
   const [registryClients, setRegistryClients] = useState<any[]>([]);
 
   const loadRegistryClients = useCallback(() => {
     const suffix = profile?.email ? `_${encodeURIComponent(profile.email)}` : '';
-    const salesRaw = localStorage.getItem('makbills_masters_vendors' + suffix);
-    const purchaseRaw = localStorage.getItem('makbills_masters_actual_vendors' + suffix);
-    const sales: any[] = salesRaw ? (() => { try { return JSON.parse(salesRaw); } catch { return []; } })() : [];
-    const purchase: any[] = purchaseRaw ? (() => { try { return JSON.parse(purchaseRaw); } catch { return []; } })() : [];
-    // Merge deduped by name
+    const isPurchase = ['purchases', 'purchase_order', 'purchase_debit_note'].includes((invoiceType || '').toLowerCase());
+    
+    // For Purchase documents: ONLY load Vendor Database (makbills_masters_actual_vendors)
+    // For Sales documents: ONLY load Client Database (makbills_masters_vendors)
+    const storageKey = isPurchase
+      ? 'makbills_masters_actual_vendors' + suffix
+      : 'makbills_masters_vendors' + suffix;
+
+    const raw = localStorage.getItem(storageKey);
+    const list: any[] = raw ? (() => { try { return JSON.parse(raw); } catch { return []; } })() : [];
+
     const seenIds = new Set<string>();
-    const merged: any[] = [];
-    for (const r of [...sales, ...purchase]) {
+    const filtered: any[] = [];
+    for (const r of list) {
       const key = (r.name || r.companyName || r.company || '').toLowerCase().trim();
       if (key && seenIds.has(key)) continue;
       if (key) seenIds.add(key);
-      merged.push(r);
+      filtered.push(r);
     }
-    setRegistryClients(merged);
-  }, [profile]);
+    setRegistryClients(filtered);
+  }, [profile, invoiceType]);
 
   useEffect(() => {
     if (isOpen) {
@@ -273,7 +282,6 @@ export default function InvoiceModal({
   }, []);
 
   // Advanced features and billing options
-  const [invoiceType, setInvoiceType] = useState<'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'estimate' | 'quote' | 'purchases' | 'purchase_order' | 'purchase_debit_note'>('invoice');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [poNumber, setPoNumber] = useState('');
   const [deliveryNote, setDeliveryNote] = useState('');

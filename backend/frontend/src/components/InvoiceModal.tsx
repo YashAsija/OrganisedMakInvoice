@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown, Loader2, ChevronDown, Smartphone, Mail, FileDown, Printer, Package, Lock } from 'lucide-react';
+import { X, Plus, Trash2, Check, Sparkles, AlertCircle, ShoppingBag, Settings, Download, Save, FileText, ArrowDown, Loader2, ChevronDown, Smartphone, Mail, FileDown, Printer, Package, Lock, ExternalLink } from 'lucide-react';
 import { Invoice, TaxClassification, InvoiceItem, InvoiceStatus, DiscountType, PresetItem, ClientProfile, RecurringInterval, BusinessProfile, InvoiceTemplate } from '../types';
 import { EditableField } from './EditableField';
 import { exportInvoicePDFAsync } from '../lib/pdfExporter';
@@ -14,6 +14,9 @@ import { emitNotification } from '../lib/notifications';
 import { SmartBillingBox } from './SmartBillingBox';
 import { getDocumentTypeDefaults } from '../lib/docTypeDefaults';
 import { getLocalizationConfig } from '../lib/localizationEngine';
+import { buildClientDetails, persistBilledParty } from '../lib/documentUtils';
+import { formatStateWithCode, getStateCode, findMatchingStateIso } from '../lib/stateUtils';
+
 
 
 interface InvoiceModalProps {
@@ -121,7 +124,7 @@ export default function InvoiceModal({
   const [activeMode, setActiveMode] = useState<'edit' | 'preview' | 'editable'>('editable');
   const [savedInvoiceForPreview, setSavedInvoiceForPreview] = useState<Invoice | null>(null);
   const [isAiBoxHighlighted, setIsAiBoxHighlighted] = useState<boolean>(isTutorialHighlight);
-  const { trackDocumentUsage } = useSubscription();
+  const { canCreateDocument } = useSubscription();
 
   useEffect(() => {
     setIsAiBoxHighlighted(isTutorialHighlight);
@@ -141,21 +144,45 @@ export default function InvoiceModal({
     };
   }, []);
 
-  // Master Registry Client Database loader
+  // Master Registry Client + Vendor Database loader (merges both, stays fresh via sync events)
   const [registryClients, setRegistryClients] = useState<any[]>([]);
+
+  const loadRegistryClients = useCallback(() => {
+    const suffix = profile?.email ? `_${encodeURIComponent(profile.email)}` : '';
+    const salesRaw = localStorage.getItem('makbills_masters_vendors' + suffix);
+    const purchaseRaw = localStorage.getItem('makbills_masters_actual_vendors' + suffix);
+    const sales: any[] = salesRaw ? (() => { try { return JSON.parse(salesRaw); } catch { return []; } })() : [];
+    const purchase: any[] = purchaseRaw ? (() => { try { return JSON.parse(purchaseRaw); } catch { return []; } })() : [];
+    // Merge deduped by name
+    const seenIds = new Set<string>();
+    const merged: any[] = [];
+    for (const r of [...sales, ...purchase]) {
+      const key = (r.name || r.companyName || r.company || '').toLowerCase().trim();
+      if (key && seenIds.has(key)) continue;
+      if (key) seenIds.add(key);
+      merged.push(r);
+    }
+    setRegistryClients(merged);
+  }, [profile]);
 
   useEffect(() => {
     if (isOpen) {
       setSavedInvoiceForPreview(null);
-      const suffix = profile?.email ? `_${encodeURIComponent(profile.email)}` : '';
-      const cached = localStorage.getItem('makbills_masters_vendors' + suffix);
-      if (cached) {
-        try {
-          setRegistryClients(JSON.parse(cached));
-        } catch (e) { }
-      }
+      loadRegistryClients();
     }
-  }, [isOpen, profile]);
+  }, [isOpen, loadRegistryClients]);
+
+  // Keep registry fresh when other parts of the app save new clients
+  useEffect(() => {
+    const handleSync = () => loadRegistryClients();
+    window.addEventListener('makbills_sync_vendors', handleSync);
+    window.addEventListener('makbills_sync_actual_vendors', handleSync);
+    return () => {
+      window.removeEventListener('makbills_sync_vendors', handleSync);
+      window.removeEventListener('makbills_sync_actual_vendors', handleSync);
+    };
+  }, [loadRegistryClients]);
+
 
   // Client details
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -190,6 +217,10 @@ export default function InvoiceModal({
   const [status, setStatus] = useState<InvoiceStatus>('pending');
   const [clientGstin, setClientGstin] = useState('');
   const [clientPan, setClientPan] = useState('');
+  const [clientCompanyName, setClientCompanyName] = useState('');
+  const updateClientGst = (gstVal: string) => {
+    setClientGstin(gstVal.trim().toUpperCase());
+  };
   const [placeOfSupply, setPlaceOfSupply] = useState('');
   const [grRrNo, setGrRrNo] = useState('');
   const [transport, setTransport] = useState('');
@@ -198,7 +229,6 @@ export default function InvoiceModal({
   const [station, setStation] = useState('');
   const [ewayBillNo, setEwayBillNo] = useState('');
   const [marka, setMarka] = useState('');
-  const [clientCompanyName, setClientCompanyName] = useState('');
   const [shippedToCompanyName, setShippedToCompanyName] = useState('');
   const [shippedToName, setShippedToName] = useState('');
   const [shippedToPhone, setShippedToPhone] = useState('');
@@ -567,7 +597,7 @@ export default function InvoiceModal({
       setClientAddress(invoice.clientAddress);
       setNotes(invoice.notes);
       setInvoiceTerms(invoice.invoiceTerms || '');
-      setStatus(invoice.status);
+      setStatus(invoice.status === 'draft' ? 'pending' : invoice.status);
       setItems(invoice.items);
       setDiscountType(invoice.discountType || 'none');
       setDiscountValue(invoice.discountValue || 0);
@@ -888,10 +918,35 @@ export default function InvoiceModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filter billing clients dynamically
+  // Filter billing clients dynamically — merge saved clients prop with master registry
   const filteredClients = useMemo(() => {
-    if (!clients || clients.length === 0) return [];
-    const sorted = [...clients].sort((a, b) => {
+    // Merge: explicit ClientProfile[] prop + master registry (auto-added from documents)
+    const registryAsProfiles = registryClients.map((r: any) => ({
+      id: r.id || `reg_${Math.random().toString(36).substr(2, 6)}`,
+      name: r.name || r.companyName || r.company || '',
+      companyName: r.companyName || r.company || '',
+      company: r.company || r.companyName || '',
+      email: r.email || '',
+      phone: r.phone || r.mobile || '',
+      address: r.address || '',
+      gstin: r.gstin || r.taxId || '',
+      taxId: r.taxId || r.gstin || '',
+      pan: r.pan || '',
+      state: r.state || '',
+      country: r.country || 'India',
+    }));
+
+    // Merge, prefer clients prop entries over registry for duplicates
+    const seenNames = new Set<string>();
+    const merged: any[] = [];
+    for (const c of [...(clients || []), ...registryAsProfiles]) {
+      const key = (c.name || '').toLowerCase().trim();
+      if (key && seenNames.has(key)) continue;
+      if (key) seenNames.add(key);
+      merged.push(c);
+    }
+
+    const sorted = merged.sort((a, b) => {
       const compA = ((a as any).companyName || (a as any).company || '').toLowerCase();
       const compB = ((b as any).companyName || (b as any).company || '').toLowerCase();
       if (compA && compB && compA !== compB) return compA.localeCompare(compB);
@@ -907,10 +962,11 @@ export default function InvoiceModal({
       const name = (c.name || '').toLowerCase();
       const email = (c.email || '').toLowerCase();
       const phone = (c.phone || '').toLowerCase();
-      const gstin = ((c as any).gstin || '').toLowerCase();
-      return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q);
+      const gstin = ((c as any).gstin || (c as any).taxId || '').toLowerCase();
+      const pan = ((c as any).pan || '').toLowerCase();
+      return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q) || pan.includes(q);
     });
-  }, [clients, clientSearchQuery]);
+  }, [clients, clientSearchQuery, registryClients]);
 
   // Filter shipping clients dynamically
   const filteredShipClients = useMemo(() => {
@@ -1975,10 +2031,17 @@ export default function InvoiceModal({
   const handleSaveSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Check usage limit for brand new documents
-    if (!invoice || invoice.status === 'draft') {
-      const allowed = await trackDocumentUsage();
-      if (!allowed) return;
+    // Step 1: Track document limit safely ONLY for new document creations (edits MUST NOT increment count)
+    const isExistingDocumentEdit = Boolean(
+      (invoice && invoice.id && !invoice.id.startsWith('inv_draft_')) ||
+      (draftIdRef.current && !draftIdRef.current.startsWith('inv_draft_'))
+    );
+
+    if (!isExistingDocumentEdit) {
+      if (canCreateDocument && !canCreateDocument()) {
+        emitNotification('Document Limit Reached', 'You have reached your document creation limit. Upgrade your plan to create more.', 'error');
+        return;
+      }
     }
 
     if (items.length === 0) {
@@ -1995,36 +2058,22 @@ export default function InvoiceModal({
 
     const suffix = activeProfile?.email ? `_${encodeURIComponent(activeProfile.email)}` : '';
 
-    // Save/update to master registry client database (vendors)
-    if (currentName && currentName.trim() !== '') {
-      const currentRegistry = JSON.parse(localStorage.getItem('makbills_masters_vendors' + suffix) || '[]');
-      const nameLower = currentName.trim().toLowerCase();
-      const existingIdx = currentRegistry.findIndex((c: any) =>
-        (c.name && c.name.toLowerCase() === nameLower) ||
-        (c.company && c.company.toLowerCase() === nameLower)
-      );
-
-      if (existingIdx > -1) {
-        currentRegistry[existingIdx] = {
-          ...currentRegistry[existingIdx],
-          address: clientAddress || currentRegistry[existingIdx].address || '',
-          email: clientEmail || currentRegistry[existingIdx].email || '',
-          phone: clientPhone || currentRegistry[existingIdx].phone || '',
-        };
-      } else {
-        currentRegistry.push({
-          id: `mat_${Math.random().toString(36).substr(2, 9)}`,
-          name: currentName.trim(),
-          company: currentName.trim(),
-          address: clientAddress || '',
-          email: clientEmail || '',
-          phone: clientPhone || '',
-          category: 'Auto-Added from Invoice'
-        });
-      }
-      localStorage.setItem('makbills_masters_vendors' + suffix, JSON.stringify(currentRegistry));
-      window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
-    }
+    // ─── Persist billed-to details to master registry + Supabase clients table ────
+    const billedDetails = buildClientDetails({
+      clientName: currentName,
+      clientCompanyName,
+      clientEmail,
+      clientPhone,
+      clientAddress,
+      clientCountry,
+      clientState,
+      clientGstin,
+      clientPan,
+    });
+    // Fire-and-forget — do NOT await so save dialog is not blocked
+    persistBilledParty(billedDetails, invoiceType, userId || null, suffix).catch(
+      (err) => console.warn('[InvoiceModal] persistBilledParty error (non-fatal):', err)
+    );
 
     if (shippedToName && shippedToName.trim() !== '') {
       const currentRegistry = JSON.parse(localStorage.getItem('makbills_masters_transports' + suffix) || '[]');
@@ -2074,7 +2123,7 @@ export default function InvoiceModal({
     }
 
     let finalInvoiceNumber = invoiceNumber;
-    if (status === 'draft') {
+    if (!finalInvoiceNumber || status === 'draft' || (invoice && invoice.status === 'draft')) {
       const config = getDocTypeConfig(invoiceType);
       finalInvoiceNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, invoiceType);
     }
@@ -2121,7 +2170,7 @@ export default function InvoiceModal({
       isFreightAdded,
       taxTotal: roundedTaxTotal,
       grandTotal: calculatedGrandTotal,
-      status: status === 'draft' ? 'pending' : status,
+      status: (status === 'draft' || !status) ? 'pending' : status,
       paidDate: status === 'paid' ? (invoice?.paidDate || new Date().toISOString().split('T')[0]) : undefined,
       items,
       createdAt: (invoice && (invoice.id || '').trim() !== '') ? invoice.createdAt : new Date().toISOString(),
@@ -2176,14 +2225,13 @@ export default function InvoiceModal({
       try {
         localStorage.removeItem('makbills_pending_resume_draft');
         setResumableDraft(null);
+        // Only clean up temporary drafts from local storage, ensure finalInvoiceObj remains present
         const storageKey = getStorageKey();
         const raw = localStorage.getItem(storageKey);
         if (raw) {
           const all = JSON.parse(raw) as any[];
-          // Remove temporary draft entry if it was a temp inv_draft_ prefix or matches current draft
-          const filtered = all.filter((i: any) => !(i.id === savedDraftId || (savedDraftId.startsWith('inv_draft_') && i.id === savedDraftId)));
+          const filtered = all.filter((i: any) => i.id !== savedDraftId || i.id === finalInvoiceObj.id);
           localStorage.setItem(storageKey, JSON.stringify(filtered));
-          localStorage.setItem('invoice_maker_invoices', JSON.stringify(filtered));
         }
       } catch { /* ignore */ }
       // Also clean up temporary draft from Supabase (ONLY if savedDraftId was a temp draft)
@@ -2194,37 +2242,6 @@ export default function InvoiceModal({
           }
         });
       }
-      // ─── Usage tracking: Increment documents_used in subscription_usage table ────
-      try {
-        if (userIdRef.current) {
-          const uId = userIdRef.current;
-          const now = new Date();
-          const pStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-          const pEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
-
-          supabase
-            .from('subscription_usage')
-            .select('id, documents_used')
-            .eq('user_id', uId)
-            .gte('period_start', pStart)
-            .maybeSingle()
-            .then(({ data: existingUsage }) => {
-              const curCount = existingUsage?.documents_used ?? 0;
-              supabase.from('subscription_usage').upsert({
-                user_id: uId,
-                period_start: pStart,
-                period_end: pEnd,
-                documents_used: curCount + 1,
-                updated_at: new Date().toISOString(),
-              }, { onConflict: 'user_id,period_start' }).then(({ error: usageErr }) => {
-                if (usageErr) console.warn('[Subscription Usage Record Warning]', usageErr);
-              });
-            });
-        }
-      } catch (uErr) {
-        console.warn('[Subscription Usage Record Exception]', uErr);
-      }
-
       // Reset draftIdRef to a new temp draft ID
       draftIdRef.current = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -2925,9 +2942,11 @@ export default function InvoiceModal({
                                         setClientEmail(c.email || '');
                                         setClientPhone(c.phone || '');
                                         setClientAddress(c.address || '');
-                                        setClientPan((c as any).pan || (c as any).taxId || '');
-                                        setClientGstin((c as any).gstin || '');
-                                        setClientCountry((c as any).country || (c as any).clientCountry || '');
+                                        const gstinVal = (c as any).gstin || (c as any).taxId || '';
+                                        const extractedPan = (c as any).pan || (c as any).clientPan || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+                                        setClientPan(extractedPan);
+                                        setClientGstin(gstinVal);
+                                        setClientCountry((c as any).country || (c as any).clientCountry || 'India');
                                         setClientState((c as any).state || (c as any).clientState || '');
                                         setClientSearchQuery(displayName);
                                         setIsClientDropdownOpen(false);
@@ -3052,29 +3071,23 @@ export default function InvoiceModal({
                             <label htmlFor="client-state" className="sr-only">Client State</label>
                             <select
                               id="client-state"
-                              value={(() => {
-                                const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode;
-                                if (!cCode) return '';
-                                return State.getStatesOfCountry(cCode).find(s => s.name === clientState)?.isoCode || '';
-                              })()}
+                              value={findMatchingStateIso(clientState, clientCountry || 'India')}
                               onChange={(e) => {
-                                const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode;
-                                if (cCode) {
-                                  const selectedState = State.getStateByCodeAndCountry(e.target.value, cCode);
-                                  if (selectedState) {
-                                    setClientState(selectedState.name);
-                                  }
+                                const cCode = Country.getAllCountries().find(c => c.name.toLowerCase() === (clientCountry || 'India').toLowerCase())?.isoCode || 'IN';
+                                const selectedState = State.getStateByCodeAndCountry(e.target.value, cCode);
+                                if (selectedState) {
+                                  setClientState(selectedState.name);
+                                } else if (e.target.value) {
+                                  setClientState(e.target.value);
                                 }
                               }}
-                              disabled={!clientCountry}
                               className={`w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white font-medium text-[13px] focus:outline-none cursor-pointer disabled:opacity-50 ${!clientState ? 'text-slate-400' : 'text-slate-800 dark:text-white'}`}
                             >
                               <option value="" disabled>Client State</option>
                               {(() => {
-                                const cCode = Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode;
-                                if (!cCode) return null;
+                                const cCode = Country.getAllCountries().find(c => c.name.toLowerCase() === (clientCountry || 'India').toLowerCase())?.isoCode || 'IN';
                                 return State.getStatesOfCountry(cCode).map((st) => (
-                                  <option key={st.isoCode} value={st.isoCode}>{st.name}</option>
+                                  <option key={st.isoCode} value={st.isoCode}>{st.name}{getStateCode(st.name) ? ` (${getStateCode(st.name)})` : ''}</option>
                                 ));
                               })()}
                             </select>
@@ -3090,25 +3103,23 @@ export default function InvoiceModal({
                               id="col-client-gstin"
                               type="text"
                               value={clientGstin}
-                              onChange={(e) => setClientGstin(e.target.value)}
+                              onChange={(e) => updateClientGst(e.target.value)}
                               placeholder="Client GSTIN / UIN"
-                              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none"
+                              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none uppercase tracking-wider"
                             />
                           </div>
                         )}
-                        {activeTemplate.config.client?.fields.includes('pan') && (
-                          <div>
-                            <label htmlFor="col-client-pan" className="sr-only">Client PAN</label>
-                            <input
-                              id="col-client-pan"
-                              type="text"
-                              value={clientPan}
-                              onChange={(e) => setClientPan(e.target.value)}
-                              placeholder="Client PAN"
-                              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none"
-                            />
-                          </div>
-                        )}
+                        <div>
+                          <label htmlFor="col-client-pan" className="sr-only">Client PAN</label>
+                          <input
+                            id="col-client-pan"
+                            type="text"
+                            value={clientPan}
+                            onChange={(e) => setClientPan(e.target.value.toUpperCase())}
+                            placeholder="Client PAN"
+                            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none uppercase tracking-wider"
+                          />
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between pt-2">
@@ -3224,7 +3235,7 @@ export default function InvoiceModal({
                             </h3>
                             <button
                               type="button"
-                              onClick={() => {
+                               onClick={() => {
                                 setShippedToCompanyName(clientCompanyName);
                                 setShippedToName(clientName);
                                 setShippedToEmail(clientEmail);
@@ -3267,29 +3278,23 @@ export default function InvoiceModal({
                             )}
                             {(activeTemplate.config.shipping?.fields.includes('address') || activeTemplate.config.shipping?.fields.includes('state')) && (
                               <select
-                                value={(() => {
-                                  const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode;
-                                  if (!cCode) return '';
-                                  return State.getStatesOfCountry(cCode).find(s => s.name === shippedToState)?.isoCode || '';
-                                })()}
+                                value={findMatchingStateIso(shippedToState, shippedToCountry || 'India')}
                                 onChange={(e) => {
-                                  const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode;
-                                  if (cCode) {
-                                    const selectedState = State.getStateByCodeAndCountry(e.target.value, cCode);
-                                    if (selectedState) {
-                                      setShippedToState(selectedState.name);
-                                    }
+                                  const cCode = Country.getAllCountries().find(c => c.name.toLowerCase() === (shippedToCountry || 'India').toLowerCase())?.isoCode || 'IN';
+                                  const selectedState = State.getStateByCodeAndCountry(e.target.value, cCode);
+                                  if (selectedState) {
+                                    setShippedToState(selectedState.name);
+                                  } else if (e.target.value) {
+                                    setShippedToState(e.target.value);
                                   }
                                 }}
-                                disabled={!shippedToCountry}
                                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none disabled:opacity-50"
                               >
                                 <option value="" disabled>State</option>
                                 {(() => {
-                                  const cCode = Country.getAllCountries().find(c => c.name === shippedToCountry)?.isoCode;
-                                  if (!cCode) return null;
+                                  const cCode = Country.getAllCountries().find(c => c.name.toLowerCase() === (shippedToCountry || 'India').toLowerCase())?.isoCode || 'IN';
                                   return State.getStatesOfCountry(cCode).map((st) => (
-                                    <option key={st.isoCode} value={st.isoCode}>{st.name}</option>
+                                    <option key={st.isoCode} value={st.isoCode}>{st.name}{getStateCode(st.name) ? ` (${getStateCode(st.name)})` : ''}</option>
                                   ));
                                 })()}
                               </select>
@@ -4034,7 +4039,7 @@ export default function InvoiceModal({
 
                       {discountType !== 'none' && (
                         <div className="flex justify-between text-rose-500 font-medium">
-                          <span>Subtotal Discount ({discountType === 'percent' ? `${discountValue}%` : 'Flat'})</span>
+                          <span>Subtotal Discount ({discountType === 'percent' ? `${typeof discountValue === 'object' ? 0 : (discountValue || 0)}%` : 'Flat'})</span>
                           <span>-{currencySymbol}{calculatedDiscountTotal.toFixed(2)}</span>
                         </div>
                       )}
@@ -4096,8 +4101,8 @@ export default function InvoiceModal({
                               if (matched.email) setClientEmail(matched.email);
                               if (matched.phone) setClientPhone(matched.phone);
                               if (matched.address) setClientAddress(matched.address);
-                              if ((matched as any).gstin || (matched as any).clientGstin) {
-                                setClientGstin((matched as any).gstin || (matched as any).clientGstin);
+                              if ((matched as any).taxId || (matched as any).gstin || (matched as any).clientGstin) {
+                                setClientGstin((matched as any).taxId || (matched as any).gstin || (matched as any).clientGstin);
                               }
                               if ((matched as any).state || (matched as any).clientState) {
                                 setClientState((matched as any).state || (matched as any).clientState);
@@ -4113,9 +4118,13 @@ export default function InvoiceModal({
                           if (field === 'clientEmail') setClientEmail(val);
                           if (field === 'clientPhone') setClientPhone(val);
                           if (field === 'clientAddress') setClientAddress(val);
-                          if (field === 'clientGstin') setClientGstin(val);
+                          if (field === 'clientGstin' || field === 'clientGST') {
+                            updateClientGst(val);
+                          }
                           if (field === 'clientState') setClientState(val);
                           if (field === 'clientCountry') setClientCountry(val);
+                          if (field === 'clientPan' || field === 'clientPAN' || field === 'pan') setClientPan(val);
+                          if (field === 'clientCompanyName' || field === 'clientCompany') setClientCompanyName(val);
                           if (field === 'shippedToName') {
                             setShippedToName(val);
                             const matched = registryClients.find(c => c.name?.trim().toLowerCase() === val.trim().toLowerCase() || c.company?.trim().toLowerCase() === val.trim().toLowerCase() || c.companyName?.trim().toLowerCase() === val.trim().toLowerCase());
@@ -4362,7 +4371,20 @@ export default function InvoiceModal({
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/50">
+                <div className="pt-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/50 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (savedInvoiceForPreview?.id) {
+                        window.location.href = `/invoice/preview?id=${savedInvoiceForPreview.id}`;
+                      }
+                    }}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all active:scale-[0.97] cursor-pointer shadow-md shadow-emerald-950/10 flex items-center justify-center gap-1.5"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>View Full Page Preview</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -4370,7 +4392,7 @@ export default function InvoiceModal({
                       setSavedInvoiceForPreview(null);
                       onClose();
                     }}
-                    className="w-full py-3 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl text-xs font-bold transition-all active:scale-[0.97] cursor-pointer shadow-md shadow-sky-950/10"
+                    className="w-full py-2.5 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl text-xs font-bold transition-all active:scale-[0.97] cursor-pointer shadow-md shadow-sky-950/10"
                   >
                     Finish and Close
                   </button>

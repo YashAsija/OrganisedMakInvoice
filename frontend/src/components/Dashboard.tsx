@@ -4,6 +4,7 @@ import { useExpenses } from '../hooks/useExpenses';
 import { ExpensesPage } from './ExpensesPage';
 import { supabase } from '../lib/supabase';
 import { useSubscription } from '../hooks/useSubscription';
+import { pullMasterRegistriesFromCloud, pushMasterRegistriesToCloud, MasterRegistriesPayload, getLocalMasterRegistry, setLocalMasterRegistry } from '../lib/masterRegistrySync';
 
 import * as XLSX from 'xlsx';
 
@@ -359,6 +360,34 @@ export default function Dashboard({
   const { confirm } = useConfirm();
   const { expenses: supabaseExpenses, stats: expenseStats } = useExpenses();
   const { subscription, isOnTrial, refetch: refetchSubscription, trackDocumentUsage, trackReportUsage, showWelcomeTrialModal, dismissWelcomeTrialModal } = useSubscription();
+
+  const effectiveTier: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise' = useMemo(() => {
+    if (subscription) {
+      const p = (subscription.plan_type || subscription.plan_name || '').toLowerCase();
+      const isActive = subscription.status === 'active' || subscription.status === 'trialing';
+      const isNotExp = !subscription.expires_at || new Date(subscription.expires_at) > new Date();
+      if (isActive && isNotExp) {
+        if (p.includes('ent') || p.includes('unlimited')) return 'unlimited';
+        if (p.includes('pro')) return 'pro';
+        if (p.includes('basic')) return 'basic';
+      }
+    }
+    const propTier = (subscriptionTier || '').toLowerCase();
+    if (propTier.includes('pro')) return 'pro';
+    if (propTier.includes('unl') || propTier.includes('ent')) return 'unlimited';
+    if (propTier.includes('basic')) return 'basic';
+
+    if (typeof window !== 'undefined') {
+      const localTier = (localStorage.getItem('makbills_subscription_tier') || localStorage.getItem('makbills_last_active_paid_tier') || '').toLowerCase();
+      const exp = localStorage.getItem('makbills_sub_expires_iso');
+      if (!exp || new Date(exp) > new Date()) {
+        if (localTier.includes('pro')) return 'pro';
+        if (localTier.includes('unl') || localTier.includes('ent')) return 'unlimited';
+        if (localTier.includes('basic')) return 'basic';
+      }
+    }
+    return 'free';
+  }, [subscription, subscriptionTier]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -957,423 +986,353 @@ export default function Dashboard({
 
   const [editingMasterItem, setEditingMasterItem] = useState<MasterItemType | null>(null);
 
-  const [isMasterModalOpen, setIsMasterModalOpen] = useState(false);
-
-
-
-  // Master databases seed
-
+  const [isMasterModalOpen, setIsMasterModalOpen] = useState(false);  // Master databases initialized strictly from user-scoped storage (defaults to empty array)
   const [vendors, setVendors] = useState<MasterVendor[]>(() => {
-
-    const cached = localStorage.getItem('makbills_masters_vendors' + suffix);
-
-    if (cached) return JSON.parse(cached);
-
-    if (suffix) return [];
-
-    return [
-
-      { id: 'v_1', name: 'AWS Cloud Hosting', company: 'Amazon Web Services', email: 'billing@aws.com', phone: '1-800-AWS', address: 'Seattle, WA', category: 'SaaS Subscriptions' },
-
-      { id: 'v_2', name: 'WeWork Office Space', company: 'WeWork LLC', email: 'billing@wework.com', phone: '+1-555-WEWORK', address: 'Tech Plaza, SF, CA', category: 'Rent & Overheads' },
-
-      { id: 'v_3', name: 'Google Suite Workspace', company: 'Google Cloud Corp', email: 'gsuite@google.com', phone: '1-800-GOOGLE', address: 'Mountain View, CA', category: 'SaaS Subscriptions' }
-
-    ];
-
+    return getLocalMasterRegistry('makbills_masters_vendors', suffix, []).filter(item => {
+      const cat = (item.category || '').toLowerCase();
+      const name = (item.name || item.company || '').toLowerCase();
+      const isPurchase = cat.includes('purchase') || cat.includes('vendor') || cat.includes('supplier') || cat.includes('overheads') || cat.includes('saas') || cat.includes('rent') || ['aws cloud hosting', 'wework office space', 'google suite workspace', 'amazon web services'].includes(name);
+      return !isPurchase;
+    });
   });
-
-
 
   const [actualVendors, setActualVendors] = useState<MasterVendor[]>(() => {
-    const cached = localStorage.getItem('makbills_masters_actual_vendors' + suffix) || localStorage.getItem('makbills_masters_actual_vendors');
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (e) {}
-    }
-    return [];
+    return getLocalMasterRegistry('makbills_masters_actual_vendors', suffix, []);
   });
-
-
 
   const [hsnCodes, setHsnCodes] = useState<MasterHsnCode[]>(() => {
-
-    const cached = localStorage.getItem('makbills_masters_hsn' + suffix);
-
-    if (cached) return JSON.parse(cached);
-
-    if (suffix) return [];
-
-    return [
-
-      { id: 'h_1', code: '998311', description: 'Technical & Software Consulting services (SAC)', gstRate: 18 },
-
-      { id: 'h_2', code: '998313', description: 'Management Advisory & General Corporate Consulting (SAC)', gstRate: 18 },
-
-      { id: 'h_3', code: '997331', description: 'Software SaaS Licensing & Subscriptions (SAC)', gstRate: 18 },
-
-      { id: 'h_4', code: '847130', description: 'Computer Laptops & Hardware Machinery Import', gstRate: 18 }
-
-    ];
-
+    return getLocalMasterRegistry('makbills_masters_hsn', suffix, []);
   });
-
-
 
   const [glAccounts, setGlAccounts] = useState<MasterGlAccount[]>(() => {
-
-    const cached = localStorage.getItem('makbills_masters_gl' + suffix);
-
-    if (cached) return JSON.parse(cached);
-
-    if (suffix) return [];
-
-    return [
-
-      { id: 'gl_1', code: 'GL-100', name: 'Professional Advisory Revenue', type: 'Revenue' },
-
-      { id: 'gl_2', code: 'GL-200', name: 'AWS Infrastructure overheads', type: 'Expense' },
-
-      { id: 'gl_3', code: 'GL-300', name: 'Office Leases Rent & utilities', type: 'Expense' },
-
-      { id: 'gl_4', code: 'GL-400', name: 'Contractor Sinking charges', type: 'Expense' }
-
-    ];
-
+    return getLocalMasterRegistry('makbills_masters_gl', suffix, []);
   });
-
-
 
   const [transports, setTransports] = useState<any[]>(() => {
-
-    const cached = localStorage.getItem('makbills_masters_transports' + suffix);
-
-    if (cached) return JSON.parse(cached);
-
-    if (suffix) return [];
-
-    return [
-
-      { id: 't_1', name: 'Safe Express Logistics', phone: '9888877777', email: 'info@safeexpress.com', address: 'Okhla Phase 1, New Delhi', gstin: '07AAAAS0000A1Z1', pan: 'AAAAS0000A', state: 'Delhi', country: 'India' }
-
-    ];
-
+    return getLocalMasterRegistry('makbills_masters_transports', suffix, []);
   });
 
-
-
-  // Catalog Master database seed
-
+  // Catalog Master database
   const [materials, setMaterials] = useState<MasterMaterial[]>(() => {
-
-    const cached = localStorage.getItem('makbills_masters_materials' + suffix);
-
-    if (cached) return JSON.parse(cached);
-
-    if (suffix) return [];
-
-    return [
-
-      { id: 'm_1', name: 'Premium Software Architecture Review', rate: 120000, hsn: '998311', uom: 'PCS', category: 'Technical Consultancy' },
-
-      { id: 'm_2', name: 'Node.js Enterprise Server Setup', rate: 85000, hsn: '998311', uom: 'PCS', category: 'Engineering Work' },
-
-      { id: 'm_3', name: 'DevOps Pipeline Automations retainer', rate: 45000, hsn: '998311', uom: 'HRS', category: 'Technical Consultancy' }
-
-    ];
-
+    return getLocalMasterRegistry('makbills_masters_materials', suffix, []);
   });
-
-
 
   const [categories, setCategories] = useState<MasterCategory[]>(() => {
-
-    const cached = localStorage.getItem('makbills_masters_categories' + suffix);
-
-    if (cached) return JSON.parse(cached);
-
-    if (suffix) return [];
-
-    return [
-
-      { id: 'cat_1', name: 'Technical Consultancy', description: 'Architectural, DevOps, review sessions' },
-
-      { id: 'cat_2', name: 'Engineering Work', description: 'Core product programming and server installations' },
-
-      { id: 'cat_3', name: 'Training Programs', description: 'Corporate developer training upskilling courses' }
-
-    ];
-
+    return getLocalMasterRegistry('makbills_masters_categories', suffix, []);
   });
-
-
 
   const [subCategories, setSubCategories] = useState<MasterSubCategory[]>(() => {
-
-    const cached = localStorage.getItem('makbills_masters_subcategories' + suffix);
-
-    if (cached) return JSON.parse(cached);
-
-    if (suffix) return [];
-
-    return [
-
-      { id: 'scat_1', category: 'Technical Consultancy', name: 'Cloud Infrastructure Auditing' },
-
-      { id: 'scat_2', category: 'Technical Consultancy', name: 'Security Review' },
-
-      { id: 'scat_3', category: 'Engineering Work', name: 'React UI Architecture Development' }
-
-    ];
-
+    return getLocalMasterRegistry('makbills_masters_subcategories', suffix, []);
   });
-
-
 
   const [mappings, setMappings] = useState<MasterMapping[]>(() => {
-
-    const cached = localStorage.getItem('makbills_masters_mappings' + suffix);
-
-    if (cached) return JSON.parse(cached);
-
-    if (suffix) return [];
-
-    return [
-
-      { id: 'map_1', item: 'Premium Software Architecture Review', glAccount: 'Professional Advisory Revenue', taxRate: 18 },
-
-      { id: 'map_2', item: 'AWS Cloud Hosting Mapping', glAccount: 'AWS Infrastructure overheads', taxRate: 18 }
-
-    ];
-
+    return getLocalMasterRegistry('makbills_masters_mappings', suffix, []);
   });
-
-
 
   const [packingUnits, setPackingUnits] = useState<MasterPackingUnit[]>(() => {
-
-    const cached = localStorage.getItem('makbills_masters_packing' + suffix);
-
-    if (cached) return JSON.parse(cached);
-
-    if (suffix) return [];
-
-    return [
-
+    return getLocalMasterRegistry('makbills_masters_packing', suffix, [
       { id: 'p_1', name: 'PCS (Single items pack)' },
-
       { id: 'p_2', name: 'BOX (Sealed cardboard cartons)' },
-
       { id: 'p_3', name: 'ENV (Flat protective paper envelopes)' }
-
-    ];
-
+    ]);
   });
-
-
 
   const [measurementUnits, setMeasurementUnits] = useState<MasterMeasurementUnit[]>(() => {
-
-    const cached = localStorage.getItem('makbills_masters_measurement' + suffix);
-
-    if (cached) return JSON.parse(cached);
-
-    if (suffix) return [];
-
-    return [
-
+    return getLocalMasterRegistry('makbills_masters_measurement', suffix, [
       { id: 'mu_1', code: 'PCS', name: 'Pieces' },
-
       { id: 'mu_2', code: 'HRS', name: 'Hours billed' },
-
       { id: 'mu_3', code: 'DAY', name: 'Days duration' },
-
       { id: 'mu_4', code: 'MTR', name: 'Meters linear' },
-
       { id: 'mu_5', code: 'KGS', name: 'Kilograms weight' }
-
-    ];
-
+    ]);
   });
 
-
-
-  // Sync Master Registry Client Database (vendors) with other views
-
+  // Cross-Device Master Registries Sync & Account-Switch Reset
   useEffect(() => {
-
-    const handleSync = () => {
-
-      const cached = localStorage.getItem('makbills_masters_vendors' + suffix);
-
-      if (cached) {
-
-        try {
-
-          setVendors(JSON.parse(cached));
-
-        } catch (e) {}
-
-      }
-
+    // 1. Immediately reset master states to the active user's scoped storage (empty if new account)
+    const loadScopedMasterState = <T,>(key: string, fallback: T[] = []): T[] => {
+      try {
+        const cached = localStorage.getItem(key + suffix);
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+      return fallback;
     };
 
-    window.addEventListener('storage', handleSync);
+    setVendors(loadScopedMasterState('makbills_masters_vendors', []));
+    setActualVendors(loadScopedMasterState('makbills_masters_actual_vendors', []));
+    setTransports(loadScopedMasterState('makbills_masters_transports', []));
+    setHsnCodes(loadScopedMasterState('makbills_masters_hsn', []));
+    setMaterials(loadScopedMasterState('makbills_masters_materials', []));
+    setCategories(loadScopedMasterState('makbills_masters_categories', []));
+    setSubCategories(loadScopedMasterState('makbills_masters_subcategories', []));
+    setGlAccounts(loadScopedMasterState('makbills_masters_gl', []));
+    setMappings(loadScopedMasterState('makbills_masters_mappings', []));
 
-    window.addEventListener('makbills_sync_vendors', handleSync);
+    // 2. Fetch remote cloud data directly from Supabase for this active session user
+    let isCancelled = false;
+    const syncCloudMasters = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) return;
 
-    return () => {
+      const cloudData = await pullMasterRegistriesFromCloud(userId, suffix);
+      if (isCancelled || !cloudData) return;
 
-      window.removeEventListener('storage', handleSync);
-
-      window.removeEventListener('makbills_sync_vendors', handleSync);
-
+      if (cloudData.vendors !== undefined) setVendors(cloudData.vendors);
+      if (cloudData.actualVendors !== undefined) setActualVendors(cloudData.actualVendors);
+      if (cloudData.transports !== undefined) setTransports(cloudData.transports);
+      if (cloudData.hsnCodes !== undefined) setHsnCodes(cloudData.hsnCodes);
+      if (cloudData.materials !== undefined) setMaterials(cloudData.materials);
+      if (cloudData.categories !== undefined) setCategories(cloudData.categories);
+      if (cloudData.subCategories !== undefined) setSubCategories(cloudData.subCategories);
+      if (cloudData.glAccounts !== undefined) setGlAccounts(cloudData.glAccounts);
+      if (cloudData.mappings !== undefined) setMappings(cloudData.mappings);
     };
 
+    syncCloudMasters();
+    return () => { isCancelled = true; };
   }, [suffix]);
 
-
-
-  // Sync Master Registry Vendor Database (actualVendors) with other views
-
+  // --- Auto-extract Billed Clients into Client DB and Billed Vendors into Vendor DB ---
   useEffect(() => {
+    let vendorsChanged = false;
+    let actualVendorsChanged = false;
 
-    const handleActualVendorSync = () => {
+    // IMPORTANT: Always read fresh scoped state for current suffix, not old closure variables
+    let updatedVendors = getLocalMasterRegistry('makbills_masters_vendors', suffix);
+    let updatedActualVendors = getLocalMasterRegistry('makbills_masters_actual_vendors', suffix);
 
-      const cached = localStorage.getItem('makbills_masters_actual_vendors' + suffix);
+    const norm = (s: string | null | undefined) => (s || '').trim().toLowerCase();
 
-      if (cached) {
+    // 1. Extract from current user's invoices
+    if (Array.isArray(invoices) && invoices.length > 0) {
+      invoices.forEach(inv => {
+        const docType = (inv.invoiceType || '').toLowerCase();
+        const isPurchase = ['purchases', 'purchase', 'purchase_order', 'purchase_bill', 'vendor_bill', 'purchase_debit_note', 'purchase_debit'].includes(docType) || docType.startsWith('purchase');
 
-        try {
+        const rawName = inv.clientName || inv.clientCompanyName || inv.clientCompany;
+        if (!rawName || rawName.trim() === '' || rawName.startsWith('Guest-') || rawName === 'Quote / Estimate') return;
 
-          setActualVendors(JSON.parse(cached));
+        const record = {
+          name: (inv.clientName || inv.clientCompanyName || inv.clientCompany || '').trim(),
+          company: (inv.clientCompanyName || inv.clientCompany || inv.clientName || '').trim(),
+          companyName: (inv.clientCompanyName || inv.clientCompany || inv.clientName || '').trim(),
+          email: (inv.clientEmail || '').trim(),
+          phone: (inv.clientPhone || '').trim(),
+          mobile: (inv.clientPhone || '').trim(),
+          address: (inv.clientAddress || '').trim(),
+          gstin: (inv.clientGstin || '').trim(),
+          taxId: (inv.clientGstin || '').trim(),
+          pan: (inv.clientPan || '').trim(),
+          state: (inv.clientState || '').trim(),
+          country: (inv.clientCountry || 'India').trim(),
+        };
 
-        } catch (e) {}
+        if (isPurchase) {
+          const nameLower = norm(record.name);
+          const compLower = norm(record.company);
+          const gstinLower = norm(record.gstin);
+          const emailLower = norm(record.email);
 
-      }
-
-    };
-
-    window.addEventListener('storage', handleActualVendorSync);
-
-    window.addEventListener('makbills_sync_actual_vendors', handleActualVendorSync);
-
-    return () => {
-
-      window.removeEventListener('storage', handleActualVendorSync);
-
-      window.removeEventListener('makbills_sync_actual_vendors', handleActualVendorSync);
-
-    };
-
-  }, [suffix]);
-
-
-
-  // Sync Transport Database with other views
-
-  useEffect(() => {
-
-    const handleSync = () => {
-
-      const cached = localStorage.getItem('makbills_masters_transports' + suffix);
-
-      if (cached) {
-
-        try {
-
-          setTransports(JSON.parse(cached));
-
-        } catch (e) {}
-
-      }
-
-    };
-
-    window.addEventListener('storage', handleSync);
-
-    window.addEventListener('makbills_sync_transports', handleSync);
-
-    return () => {
-
-      window.removeEventListener('storage', handleSync);
-
-      window.removeEventListener('makbills_sync_transports', handleSync);
-
-    };
-
-  }, [suffix]);
-
-
-
-  // --- Auto-sync items from invoices into material catalog ---
-
-  useEffect(() => {
-
-    if (!invoices || invoices.length === 0) return;
-
-    
-
-    let changed = false;
-
-    const updatedMaterials = [...materials];
-
-
-
-    invoices.forEach(inv => {
-
-      if (!inv.items) return;
-
-      inv.items.forEach(item => {
-
-        if (item.name && item.name.trim() !== '') {
-
-          const nameLower = item.name.trim().toLowerCase();
-
-          const exists = updatedMaterials.some(m => m.name && m.name.toLowerCase() === nameLower);
-
-          
+          const exists = updatedActualVendors.some(v => {
+            if (gstinLower && norm(v.gstin) === gstinLower) return true;
+            if (emailLower && norm(v.email) === emailLower) return true;
+            if (nameLower && (norm(v.name) === nameLower || norm(v.company) === nameLower)) return true;
+            if (compLower && (norm(v.name) === compLower || norm(v.company) === compLower)) return true;
+            return false;
+          });
 
           if (!exists) {
-
-            changed = true;
-
-            updatedMaterials.push({
-
-              id: `mat_${Math.random().toString(36).substr(2, 9)}`,
-
-              name: item.name.trim(),
-
-              rate: item.rate || 0,
-
-              hsn: item.hsnCode || item.sacCode || '',
-
-              uom: item.quantityType || 'unit',
-
-              category: 'Auto-Added from Invoice'
-
-            });
-
+            actualVendorsChanged = true;
+            updatedActualVendors = [
+              {
+                id: `av_auto_${Math.random().toString(36).substr(2, 9)}`,
+                ...record,
+                category: 'Vendor',
+                createdAt: new Date().toISOString(),
+              },
+              ...updatedActualVendors
+            ];
           }
+        } else {
+          const nameLower = norm(record.name);
+          const compLower = norm(record.company);
+          const gstinLower = norm(record.gstin);
+          const emailLower = norm(record.email);
 
+          const exists = updatedVendors.some(v => {
+            if (gstinLower && norm(v.gstin) === gstinLower) return true;
+            if (emailLower && norm(v.email) === emailLower) return true;
+            if (nameLower && (norm(v.name) === nameLower || norm(v.company) === nameLower)) return true;
+            if (compLower && (norm(v.name) === compLower || norm(v.company) === compLower)) return true;
+            return false;
+          });
+
+          if (!exists) {
+            vendorsChanged = true;
+            updatedVendors = [
+              {
+                id: `v_auto_${Math.random().toString(36).substr(2, 9)}`,
+                ...record,
+                category: 'Client',
+                createdAt: new Date().toISOString(),
+              },
+              ...updatedVendors
+            ];
+          }
         }
-
       });
-
-    });
-
-
-
-    if (changed) {
-
-      setMaterials(updatedMaterials);
-
-      localStorage.setItem('makbills_masters_materials' + suffix, JSON.stringify(updatedMaterials));
-
     }
 
-  }, [invoices, materials, suffix]);
+    if (vendorsChanged) {
+      setVendors(updatedVendors);
+      localStorage.setItem('makbills_masters_vendors' + suffix, JSON.stringify(updatedVendors));
+    }
+
+    if (actualVendorsChanged) {
+      setActualVendors(updatedActualVendors);
+      localStorage.setItem('makbills_masters_actual_vendors' + suffix, JSON.stringify(updatedActualVendors));
+    }
+
+    if (vendorsChanged || actualVendorsChanged) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user?.id) {
+          pushMasterRegistriesToCloud(session.user.id, suffix, {
+            vendors: updatedVendors,
+            actualVendors: updatedActualVendors,
+          });
+        }
+      });
+    }
+  }, [invoices, suffix]);
+
+  // Sync Master Registry Client Database (vendors) with other views
+  useEffect(() => {
+    const handleSync = () => {
+      const cached = localStorage.getItem('makbills_masters_vendors' + suffix);
+      if (cached) {
+        try {
+          setVendors(JSON.parse(cached));
+        } catch (e) {}
+      }
+    };
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('makbills_sync_vendors', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('makbills_sync_vendors', handleSync);
+    };
+  }, [suffix]);
+
+  // Sync Master Registry Vendor Database (actualVendors) with other views
+  useEffect(() => {
+    const handleActualVendorSync = () => {
+      const cached = localStorage.getItem('makbills_masters_actual_vendors' + suffix);
+      if (cached) {
+        try {
+          setActualVendors(JSON.parse(cached));
+        } catch (e) {}
+      }
+    };
+    window.addEventListener('storage', handleActualVendorSync);
+    window.addEventListener('makbills_sync_actual_vendors', handleActualVendorSync);
+    return () => {
+      window.removeEventListener('storage', handleActualVendorSync);
+      window.removeEventListener('makbills_sync_actual_vendors', handleActualVendorSync);
+    };
+  }, [suffix]);
+
+  // Sync Transport Database with other views
+  useEffect(() => {
+    const handleSync = () => {
+      const cached = localStorage.getItem('makbills_masters_transports' + suffix);
+      if (cached) {
+        try {
+          setTransports(JSON.parse(cached));
+        } catch (e) {}
+      }
+    };
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('makbills_sync_transports', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('makbills_sync_transports', handleSync);
+    };
+  }, [suffix]);
+
+  // Sync Material, HSN & Categories with other views
+  useEffect(() => {
+    const handleMaterialSync = () => {
+      const cached = localStorage.getItem('makbills_masters_materials' + suffix);
+      if (cached) {
+        try { setMaterials(JSON.parse(cached)); } catch (e) {}
+      }
+    };
+    const handleHsnSync = () => {
+      const cached = localStorage.getItem('makbills_masters_hsn' + suffix);
+      if (cached) {
+        try { setHsnCodes(JSON.parse(cached)); } catch (e) {}
+      }
+    };
+    const handleCategorySync = () => {
+      const cached = localStorage.getItem('makbills_masters_categories' + suffix);
+      if (cached) {
+        try { setCategories(JSON.parse(cached)); } catch (e) {}
+      }
+    };
+    window.addEventListener('storage', handleMaterialSync);
+    window.addEventListener('makbills_sync_materials', handleMaterialSync);
+    window.addEventListener('makbills_sync_hsn', handleHsnSync);
+    window.addEventListener('makbills_sync_categories', handleCategorySync);
+    return () => {
+      window.removeEventListener('storage', handleMaterialSync);
+      window.removeEventListener('makbills_sync_materials', handleMaterialSync);
+      window.removeEventListener('makbills_sync_hsn', handleHsnSync);
+      window.removeEventListener('makbills_sync_categories', handleCategorySync);
+    };
+  }, [suffix]);
+
+  // --- Auto-sync items from invoices into material catalog (scoped strictly by suffix) ---
+  useEffect(() => {
+    if (!invoices || invoices.length === 0) return;
+
+    let changed = false;
+    const updatedMaterials = getLocalMasterRegistry('makbills_masters_materials', suffix);
+
+    invoices.forEach(inv => {
+      if (!inv.items) return;
+      inv.items.forEach(item => {
+        if (item.name && item.name.trim() !== '') {
+          const nameLower = item.name.trim().toLowerCase();
+          const exists = updatedMaterials.some((m: any) => m.name && m.name.toLowerCase() === nameLower);
+
+          if (!exists) {
+            changed = true;
+            updatedMaterials.push({
+              id: `mat_${Math.random().toString(36).substr(2, 9)}`,
+              name: item.name.trim(),
+              rate: item.rate || 0,
+              hsn: item.hsnCode || item.sacCode || '',
+              uom: item.quantityType || 'unit',
+              category: 'Auto-Added from Invoice'
+            });
+          }
+        }
+      });
+    });
+
+    if (changed) {
+      setMaterials(updatedMaterials);
+      localStorage.setItem('makbills_masters_materials' + suffix, JSON.stringify(updatedMaterials));
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user?.id) {
+          pushMasterRegistriesToCloud(session.user.id, suffix, {
+            materials: updatedMaterials,
+          });
+        }
+      });
+    }
+  }, [invoices, suffix]);
 
 
 
@@ -1555,6 +1514,23 @@ export default function Dashboard({
     setter(updated);
 
     localStorage.setItem(key, JSON.stringify(updated));
+
+    // Also push to Supabase Cloud for cross-device synchronization
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) {
+        pushMasterRegistriesToCloud(session.user.id, suffix, {
+          vendors: activeTab === 'master_vendor' ? updated : vendors,
+          actualVendors: activeTab === 'master_actual_vendor' ? updated : actualVendors,
+          transports: activeTab === 'master_transport' ? updated : transports,
+          hsnCodes: activeTab === 'master_hsn' ? updated : hsnCodes,
+          materials: activeTab === 'catalog_material' ? updated : materials,
+          categories: activeTab === 'catalog_category' ? updated : categories,
+          subCategories: activeTab === 'catalog_sub_category' ? updated : subCategories,
+          glAccounts: activeTab === 'master_gl' ? updated : glAccounts,
+          mappings: activeTab === 'catalog_mapping' ? updated : mappings,
+        });
+      }
+    });
 
     setIsMasterModalOpen(false);
 
@@ -1765,6 +1741,23 @@ export default function Dashboard({
     setter(updated);
 
     localStorage.setItem(key, JSON.stringify(updated));
+
+    // Also push to Supabase Cloud for cross-device synchronization
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) {
+        pushMasterRegistriesToCloud(session.user.id, suffix, {
+          vendors: activeTab === 'master_vendor' ? updated : vendors,
+          actualVendors: activeTab === 'master_actual_vendor' ? updated : actualVendors,
+          transports: activeTab === 'master_transport' ? updated : transports,
+          hsnCodes: activeTab === 'master_hsn' ? updated : hsnCodes,
+          materials: activeTab === 'catalog_material' ? updated : materials,
+          categories: activeTab === 'catalog_category' ? updated : categories,
+          subCategories: activeTab === 'catalog_sub_category' ? updated : subCategories,
+          glAccounts: activeTab === 'master_gl' ? updated : glAccounts,
+          mappings: activeTab === 'catalog_mapping' ? updated : mappings,
+        });
+      }
+    });
 
 
 
@@ -2342,10 +2335,8 @@ export default function Dashboard({
 
             </div>
 
-            <span className="text-[8.5px] px-1.5 py-0.5 bg-white text-[#0284c7] rounded-md uppercase font-black tracking-wider animate-pulse shadow-sm">
-
-              {subscriptionTier === 'free' ? 'PRO' : subscriptionTier === 'basic' ? 'PRO' : subscriptionTier === 'pro' ? 'UNLTD' : 'MAX'}
-
+            <span className="text-[8.5px] px-1.5 py-0.5 bg-white text-[#0284c7] rounded-md uppercase font-black tracking-wider shadow-sm">
+              {effectiveTier === 'free' ? 'PRO' : effectiveTier === 'basic' ? 'PRO' : effectiveTier === 'pro' ? 'UNLTD' : 'MAX'}
             </span>
 
           </button>
@@ -3225,7 +3216,27 @@ export default function Dashboard({
 
                               else if (activeTab === 'catalog_category') { currentList = categories; storageKey = 'makbills_masters_categories' + suffix; setterFn = setCategories; }
 
-                              if (setterFn) { const updatedList = [...finalItems, ...currentList]; setterFn(updatedList); localStorage.setItem(storageKey, JSON.stringify(updatedList)); const tabLabelUp: Record<string, string> = { master_vendor: 'Client Database', master_actual_vendor: 'Vendor Database', master_transport: 'Transport Database', master_hsn: 'HSN Registry', catalog_material: 'Material Catalog', catalog_category: 'Product Category' }; emitNotification('Bulk Upload Complete', `${finalItems.length} records imported into ${tabLabelUp[activeTab] || 'Registry'} successfully.`, 'info'); }
+                              if (setterFn) {
+                                const updatedList = [...finalItems, ...currentList];
+                                setterFn(updatedList);
+                                localStorage.setItem(storageKey, JSON.stringify(updatedList));
+
+                                supabase.auth.getSession().then(({ data: { session } }) => {
+                                  if (session?.user?.id) {
+                                    pushMasterRegistriesToCloud(session.user.id, suffix, {
+                                      vendors: activeTab === 'master_vendor' ? updatedList : vendors,
+                                      actualVendors: activeTab === 'master_actual_vendor' ? updatedList : actualVendors,
+                                      transports: activeTab === 'master_transport' ? updatedList : transports,
+                                      hsnCodes: activeTab === 'master_hsn' ? updatedList : hsnCodes,
+                                      materials: activeTab === 'catalog_material' ? updatedList : materials,
+                                      categories: activeTab === 'catalog_category' ? updatedList : categories,
+                                    });
+                                  }
+                                });
+
+                                const tabLabelUp: Record<string, string> = { master_vendor: 'Client Database', master_actual_vendor: 'Vendor Database', master_transport: 'Transport Database', master_hsn: 'HSN Registry', catalog_material: 'Material Catalog', catalog_category: 'Product Category' };
+                                emitNotification('Bulk Upload Complete', `${finalItems.length} records imported into ${tabLabelUp[activeTab] || 'Registry'} successfully.`, 'info');
+                              }
 
                             } catch (err: any) { alert('Error parsing file: ' + err.message); }
 

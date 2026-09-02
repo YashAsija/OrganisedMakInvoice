@@ -4,6 +4,7 @@ import { BusinessProfile } from '../types';
 import { Country, State } from 'country-state-city';
 import { supabase } from '../lib/supabase';
 import { emitNotification } from '../lib/notifications';
+import { useSubscription, getExpiryLabel } from '../context/SubscriptionContext';
 
 interface BusinessProfileModalProps {
   profile: BusinessProfile;
@@ -24,6 +25,8 @@ const SIGNATURE_FONTS = [
 ];
 
 export default function BusinessProfileModal({ profile, isOpen, isOnboarding = false, onClose, onSave, subscriptionTier = 'free' }: BusinessProfileModalProps) {
+  const { subscription } = useSubscription();
+
   // Tabs State: 'company' | 'banking' | 'billing' | 'subscription' | 'tax'
   type TabType = 'company' | 'banking' | 'billing' | 'subscription' | 'tax';
   const validTabs: TabType[] = ['company', 'banking', 'billing', 'subscription', 'tax'];
@@ -783,6 +786,13 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
 
   // Real offline-ready Base64 logo upload triggers
   const triggerLogoUpload = () => {
+    if (subscriptionTier === 'free') {
+      emitNotification('Feature Locked 🔒', 'Personalised Logo upload is available on Basic, Professional, and Enterprise plans. Upgrade your plan to add your custom business logo.', 'error');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+      }
+      return;
+    }
     fileInputRef.current?.click();
   };
 
@@ -1918,10 +1928,10 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 md:p-6 lg:p-8 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
       <div 
         id="profile-modal" 
-        className="relative w-full max-w-6xl bg-white dark:bg-[#111a36] text-[#0f172a] dark:text-[#e2e8f0] rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 flex flex-col max-h-[95dvh] my-auto"
+        className="relative w-full max-w-6xl bg-white dark:bg-[#111a36] text-[#0f172a] dark:text-[#e2e8f0] rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 flex flex-col max-h-[90vh] sm:max-h-[85vh] my-auto"
       >
         {/* Hidden File Picker reference */}
         <input 
@@ -1941,7 +1951,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         />
 
         {/* Modal Header */}
-        <div className="p-6 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex items-center justify-between bg-[#f4f9ff] dark:bg-[#0b1329]/60">
+        <div className="p-4 sm:p-5 md:p-6 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex items-center justify-between bg-[#f4f9ff] dark:bg-[#0b1329]/60 shrink-0 sticky top-0 z-20">
           <div className="flex items-center gap-2.5">
             {activeTab !== 'company' && (
               <button 
@@ -1961,7 +1971,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
               <Building2 className="w-5 h-5 text-amber-100" />
             </div>
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-[#0f172a] dark:text-white">Company Settings</h2>
+              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-[#0f172a] dark:text-white">Company Settings</h2>
               <p className="text-[11px] font-medium text-[#0284c7]/70 dark:text-[#38bdf8]/60">Used as the seller details on every invoice.</p>
             </div>
           </div>
@@ -2079,8 +2089,19 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     {/* Logo upload (cols 5) */}
                     <div className="md:col-span-5 p-5 rounded-2xl border-2 border-dashed border-[#bae6fd]/60 dark:border-[#223269]/60 bg-[#f4f9ff] dark:bg-[#0b1329]/50 flex flex-col items-center justify-center space-y-4">
                       <div 
-                        className="w-32 h-32 rounded-xl border border-[#bae6fd]/60 dark:border-[#223269]/60 bg-[#f4f9ff] dark:bg-[#0b1329] relative overflow-hidden flex items-center justify-center group cursor-pointer transition-all hover:border-[#0284c7]"
-                        onClick={() => logoUrl ? setShowLogoPreview(true) : triggerLogoUpload()}
+                        className={`w-32 h-32 rounded-xl border border-[#bae6fd]/60 dark:border-[#223269]/60 bg-[#f4f9ff] dark:bg-[#0b1329] relative overflow-hidden flex items-center justify-center group transition-all ${
+                          subscriptionTier === 'free' ? 'cursor-not-allowed opacity-90' : 'cursor-pointer hover:border-[#0284c7]'
+                        }`}
+                        onClick={() => {
+                          if (subscriptionTier === 'free') {
+                            emitNotification('Feature Locked 🔒', 'Personalised Logo upload is available on Basic, Professional, and Enterprise plans. Upgrade your plan to add your custom business logo.', 'error');
+                            if (typeof window !== 'undefined') {
+                              window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                            }
+                            return;
+                          }
+                          logoUrl ? setShowLogoPreview(true) : triggerLogoUpload();
+                        }}
                       >
                         {logoUrl ? (
                           <img 
@@ -2093,7 +2114,9 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                           <span className="text-[10px] font-bold text-[#0284c7]/50 dark:text-[#38bdf8]/40 uppercase tracking-widest">LOGO</span>
                         )}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                          {logoUrl ? (
+                          {subscriptionTier === 'free' ? (
+                            <Lock className="w-5 h-5 text-amber-400" />
+                          ) : logoUrl ? (
                             <EyeIcon className="w-5 h-5 text-white" />
                           ) : (
                             <Upload className="w-5 h-5 text-white" />
@@ -3151,7 +3174,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
             const currentPlanType = planTypes[subscriptionTier] || 'Starter Plan (Free Tier)';
             const currentDescription = planDescriptions[subscriptionTier] || 'Standard billing suite environment.';
             const currentStatus = subscriptionTier === 'free' ? 'Active Free Plan' : 'Active Subscription';
-            const currentRenewal = (typeof window !== 'undefined' && localStorage.getItem('makbills_sub_expires_at')) || (subscriptionTier === 'free' ? 'Free Forever' : 'Renews Monthly / Annually');
+            const currentRenewal = getExpiryLabel(subscription);
 
             return (
               <div className="space-y-6 animate-fade-in text-[#0f172a] dark:text-[#e2e8f0]">
@@ -3183,7 +3206,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                           <span className="block text-[9px] font-extrabold text-[#0284c7]/60 dark:text-[#64748b] uppercase tracking-widest">Date of Activation</span>
                           <span className="text-sm font-bold text-[#0284c7] dark:text-sky-400 font-mono">
                             {(() => {
-                              const activatedAt = typeof window !== 'undefined' ? localStorage.getItem('makbills_sub_activated_at') : null;
+                              const activatedAt = subscription?.trial_started_at || subscription?.created_at || (typeof window !== 'undefined' ? localStorage.getItem('makbills_sub_activated_at') : null);
                               const dateObj = activatedAt ? new Date(activatedAt) : new Date();
                               return isNaN(dateObj.getTime()) ? new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
                             })()}

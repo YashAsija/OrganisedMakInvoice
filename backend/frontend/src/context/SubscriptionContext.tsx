@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { emitNotification } from '../lib/notifications';
+import { validateSubscriptionPayload, getExpiryDisplay, ExpiryDisplayInfo, seedUsagePeriods } from '../lib/subscriptionUtils';
 
 export const PLANS = {
   free: {
@@ -14,7 +16,7 @@ export const PLANS = {
     description: 'Get started at zero cost. Essential billing and ledger tools.',
     billing_note: 'Free forever. No credit card needed.',
     document_limit: 10,
-    report_limit: 2,
+    report_limit: 1,
   },
   basic: {
     plan_type: 'basic' as const,
@@ -56,9 +58,9 @@ export const PLANS = {
 };
 
 export const PLAN_LIMITS = {
-  free:         { documents: 10,       reports: 2   },
-  basic:        { documents: 100,      reports: 20  },
-  professional: { documents: 500,      reports: 100 },
+  free:         { documents: 10,       reports: 1   },
+  basic:        { documents: 60,       reports: 5   },
+  professional: { documents: 140,      reports: 15  },
   enterprise:   { documents: Infinity, reports: Infinity },
 };
 
@@ -75,6 +77,7 @@ export interface Subscription {
   user_phone?: string | null;
   trial_used_plans?: string[];
   trial_started_at?: string | null;
+  activated_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -97,7 +100,7 @@ export interface SubscriptionContextType {
   isRealtimeSyncing: boolean;
   isActive: boolean;
   planKey: 'free' | 'basic' | 'professional' | 'enterprise';
-  upgradeSubscription: (planType: string, billingMode: 'monthly' | 'yearly', transactionId: string) => Promise<void>;
+  upgradeSubscription: (planType: string, billingMode: 'monthly' | 'yearly', transactionId: string) => Promise<Subscription>;
   refreshSubscription: () => Promise<void>;
   refetch: () => Promise<void>;
   trackDocumentUsage: () => Promise<boolean>;
@@ -110,8 +113,16 @@ export interface SubscriptionContextType {
   canStartTrial: (planType: 'basic' | 'professional') => boolean;
   isOnTrial: () => boolean;
   getTrialDaysRemaining: () => number;
-  checkAndExpireTrials: () => Promise<void>;
+  checkAndExpireTrials: (currentSub?: Subscription | null) => Promise<void>;
+  getExpiryDisplayInfo: () => ExpiryDisplayInfo;
+  getExpiryLabel: (sub: Subscription) => string;
+  showWelcomeTrialModal: boolean;
+  dismissWelcomeTrialModal: (userId?: string) => void;
 }
+
+export const getExpiryLabel = (sub: Subscription | null): string => {
+  return getExpiryDisplay(sub).value;
+};
 
 const SubscriptionContext = createContext<SubscriptionContextType | null>(null);
 
@@ -121,283 +132,569 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [showWelcomeTrialModal, setShowWelcomeTrialModal] = useState(false);
 
-  // FIX 3: fetchCurrentUsage — always get active period row or create one
-  const fetchCurrentUsage = useCallback(async (uid: string): Promise<SubscriptionUsage | null> => {
-    const now = new Date().toISOString();
-    
-    const { data, error } = await supabase
-      .from('subscription_usage')
-      .select('*')
-      .eq('user_id', uid)
-      .gte('period_end', now)
-      .order('period_start', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+  const dismissWelcomeTrialModal = useCallback((targetUid?: string) => {
+    const uidToUse = targetUid || userId;
+    if (uidToUse && typeof window !== 'undefined') {
+      localStorage.setItem(`welcome_trial_shown_${uidToUse}`, 'true');
+    }
+    setShowWelcomeTrialModal(false);
+  }, [userId]);
 
-    if (error) {
-      console.error('[fetchCurrentUsage Error]', error);
-      return null;
+  const isUpgradingRef = useRef(false);
+
+  const isUpgradeLocked = (uid: string | null): boolean => {
+    if (!uid) return false;
+    const lockKey = `upgrade_lock_${uid}`;
+    const lockTime = typeof window !== 'undefined' ? localStorage.getItem(lockKey) : null;
+    if (lockTime && Date.now() - parseInt(lockTime) < 10000) {
+      console.warn('[LOCK] Upgrade lock active for user:', uid);
+      return true;
+    }
+    return false;
+  };
+
+  // checkAndExpireTrials accepts parameter to prevent reading stale state
+  const checkAndExpireTrials = useCallback(async (currentSub?: Subscription | null) => {
+    const sub = currentSub || subscription;
+    if (!sub) return;
+
+    if (sub.status === 'active' && sub.plan_type !== 'free') {
+      console.log('[ExpireCheck] Active paid plan — skipping:', sub.plan_type);
+      return;
     }
 
-    if (!data) {
-      console.log('[Usage] No active period found, creating new one');
-      const periodStart = new Date();
-      const periodEnd = new Date(periodStart.getTime() + 30 * 24 * 60 * 60 * 1000);
-      
-      const { data: newUsage, error: insertErr } = await supabase
-        .from('subscription_usage')
-        .insert({
-          user_id: uid,
-          period_start: periodStart.toISOString(),
-          period_end: periodEnd.toISOString(),
-          documents_used: 0,
-          reports_used: 0,
-        })
+    if (sub.status !== 'trialing') {
+      console.log('[ExpireCheck] Not trialing — skipping:', sub.status);
+      return;
+    }
+
+    const now = new Date();
+    if (!sub.expires_at || now <= new Date(sub.expires_at)) {
+      console.log('[ExpireCheck] Trial still active — skipping expiry');
+      return;
+    }
+
+    console.log('[ExpireCheck] Trial expired — downgrading to free');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      if (isUpgradeLocked(user.id)) {
+        console.warn('[ExpireCheck] Skipping trial expiry downgrade — upgrade lock active for user:', user.id);
+        return;
+      }
+
+      console.log('[ExpireCheck] Upserting expired Free subscription to DB');
+      const { data: updated } = await supabase
+        .from('subscriptions')
+        .upsert({
+          user_id: user.id,
+          plan_name: 'Free',
+          plan_type: 'free',
+          status: 'expired',
+          expires_at: null,
+          renews_at: null,
+          trial_used_plans: sub.trial_used_plans,
+          updated_at: now.toISOString(),
+        }, { onConflict: 'user_id' })
         .select()
         .single();
 
-      if (insertErr) {
-        console.error('[fetchCurrentUsage Insert Error]', insertErr);
-        return null;
+      if (updated) {
+        setSubscription({ ...updated } as Subscription);
+        emitNotification('Trial Ended', 'Upgrade to continue premium features.', 'error');
       }
-      return newUsage as SubscriptionUsage;
+    } catch (e) {
+      console.error('[Trial Expiry Error]', e);
     }
+  }, [subscription]);
 
-    return data as SubscriptionUsage;
-  }, []);
-
+  // READ ONLY refreshSubscription — never creates rows
   const refreshSubscription = useCallback(async () => {
     if (!userId) return;
+    if (isUpgradingRef.current || isUpgradeLocked(userId)) {
+      console.log('[Refresh] Blocked — upgrade in progress / lock active');
+      return;
+    }
     try {
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (!error && data) {
-        setSubscription(data as Subscription);
+      let query = supabase.from('subscriptions').select('*');
+      const activeEmail = typeof window !== 'undefined' ? localStorage.getItem('makbills_active_email') : null;
+      
+      if (userId && activeEmail) {
+        query = query.or(`user_id.eq.${userId},user_email.eq.${activeEmail}`);
+      } else if (userId) {
+        query = query.eq('user_id', userId);
+      } else if (activeEmail) {
+        query = query.eq('user_email', activeEmail);
       }
 
-      const activeUsage = await fetchCurrentUsage(userId);
-      if (activeUsage) setUsage(activeUsage);
-    } catch (err) {
-      console.error('[refreshSubscription] Error:', err);
-    }
-  }, [userId, fetchCurrentUsage]);
+      const { data: fetchedSubs, error } = await query.order('updated_at', { ascending: false }).limit(1);
+      let sub = fetchedSubs && fetchedSubs.length > 0 ? fetchedSubs[0] : null;
 
-  const fetchSubscriptionData = useCallback(async (uid: string) => {
+      if (!sub && (userId || activeEmail)) {
+        try {
+          const params = new URLSearchParams();
+          if (userId) params.set('userId', userId);
+          if (activeEmail) params.set('userEmail', activeEmail);
+          const apiRes = await fetch(`/api/payments/save-subscription?${params.toString()}`);
+          if (apiRes.ok) {
+            const json = await apiRes.json();
+            if (json.subscription) sub = json.subscription;
+          }
+        } catch (apiErr) {
+          console.warn('[Refresh] Server API fallback note:', apiErr);
+        }
+      }
+
+      if (error && !sub) {
+        console.error('[Refresh] Error fetching subscription:', error);
+        return;
+      }
+
+      if (sub) {
+        const validatedSub = validateSubscriptionPayload({ ...sub });
+        setSubscription(prev => {
+          if (
+            prev &&
+            prev.id === validatedSub.id &&
+            prev.plan_type === validatedSub.plan_type &&
+            prev.status === validatedSub.status &&
+            prev.expires_at === validatedSub.expires_at
+          ) {
+            return prev;
+          }
+          console.log('[Refresh] Updating subscription state:', validatedSub.plan_name);
+          return validatedSub as Subscription;
+        });
+      }
+
+      const nowIso = new Date().toISOString();
+      const { data: usageData } = await supabase
+        .from('subscription_usage')
+        .select('*')
+        .eq('user_id', userId)
+        .lte('period_start', nowIso)
+        .gte('period_end', nowIso)
+        .order('period_start', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (usageData) {
+        setUsage(prev => {
+          if (
+            prev &&
+            prev.id === usageData.id &&
+            prev.documents_used === usageData.documents_used &&
+            prev.reports_used === usageData.reports_used
+          ) {
+            return prev;
+          }
+          console.log('[Refresh] Updating usage state:', usageData.documents_used, usageData.reports_used);
+          return { ...usageData } as SubscriptionUsage;
+        });
+      }
+    } catch (err) {
+      console.error('[Refresh] Unexpected error:', err);
+    }
+  }, [userId]);
+
+  // Root initializeSubscription fix — read-only if sub exists, maybeSingle() error handling
+  useEffect(() => {
+    const initializeSubscription = async () => {
+      setIsLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          console.log('[Init] No session — skipping');
+          setIsLoading(false);
+          return;
+        }
+
+        const uid = session.user.id;
+        setUserId(uid);
+        console.log('[Init] Initializing for user:', uid);
+
+        if (isUpgradingRef.current || isUpgradeLocked(uid)) {
+          console.log('[Init] Blocked — upgrade in progress / lock active');
+          setIsLoading(false);
+          return;
+        }
+
+        const activeEmail = session.user.email || (typeof window !== 'undefined' ? localStorage.getItem('makbills_active_email') : null);
+        let initQuery = supabase.from('subscriptions').select('*');
+        if (uid && activeEmail) {
+          initQuery = initQuery.or(`user_id.eq.${uid},user_email.eq.${activeEmail}`);
+        } else if (uid) {
+          initQuery = initQuery.eq('user_id', uid);
+        } else if (activeEmail) {
+          initQuery = initQuery.eq('user_email', activeEmail);
+        }
+
+        const { data: fetchedInitSubs, error: selectError } = await initQuery.order('updated_at', { ascending: false }).limit(1);
+        let existingSub = fetchedInitSubs && fetchedInitSubs.length > 0 ? fetchedInitSubs[0] : null;
+
+        if (!existingSub && (uid || activeEmail)) {
+          try {
+            const params = new URLSearchParams();
+            if (uid) params.set('userId', uid);
+            if (activeEmail) params.set('userEmail', activeEmail);
+            const apiRes = await fetch(`/api/payments/save-subscription?${params.toString()}`);
+            if (apiRes.ok) {
+              const json = await apiRes.json();
+              if (json.subscription) existingSub = json.subscription;
+            }
+          } catch (apiErr) {
+            console.warn('[Init] Server API fallback note:', apiErr);
+          }
+        }
+
+        console.log('[Init] Existing subscription:', existingSub?.plan_name, existingSub?.plan_type, '| Error:', selectError?.message);
+
+        if (selectError) {
+          console.error('[Init] SELECT error:', selectError);
+          setTimeout(initializeSubscription, 1000);
+          return;
+        }
+
+        if (existingSub) {
+          console.log('[Init] ✅ Found existing subscription:', existingSub.plan_name);
+          const validatedSub = validateSubscriptionPayload({ ...existingSub }) as Subscription;
+          
+          // Cross-device / Local storage fallback sync
+          const localRaw = typeof window !== 'undefined' ? localStorage.getItem(`makbills_sub_${uid}`) : null;
+          if (localRaw) {
+            try {
+              const localParsed = JSON.parse(localRaw);
+              if (
+                localParsed &&
+                localParsed.status === 'trialing' &&
+                localParsed.expires_at &&
+                new Date() < new Date(localParsed.expires_at)
+              ) {
+                if (validatedSub.plan_type === 'free' || !validatedSub.trial_used_plans || validatedSub.trial_used_plans.length === 0) {
+                  console.log('[Init] Merging active local trial into subscription state:', localParsed.plan_name);
+                  validatedSub.plan_name = localParsed.plan_name || validatedSub.plan_name;
+                  validatedSub.plan_type = localParsed.plan_type || validatedSub.plan_type;
+                  validatedSub.status = 'trialing';
+                  validatedSub.expires_at = localParsed.expires_at || validatedSub.expires_at;
+                  validatedSub.trial_started_at = localParsed.trial_started_at || validatedSub.trial_started_at;
+                  validatedSub.trial_used_plans = Array.from(new Set([
+                    ...(validatedSub.trial_used_plans || []),
+                    ...(localParsed.trial_used_plans || [])
+                  ]));
+                }
+              }
+            } catch (e) {
+              console.warn('[Init] Local sub merge note:', e);
+            }
+          }
+
+          setSubscription(validatedSub as Subscription);
+          setIsLoading(false);
+
+          if (validatedSub.status === 'trialing') {
+            await checkAndExpireTrials(validatedSub as Subscription);
+          } else if (validatedSub.plan_type === 'free' && (!validatedSub.trial_used_plans || validatedSub.trial_used_plans.length === 0)) {
+            const shownKey = `welcome_trial_shown_${uid}`;
+            if (typeof window !== 'undefined' && !localStorage.getItem(shownKey)) {
+              console.log('[WelcomeTrial] Showing modal for user:', uid);
+              setTimeout(() => setShowWelcomeTrialModal(true), 1200);
+            }
+          }
+        } else {
+          console.log('[Init] No DB subscription found — checking local fallback');
+          const localRaw = typeof window !== 'undefined' ? localStorage.getItem(`makbills_sub_${uid}`) : null;
+          if (localRaw) {
+            try {
+              const localParsed = JSON.parse(localRaw);
+              if (localParsed && localParsed.status === 'trialing' && localParsed.expires_at && new Date() < new Date(localParsed.expires_at)) {
+                console.log('[Init] ✅ Recovered active trial from local storage:', localParsed.plan_name);
+                const validatedLocal = validateSubscriptionPayload(localParsed) as Subscription;
+                setSubscription(validatedLocal);
+                setIsLoading(false);
+                return;
+              }
+            } catch (e) {
+              console.warn('[Init] Local storage recovery note:', e);
+            }
+          }
+          const { data: newSub, error: insertError } = await supabase
+            .from('subscriptions')
+            .upsert({
+              user_id: uid,
+              plan_name: 'Free',
+              plan_type: 'free',
+              status: 'active',
+              expires_at: null,
+              renews_at: null,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id' })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.warn('[Init] Supabase insert note: using local Free starter subscription fallback', insertError);
+            const fallbackSub: Subscription = {
+              id: `sub_free_${uid}`,
+              user_id: uid,
+              plan_name: 'Free',
+              plan_type: 'free',
+              status: 'active',
+              expires_at: null,
+              renews_at: null,
+              authorized_token_node: null,
+              trial_used_plans: [],
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+            setSubscription(fallbackSub);
+            setIsLoading(false);
+            return;
+          }
+
+          console.log('[Init] ✅ Created Free starter subscription');
+          const validatedNewSub = validateSubscriptionPayload(newSub) as Subscription;
+          setSubscription(validatedNewSub);
+          setIsLoading(false);
+
+          const shownKey = `welcome_trial_shown_${uid}`;
+          if (typeof window !== 'undefined' && !localStorage.getItem(shownKey)) {
+            console.log('[WelcomeTrial] Showing modal for new user:', uid);
+            setTimeout(() => setShowWelcomeTrialModal(true), 1200);
+          }
+        }
+
+        const nowIso = new Date().toISOString();
+        const { data: usageData } = await supabase
+          .from('subscription_usage')
+          .select('*')
+          .eq('user_id', uid)
+          .lte('period_start', nowIso)
+          .gte('period_end', nowIso)
+          .order('period_start', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (usageData) {
+          console.log('[Init] ✅ Usage found:', usageData.documents_used, usageData.reports_used);
+          setUsage({ ...usageData } as SubscriptionUsage);
+        } else {
+          console.log('[Init] No usage period found — creating new one');
+          const periodStart = new Date();
+          const periodEnd = new Date(periodStart.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+          const { data: newUsage } = await supabase
+            .from('subscription_usage')
+            .insert({
+              user_id: uid,
+              period_start: periodStart.toISOString(),
+              period_end: periodEnd.toISOString(),
+              documents_used: 0,
+              reports_used: 0,
+            })
+            .select()
+            .single();
+
+          if (newUsage) setUsage({ ...newUsage } as SubscriptionUsage);
+        }
+      } catch (err) {
+        console.error('[Init] Unexpected error:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeSubscription();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Read-only syncSubscription helper
+  const syncSubscription = useCallback(async (uid: string) => {
+    console.log('[Sync] Syncing for user:', uid);
     try {
-      const { data: subData } = await supabase
+      const { data: existingSub, error } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', uid)
         .maybeSingle();
 
-      let activeSub = subData as Subscription | null;
+      if (error) {
+        console.error('[Sync] Error fetching subscription:', error);
+        return;
+      }
 
-      if (!activeSub) {
-        const { data: { user } } = await supabase.auth.getUser();
-        const defaultSubPayload = {
-          user_id: uid,
-          user_email: user?.email || null,
-          user_phone: user?.phone || null,
-          plan_name: 'Free',
-          plan_type: 'free' as const,
-          status: 'active' as const,
-          expires_at: null,
-          renews_at: null,
-          trial_used_plans: [],
-          updated_at: new Date().toISOString(),
-        };
-
-        const { data: createdSub } = await supabase
+      if (existingSub) {
+        console.log('[Sync] ✅ Subscription found:', existingSub.plan_name, existingSub.status);
+        setSubscription(validateSubscriptionPayload({ ...existingSub }) as Subscription);
+      } else {
+        console.log('[Sync] No subscription — creating Free starter');
+        const { data: newSub } = await supabase
           .from('subscriptions')
-          .upsert(defaultSubPayload, { onConflict: 'user_id' })
+          .upsert({
+            user_id: uid,
+            plan_name: 'Free',
+            plan_type: 'free',
+            status: 'active',
+            expires_at: null,
+            renews_at: null,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' })
           .select()
           .single();
 
-        activeSub = (createdSub as Subscription) || (defaultSubPayload as any);
+        if (newSub) setSubscription(validateSubscriptionPayload(newSub) as Subscription);
       }
-
-      setSubscription(activeSub);
-
-      const activeUsage = await fetchCurrentUsage(uid);
-      setUsage(activeUsage);
     } catch (err) {
-      console.error('[SubscriptionContext] Fetch error:', err);
-    } finally {
-      setIsLoading(false);
+      console.error('[Sync] Unexpected error:', err);
     }
-  }, [fetchCurrentUsage]);
+  }, []);
 
-  // Trial expiry check
-  const checkAndExpireTrials = useCallback(async () => {
-    if (!subscription || subscription.status !== 'trialing') return;
-    const now = new Date();
-    if (!subscription.expires_at || now <= new Date(subscription.expires_at)) return;
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      await supabase.from('subscriptions').upsert({
-        user_id: user.id,
-        plan_name: 'Free',
-        plan_type: 'free',
-        status: 'expired',
-        expires_at: subscription.expires_at,
-        updated_at: now.toISOString(),
-        trial_used_plans: subscription.trial_used_plans,
-      }, { onConflict: 'user_id' });
-
-      await refreshSubscription();
-    } catch (e) {
-      console.error('[Trial Expiry Error]', e);
-    }
-  }, [subscription, refreshSubscription]);
-
-  // FIX 4: Realtime listener for subscription_usage correctly handling INSERT, UPDATE, & DELETE
+  // Realtime channel listener with lock check
   useEffect(() => {
     if (!userId) return;
 
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    let retryTimeout: NodeJS.Timeout | null = null;
-    let retryCount = 0;
-    const MAX_RETRIES = 5;
+    console.log('[Realtime] Setting up channel for userId:', userId);
 
-    const setupChannel = () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-        channel = null;
+    const channel = supabase
+      .channel(`makinvoices-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'subscriptions',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          if (isUpgradingRef.current || isUpgradeLocked(userId)) {
+            console.log('[Realtime] Subscription UPDATE received but blocked by upgrade lock');
+            return;
+          }
+          const validated = validateSubscriptionPayload({ ...payload.new });
+          console.log('[Realtime] Subscription UPDATE received:', {
+            plan: validated.plan_name,
+            expires: validated.expires_at,
+            status: validated.status,
+          });
+          setSubscription(validated as Subscription);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'subscriptions',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          if (isUpgradingRef.current || isUpgradeLocked(userId)) {
+            console.log('[Realtime] Subscription INSERT received but blocked by upgrade lock');
+            return;
+          }
+          const validated = validateSubscriptionPayload({ ...payload.new });
+          console.log('[Realtime] Subscription INSERT received:', validated);
+          setSubscription(validated as Subscription);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'subscription_usage',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('[Realtime] Usage UPDATE received:', {
+            documents: (payload.new as any).documents_used,
+            reports: (payload.new as any).reports_used,
+          });
+          setUsage({ ...payload.new } as SubscriptionUsage);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'subscription_usage',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('[Realtime] Usage INSERT received:', payload.new);
+          setUsage({ ...payload.new } as SubscriptionUsage);
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('[Realtime] Status:', status, err || '');
+        setIsSyncing(status !== 'SUBSCRIBED');
+
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] ✅ Listening for changes on userId:', userId);
+          refreshSubscription();
+        }
+      });
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[Sync] Tab visible — refreshing');
+        refreshSubscription();
       }
-
-      const channelName = `sub-${userId}-${Date.now()}`;
-      console.log('[Realtime] Setting up channel:', channelName);
-
-      channel = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'subscriptions',
-            filter: `user_id=eq.${userId}`,
-          },
-          (payload) => {
-            console.log('[Realtime] Subscription change received:', payload);
-            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-              setSubscription(payload.new as Subscription);
-            }
-            if (payload.eventType === 'DELETE') {
-              refreshSubscription();
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'subscription_usage',
-            filter: `user_id=eq.${userId}`,
-          },
-          (payload) => {
-            console.log('[Realtime] Usage change:', payload.eventType, payload.new);
-            
-            if (payload.eventType === 'INSERT') {
-              setUsage(payload.new as SubscriptionUsage);
-            }
-            
-            if (payload.eventType === 'UPDATE') {
-              setUsage(payload.new as SubscriptionUsage);
-              console.log('[Realtime] Usage synced:', {
-                documents: (payload.new as any).documents_used,
-                reports: (payload.new as any).reports_used,
-              });
-            }
-            
-            if (payload.eventType === 'DELETE') {
-              fetchCurrentUsage(userId).then(u => { if (u) setUsage(u); });
-            }
-          }
-        )
-        .subscribe((status, err) => {
-          console.log('[Realtime] Status:', status, 'Error:', err);
-
-          if (status === 'SUBSCRIBED') {
-            setIsSyncing(false);
-            retryCount = 0;
-            console.log('[Realtime] ✅ Connected successfully');
-          }
-
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            setIsSyncing(true);
-            console.warn('[Realtime] ⚠️ Connection issue:', status);
-            if (retryCount < MAX_RETRIES) {
-              retryCount++;
-              const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
-              console.log(`[Realtime] Retrying in ${delay}ms (attempt ${retryCount})`);
-              retryTimeout = setTimeout(setupChannel, delay);
-            }
-          }
-
-          if (status === 'CLOSED') {
-            setIsSyncing(true);
-            console.warn('[Realtime] Channel closed');
-          }
-        });
     };
 
-    setIsSyncing(true);
-    setupChannel();
-
-    const handleFocus = async () => {
-      console.log('[Sync] Window focused — refreshing subscription');
-      await refreshSubscription();
-      checkAndExpireTrials();
+    const handleFocus = () => {
+      console.log('[Sync] Window focused — refreshing');
+      refreshSubscription();
     };
 
     const handleOnline = () => {
-      console.log('[Sync] Network restored — reconnecting realtime');
-      setupChannel();
+      console.log('[Sync] Back online — refreshing');
+      refreshSubscription();
     };
 
-    const pollInterval = setInterval(() => {
-      console.log('[Sync] Poll tick — refreshing subscription');
-      refreshSubscription();
-    }, 30000);
+    const poll = setInterval(refreshSubscription, 15000);
 
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
     window.addEventListener('online', handleOnline);
 
     return () => {
-      console.log('[Realtime] Cleaning up channel');
-      if (channel) supabase.removeChannel(channel);
-      if (retryTimeout) clearTimeout(retryTimeout);
-      clearInterval(pollInterval);
+      console.log('[Realtime] Removing channel for userId:', userId);
+      supabase.removeChannel(channel);
+      clearInterval(poll);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('online', handleOnline);
     };
-  }, [userId, refreshSubscription, checkAndExpireTrials, fetchCurrentUsage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
+  // Read-only onAuthStateChange — NEVER writes Free plan
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUserId(session.user.id);
-        fetchSubscriptionData(session.user.id);
-      } else {
-        setIsLoading(false);
-      }
-    });
+    const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[Auth] Event:', event);
 
-    const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+      if (event === 'SIGNED_IN' && session?.user) {
         setUserId(session.user.id);
-        fetchSubscriptionData(session.user.id);
+        await syncSubscription(session.user.id);
+        await checkAndExpireTrials();
       }
+
+      if (event === 'TOKEN_REFRESHED' && session?.user) {
+        console.log('[Auth] Token refreshed — re-reading subscription');
+        setUserId(session.user.id);
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        if (sub) setSubscription(validateSubscriptionPayload(sub) as Subscription);
+      }
+
       if (event === 'SIGNED_OUT') {
         setSubscription(null);
         setUsage(null);
@@ -409,9 +706,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return () => {
       authListener.unsubscribe();
     };
-  }, [fetchSubscriptionData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Trial Helper Functions
   const canStartTrial = useCallback((planType: 'basic' | 'professional'): boolean => {
     if (!subscription) return true;
     if (['basic', 'professional', 'enterprise'].includes(subscription.plan_type) && subscription.status === 'active') return false;
@@ -425,10 +722,19 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       throw new Error(subscription?.trial_used_plans?.includes(planType) ? `Trial already used for ${planType}` : 'Ineligible for trial');
     }
 
+    isUpgradingRef.current = true;
     setIsLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      const activeUserId = user?.id || userId;
+      const activeEmail = user?.email || (typeof window !== 'undefined' ? localStorage.getItem('makbills_active_email') : null);
+
+      if (!activeUserId) {
+        throw new Error('Not authenticated');
+      }
+
+      const lockKey = `upgrade_lock_${activeUserId}`;
+      localStorage.setItem(lockKey, Date.now().toString());
 
       const planNames = { basic: 'Basic', professional: 'Professional' };
       const now = new Date();
@@ -437,40 +743,95 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       const currentTrialUsed = subscription?.trial_used_plans || [];
       const updatedTrialUsed = Array.from(new Set([...currentTrialUsed, planType]));
 
-      const { data: updatedSub, error } = await supabase
-        .from('subscriptions')
-        .upsert({
-          user_id: user.id,
-          user_email: user.email || null,
-          user_phone: user.phone || null,
-          plan_name: planNames[planType],
-          plan_type: planType,
-          status: 'trialing',
-          expires_at: trialEnd.toISOString(),
-          renews_at: trialEnd.toISOString(),
-          trial_started_at: now.toISOString(),
-          trial_used_plans: updatedTrialUsed,
-          authorized_token_node: `trial_${planType}_${user.id}`,
-          updated_at: now.toISOString(),
-        }, { onConflict: 'user_id' })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      await supabase.from('subscription_usage').insert({
-        user_id: user.id,
-        period_start: now.toISOString(),
-        period_end: trialEnd.toISOString(),
-        documents_used: 0,
-        reports_used: 0,
+      const trialPayload = validateSubscriptionPayload({
+        user_id: activeUserId,
+        user_email: activeEmail || null,
+        user_phone: null,
+        plan_name: planNames[planType],
+        plan_type: planType,
+        status: 'trialing',
+        expires_at: trialEnd.toISOString(),
+        renews_at: trialEnd.toISOString(),
+        trial_started_at: now.toISOString(),
+        trial_used_plans: updatedTrialUsed,
+        authorized_token_node: `trial_${planType}_${activeUserId}`,
+        updated_at: now.toISOString(),
       });
 
-      if (updatedSub) setSubscription(updatedSub as Subscription);
+      console.log('[Trial] Writing to DB:', trialPayload);
+      let dbError: any = null;
+
+      try {
+        await supabase.from('users').upsert({
+          uid: activeUserId,
+          email: activeEmail || null,
+          updatedAt: new Date().toISOString(),
+        }, { onConflict: 'uid' });
+      } catch (uErr) {}
+
+      try {
+        const { error } = await supabase
+          .from('subscriptions')
+          .upsert(trialPayload, { onConflict: 'user_id' });
+        if (error) dbError = error;
+      } catch (err: any) {
+        dbError = err;
+      }
+
+      // Always send to server API endpoint to guarantee trial and trial_used_plans persistence
+      try {
+        await fetch('/api/payments/save-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: activeUserId,
+            userEmail: activeEmail,
+            planName: planNames[planType],
+            planType: planType,
+            status: 'trialing',
+            trialUsedPlans: updatedTrialUsed,
+            authorizedTokenNode: `trial_${planType}_${activeUserId}`,
+          }),
+        });
+      } catch (apiErr) {
+        console.warn('[Trial] Server API sync warning:', apiErr);
+      }
+
+      // Try seeding usage period safely
+      try {
+        await supabase.from('subscription_usage').insert({
+          user_id: activeUserId,
+          period_start: now.toISOString(),
+          period_end: trialEnd.toISOString(),
+          documents_used: 0,
+          reports_used: 0,
+        });
+      } catch (usageErr) {
+        console.warn('[Trial] Usage seed warning:', usageErr);
+      }
+
+      // Activate active trial state & persist to local storage so user gets 30-day trial seamlessly
+      const activeSub = trialPayload as Subscription;
+      setSubscription(activeSub);
+
+      if (typeof window !== 'undefined') {
+        const appTier = planType === 'professional' ? 'pro' : planType === 'basic' ? 'basic' : 'unlimited';
+        localStorage.setItem(`makbills_sub_${activeUserId}`, JSON.stringify(activeSub));
+        localStorage.setItem('makbills_trial_active_plan', planType);
+        localStorage.setItem('makbills_subscription_tier', appTier);
+        localStorage.setItem('makbills_last_active_paid_tier', appTier);
+        localStorage.setItem('makbills_sub_expires_iso', trialEnd.toISOString());
+        window.dispatchEvent(new CustomEvent('mak_subscription_change', { detail: appTier }));
+      }
     } finally {
       setIsLoading(false);
+      setTimeout(() => {
+        isUpgradingRef.current = false;
+        if (userId) localStorage.removeItem(`upgrade_lock_${userId}`);
+        console.log('[Trial] Lock released — normal sync resumed');
+      }, 5000);
     }
-  }, [subscription, canStartTrial]);
+  }, [subscription, canStartTrial, userId]);
 
   const isOnTrial = useCallback((): boolean => {
     return subscription?.status === 'trialing';
@@ -484,125 +845,243 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
   }, [subscription]);
 
-  // Upgrade handler
   const upgradeSubscription = useCallback(async (
     planType: string,
     billingMode: 'monthly' | 'yearly',
     transactionId: string
-  ) => {
+  ): Promise<Subscription> => {
+    isUpgradingRef.current = true;
+    setIsLoading(true);
+
     const planNames: Record<string, string> = {
       basic: 'Basic',
       professional: 'Professional',
       enterprise: 'Enterprise',
     };
+    const prices: Record<string, { monthly: number; yearly: number }> = {
+      basic: { monthly: 199, yearly: 1990 },
+      professional: { monthly: 299, yearly: 2990 },
+      enterprise: { monthly: 599, yearly: 5990 },
+    };
 
-    const days = billingMode === 'monthly' ? 30 : 365;
-    const expiresAt = new Date(Date.now() + days * 86400000).toISOString();
-    const { data: { user } } = await supabase.auth.getUser();
+    let userObjId = '';
 
-    if (!user) throw new Error('Authentication required to upgrade');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      userObjId = user.id;
 
-    const mappedPlanType = (planType.toLowerCase().includes('pro') ? 'professional' : planType.toLowerCase().includes('basic') ? 'basic' : planType.toLowerCase().includes('ent') ? 'enterprise' : 'free') as 'free' | 'basic' | 'professional' | 'enterprise';
-    const planName = planNames[mappedPlanType] || 'Free';
+      const lockKey = `upgrade_lock_${user.id}`;
+      localStorage.setItem(lockKey, Date.now().toString());
 
-    const { data: updatedSub, error } = await supabase
-      .from('subscriptions')
-      .upsert({
+      const mappedPlanType = (planType.toLowerCase().includes('pro') ? 'professional' : planType.toLowerCase().includes('basic') ? 'basic' : planType.toLowerCase().includes('ent') ? 'enterprise' : 'free') as 'free' | 'basic' | 'professional' | 'enterprise';
+      const planName = planNames[mappedPlanType] || 'Free';
+
+      const now = new Date();
+      const days = billingMode === 'monthly' ? 30 : 365;
+      const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
+
+      const upgradePayload = validateSubscriptionPayload({
         user_id: user.id,
         user_email: user.email || null,
         user_phone: user.phone || null,
         plan_name: planName,
         plan_type: mappedPlanType,
         status: 'active',
-        expires_at: expiresAt,
-        renews_at: expiresAt,
-        authorized_token_node: transactionId,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' })
-      .select()
-      .single();
+        activated_at: now.toISOString(),
+        expires_at: mappedPlanType === 'free' ? null : expiresAt,
+        renews_at: mappedPlanType === 'free' ? null : expiresAt,
+        authorized_token_node: transactionId || `manual_${mappedPlanType}_${Date.now()}`,
+        updated_at: now.toISOString(),
+      });
 
-    if (error) throw error;
+      console.log('[Upgrade] Writing to DB:', upgradePayload);
 
-    const now = new Date();
-    await supabase.from('subscription_usage').insert({
-      user_id: user.id,
-      period_start: now.toISOString(),
-      period_end: expiresAt,
-      documents_used: 0,
-      reports_used: 0,
-    });
+      const { error: upsertError } = await supabase
+        .from('subscriptions')
+        .upsert(upgradePayload, { onConflict: 'user_id' });
 
-    if (updatedSub) setSubscription(updatedSub as Subscription);
+      if (upsertError) {
+        console.error('[Upgrade] Upsert failed:', upsertError);
+        throw upsertError;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const { data: verified, error: verifyError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      console.log('[Upgrade] DB verification result:', verified?.plan_name, verified?.plan_type);
+
+      if (verifyError || !verified || verified.plan_type !== mappedPlanType) {
+        console.error('[Upgrade] DB was overwritten or unverified! Re-writing paid plan...');
+        await supabase
+          .from('subscriptions')
+          .upsert({
+            ...upgradePayload,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' });
+
+        const { data: verified2 } = await supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!verified2 || verified2.plan_type !== mappedPlanType) {
+          throw new Error(
+            `Upgrade failed: DB shows ${verified2?.plan_type} instead of ${mappedPlanType}. ` +
+            `Another process is overwriting the subscription.`
+          );
+        }
+      }
+
+      const finalSub = verified || upgradePayload;
+      console.log('[Upgrade] ✅ Verified in DB:', finalSub.plan_name);
+
+      setSubscription({ ...finalSub } as Subscription);
+
+      const isYearlyPlan = billingMode === 'yearly';
+      const seededRows = await seedUsagePeriods(supabase, user.id, isYearlyPlan, now);
+      if (seededRows && seededRows.length > 0) {
+        setUsage({ ...seededRows[0] } as SubscriptionUsage);
+      }
+
+      emitNotification(
+        `✅ Upgraded to ${planName}!`,
+        `Active on all your devices. ₹${prices[mappedPlanType]?.[billingMode] || 0}/${billingMode === 'monthly' ? 'mo' : 'yr'}`,
+        'success'
+      );
+
+      return finalSub as Subscription;
+    } catch (err: any) {
+      console.error('[Upgrade] Failed:', err);
+      emitNotification('Upgrade Failed', err.message || 'Payment upgrade failed', 'error');
+      throw err;
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => {
+        isUpgradingRef.current = false;
+        if (userObjId) localStorage.removeItem(`upgrade_lock_${userObjId}`);
+        console.log('[Upgrade] Lock released — normal sync resumed');
+      }, 10000);
+    }
   }, []);
 
-  // FIX 1: trackDocumentUsage — always write to Supabase FIRST and return Promise<boolean>
   const trackDocumentUsage = useCallback(async (): Promise<boolean> => {
-    if (!userId || !usage) return false;
-    
-    const limit = PLAN_LIMITS[subscription?.plan_type || 'free'].documents;
-    if (usage.documents_used >= limit) {
-      console.warn('[Usage] Document limit reached:', usage.documents_used, 'Limit:', limit);
-      return false;
+    if (!userId) {
+      console.warn('[trackDocumentUsage] No userId present, allowing local save');
+      return true;
     }
 
     try {
-      const newCount = usage.documents_used + 1;
-      
-      const { data, error } = await supabase
+      const nowIso = new Date().toISOString();
+      let { data: freshUsage } = await supabase
         .from('subscription_usage')
-        .update({
-          documents_used: newCount,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', usage.id)
-        .select()
-        .single();
+        .select('*')
+        .eq('user_id', userId)
+        .lte('period_start', nowIso)
+        .gte('period_end', nowIso)
+        .order('period_start', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      if (error) throw error;
-      
-      setUsage(data as SubscriptionUsage);
-      console.log('[Usage] Document tracked:', newCount);
+      if (!freshUsage) {
+        console.warn('[trackDocumentUsage] No usage row found — initializing default row');
+        const now = new Date();
+        const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const { data: createdUsage } = await supabase
+          .from('subscription_usage')
+          .insert({
+            user_id: userId,
+            period_start: now.toISOString(),
+            period_end: periodEnd.toISOString(),
+            documents_used: 0,
+            reports_used: 0,
+          })
+          .select()
+          .single();
+        freshUsage = createdUsage;
+      }
+
+      const planType = (subscription?.plan_type || 'free') as keyof typeof PLAN_LIMITS;
+      const limit = (PLAN_LIMITS[planType] || PLAN_LIMITS.free).documents;
+
+      if (freshUsage && freshUsage.documents_used >= limit) {
+        emitNotification('Document Limit Reached', `You have used ${freshUsage.documents_used}/${limit} documents. Upgrade to create more.`, 'error');
+        return false;
+      }
+
+      if (freshUsage) {
+        const { data, error } = await supabase
+          .from('subscription_usage')
+          .update({
+            documents_used: freshUsage.documents_used + 1,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', freshUsage.id)
+          .select()
+          .single();
+
+        if (!error && data) {
+          setUsage({ ...data } as SubscriptionUsage);
+        }
+      }
       return true;
     } catch (err: any) {
-      console.error('[trackDocumentUsage Error]', err);
-      return false;
+      console.error('[trackDocumentUsage] Non-fatal exception:', err);
+      return true;
     }
-  }, [userId, usage, subscription]);
+  }, [userId, subscription]);
 
-  // FIX 2: trackReportUsage — always write to Supabase FIRST and return Promise<boolean>
   const trackReportUsage = useCallback(async (): Promise<boolean> => {
-    if (!userId || !usage) return false;
+    if (!userId) return false;
 
-    const limit = PLAN_LIMITS[subscription?.plan_type || 'free'].reports;
-    if (usage.reports_used >= limit) {
-      console.warn('[Usage] Report limit reached:', usage.reports_used, 'Limit:', limit);
+    const nowIso = new Date().toISOString();
+    const { data: freshUsage } = await supabase
+      .from('subscription_usage')
+      .select('*')
+      .eq('user_id', userId)
+      .lte('period_start', nowIso)
+      .gte('period_end', nowIso)
+      .order('period_start', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!freshUsage) return false;
+
+    const planType = (subscription?.plan_type || 'free') as keyof typeof PLAN_LIMITS;
+    const limit = PLAN_LIMITS[planType].reports;
+
+    if (freshUsage.reports_used >= limit) {
+      emitNotification('Report Limit Reached', `You have used ${freshUsage.reports_used}/${limit} reports. Upgrade to generate more.`, 'error');
       return false;
     }
 
     try {
-      const newCount = usage.reports_used + 1;
-
       const { data, error } = await supabase
         .from('subscription_usage')
         .update({
-          reports_used: newCount,
+          reports_used: freshUsage.reports_used + 1,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', usage.id)
+        .eq('id', freshUsage.id)
         .select()
         .single();
 
       if (error) throw error;
 
-      setUsage(data as SubscriptionUsage);
-      console.log('[Usage] Report tracked:', newCount);
+      setUsage({ ...data } as SubscriptionUsage);
       return true;
     } catch (err: any) {
-      console.error('[trackReportUsage Error]', err);
+      console.error('[trackReportUsage] Failed:', err);
+      emitNotification('Usage Error', 'Failed to track usage', 'error');
       return false;
     }
-  }, [userId, usage, subscription]);
+  }, [userId, subscription]);
 
   const currentPlanType = (subscription?.plan_type || 'free') as keyof typeof PLAN_LIMITS;
   
@@ -611,7 +1090,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, [currentPlanType]);
 
   const getReportLimit = useCallback(() => {
-    return PLAN_LIMITS[currentPlanType]?.reports ?? 2;
+    return PLAN_LIMITS[currentPlanType]?.reports ?? 1;
   }, [currentPlanType]);
 
   const canCreateDocument = useCallback(() => {
@@ -653,6 +1132,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       isOnTrial,
       getTrialDaysRemaining,
       checkAndExpireTrials,
+      getExpiryDisplayInfo: () => getExpiryDisplay(subscription),
+      getExpiryLabel: (sub: Subscription) => getExpiryDisplay(sub).value,
+      showWelcomeTrialModal,
+      dismissWelcomeTrialModal,
     }}>
       {children}
     </SubscriptionContext.Provider>

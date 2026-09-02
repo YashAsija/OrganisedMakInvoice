@@ -478,7 +478,7 @@ export default function App() {
   useEffect(() => {
     const handleSubChange = (e: any) => {
       const newTier = e.detail || localStorage.getItem('makbills_subscription_tier') || 'free';
-      setSubscriptionTier(newTier as any);
+      setSubscriptionTier(prev => (prev === newTier ? prev : (newTier as any)));
     };
     window.addEventListener('mak_subscription_change', handleSubChange);
     window.addEventListener('storage', handleSubChange);
@@ -805,57 +805,35 @@ export default function App() {
       });
     }
 
-    // Invoices list (combines suffixed and guest storage to prevent loss across auth shifts)
-    const localMap = new Map<string, Invoice>();
-    const localSourcesInit = [
-      localStorage.getItem(`invoice_maker_invoices${suffix}`),
-      localStorage.getItem('invoice_maker_invoices')
-    ];
-    localSourcesInit.forEach(raw => {
-      if (raw) {
-        try {
-          const list: Invoice[] = JSON.parse(raw);
-          if (Array.isArray(list)) {
-            list.forEach((inv: Invoice) => {
-              if (inv && inv.id) {
-                const existing = localMap.get(inv.id);
-                if (!existing) localMap.set(inv.id, inv);
-                else localMap.set(inv.id, { ...existing, ...inv });
-              }
-            });
-          }
-        } catch (e) {}
+    // Invoices list: strictly scoped to current user account
+    const localRawInvoices = localStorage.getItem(`invoice_maker_invoices${suffix}`);
+    if (localRawInvoices) {
+      try {
+        const list: Invoice[] = JSON.parse(localRawInvoices);
+        if (Array.isArray(list)) {
+          const visibleInvoicesList = list.filter((inv: any) => !inv._pendingDelete);
+          setInvoices(visibleInvoicesList);
+        } else {
+          setInvoices([]);
+        }
+      } catch (e) {
+        setInvoices([]);
       }
-    });
-
-    const initialInvoicesList = Array.from(localMap.values());
-    const visibleInvoicesList = initialInvoicesList.filter((inv: any) => !inv._pendingDelete);
-    setInvoices(visibleInvoicesList);
-    if (initialInvoicesList.length > 0) {
-      localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(initialInvoicesList));
-      localStorage.setItem('invoice_maker_invoices', JSON.stringify(initialInvoicesList));
+    } else {
+      setInvoices([]);
     }
 
-    // Presets catalog
+    // Presets catalog: strictly scoped to current user account
     const localPresets = localStorage.getItem(`invoice_maker_presets${suffix}`);
     if (localPresets) {
       try {
         setPresets(JSON.parse(localPresets));
       } catch (e) {
         console.warn('Failed to parse local presets');
+        setPresets([]);
       }
     } else {
-      // Load standard freelance templates catalog
-      const standardTemplateItems = BUSINESS_TEMPLATES[0].items.map(it => ({
-        id: it.id,
-        userId: user?.id || '',
-        name: it.name,
-        rate: it.rate,
-        taxPercentage: it.taxPercentage,
-        description: it.description
-      }));
-      setPresets(standardTemplateItems);
-      localStorage.setItem(`invoice_maker_presets${suffix}`, JSON.stringify(standardTemplateItems));
+      setPresets([]);
     }
 
     // Clients list
@@ -931,13 +909,53 @@ export default function App() {
           const lastUser = typeof window !== 'undefined' ? localStorage.getItem('makbills_last_user') : null;
           
           if (activeEmail && lastUser && activeEmail !== lastUser) {
+            const locConfig = getLocalizationConfig();
+            setProfile({
+              uid: '',
+              name: '',
+              displayName: '',
+              ownerName: '',
+              email: activeEmail || '',
+              phone: '',
+              mobile: '',
+              address: '',
+              taxId: '',
+              pan: '',
+              currency: locConfig.currency || 'INR',
+              defaultTaxRate: locConfig.defaultTaxRate || 18,
+              bankName: '',
+              accountNumber: '',
+              ifsc: '',
+              upiId: '',
+              logoUrl: '',
+              signature: '',
+              updatedAt: new Date().toISOString()
+            });
             setInvoices([]);
             setClients([]);
             setExpenses([]);
             setPresets([]);
             setCustomTemplates([]);
             if (typeof window !== 'undefined') {
+              localStorage.removeItem('makbills_custom_email');
+              localStorage.removeItem('makbills_custom_brand');
+              localStorage.removeItem('makbills_custom_phone');
+              localStorage.removeItem('makbills_custom_owner');
+              localStorage.removeItem('invoice_maker_biz_profile');
+              localStorage.removeItem('invoice_maker_invoices');
+              localStorage.removeItem('invoice_maker_clients');
+              localStorage.removeItem('invoice_maker_expenses');
+              localStorage.removeItem('invoice_maker_presets');
               localStorage.removeItem('makbills_custom_templates');
+              localStorage.removeItem('makbills_masters_vendors');
+              localStorage.removeItem('makbills_masters_actual_vendors');
+              localStorage.removeItem('makbills_masters_transports');
+              localStorage.removeItem('makbills_masters_hsn');
+              localStorage.removeItem('makbills_masters_materials');
+              localStorage.removeItem('makbills_masters_categories');
+              localStorage.removeItem('makbills_masters_subcategories');
+              localStorage.removeItem('makbills_masters_gl');
+              localStorage.removeItem('makbills_masters_mappings');
             }
           }
           if (activeEmail && typeof window !== 'undefined') {
@@ -1056,30 +1074,30 @@ export default function App() {
             } else {
               const initProf: BusinessProfile = {
                 uid,
-                name: companySettings?.business_name || (typeof window !== 'undefined' ? localStorage.getItem('makbills_custom_brand') : null) || profile.name || '',
-                displayName: companySettings?.owner_name || (typeof window !== 'undefined' ? localStorage.getItem('makbills_custom_owner') : null) || profile.displayName || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '',
-                ownerName: companySettings?.owner_name || (typeof window !== 'undefined' ? localStorage.getItem('makbills_custom_owner') : null) || profile.ownerName || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '',
-                email: companySettings?.email || profile.email || currentUser.email || '',
-                phone: companySettings?.mobile || profile.phone || '',
+                name: companySettings?.business_name || '',
+                displayName: companySettings?.owner_name || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '',
+                ownerName: companySettings?.owner_name || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '',
+                email: companySettings?.email || currentUser.email || activeEmail || '',
+                phone: companySettings?.mobile || '',
                 mobile: companySettings?.mobile || '',
-                address: companySettings?.address || profile.address || '',
-                taxId: companySettings?.gstin || profile.taxId || '',
-                pan: companySettings?.pan || profile.pan || '',
-                country: companySettings?.country || profile.country || '',
-                state: companySettings?.state || profile.state || '',
-                stateCode: companySettings?.state_code || profile.stateCode || '',
-                currency: companySettings?.currency || deriveCurrencyCode(companySettings?.currency_symbol, profile.currency || 'INR'),
-                currencySymbol: companySettings?.currency_symbol || profile.currencySymbol || '',
-                taxMode: companySettings?.tax_mode || profile.taxMode || 'dynamic',
-                customTaxName: companySettings?.custom_tax_name || profile.customTaxName || 'Tax',
-                customTaxPercentage: companySettings?.custom_tax_percentage !== undefined ? companySettings.custom_tax_percentage : profile.customTaxPercentage,
-                defaultTaxRate: companySettings?.default_tax_rate !== undefined ? companySettings.default_tax_rate : (profile.defaultTaxRate || 18),
-                logoUrl: companySettings?.logo_url || profile.logoUrl || '',
-                signature: companySettings?.signature_url || profile.signature || '',
-                bankName: companySettings?.bank_name || profile.bankName || '',
-                accountNumber: companySettings?.account_number || profile.accountNumber || '',
-                ifsc: companySettings?.ifsc || profile.ifsc || '',
-                upiId: companySettings?.upi_id || profile.upiId || '',
+                address: companySettings?.address || '',
+                taxId: companySettings?.gstin || '',
+                pan: companySettings?.pan || '',
+                country: companySettings?.country || 'India',
+                state: companySettings?.state || '',
+                stateCode: companySettings?.state_code || '',
+                currency: companySettings?.currency || deriveCurrencyCode(companySettings?.currency_symbol, 'INR'),
+                currencySymbol: companySettings?.currency_symbol || '₹',
+                taxMode: companySettings?.tax_mode || 'dynamic',
+                customTaxName: companySettings?.custom_tax_name || 'Tax',
+                customTaxPercentage: companySettings?.custom_tax_percentage !== undefined ? companySettings.custom_tax_percentage : 18,
+                defaultTaxRate: companySettings?.default_tax_rate !== undefined ? companySettings.default_tax_rate : 18,
+                logoUrl: companySettings?.logo_url || '',
+                signature: companySettings?.signature_url || '',
+                bankName: companySettings?.bank_name || '',
+                accountNumber: companySettings?.account_number || '',
+                ifsc: companySettings?.ifsc || '',
+                upiId: companySettings?.upi_id || '',
                 updatedAt: new Date().toISOString()
               };
               await supabase.from('users').upsert(initProf);
@@ -1179,8 +1197,8 @@ export default function App() {
                 }
               }
 
-              // Update state & local storage from database single source of truth
-              setSubscriptionTier(fetchedTier);
+              // Update state & local storage from database single source of truth only if changed
+              setSubscriptionTier(prev => (prev === fetchedTier ? prev : fetchedTier));
               localStorage.setItem('makbills_subscription_tier', fetchedTier);
             } catch (err) {
               console.warn('[SUPABASE SUBSCRIPTION FETCH EXCEPTION]:', err);
@@ -1222,7 +1240,7 @@ export default function App() {
             .subscribe();
           activeChannels.push(subscriptionChannel);
 
-          // 1d. Focus re-check, visibilitychange & fast periodic poll (Guarantees multi-device sync across laptops, phones, tablets)
+          // 1d. Focus re-check & steady periodic poll (Guarantees multi-device sync across laptops, phones, tablets)
           const handleWindowFocus = () => {
             syncCloudSubscriptionTier();
           };
@@ -1230,7 +1248,7 @@ export default function App() {
           window.addEventListener('visibilitychange', handleWindowFocus);
           const subPollInterval = setInterval(() => {
             syncCloudSubscriptionTier();
-          }, 5_000);
+          }, 30_000);
 
           activeChannels.push({
             unsubscribe: () => {
@@ -1325,7 +1343,6 @@ export default function App() {
             setInvoices(finalInvoices);
             isCloudLoadedRef.current = true;
             localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(finalInvoices));
-            localStorage.setItem('invoice_maker_invoices', JSON.stringify(finalInvoices));
           } catch (err) {
             console.warn('[SUPABASE GET INVOICES EXCEPTION]:', err);
             handleSupabaseError(err, OperationType.GET, `invoices[userId=${uid}]`);
@@ -1353,7 +1370,6 @@ export default function App() {
                     const finalInvoices2 = reconcileCloudInvoicesWithPending(data, suffix);
                     setInvoices(finalInvoices2);
                     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(finalInvoices2));
-                    localStorage.setItem('invoice_maker_invoices', JSON.stringify(finalInvoices2));
                   }
                 } catch (err) {
                   console.warn("Error in realtime invoice sync:", String(err));
@@ -1644,6 +1660,17 @@ export default function App() {
             localStorage.removeItem('makbills_custom_templates');
             localStorage.removeItem('makbills_last_user');
             localStorage.removeItem('makbills_subscription_tier');
+            localStorage.removeItem('makbills_masters_vendors');
+            localStorage.removeItem('makbills_masters_actual_vendors');
+            localStorage.removeItem('makbills_masters_transports');
+            localStorage.removeItem('makbills_masters_hsn');
+            localStorage.removeItem('makbills_masters_materials');
+            localStorage.removeItem('makbills_masters_categories');
+            localStorage.removeItem('makbills_masters_subcategories');
+            localStorage.removeItem('makbills_masters_gl');
+            localStorage.removeItem('makbills_masters_mappings');
+            window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
+            window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
           }
           setProfile({
             uid: '',
@@ -2229,12 +2256,49 @@ export default function App() {
       localStorage.removeItem('invoice_maker_clients');
       localStorage.removeItem('invoice_maker_expenses');
       localStorage.removeItem('makbills_notifications');
+      localStorage.removeItem('makbills_masters_vendors');
+      localStorage.removeItem('makbills_masters_actual_vendors');
+      localStorage.removeItem('makbills_masters_transports');
+      localStorage.removeItem('makbills_masters_hsn');
+      localStorage.removeItem('makbills_masters_materials');
+      localStorage.removeItem('makbills_masters_categories');
+      localStorage.removeItem('makbills_masters_subcategories');
+      localStorage.removeItem('makbills_masters_gl');
+      localStorage.removeItem('makbills_masters_mappings');
+      window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
+      window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
+      window.dispatchEvent(new CustomEvent('makbills_sync_transports'));
 
       setUser(null);
       setUserEmail(null);
+      const locConfig = getLocalizationConfig();
+      setProfile({
+        uid: '',
+        name: '',
+        displayName: '',
+        ownerName: '',
+        email: '',
+        phone: '',
+        mobile: '',
+        address: '',
+        taxId: '',
+        pan: '',
+        currency: locConfig.currency || 'INR',
+        defaultTaxRate: locConfig.defaultTaxRate || 18,
+        bankName: '',
+        accountNumber: '',
+        ifsc: '',
+        upiId: '',
+        logoUrl: '',
+        signature: '',
+        updatedAt: new Date().toISOString()
+      });
+      setInvoices([]);
+      setClients([]);
+      setExpenses([]);
+      setPresets([]);
+      setCustomTemplates([]);
       isCloudLoadedRef.current = false;
-      // Data falls back to default local storage
-      loadLocalData();
     } catch (e) {
       console.error('Logout failed:', e);
     }
@@ -2593,8 +2657,9 @@ export default function App() {
     // Process Vendor details for Purchase Ledger documents
     const processVendorDetails = async (invoiceObj: Invoice) => {
       try {
-        const suffixKey = typeof window !== 'undefined' ? (localStorage.getItem('makbills_company_suffix') || '') : '';
-        const cachedRaw = typeof window !== 'undefined' ? (localStorage.getItem(`makbills_masters_actual_vendors${suffixKey}`) || localStorage.getItem('makbills_masters_actual_vendors')) : null;
+        const activeEmail = user?.email || (typeof window !== 'undefined' ? localStorage.getItem('makbills_user_email') : '') || '';
+        const suffixKey = activeEmail ? `_${encodeURIComponent(activeEmail)}` : (typeof window !== 'undefined' ? (localStorage.getItem('makbills_company_suffix') || '') : '');
+        const cachedRaw = typeof window !== 'undefined' && suffixKey ? localStorage.getItem(`makbills_masters_actual_vendors${suffixKey}`) : null;
         let existingVendors: any[] = cachedRaw ? JSON.parse(cachedRaw) : [];
 
         const vendorsToUpsert: any[] = [];
@@ -2723,12 +2788,8 @@ export default function App() {
           }
         }
 
-        if (vendorsToUpsert.length > 0 && typeof window !== 'undefined') {
+        if (vendorsToUpsert.length > 0 && typeof window !== 'undefined' && suffixKey) {
           localStorage.setItem(`makbills_masters_actual_vendors${suffixKey}`, JSON.stringify(existingVendors));
-          if (suffix) {
-            localStorage.setItem(`makbills_masters_actual_vendors${suffix}`, JSON.stringify(existingVendors));
-          }
-          localStorage.setItem('makbills_masters_actual_vendors', JSON.stringify(existingVendors));
           window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
 
           const activeUid = await resolveSessionUid();
@@ -3241,16 +3302,16 @@ export default function App() {
     alert(`Successfully loaded '${template.name}' presets!`);
   };
 
-  // 6. Sync local unsynced invoices up to cloud (Triggered upon login)
+  // 6. Sync local unsynced invoices up to cloud (Triggered only for current user's suffixed pending items)
   const handleSyncLocalInvoices = async () => {
-    if (!user) return;
+    if (!user || !userEmail) return;
 
-    // Load guest/offline data from localStorage (suffix is '')
-    const localInvoicesStr = localStorage.getItem('invoice_maker_invoices');
-    const localClientsStr = localStorage.getItem('invoice_maker_clients');
-    const localExpensesStr = localStorage.getItem('invoice_maker_expenses');
-    const localPresetsStr = localStorage.getItem('invoice_maker_presets');
-    const localProfileStr = localStorage.getItem('invoice_maker_biz_profile');
+    const currentSuffix = `_${encodeURIComponent(userEmail)}`;
+    const localInvoicesStr = localStorage.getItem(`invoice_maker_invoices${currentSuffix}`);
+    const localClientsStr = localStorage.getItem(`invoice_maker_clients${currentSuffix}`);
+    const localExpensesStr = localStorage.getItem(`invoice_maker_expenses${currentSuffix}`);
+    const localPresetsStr = localStorage.getItem(`invoice_maker_presets${currentSuffix}`);
+    const localProfileStr = localStorage.getItem(`invoice_maker_biz_profile${currentSuffix}`);
 
     try {
       // 1. Sync Invoices
@@ -3415,39 +3476,7 @@ export default function App() {
     setExpenses(updated);
     localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(updated));
 
-    // Save vendor to Billed Vendors Directory (actualVendors) if vendor string exists
-    if (expense.vendor && expense.vendor.trim()) {
-      try {
-        const vName = expense.vendor.trim();
-        const suffixKey = typeof window !== 'undefined' ? (localStorage.getItem('makbills_company_suffix') || '') : '';
-        const cachedRaw = typeof window !== 'undefined' ? (localStorage.getItem(`makbills_masters_actual_vendors${suffixKey}`) || localStorage.getItem('makbills_masters_actual_vendors')) : null;
-        let existingVendors: any[] = cachedRaw ? JSON.parse(cachedRaw) : [];
-        const existsVendor = existingVendors.some(v => (v.name || '').toLowerCase() === vName.toLowerCase() || (v.company || '').toLowerCase() === vName.toLowerCase());
-        if (!existsVendor) {
-          const newVendor = {
-            id: `av_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-            name: vName,
-            company: vName,
-            email: '',
-            phone: '',
-            address: '',
-            gstin: '',
-            pan: '',
-            state: '',
-            country: 'India',
-            category: expense.category || 'Vendor',
-          };
-          existingVendors = [newVendor, ...existingVendors];
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(`makbills_masters_actual_vendors${suffixKey}`, JSON.stringify(existingVendors));
-            localStorage.setItem('makbills_masters_actual_vendors', JSON.stringify(existingVendors));
-            window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
-          }
-        }
-      } catch (eErr) {
-        console.warn('[handleSaveExpense] Vendor save warning:', eErr);
-      }
-    }
+
 
     const activeUid = await resolveSessionUid();
     if (activeUid) {

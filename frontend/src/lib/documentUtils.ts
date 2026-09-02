@@ -259,11 +259,14 @@ export const upsertSupabaseClient = async (
 
 // ─── Combined Save ────────────────────────────────────────────────────────────
 
+import { pushMasterRegistriesToCloud, getLocalMasterRegistry } from './masterRegistrySync';
+
 /**
  * Primary entry point called after every successful document save.
  *
  * 1. Always writes to localStorage master registry (offline-first)
  * 2. For sales documents: also upserts to Supabase `clients` table
+ * 3. Syncs updated master database with Supabase cloud across all devices
  *
  * @param details  - Extracted client/vendor details from the document
  * @param docType  - The invoiceType string from InvoiceModal (e.g. 'invoice', 'purchases')
@@ -282,5 +285,22 @@ export const persistBilledParty = async (
   // 2. For sales documents, also sync to Supabase clients table
   if (isSalesDocument(docType) && userId) {
     await upsertSupabaseClient(details, userId);
+  }
+
+  // 3. Sync updated master database with Supabase cloud across all devices
+  if (userId) {
+    try {
+      const isSales = isSalesDocument(docType);
+      const key = isSales ? 'makbills_masters_vendors' : 'makbills_masters_actual_vendors';
+      const updatedList = getLocalMasterRegistry(key, suffix);
+      const transportList = getLocalMasterRegistry('makbills_masters_transports', suffix);
+
+      await pushMasterRegistriesToCloud(userId, suffix, {
+        [isSales ? 'vendors' : 'actualVendors']: updatedList,
+        transports: transportList,
+      });
+    } catch (err) {
+      console.warn('[documentUtils] Failed to sync master party to cloud:', err);
+    }
   }
 };

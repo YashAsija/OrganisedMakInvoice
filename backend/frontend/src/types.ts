@@ -102,6 +102,26 @@ export interface Invoice {
   _pendingDelete?: boolean;
 }
 
+export interface GSTResult {
+  success: boolean;
+  error?: string;
+  companyName?: string;
+  tradeName?: string;
+  address?: {
+    building: string;
+    plot: string;
+    street: string;
+    locality: string;
+    city: string;
+    state: string;
+    pincode: string;
+    fullAddress: string;
+  };
+  status?: string;
+  businessType?: string;
+  registrationDate?: string;
+}
+
 export interface ClientProfile {
   id: string;
   userId: string;
@@ -110,6 +130,11 @@ export interface ClientProfile {
   address: string;
   email: string;
   phone: string;
+  country?: string;
+  state?: string;
+  taxId?: string;
+  gstin?: string;
+  pan?: string;
   createdAt: string;
   updatedAt: string;
   _pendingSync?: boolean;

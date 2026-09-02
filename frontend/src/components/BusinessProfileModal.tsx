@@ -652,51 +652,55 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           setDefaultNotes(settings.default_notes || 'Thank you for your business.');
           setDefaultTerms(settings.default_terms || 'Goods once sold will not be taken back or exchanged.');
         } else {
-          // If no row exists yet, use props / defaults
-          setName(profile.name || '');
-          setDisplayName(profile.displayName || '');
-          setWebsite(profile.website || '');
-          setEmail(profile.email || '');
-          setPhone(profile.phone || '');
-          setAddress(profile.address || '');
-          setTaxId(profile.taxId || '');
-          setPan(profile.pan || '');
-          setCurrency(profile.currency || 'INR');
-          setDefaultTaxRate(profile.defaultTaxRate || 0);
-          setLogoUrl(profile.logoUrl || '');
-          setSignature(profile.signature || '');
-          setSignatureSize(profile.signatureSize || 150);
-          setThemeAccent(profile.themeAccent || 'sky');
-          setInvoiceFont(profile.invoiceFont || 'inter');
-          setInvoiceLayout(profile.invoiceLayout || 'professional');
+          // If no row exists yet for this user, strictly initialize with active user's auth metadata and empty strings
+          setName('');
+          setDisplayName(user.user_metadata?.full_name || user.user_metadata?.name || '');
+          setWebsite('');
+          setEmail(user.email || '');
+          setPhone(user.phone || '');
+          setAddress('');
+          setTaxId('');
+          setPan('');
+          setCurrency('INR');
+          setDefaultTaxRate(18);
+          setLogoUrl('');
+          setSignature('');
+          setSignatureSize(150);
+          setThemeAccent('sky');
+          setInvoiceFont('inter');
+          setInvoiceLayout('professional');
 
-          setCompanyCode(profile.companyCode || '');
-          setState(profile.state || '');
-          setStateCode(profile.stateCode || '');
-          setCountry(profile.country || '');
-          setCurrencySymbol(profile.currencySymbol || '');
-          setMobile(profile.mobile || '');
+          setCompanyCode('');
+          setState('');
+          setStateCode('');
+          setCountry('India');
+          setCurrencySymbol('₹');
+          setMobile(user.phone || '');
 
-          setBankName(profile.bankName || '');
-          setAccountNumber(profile.accountNumber || '');
-          setIfsc(profile.ifsc || '');
-          setUpiId(profile.upiId || '');
+          setBankName('');
+          setAccountNumber('');
+          setIfsc('');
+          setUpiId('');
 
-          setInvoicePrefix(profile.invoicePrefix || 'INV');
-          setStartingInvoiceNumber(profile.startingInvoiceNumber || '1');
-          setProformaPrefix(profile.proformaPrefix || 'PI');
-          setStartingProformaNumber(profile.startingProformaNumber || '1');
-          setDebitNotePrefix(profile.debitNotePrefix || 'DN');
-          setStartingDebitNoteNumber(profile.startingDebitNoteNumber || '1');
-          setCreditNotePrefix(profile.creditNotePrefix || 'CN');
-          setStartingCreditNoteNumber(profile.startingCreditNoteNumber || '1');
-          setQuotePrefix(profile.quotePrefix || 'EST');
-          setStartingQuoteNumber(profile.startingQuoteNumber || '1');
-          setPostedInvoiceEdit(profile.postedInvoiceEdit || 'Disabled');
-          setMaterialRateEdit(profile.materialRateEdit || 'Disabled');
-          setMaterialCategorization(profile.materialCategorization || 'Optional');
-          setDefaultNotes(profile.defaultNotes || 'Thank you for your business.');
-          setDefaultTerms(profile.defaultTerms || 'Goods once sold will not be taken back or exchanged.');
+          setInvoicePrefix('INV');
+          setStartingInvoiceNumber('1');
+          setProformaPrefix('PRO');
+          setStartingProformaNumber('1');
+          setDebitNotePrefix('DN');
+          setStartingDebitNoteNumber('1');
+          setCreditNotePrefix('CN');
+          setStartingCreditNoteNumber('1');
+          setQuotePrefix('EST');
+          setStartingQuoteNumber('1');
+          setPurchaseOrderPrefix('PO');
+          setStartingPurchaseOrderNumber('1');
+          setPurchasesPrefix('PUR');
+          setStartingPurchasesNumber('1');
+          setPostedInvoiceEdit('Disabled');
+          setMaterialRateEdit('Disabled');
+          setMaterialCategorization('Optional');
+          setDefaultNotes('Thank you for your business.');
+          setDefaultTerms('Goods once sold will not be taken back or exchanged.');
         }
 
         // Fetch tax configs

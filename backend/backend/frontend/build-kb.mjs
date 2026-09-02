@@ -1,0 +1,653 @@
+import fs from 'fs';
+
+const knowledgeBase = [
+  // 1. DASHBOARD & OVERVIEW
+  {
+    topic: "Dashboard Overview",
+    route: "/",
+    summary: "The primary control center of MakInvoices showing quick business performance cards, monthly metrics, recent sales, and quick action shortcuts.",
+    steps: [
+      "Click 'Dashboard' in the left navigation sidebar.",
+      "Review the top 5 monthly metric cards: Monthly Sales, Monthly Purchases, Monthly Stock (Purchases - Sales), Monthly Expenses, and Monthly Tax (Output GST - Input GST).",
+      "Use Quick Actions buttons to rapidly create new Invoices, record Purchases, or add Clients.",
+      "View your recent invoice activities and financial summary charts."
+    ],
+    keywords: ["dashboard", "home", "overview", "business summary", "quick actions", "monthly sales", "monthly metrics", "sales overview", "stats", "main page"],
+    related_topics: ["Monthly Metrics & Period Filter", "Financial Reports"],
+    not_this: "Not for detailed line-by-line ledger analysis or full GSTR export."
+  },
+  {
+    topic: "Monthly Metrics & Period Filter",
+    route: "/",
+    summary: "Filter sales, purchases, expenses, stock, and tax figures by any past or current month.",
+    steps: [
+      "Navigate to the main Dashboard.",
+      "Locate the Month Selection dropdown at the top right of the metrics panel.",
+      "Choose a specific month and year to view historical totals.",
+      "Click the 'This Month' button to instantly return to current month figures."
+    ],
+    keywords: ["period filter", "select month", "historical month", "this month", "monthly metrics", "monthly stock", "monthly tax", "monthly expenses", "filter sales"],
+    related_topics: ["Dashboard Overview", "Financial Reports"],
+    not_this: "Not for changing your business fiscal year settings."
+  },
+
+  // 2. INVOICE CREATION & MANAGEMENT
+  {
+    topic: "Create Tax Invoice",
+    route: "/",
+    summary: "Generate professional GST tax invoices with client info, item breakdowns, HSN codes, discounts, and auto-computed taxes.",
+    steps: [
+      "Click 'Invoices' in the sidebar or 'Create Invoice' from the Dashboard.",
+      "Select a registered Client from the dropdown or click '+ New Client' to enter fresh details.",
+      "Enter Invoice Date, Due Date, and custom Invoice Number/Prefix if needed.",
+      "Click '+ Add Item' to insert goods or services from your catalog or type line items manually.",
+      "Specify Item Name, HSN/SAC Code, Quantity, Unit Rate, and GST Tax Slab (0%, 5%, 12%, 18%, 28%, or Exempt).",
+      "Add optional item discounts (Percentage % or Flat Amount ₹).",
+      "Click 'Save Invoice' to finalize."
+    ],
+    keywords: ["create invoice", "make bill", "new invoice", "tax invoice", "generate bill", "add invoice", "billing", "gst invoice", "issue bill"],
+    related_topics: ["Add Items & HSN/SAC Codes", "GST Slabs & Tax Calculations", "Transport & E-Way Bill Details"],
+    not_this: "Not for recording vendor purchases or business expenses."
+  },
+  {
+    topic: "Add Items & HSN/SAC Codes",
+    route: "/",
+    summary: "Insert goods, materials, or service line items with HSN/SAC codes and quantity pricing into invoices.",
+    steps: [
+      "In the invoice creation window, click '+ Add Item'.",
+      "Type the item name or pick an existing item from your Catalog.",
+      "Enter the HSN or SAC code (e.g., 8471 for electronics or 9983 for consultancy).",
+      "Select the Unit of Measure (Pcs, Kg, Mtr, Box, Hours, etc.).",
+      "Enter Quantity and Unit Rate — subtotal and GST amounts update automatically."
+    ],
+    keywords: ["add item", "hsn code", "sac code", "line item", "quantity", "unit rate", "product entry", "service entry", "item price"],
+    related_topics: ["Create Tax Invoice", "Master HSN / SAC Code Database"],
+    not_this: "Not for creating new catalog products permanently."
+  },
+  {
+    topic: "GST Slabs & Tax Calculations",
+    route: "/",
+    summary: "Automatically calculate CGST, SGST, IGST, and Cess based on customer location and GST tax slabs.",
+    steps: [
+      "Select the appropriate GST Tax Slab (0%, 5%, 12%, 18%, 28%, or Exempt) for each item.",
+      "If the customer is within the same state (Intra-state), CGST and SGST split equally (e.g., 9% + 9%).",
+      "If the customer is in a different state (Inter-state), IGST applies in full (e.g., 18%).",
+      "Review the tax breakdown summary at the bottom of the bill."
+    ],
+    keywords: ["gst tax", "cgst", "sgst", "igst", "tax calculation", "intra state", "inter state", "gst slab", "tax percentage", "cess"],
+    related_topics: ["Create Tax Invoice", "Tax Config (GSTIN & PAN)"],
+    not_this: "Not for filing monthly GST returns directly."
+  },
+  {
+    topic: "Transport, Shipping & E-Way Bill Details",
+    route: "/",
+    summary: "Attach logistics data, vehicle numbers, e-way bill IDs, freight charges, and driver contacts to invoices.",
+    steps: [
+      "In the invoice editor, open the 'Transport & Shipping' tab/section.",
+      "Enter Transport Carrier Name, Vehicle Number, and Driver Mobile Number.",
+      "Provide the E-Way Bill Number and GR/RR Number if consignment value exceeds limits.",
+      "Enter freight/transportation charges if billed to the customer."
+    ],
+    keywords: ["transport", "eway bill", "e-way bill", "vehicle number", "driver mobile", "gr rr number", "freight charge", "shipping details", "consignee", "dispatch"],
+    related_topics: ["Shipped To vs Billing Address", "Master Transport & Carriers Registry"],
+    not_this: "Not for managing internal fleet maintenance."
+  },
+  {
+    topic: "Shipped To vs Billing Address",
+    route: "/",
+    summary: "Specify a separate delivery address (Shipped To / Consignee) when goods are delivered to a location different from the buyer's billing address.",
+    steps: [
+      "In the invoice editor, enable 'Different Shipping Address'.",
+      "Enter the Consignee / Shipped To Company Name, Address, State, GSTIN, and Pincode.",
+      "The invoice preview will render distinct 'Billed To' and 'Shipped To' blocks."
+    ],
+    keywords: ["shipped to", "consignee", "shipping address", "delivery address", "dispatch address", "billing address", "ship to vs bill to"],
+    related_topics: ["Transport, Shipping & E-Way Bill Details"],
+    not_this: "Not for changing your own company address."
+  },
+  {
+    topic: "Edit Existing Invoice",
+    route: "/",
+    summary: "Modify client details, item lines, pricing, or tax configurations of previously saved invoices.",
+    steps: [
+      "Navigate to the 'Invoices' tab.",
+      "Locate the target invoice and click the 'Edit' (pencil) button.",
+      "Update any line items, terms, rates, or transport details.",
+      "Click 'Save Changes' to update the invoice record."
+    ],
+    keywords: ["edit invoice", "modify bill", "update invoice", "change bill details", "correct invoice", "revise invoice"],
+    related_topics: ["Create Tax Invoice", "Invoice Soft Delete & Trash"],
+    not_this: "Not for duplicating an invoice as a new invoice."
+  },
+  {
+    topic: "Invoice Soft Delete & Trash Restoration",
+    route: "/",
+    summary: "Safely delete invoices into a temporary Trash bin with a 30-day window for restoration before permanent deletion.",
+    steps: [
+      "To delete an invoice, click the Trash icon on the invoice row.",
+      "To view deleted invoices, open the Trash Bin filter view.",
+      "Click 'Restore' to recover a deleted invoice back to active status.",
+      "Click 'Delete Permanently' if you wish to purge the record immediately."
+    ],
+    keywords: ["delete invoice", "trash bin", "restore invoice", "recover bill", "soft delete", "permanent delete", "purge invoice", "undo delete"],
+    related_topics: ["Edit Existing Invoice"],
+    not_this: "Not for canceling paid invoice status."
+  },
+  {
+    topic: "Proforma Invoices & Estimates",
+    route: "/",
+    summary: "Issue proforma bills, quotations, or cost estimates to customers and convert them into tax invoices when confirmed.",
+    steps: [
+      "When creating an invoice, toggle Document Type to 'Proforma Invoice' or 'Quotation'.",
+      "Fill in items and estimated costs.",
+      "Save the proforma document.",
+      "When accepted, click 'Convert to Tax Invoice' to generate a final GST tax bill automatically."
+    ],
+    keywords: ["proforma invoice", "quotation", "estimate", "cost estimate", "convert to invoice", "draft bill", "proforma bill"],
+    related_topics: ["Create Tax Invoice"],
+    not_this: "Not for official tax accounting until converted to tax invoice."
+  },
+  {
+    topic: "Invoice Numbering & Prefix Settings",
+    route: "/company-settings#billing",
+    summary: "Customize auto-incrementing invoice numbering formats, prefixes (e.g. INV-2026-), and starting numbers.",
+    steps: [
+      "Open 'Company Settings' from sidebar or profile menu.",
+      "Select the 'Billing Settings' tab.",
+      "Set your desired Invoice Prefix (e.g. `MI/2026/`).",
+      "Set the 'Next Invoice Number' (e.g. `1001`).",
+      "Click 'Save Settings' — future invoices will auto-number sequentially."
+    ],
+    keywords: ["invoice prefix", "invoice numbering", "sequence", "next number", "bill serial number", "auto increment", "invoice format"],
+    related_topics: ["Create Tax Invoice", "Terms & Conditions & Footer Notes"],
+    not_this: "Not for changing customer IDs."
+  },
+  {
+    topic: "Multi-Currency & International Billing",
+    route: "/company-settings#tax",
+    summary: "Configure default billing currency (INR ₹, USD $, EUR €, GBP £, AED, etc.) and currency symbol formatting.",
+    steps: [
+      "Open 'Company Settings' and select 'Tax Config' / 'Billing'.",
+      "Select your primary Currency (e.g., INR ₹, USD $, EUR €).",
+      "Save settings — all invoice totals and summaries display the chosen currency symbol."
+    ],
+    keywords: ["currency", "multi-currency", "dollar", "euro", "pound", "inr", "rupee", "foreign client", "international billing", "currency symbol"],
+    related_topics: ["Tax Config (GSTIN & PAN)"],
+    not_this: "Not for automatic foreign exchange rate conversion."
+  },
+  {
+    topic: "Download, Print & Share Invoices",
+    route: "/",
+    summary: "Export invoices as high-quality PDF files, print directly, or share instantly via WhatsApp or Email.",
+    steps: [
+      "Open the invoice actions menu for any invoice.",
+      "Click 'Download PDF' to save a print-ready document.",
+      "Click 'Print' to trigger your system printing dialog.",
+      "Click 'Share via WhatsApp' to send a formatted link and summary directly to the customer's phone."
+    ],
+    keywords: ["download pdf", "print invoice", "whatsapp share", "email bill", "export pdf", "print bill", "share invoice", "send bill"],
+    related_topics: ["Invoice Studio & Templates"],
+    not_this: "Not for bulk exporting all data to Excel."
+  },
+  {
+    topic: "Bulk Invoice Operations",
+    route: "/",
+    summary: "Export multiple invoices to CSV/Excel, download bulk PDFs, or update payment statuses in batches.",
+    steps: [
+      "Go to the 'Invoices' tab.",
+      "Use the checkboxes to select multiple invoices.",
+      "Click 'Bulk Export to Excel' or 'Bulk Status Update'.",
+      "Process selected items simultaneously."
+    ],
+    keywords: ["bulk export", "bulk download", "excel export", "batch update", "select multiple invoices", "export csv"],
+    related_topics: ["Download, Print & Share Invoices", "Financial Reports"],
+    not_this: "Not for deleting invoices without confirmation."
+  },
+
+  // 3. PURCHASES & EXPENSES
+  {
+    topic: "Purchase Bills Recording",
+    route: "/purchases",
+    summary: "Record vendor purchase bills, supplier invoices, input tax credits (ITC), and purchase ledger entries.",
+    steps: [
+      "Click 'Purchases' in the sidebar.",
+      "Click '+ Add Purchase Bill'.",
+      "Select the Purchaser/Supplier and enter Vendor Invoice Number and Date.",
+      "Add purchased goods/materials, rates, and GST tax components.",
+      "Click 'Save Purchase Bill'."
+    ],
+    keywords: ["purchase bill", "vendor invoice", "record purchase", "supplier bill", "buy inventory", "inward supply", "purchase ledger"],
+    related_topics: ["Input Tax Credit (ITC) Management", "Purchasers & Supplier Profiles"],
+    not_this: "Not for sales invoices issued to customers."
+  },
+  {
+    topic: "Input Tax Credit (ITC) Management",
+    route: "/purchases",
+    summary: "Track eligible CGST, SGST, and IGST Input Tax Credit (ITC) on purchases to reduce net GST tax liability.",
+    steps: [
+      "When recording a purchase bill, ensure the vendor's valid GSTIN is selected.",
+      "Mark the purchase as 'Eligible for ITC'.",
+      "View the net GST liability on the Dashboard (Output GST from Sales − Input GST from Purchases)."
+    ],
+    keywords: ["itc", "input tax credit", "gst credit", "input gst", "tax liability reduction", "gstr-3b itc", "vendor gst"],
+    related_topics: ["Purchase Bills Recording", "Financial Reports"],
+    not_this: "Not for personal tax deductions."
+  },
+  {
+    topic: "Purchasers & Supplier Profiles",
+    route: "/purchasers",
+    summary: "Manage vendor accounts, supplier addresses, contact details, and purchase history ledgers.",
+    steps: [
+      "Click 'Purchasers' in the sidebar.",
+      "Click '+ Add Purchaser' to create a new vendor profile.",
+      "Enter Business Name, Contact Person, Phone, Email, GSTIN, and Billing Address.",
+      "View the complete purchase history for each vendor."
+    ],
+    keywords: ["purchasers", "vendors", "suppliers", "vendor list", "add vendor", "supplier contact", "vendor gstin", "vendor profile"],
+    related_topics: ["Purchase Bills Recording", "Master Vendor Registry"],
+    not_this: "Not for customer profiles (use Clients)."
+  },
+  {
+    topic: "Expense Tracking & Categorization",
+    route: "/expenses",
+    summary: "Log daily operational expenses (Rent, Utilities, Salaries, Transport, Marketing, Software) to monitor net profitability.",
+    steps: [
+      "Click 'Expenses' in the sidebar.",
+      "Click '+ Add Expense'.",
+      "Enter Expense Title, Amount, Category, Date, and Description.",
+      "Select Category (e.g. Office Supplies, Rent, Utilities, Transport, Marketing).",
+      "Click 'Save Expense'."
+    ],
+    keywords: ["expenses", "add expense", "business expenses", "track spending", "categories", "rent", "salaries", "utilities", "outflow"],
+    related_topics: ["Expense Receipt & Payment Modes", "Dashboard Overview"],
+    not_this: "Not for recording inventory purchases (use Purchases)."
+  },
+  {
+    topic: "Expense Receipt & Payment Modes",
+    route: "/expenses",
+    summary: "Attach receipt numbers, tax amounts, and payment modes (Cash, Bank Transfer, UPI, Credit Card) to expense logs.",
+    steps: [
+      "In the Expense modal, select Payment Mode (Cash, UPI, Net Banking, Credit Card).",
+      "Enter Reference / Receipt Number.",
+      "Add tax breakdown if expense includes claimable GST.",
+      "Save entry."
+    ],
+    keywords: ["payment mode", "cash expense", "upi expense", "credit card", "receipt number", "expense tax", "expense receipt"],
+    related_topics: ["Expense Tracking & Categorization"],
+    not_this: "Not for customer payment collection."
+  },
+
+  // 4. MASTER REGISTRIES & CATALOG
+  {
+    topic: "Master Vendor Registry",
+    route: "/master-vendor",
+    summary: "Central directory for managing primary vendor partners, tags, contacts, and bulk imports.",
+    steps: [
+      "Click 'Master Registries' → 'Vendors' in the sidebar.",
+      "Click '+ Add Vendor' or 'Import CSV' to bulk load vendors.",
+      "Manage category tags, contact info, and addresses.",
+      "Export vendor lists to CSV anytime."
+    ],
+    keywords: ["master vendor", "vendor directory", "vendor master", "bulk import vendors", "vendor list", "vendor tags"],
+    related_topics: ["Purchasers & Supplier Profiles", "Bulk CSV Import, Export & Templates"],
+    not_this: "Not for customer address books."
+  },
+  {
+    topic: "Master Actual Vendors & Manufacturers",
+    route: "/master-actual-vendor",
+    summary: "Manage sub-vendors, original equipment manufacturers (OEMs), and actual suppliers.",
+    steps: [
+      "Click 'Master Registries' → 'Actual Vendors' in sidebar.",
+      "Add OEM / actual manufacturer details.",
+      "Link actual vendors to purchase records for supply chain auditability."
+    ],
+    keywords: ["actual vendor", "oem", "manufacturer", "sub vendor", "supplier master", "factory source"],
+    related_topics: ["Master Vendor Registry"],
+    not_this: "Not for primary client list."
+  },
+  {
+    topic: "Master HSN / SAC Code Database",
+    route: "/master-hsn",
+    summary: "Maintain a library of HSN and SAC tax codes with default descriptions and tax rates for instant invoice auto-complete.",
+    steps: [
+      "Click 'Master Registries' → 'HSN / SAC' in sidebar.",
+      "Click '+ Add HSN/SAC'.",
+      "Enter 4, 6, or 8 digit HSN/SAC Code, Description, and default GST Slab.",
+      "When creating invoices, picking an HSN auto-fills tax rates and descriptions."
+    ],
+    keywords: ["master hsn", "hsn code list", "sac code list", "hsn database", "add hsn", "tax rate lookup", "gst codes"],
+    related_topics: ["Add Items & HSN/SAC Codes"],
+    not_this: "Not for searching personal tax returns."
+  },
+  {
+    topic: "Master Transport & Carriers Registry",
+    route: "/master-transport",
+    summary: "Directory of preferred transport companies, carrier names, default vehicle numbers, and driver mobile numbers.",
+    steps: [
+      "Click 'Master Registries' → 'Transport' in sidebar.",
+      "Add Transport Carrier Name, Vehicle Number, Station, and Contact Person.",
+      "Select default carrier when creating shipping invoices for instant auto-complete."
+    ],
+    keywords: ["master transport", "logistics carrier", "transporter list", "default vehicle", "driver contact", "carrier directory"],
+    related_topics: ["Transport, Shipping & E-Way Bill Details"],
+    not_this: "Not for GPS vehicle tracking."
+  },
+  {
+    topic: "Catalog Products & Materials",
+    route: "/catalog-material",
+    summary: "Save standard products, raw materials, or services to your catalog with default rates, units, and tax slabs.",
+    steps: [
+      "Click 'Catalog' → 'Materials' in sidebar.",
+      "Click '+ Add Material'.",
+      "Enter Item Name, Category, HSN Code, Unit of Measure, Unit Price, and Tax Slab.",
+      "Saved items appear in invoice auto-complete dropdowns."
+    ],
+    keywords: ["catalog", "products", "materials", "item master", "add product", "saved items", "inventory items", "unit rate"],
+    related_topics: ["Catalog Categories", "Add Items & HSN/SAC Codes"],
+    not_this: "Not for tracking real-time barcode inventory scanning."
+  },
+  {
+    topic: "Catalog Categories",
+    route: "/catalog-category",
+    summary: "Organize catalog items into product categories (e.g. Electronics, Hardware, Services, Raw Materials).",
+    steps: [
+      "Click 'Catalog' → 'Categories' in sidebar.",
+      "Click '+ Add Category'.",
+      "Enter Category Name and Description.",
+      "Assign products/materials to categories for organized filtering."
+    ],
+    keywords: ["catalog category", "product categories", "item groups", "category tags", "organize items"],
+    related_topics: ["Catalog Products & Materials"],
+    not_this: "Not for expense categories."
+  },
+  {
+    topic: "Bulk CSV Import, Export & Templates",
+    route: "/master-vendor",
+    summary: "Download standardized CSV templates, bulk import vendors/items/clients, and export registry data.",
+    steps: [
+      "In any Master Registry or Catalog tab, click 'Download CSV Template'.",
+      "Populate your data in Excel or Google Sheets using the template columns.",
+      "Click 'Import CSV', select your file, and verify preview mapping.",
+      "Click 'Confirm Import' to insert all records simultaneously."
+    ],
+    keywords: ["csv import", "bulk import", "csv template", "export registry", "excel import", "mass upload", "import clients", "import vendors"],
+    related_topics: ["Master Vendor Registry", "Catalog Products & Materials"],
+    not_this: "Not for restoring database backups."
+  },
+  {
+    topic: "Manage Clients",
+    route: "/clients",
+    summary: "View, create, edit, and organize customer profiles, shipping details, and billing addresses.",
+    steps: [
+      "Click 'Clients' in the sidebar.",
+      "Click '+ Add Client' to register a new customer.",
+      "Enter Company Name, Contact Person, Email, Mobile Number, GSTIN, and Billing Address.",
+      "Click Edit icon to modify client info or Trash icon to delete."
+    ],
+    keywords: ["clients", "customers", "add client", "customer address", "client gstin", "edit client", "client directory", "address book"],
+    related_topics: ["Create Tax Invoice"],
+    not_this: "Not for vendor management (use Purchasers)."
+  },
+
+  // 5. COMPANY PROFILE & SETTINGS
+  {
+    topic: "Company Profile & Identity",
+    route: "/company-settings",
+    summary: "Configure core business identity details including Business Name, Tagline, Owner Name, Address, Contact Info, and Business Type.",
+    steps: [
+      "Click 'Settings' in sidebar or click your company name in header.",
+      "Select 'Company Profile' tab.",
+      "Update Business Name, Tagline, Owner Name, Registered Email, Mobile Number, and Address.",
+      "Click 'Save Profile'."
+    ],
+    keywords: ["company profile", "business name", "owner name", "company address", "business info", "tagline", "change mobile", "registered email"],
+    related_topics: ["Company Logo & Image Cropper", "Tax Config (GSTIN & PAN)"],
+    not_this: "Not for user login password changes."
+  },
+  {
+    topic: "Company Logo & Image Cropper",
+    route: "/company-settings",
+    summary: "Upload, crop, and position your brand logo for crisp rendering on printed invoices.",
+    steps: [
+      "Open 'Company Profile' settings.",
+      "Click 'Upload Logo'.",
+      "Select an image file (PNG, JPG, SVG).",
+      "Use the interactive cropping box to frame your logo perfectly.",
+      "Click 'Crop & Save' and save profile."
+    ],
+    keywords: ["logo", "upload logo", "crop logo", "brand logo", "business logo", "company picture", "header logo"],
+    related_topics: ["Company Profile & Identity", "Invoice Studio & Templates"],
+    not_this: "Not for changing app UI themes."
+  },
+  {
+    topic: "Bank Details & UPI Payment QR",
+    route: "/company-settings#banking",
+    summary: "Configure bank account details, IFSC code, UPI ID, and enable auto-generated UPI QR codes on invoice PDFs for instant payment collection.",
+    steps: [
+      "Open Company Settings and select the 'Bank Details' tab.",
+      "Enter Bank Name, Account Holder Name, Account Number, IFSC Code, and Branch.",
+      "Enter your VPA / UPI ID (e.g. `business@upi`).",
+      "Enable 'Print Payment UPI QR Code on Invoices'.",
+      "Click 'Save'."
+    ],
+    keywords: ["bank details", "ifsc code", "account number", "upi id", "upi qr code", "payment qr", "bank transfer", "receive payment", "qr code on bill"],
+    related_topics: ["Company Profile & Identity"],
+    not_this: "Not for automated credit card payment gateway integration."
+  },
+  {
+    topic: "Digital Signature (Draw, Type, Upload)",
+    route: "/company-settings",
+    summary: "Attach an authorized digital signature to invoices by drawing on screen, typing stylized text, or uploading an image.",
+    steps: [
+      "Open Company Settings and scroll to 'Digital Signature'.",
+      "Choose signature method: 'Draw' (canvas signature), 'Type' (stylized cursive name), or 'Upload' (transparent PNG).",
+      "Preview signature appearance and click 'Save'."
+    ],
+    keywords: ["digital signature", "sign invoice", "draw signature", "type signature", "upload signature", "authorized sign", "stamp"],
+    related_topics: ["Company Profile & Identity"],
+    not_this: "Not for legal government e-Sign (Aadhaar OTP)."
+  },
+  {
+    topic: "Terms & Conditions & Footer Notes",
+    route: "/company-settings#billing",
+    summary: "Define standard legal terms & conditions, payment due policies, and custom footer messages printed on bills.",
+    steps: [
+      "Open Company Settings and go to 'Billing Settings'.",
+      "Enter standard Terms & Conditions (e.g., 'Goods once sold will not be taken back. Interest @ 18% p.a. on late payment.').",
+      "Enter Footer Note (e.g., 'Thank you for your business!').",
+      "Click 'Save'."
+    ],
+    keywords: ["terms and conditions", "t&c", "footer note", "invoice terms", "late payment terms", "declaration", "policy"],
+    related_topics: ["Invoice Numbering & Prefix Settings"],
+    not_this: "Not for website terms of service."
+  },
+
+  // 6. TEMPLATE STUDIO & CUSTOMIZER
+  {
+    topic: "Invoice Customizer Studio & Templates",
+    route: "/invoice-templates",
+    summary: "Choose professional invoice template layouts (Classic, Modern, Executive, Minimal, Compact, Creative) and customize colors and typography.",
+    steps: [
+      "Click 'Templates' in the sidebar.",
+      "Browse available layout themes.",
+      "Use the Studio Customizer panel to change Primary Accent Color, Secondary Accent, Font Family, and Logo Placement.",
+      "Click 'Set as Default Template' to apply to all future bills."
+    ],
+    keywords: ["invoice templates", "template customizer", "invoice design", "accent color", "layout studio", "change template", "invoice style", "font family"],
+    related_topics: ["Paper Light Mode Preview", "Company Logo & Image Cropper"],
+    not_this: "Not for editing invoice content/line items."
+  },
+  {
+    topic: "Paper Light Mode Preview",
+    route: "/invoice-templates",
+    summary: "Toggle Paper Light Mode preview to ensure true white background PDF rendering even while working in app Dark Mode.",
+    steps: [
+      "In the Template Customizer or Invoice Preview window, locate the 'Paper Light Mode' toggle.",
+      "Switching it ON forces the invoice paper preview to maintain print-ready white paper backgrounds regardless of dark theme."
+    ],
+    keywords: ["paper light mode", "white paper preview", "print preview", "dark mode preview", "pdf paper mode"],
+    related_topics: ["Invoice Customizer Studio & Templates", "Dark Mode & App Appearance"],
+    not_this: "Not for switching app UI theme."
+  },
+
+  // 7. SECURITY & ACCESS CONTROL
+  {
+    topic: "App PIN Lock & Biometrics",
+    route: "/settings",
+    summary: "Encrypt local IndexedDB data and secure app access with a 4-digit PIN passcode or hardware biometrics (TouchID/FaceID).",
+    steps: [
+      "Go to 'Settings' → 'Security'.",
+      "Click 'Enable App PIN Lock'.",
+      "Set your secret 4-digit PIN and confirm.",
+      "Optionally enable WebAuthn Hardware / Biometric Key for quick unlocking."
+    ],
+    keywords: ["pin lock", "app security", "passcode", "biometrics", "fingerprint", "face id", "encrypt data", "lock app", "secure workspace"],
+    related_topics: ["Inactivity Auto-Lock Timer", "Multi-Device Workspace Sessions & Remote Revoke"],
+    not_this: "Not for account password reset."
+  },
+  {
+    topic: "Inactivity Auto-Lock Timer",
+    route: "/settings",
+    summary: "Configure automatic app lock after a specified duration of user inactivity (Off, 1 min, 5 mins, 15 mins, 30 mins).",
+    steps: [
+      "Go to 'Settings' → 'Security'.",
+      "Locate 'Inactivity Auto-Lock'.",
+      "Select desired timeout interval (e.g. 5 minutes).",
+      "If idle for the selected time, the app locks automatically requiring your PIN."
+    ],
+    keywords: ["auto lock", "inactivity timer", "idle lock", "lock timeout", "auto lock time"],
+    related_topics: ["App PIN Lock & Biometrics"],
+    not_this: "Not for logging out of your account."
+  },
+  {
+    topic: "Multi-Device Workspace Sessions & Remote Revoke",
+    route: "/settings",
+    summary: "View all active devices (Windows PC, Mac, iPhone, Android) logged into your account ID, inspect IP/Location badges, and remotely revoke sessions.",
+    steps: [
+      "Navigate to 'Settings' → 'Security' → 'Active Workspace Sessions'.",
+      "View the list of all real devices currently authenticated under your user account ID.",
+      "Identify your 'Current Device' (emerald badge) versus remote 'Active Sessions' (sky badge).",
+      "Click 'Revoke' on any specific device row to immediately force-logout that remote device.",
+      "Click 'Sign Out Other Sessions' to sign out all secondary devices at once."
+    ],
+    keywords: ["workspace sessions", "active sessions", "multi device", "remote revoke", "sign out other sessions", "device security", "session manager", "logged in devices", "force logout"],
+    related_topics: ["App PIN Lock & Biometrics"],
+    not_this: "Not for revoking third-party API keys."
+  },
+
+  // 8. AI CAPABILITIES
+  {
+    topic: "AI Smart Billing Assistant (Voice/Text)",
+    route: "/",
+    summary: "Use natural language text or voice prompts (e.g., 'Bill Acme Corp 10 Widgets at 500 each') to auto-generate filled invoices instantaneously.",
+    steps: [
+      "Click the 'Smart Billing AI' icon or box on the Dashboard/Invoice editor.",
+      "Type or speak your billing command in plain English or Hindi.",
+      "AI parses client name, items, quantities, rates, and tax rates into an editable invoice draft automatically."
+    ],
+    keywords: ["smart billing", "ai billing", "voice invoice", "text to invoice", "ai assistant", "parse bill prompt", "auto invoice creation"],
+    related_topics: ["AI Document OCR Parser", "Create Tax Invoice"],
+    not_this: "Not for general customer support questions."
+  },
+  {
+    topic: "AI Document OCR Parser",
+    route: "/",
+    summary: "Upload PDF or image bills to automatically extract vendor name, GSTIN, line items, rates, and total amounts via OCR.",
+    steps: [
+      "Open Smart Billing or Invoice creation window.",
+      "Click 'Upload Document OCR'.",
+      "Select a PDF or image file of a bill or invoice.",
+      "AI OCR extracts and pre-fills invoice fields in seconds."
+    ],
+    keywords: ["ocr", "document ocr", "pdf parser", "scan bill", "extract invoice data", "image to invoice", "ai ocr"],
+    related_topics: ["AI Smart Billing Assistant (Voice/Text)"],
+    not_this: "Not for scanning barcode labels."
+  },
+
+  // 9. REPORTS & DATA EXPORT
+  {
+    topic: "Financial Reports & GST Summaries (GSTR-1, GSTR-3B)",
+    route: "/reports",
+    summary: "Generate and export comprehensive sales ledgers, purchase ledgers, expense breakdown reports, and GSTR-1 / GSTR-3B tax summaries.",
+    steps: [
+      "Click 'Reports' in the sidebar.",
+      "Choose Report Type: Sales Summary, Purchase Summary, Expense Report, or GST Tax Report.",
+      "Select Date Range (e.g. Current Month, Last Quarter, Financial Year).",
+      "Click 'Export to Excel' or 'Export to CSV'."
+    ],
+    keywords: ["reports", "gstr-1", "gstr-3b", "gst reports", "sales report", "purchase report", "tax summary", "excel report", "financial statements"],
+    related_topics: ["Data Export & Cloud Backup", "Bulk Invoice Operations"],
+    not_this: "Not for submitting returns directly to the GST portal."
+  },
+  {
+    topic: "Data Export & Cloud Backup",
+    route: "/settings",
+    summary: "Export your complete business database (invoices, clients, purchases, settings) for offline backup or accounting migration.",
+    steps: [
+      "Go to 'Settings' → 'Data Management'.",
+      "Click 'Export Full Backup'.",
+      "A JSON/CSV archive containing all your records downloads to your device."
+    ],
+    keywords: ["export data", "backup", "data export", "cloud backup", "download database", "save backup", "data management"],
+    related_topics: ["Financial Reports & GST Summaries (GSTR-1, GSTR-3B)"],
+    not_this: "Not for downloading single PDF invoice."
+  },
+  {
+    topic: "Dark Mode & App Appearance",
+    route: "/settings",
+    summary: "Switch the application interface between sleek Dark Mode and high-contrast Light Mode.",
+    steps: [
+      "Click the Sun/Moon theme toggle icon in the header, or go to 'Settings' → 'Appearance'.",
+      "Select 'Light Mode' or 'Dark Mode'."
+    ],
+    keywords: ["dark mode", "light mode", "theme toggle", "appearance", "ui theme", "night mode"],
+    related_topics: ["Paper Light Mode Preview"],
+    not_this: "Not for changing printed invoice colors."
+  },
+
+  // 10. SUPPORT & SUBSCRIPTIONS
+  {
+    topic: "MakInvoices AI Support Chatbot",
+    route: "/support",
+    summary: "Get instant interactive support from MakInvoices AI assistant in multiple languages (English, Hindi, Hinglish, Spanish, French, German) with direct feature redirect links.",
+    steps: [
+      "Click 'Help & Support' in the profile menu or sidebar.",
+      "Click 'Ask AI Support Chatbot'.",
+      "Type any question about creating invoices, managing vendors, setting up GST, or security.",
+      "Click the embedded feature buttons in replies to jump straight to the relevant page in the app."
+    ],
+    keywords: ["ai chatbot", "support chat", "help chatbot", "ask ai", "hinglish support", "hindi support", "ai assistant", "help desk"],
+    related_topics: ["Human Support Desk & Support Tickets"],
+    not_this: "Not for financial investment advice."
+  },
+  {
+    topic: "Human Support Desk & Support Tickets",
+    route: "/support",
+    summary: "Submit a support ticket or request direct human assistance for billing issues, account inquiries, or technical bugs.",
+    steps: [
+      "Go to 'Help & Support'.",
+      "Click 'Talk to a Human / Raise Ticket'.",
+      "Fill in Subject, Issue Category, and Description.",
+      "Click 'Submit Ticket' — our support team will respond promptly."
+    ],
+    keywords: ["human support", "support ticket", "raise ticket", "talk to human", "customer service", "help desk ticket", "contact support"],
+    related_topics: ["MakInvoices AI Support Chatbot"],
+    not_this: "Not for basic app navigation (use AI Chatbot)."
+  },
+  {
+    topic: "Subscription Plans & Upgrades",
+    route: "/pricing",
+    summary: "Explore MakInvoices plan tiers (Free, Basic, Pro, Unlimited, Enterprise) and upgrade features.",
+    steps: [
+      "Go to 'Settings' → 'Subscription' or navigate to `/pricing`.",
+      "Compare feature capabilities across plan tiers.",
+      "Click 'Upgrade Plan' to select your plan."
+    ],
+    keywords: ["subscription", "pricing", "plans", "upgrade plan", "pro tier", "free tier", "unlimited plan", "paddle payment"],
+    related_topics: ["Company Profile & Identity"],
+    not_this: "Not for customer payment receipts."
+  }
+];
+
+fs.writeFileSync('src/data/knowledge-base.json', JSON.stringify(knowledgeBase, null, 2));
+console.log('src/data/knowledge-base.json generated with ' + knowledgeBase.length + ' entries.');

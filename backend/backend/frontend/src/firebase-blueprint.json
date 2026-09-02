@@ -1,0 +1,134 @@
+{
+  "entities": {
+    "BusinessProfile": {
+      "title": "BusinessProfile",
+      "description": "Information about the business generating the invoices",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "taxId": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "signature": { "type": "string" },
+        "currency": { "type": "string" },
+        "defaultTaxRate": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "An invoice representing a bill created by the user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "date": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientEmail": { "type": "string" },
+        "clientPhone": { "type": "string" },
+        "clientAddress": { "type": "string" },
+        "notes": { "type": "string" },
+        "subtotal": { "type": "number" },
+        "discountType": { "type": "string" },
+        "discountValue": { "type": "number" },
+        "discountTotal": { "type": "number" },
+        "taxTotal": { "type": "number" },
+        "grandTotal": { "type": "number" },
+        "status": { "type": "string" },
+        "items": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "parentInvoiceId": { "type": "string" },
+        "recurringSettings": {
+          "type": "object",
+          "properties": {
+            "isRecurring": { "type": "boolean" },
+            "interval": { "type": "string" },
+            "startDate": { "type": "string" },
+            "endDate": { "type": "string" },
+            "hasEnded": { "type": "boolean" },
+            "lastGeneratedDate": { "type": "string" }
+          },
+          "required": ["isRecurring", "interval", "startDate"]
+        }
+      },
+      "required": ["id", "userId", "invoiceNumber", "date"]
+    },
+    "ClientProfile": {
+      "title": "ClientProfile",
+      "description": "Profile of a standard client representing contact details for quick selection",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "companyName": { "type": "string" },
+        "address": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "name"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "A business expense logged by the user for reporting modules",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "category": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "category", "amount", "date"]
+    },
+    "PresetItem": {
+      "title": "PresetItem",
+      "description": "Simple reusable item catalog for billing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "rate": { "type": "number" },
+        "taxPercentage": { "type": "number" },
+        "quantity": { "type": "number" },
+        "description": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "name"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "BusinessProfile",
+      "description": "User Business Details"
+    },
+    "users/{userId}/invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "User Invoices"
+    },
+    "users/{userId}/presetItems/{presetItemId}": {
+      "schema": "PresetItem",
+      "description": "User Item Catalog Presets"
+    },
+    "users/{userId}/clients/{clientId}": {
+      "schema": "ClientProfile",
+      "description": "User Clients list"
+    },
+    "users/{userId}/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "User Business expenses"
+    }
+  }
+}

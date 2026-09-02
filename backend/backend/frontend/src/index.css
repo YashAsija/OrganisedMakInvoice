@@ -1,0 +1,921 @@
+@import "tailwindcss";
+
+/* ==========================================
+   GLOBAL RESPONSIVE LAYOUT FIXES
+   Prevents horizontal overflow on all devices
+   ========================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  min-height: 100dvh;
+}
+
+/* Prevent absolute decorative elements from causing scrollbar */
+body {
+  position: relative;
+}
+
+/* Safe area insets for mobile devices (notches, home bars) */
+@supports (padding: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Ensure images never overflow containers */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Prevent inputs from expanding beyond viewport on iOS and improve touch tap response */
+input,
+textarea,
+select,
+button,
+a,
+[role="button"] {
+  max-width: 100%;
+  touch-action: manipulation;
+}
+
+/* ==========================================
+   RESPONSIVE UTILITY CLASSES
+   ========================================== */
+.responsive-container {
+  width: 100%;
+  max-width: 80rem; /* 1280px */
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .responsive-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.responsive-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.responsive-modal-body {
+  width: 95vw;
+  max-width: 42rem;
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+
+/* ==========================================
+   WHOLE-APP FINANCIAL REVENUE PRIVACY MODE
+   ========================================== */
+body.mak-privacy-active .privacy-sensitive:not(:hover):not([data-privacy-exempt="true"]):not([data-privacy-exempt="true"] *):not(.no-privacy-blur *):not(.master-registry-container *):not(.invoice-template-builder *):not(.invoice-modal-container *):not(.invoice-preview-container *):not(.live-preview-container *):not(.preview-section *):not(.document-summary-section *):not(.document-summary *):not(.doc-preview-modal *):not([class*="preview"] *):not([class*="summary"] *):not(table *):not(tbody *):not(tr *):not(td *):not(.ledger-table *):not(.ledger-row *):not(.document-row *):not(.invoice-row *):not(.document-list-item *):not(.document-card *):not(.paper-sheet-light *):not(.paper-sheet *):not(#pdf-export-content-editable *):not(#invoice-editor *),
+body.mak-privacy-active [data-privacy-sensitive="true"]:not(:hover):not([data-privacy-exempt="true"]):not([data-privacy-exempt="true"] *):not(.no-privacy-blur *):not(.master-registry-container *):not(.invoice-template-builder *):not(.invoice-modal-container *):not(.invoice-preview-container *):not(.live-preview-container *):not(.preview-section *):not(.document-summary-section *):not(.document-summary *):not(.doc-preview-modal *):not([class*="preview"] *):not([class*="summary"] *):not(table *):not(tbody *):not(tr *):not(td *):not(.ledger-table *):not(.ledger-row *):not(.document-row *):not(.invoice-row *):not(.document-list-item *):not(.document-card *):not(.paper-sheet-light *):not(.paper-sheet *):not(#pdf-export-content-editable *):not(#invoice-editor *),
+body.mak-privacy-active .financial-amount:not(:hover):not([data-privacy-exempt="true"]):not([data-privacy-exempt="true"] *):not(.no-privacy-blur *):not(.master-registry-container *):not(.invoice-template-builder *):not(.invoice-modal-container *):not(.invoice-preview-container *):not(.live-preview-container *):not(.preview-section *):not(.document-summary-section *):not(.document-summary *):not(.doc-preview-modal *):not([class*="preview"] *):not([class*="summary"] *):not(table *):not(tbody *):not(tr *):not(td *):not(.ledger-table *):not(.ledger-row *):not(.document-row *):not(.invoice-row *):not(.document-list-item *):not(.document-card *):not(.paper-sheet-light *):not(.paper-sheet *):not(#pdf-export-content-editable *):not(#invoice-editor *),
+body.mak-privacy-active .privacy-amount:not(:hover):not([data-privacy-exempt="true"]):not([data-privacy-exempt="true"] *):not(.no-privacy-blur *):not(.master-registry-container *):not(.invoice-template-builder *):not(.invoice-modal-container *):not(.invoice-preview-container *):not(.live-preview-container *):not(.preview-section *):not(.document-summary-section *):not(.document-summary *):not(.doc-preview-modal *):not([class*="preview"] *):not([class*="summary"] *):not(table *):not(tbody *):not(tr *):not(td *):not(.ledger-table *):not(.ledger-row *):not(.document-row *):not(.invoice-row *):not(.document-list-item *):not(.document-card *):not(.paper-sheet-light *):not(.paper-sheet *):not(#pdf-export-content-editable *):not(#invoice-editor *),
+.mak-privacy-active .privacy-sensitive:not(:hover):not([data-privacy-exempt="true"]):not([data-privacy-exempt="true"] *):not(.no-privacy-blur *):not(.master-registry-container *):not(.invoice-template-builder *):not(.invoice-modal-container *):not(.invoice-preview-container *):not(.live-preview-container *):not(.preview-section *):not(.document-summary-section *):not(.document-summary *):not(.doc-preview-modal *):not([class*="preview"] *):not([class*="summary"] *):not(table *):not(tbody *):not(tr *):not(td *):not(.ledger-table *):not(.ledger-row *):not(.document-row *):not(.invoice-row *):not(.document-list-item *):not(.document-card *):not(.paper-sheet-light *):not(.paper-sheet *):not(#pdf-export-content-editable *):not(#invoice-editor *),
+.privacy-blurred:not(:hover):not([data-privacy-exempt="true"]):not([data-privacy-exempt="true"] *):not(.no-privacy-blur *):not(.master-registry-container *):not(.invoice-template-builder *):not(.invoice-modal-container *):not(.invoice-preview-container *):not(.live-preview-container *):not(.preview-section *):not(.document-summary-section *):not(.document-summary *):not(.doc-preview-modal *):not([class*="preview"] *):not([class*="summary"] *):not(table *):not(tbody *):not(tr *):not(td *):not(.ledger-table *):not(.ledger-row *):not(.document-row *):not(.invoice-row *):not(.document-list-item *):not(.document-card *):not(.paper-sheet-light *):not(.paper-sheet *):not(#pdf-export-content-editable *):not(#invoice-editor *) {
+  filter: blur(8px) !important;
+  -webkit-filter: blur(8px) !important;
+  user-select: none !important;
+  transition: filter 0.2s ease, opacity 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+body.mak-privacy-active .privacy-sensitive:hover,
+body.mak-privacy-active .privacy-sensitive:hover *,
+body.mak-privacy-active [data-privacy-sensitive="true"]:hover,
+body.mak-privacy-active [data-privacy-sensitive="true"]:hover *,
+body.mak-privacy-active .financial-amount:hover,
+body.mak-privacy-active .financial-amount:hover *,
+body.mak-privacy-active .privacy-amount:hover,
+body.mak-privacy-active .privacy-amount:hover *,
+.mak-privacy-active .privacy-sensitive:hover,
+.mak-privacy-active .privacy-sensitive:hover *,
+.privacy-blurred:hover,
+.privacy-blurred:hover *,
+[data-privacy-exempt="true"],
+[data-privacy-exempt="true"] *,
+.no-privacy-blur,
+.no-privacy-blur *,
+.master-registry-container,
+.master-registry-container *,
+.invoice-template-builder,
+.invoice-template-builder *,
+.invoice-modal-container,
+.invoice-modal-container *,
+.invoice-preview-container,
+.invoice-preview-container *,
+.live-preview-container,
+.live-preview-container *,
+.preview-section,
+.preview-section *,
+.document-summary-section,
+.document-summary-section *,
+.document-summary,
+.document-summary *,
+.doc-preview-modal,
+.doc-preview-modal *,
+[class*="preview"],
+[class*="preview"] *,
+[class*="summary"],
+[class*="summary"] *,
+table,
+table *,
+tbody,
+tbody *,
+tr,
+tr *,
+td,
+td *,
+.ledger-table,
+.ledger-table *,
+.ledger-row,
+.ledger-row *,
+.document-row,
+.document-row *,
+.invoice-row,
+.invoice-row *,
+.document-list-item,
+.document-list-item *,
+.document-card,
+.document-card *,
+.paper-sheet-light,
+.paper-sheet-light *,
+.paper-sheet,
+.paper-sheet *,
+#pdf-export-content-editable,
+#pdf-export-content-editable *,
+#invoice-editor,
+#invoice-editor * {
+  filter: none !important;
+  -webkit-filter: none !important;
+  opacity: 1 !important;
+}
+
+@media print {
+  *,
+  *::before,
+  *::after {
+    filter: none !important;
+    -webkit-filter: none !important;
+  }
+}
+.mak-compact-density td,
+.mak-compact-density th {
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
+}
+
+.mak-reduced-motion *,
+.mak-reduced-motion *::before,
+.mak-reduced-motion *::after {
+  animation-duration: 0.001s !important;
+  transition-duration: 0.001s !important;
+}
+
+html[data-font-scale="small"] {
+  font-size: 14.5px;
+}
+
+html[data-font-scale="medium"] {
+  font-size: 16px;
+}
+
+html[data-font-scale="large"] {
+  font-size: 17.5px;
+}
+
+html[data-surface-style="solid"] .backdrop-blur-md,
+html[data-surface-style="solid"] .backdrop-blur-sm {
+  backdrop-filter: none !important;
+}
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Custom palette system variables registered in the Tailwind build so they produce real utility classes */
+  --color-slate-50: var(--color-slate-50);
+  --color-slate-100: var(--color-slate-100);
+  --color-slate-150: var(--color-slate-150);
+  --color-slate-200: var(--color-slate-200);
+  --color-slate-205: var(--color-slate-205);
+  --color-slate-350: var(--color-slate-350);
+  --color-slate-405: var(--color-slate-405);
+  --color-slate-450: var(--color-slate-450);
+  --color-slate-550: var(--color-slate-550);
+  --color-slate-650: var(--color-slate-650);
+  --color-slate-705: var(--color-slate-705);
+  --color-slate-750: var(--color-slate-750);
+  --color-slate-805: var(--color-slate-805);
+  --color-slate-850: var(--color-slate-850);
+  --color-slate-900: var(--color-slate-900);
+  --color-slate-950: var(--color-slate-950);
+
+  /* Custom pallet system variables */
+  --color-beige-50: #FAF8F5;
+  --color-beige-100: #F4EFE6;
+  --color-beige-200: #EADFC9;
+  --color-french-beige: #A79277;
+  --color-french-beige-dark: #8C7558;
+  --color-french-beige-light: #D1C7BD;
+
+  /* Map standard Sky buttons & brand elements */
+  --color-sky-50: var(--color-sky-50);
+  --color-sky-100: var(--color-sky-100);
+  --color-sky-102: var(--color-sky-102);
+  --color-sky-305: var(--color-sky-305);
+  --color-sky-600: var(--color-sky-600);
+  --color-sky-650: var(--color-sky-650);
+  --color-sky-700: var(--color-sky-700);
+  --color-sky-750: var(--color-sky-750);
+  --color-sky-800: var(--color-sky-800);
+  --color-sky-850: var(--color-sky-850);
+  --color-sky-955: var(--color-sky-955);
+}
+
+/* ROOT/LIGHT CONTEXT (Premium Navy & Sky Blue theme) */
+:root {
+  --color-slate-50: #f4f9ff;
+  /* Very light blue-white background */
+  --color-slate-100: #f8fafc;
+  /* Auxiliary light background */
+  --color-slate-150: #e0f2fe;
+  /* Light blue inner panels */
+  --color-slate-200: #bae6fd;
+  /* Soft blue borders */
+  --color-slate-205: #bae6fd;
+  /* Balanced light detail contrast variable */
+  --color-slate-350: #475569;
+  /* Descriptions in muted slate */
+  --color-slate-405: #475569;
+  /* Muted slate labels */
+  --color-slate-450: #475569;
+  --color-slate-550: #475569;
+  --color-slate-650: #0f172a;
+  --color-slate-705: #0f172a;
+  /* Deep slate text */
+  --color-slate-750: #0f172a;
+  --color-slate-805: #0f172a;
+  --color-slate-850: #bae6fd;
+  /* Fallback light outline */
+  --color-slate-900: #ffffff;
+  /* Card backgrounds are pure clean white */
+  --color-slate-950: #f8fafc;
+  /* Aux light background */
+
+  /* Map standard Sky buttons & brand elements to highly readable Sky Blue */
+  --color-sky-50: #f4f9ff;
+  --color-sky-102: #f8fafc;
+  --color-sky-100: #f8fafc;
+  --color-sky-305: #2563eb;
+  --color-sky-600: #0284c7;
+  /* Primary sky blue button background */
+  --color-sky-650: #0369a1;
+  --color-sky-700: #0369a1;
+  --color-sky-750: #0369a1;
+  --color-sky-800: #0f172a;
+  --color-sky-850: #0f172a;
+  --color-sky-955: #e0f2fe;
+
+  --color-teal-300: #0284c7;
+  --color-teal-850: #0f172a;
+}
+
+/* DARK CONTEXT (Premium Navy Blue & Luminous Sky Blue theme) */
+.dark,
+html.dark,
+.dark :root {
+  --color-slate-50: #0b1329;
+  /* Navy base canvas */
+  --color-slate-100: #0b1329;
+  /* Auxiliary dark elements */
+  --color-slate-150: #1b264f;
+  /* Navy panels */
+  --color-slate-205: #223269;
+  --color-slate-200: #223269;
+  /* Navy borders */
+  --color-slate-350: #94a3b8;
+  --color-slate-405: #94a3b8;
+  /* Clear supporting details */
+  --color-slate-450: #94a3b8;
+  --color-slate-550: #94a3b8;
+  --color-slate-650: #f8fafc;
+  --color-slate-705: #f8fafc;
+  --color-slate-750: #f8fafc;
+  --color-slate-805: #f8fafc;
+  /* High legibility navy / white text swaps */
+  --color-slate-850: #223269;
+  /* Navy borders */
+  --color-slate-900: #111a36;
+  /* elevated navy cards */
+  --color-slate-950: #0b1329;
+  /* Deep pitch dark cards inner */
+
+  /* Enable bright clear slate-blue colors for dark mode primary elements */
+  --color-sky-50: #0b1329;
+  --color-sky-102: #0b1329;
+  --color-sky-100: #0b1329;
+  --color-sky-305: #60a5fa;
+  --color-sky-600: #38bdf8;
+  /* Premium radiant sky blue dark mode links/buttons */
+  --color-sky-650: #0284c7;
+  --color-sky-700: #0284c7;
+  --color-sky-750: #0284c7;
+  --color-sky-800: #f8fafc;
+  --color-sky-850: #f8fafc;
+  --color-sky-955: #1b264f;
+
+  --color-teal-300: #38bdf8;
+  --color-teal-850: #1b264f;
+}
+
+/* Default elements configurations */
+body {
+  background-color: #f4f9ff;
+  color: #0f172a;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark body {
+  background-color: #0b1329 !important;
+  color: #f8fafc !important;
+}
+
+.dark .bg-white:not(.paper-sheet-light *) {
+  background-color: #161616 !important;
+}
+
+/* Make sure modal elements and tables are highly legible */
+.dark table:not(.paper-sheet-light *) {
+  color: #E5E7EB;
+}
+
+/* Smooth active feedback */
+button,
+[role="button"] {
+  transition: transform 0.1s ease, background-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:active,
+[role="button"]:active {
+  transform: scale(0.98);
+}
+
+/* Safe area padding utilities */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+.px-safe {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Sidebar Animation */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ── Toast Notification Animations ── */
+
+/* Enter: slides in from right + fades in + subtle scale-up */
+@keyframes toastSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(calc(100% + 24px)) scale(0.92);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(-6px) scale(1.01);
+  }
+  80% {
+    transform: translateX(3px) scale(0.995);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Exit: slides out to right + fades out + subtle scale-down */
+@keyframes toastSlideOut {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    max-height: 200px;
+    margin-bottom: 0px;
+  }
+  40% {
+    opacity: 0;
+    transform: translateX(calc(100% + 24px)) scale(0.94);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(calc(100% + 24px)) scale(0.94);
+    max-height: 0px;
+    margin-bottom: -10px;
+  }
+}
+
+/* Progress bar: uses scaleX on transform-origin left (no layout reflow) */
+@keyframes toastProgress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* Applied classes */
+.toast-enter {
+  animation: toastSlideIn 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.toast-exit {
+  animation: toastSlideOut 0.38s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+  will-change: transform, opacity, max-height;
+  pointer-events: none;
+}
+
+.toast-progress-bar {
+  transform-origin: left center;
+  animation: toastProgress 6s linear forwards;
+  will-change: transform;
+}
+
+
+/* Global keyboard accessibility */
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-sky-500, #0ea5e9);
+  outline-offset: 2px;
+}
+
+@variant dark (.dark &);
+
+/* ==========================================
+   HIGH-QUALITY PRINT MEDIA QUERIES
+   ========================================== */
+@media print {
+  @page {
+    size: A4;
+    margin: 0 !important;
+  }
+
+  /* Hide standard headers, sidebars, backgrounds, modals, tabs and buttons */
+  body,
+  html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide entire workspace wrapper content */
+  body>div,
+  #root,
+  #invoice-editor,
+  form,
+  .fixed,
+  button {
+    visibility: hidden !important;
+  }
+
+  /* Make sure the precise sheet content is isolated and fully visible */
+  body {
+    visibility: hidden !important;
+  }
+
+  .invoice-print-sheet,
+  .invoice-print-sheet * {
+    visibility: visible !important;
+  }
+
+  .invoice-print-sheet {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    transform: none !important;
+    z-index: 99999 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide interactive or secondary helper components during physical print */
+  .hide-on-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Keep line-height and text spacing crisp on physical paper */
+  /* Keep line-height and text spacing crisp on physical paper */
+  tr,
+  td,
+  th {
+    page-break-inside: avoid !important;
+  }
+}
+
+/* ==========================================
+   SCROLLBAR REMOVAL (Hides scrollbar globally)
+   ========================================== */
+*::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+div::-webkit-scrollbar,
+section::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+* {
+  -ms-overflow-style: none !important;
+  /* IE and Edge */
+  scrollbar-width: none !important;
+  /* Firefox */
+}
+
+.editable-placeholder:empty::before,
+.editable-placeholder.is-empty::before {
+  content: attr(data-placeholder) !important;
+  color: #94a3b8 !important;
+  /* slate-400 */
+  opacity: 0.7 !important;
+  display: inline-block !important;
+}
+
+/* ===========================================================================
+   AI SMART BILLING INPUT — High contrast, crystal clear text visibility
+   =========================================================================== */
+.smart-billing-prompt-input {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  caret-color: #0284c7 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+}
+
+.smart-billing-prompt-input::placeholder {
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
+  opacity: 0.55 !important;
+  font-weight: 400 !important;
+}
+
+.dark .smart-billing-prompt-input,
+[data-theme="dark"] .smart-billing-prompt-input {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  caret-color: #38bdf8 !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+}
+
+.dark .smart-billing-prompt-input::placeholder,
+[data-theme="dark"] .smart-billing-prompt-input::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+  opacity: 0.55 !important;
+  font-weight: 400 !important;
+}
+
+/* ===========================================================================
+   RESUME DRAFT BANNER — High contrast, crystal clear text visibility
+   =========================================================================== */
+.resume-draft-banner {
+  background-color: #fef3c7 !important;
+  border-bottom: 1px solid #fde68a !important;
+  color: #78350f !important;
+}
+
+.resume-draft-banner .client-name {
+  color: #451a03 !important;
+  -webkit-text-fill-color: #451a03 !important;
+}
+
+.resume-draft-banner .time-text {
+  color: #92400e !important;
+  -webkit-text-fill-color: #92400e !important;
+}
+
+.dark .resume-draft-banner,
+[data-theme="dark"] .resume-draft-banner {
+  background-color: #451a03 !important;
+  border-bottom: 1px solid #78350f !important;
+  color: #fef3c7 !important;
+}
+
+.dark .resume-draft-banner .client-name,
+[data-theme="dark"] .resume-draft-banner .client-name {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.dark .resume-draft-banner .time-text,
+[data-theme="dark"] .resume-draft-banner .time-text {
+  color: #fde68a !important;
+  -webkit-text-fill-color: #fde68a !important;
+}
+
+/* ===========================================================================
+   ULTRA-PREMIUM DARK MODE LEGIBILITY & CONTRAST ENHANCEMENTS
+   High contrast, crystal clear text visibility on all dark backgrounds
+   =========================================================================== */
+.dark {
+  color-scheme: dark;
+  background-color: #0b1329;
+  color: #f8fafc;
+}
+
+/* Elevate dark mode secondary & muted text legibility */
+.dark .text-zinc-400:not(.paper-sheet-light *),
+.dark .text-slate-400:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-400:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-400:not(.paper-sheet-light *) {
+  color: #cbd5e1 !important; /* Slate 300 - High contrast crisp text */
+}
+
+.dark .text-zinc-500:not(.paper-sheet-light *),
+.dark .text-slate-500:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-500:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-500:not(.paper-sheet-light *) {
+  color: #cbd5e1 !important; /* Slate 300 - Clear legible text */
+}
+
+.dark .text-zinc-600:not(.paper-sheet-light *),
+.dark .text-slate-600:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-600:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-600:not(.paper-sheet-light *) {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-zinc-700:not(.paper-sheet-light *),
+.dark .text-slate-700:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-700:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-700:not(.paper-sheet-light *) {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-slate-800:not(.paper-sheet-light *),
+.dark .text-slate-900:not(.paper-sheet-light *),
+.dark .text-slate-950:not(.paper-sheet-light *),
+.dark .text-zinc-800:not(.paper-sheet-light *),
+.dark .text-zinc-900:not(.paper-sheet-light *),
+.dark .text-gray-800:not(.paper-sheet-light *),
+.dark .text-gray-900:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-800:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-900:not(.paper-sheet-light *),
+[data-theme="dark"] .text-slate-950:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-800:not(.paper-sheet-light *),
+[data-theme="dark"] .text-zinc-900:not(.paper-sheet-light *),
+[data-theme="dark"] .text-gray-800:not(.paper-sheet-light *),
+[data-theme="dark"] .text-gray-900:not(.paper-sheet-light *) {
+  color: #f8fafc !important;
+}
+
+/* Dark mode table headers & data cells readability */
+.dark table:not(.paper-sheet-light *) th {
+  color: #94a3b8 !important;
+}
+
+.dark table:not(.paper-sheet-light *) td {
+  color: #f8fafc;
+}
+
+/* Dark mode inputs, textareas & dropdown selects readability */
+.dark input:not([type="checkbox"]):not([type="radio"]):not(.paper-sheet-light *),
+.dark select:not(.paper-sheet-light *),
+.dark textarea:not(.paper-sheet-light *) {
+  color: #f8fafc !important;
+  background-color: #0f172a;
+  border-color: #223269;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b !important;
+  opacity: 1 !important;
+}
+
+/* ===========================================================================
+   PAPER DOCUMENT PREVIEW SHEET (100% UNTOUCHED BY DARK MODE OVERRIDES)
+   Guarantees all document template colors, borders, text, backgrounds,
+   badges, inputs, and inline styles remain 100% identical to light mode.
+   =========================================================================== */
+.paper-sheet-light,
+.dark .paper-sheet-light,
+[data-theme="dark"] .paper-sheet-light {
+  color-scheme: light !important;
+  background-color: #ffffff !important;
+  color: #0f172a;
+
+  --color-slate-50: #f8fafc !important;
+  --color-slate-100: #f1f5f9 !important;
+  --color-slate-150: #e2e8f0 !important;
+  --color-slate-200: #e2e8f0 !important;
+  --color-slate-205: #e2e8f0 !important;
+  --color-slate-300: #cbd5e1 !important;
+  --color-slate-350: #cbd5e1 !important;
+  --color-slate-400: #94a3b8 !important;
+  --color-slate-405: #94a3b8 !important;
+  --color-slate-450: #64748b !important;
+  --color-slate-500: #64748b !important;
+  --color-slate-550: #475569 !important;
+  --color-slate-600: #475569 !important;
+  --color-slate-650: #334155 !important;
+  --color-slate-700: #334155 !important;
+  --color-slate-705: #1e293b !important;
+  --color-slate-750: #1e293b !important;
+  --color-slate-800: #1e293b !important;
+  --color-slate-805: #0f172a !important;
+  --color-slate-850: #e2e8f0 !important;
+  --color-slate-900: #0f172a !important;
+  --color-slate-950: #020617 !important;
+
+  --color-gray-50: #f9fafb !important;
+  --color-gray-100: #f3f4f6 !important;
+  --color-gray-200: #e5e7eb !important;
+  --color-gray-300: #d1d5db !important;
+  --color-gray-400: #9ca3af !important;
+  --color-gray-500: #6b7280 !important;
+  --color-gray-600: #4b5563 !important;
+  --color-gray-700: #374151 !important;
+  --color-gray-800: #1f2937 !important;
+  --color-gray-900: #111827 !important;
+
+  --color-zinc-50: #fafafa !important;
+  --color-zinc-100: #f4f4f5 !important;
+  --color-zinc-200: #e4e4e7 !important;
+  --color-zinc-300: #d4d4d8 !important;
+  --color-zinc-400: #a1a1aa !important;
+  --color-zinc-500: #71717a !important;
+  --color-zinc-600: #52525b !important;
+  --color-zinc-700: #39393d !important;
+  --color-zinc-800: #27272a !important;
+  --color-zinc-900: #18181b !important;
+
+  --color-sky-50: #f0f9ff !important;
+  --color-sky-100: #e0f2fe !important;
+  --color-sky-200: #bae6fd !important;
+  --color-sky-300: #7dd3fc !important;
+  --color-sky-400: #38bdf8 !important;
+  --color-sky-500: #0ea5e9 !important;
+  --color-sky-600: #0284c7 !important;
+  --color-sky-700: #0369a1 !important;
+  --color-sky-800: #075985 !important;
+  --color-sky-900: #0c4a6e !important;
+}
+
+.paper-sheet-light,
+.paper-sheet-light *,
+.paper-sheet-light ::before,
+.paper-sheet-light ::after {
+  color-scheme: light !important;
+}
+
+/* Ensure outer paper containers maintain light background */
+.dark .paper-sheet-light.bg-white,
+.paper-sheet-light.bg-white,
+.dark .paper-sheet-light .invoice-pdf-page,
+.paper-sheet-light .invoice-pdf-page,
+.dark .paper-sheet-light .invoice-live-preview,
+.paper-sheet-light .invoice-live-preview {
+  background-color: #ffffff !important;
+}
+
+/* Force light background & text on fillable interactive fields inside paper sheet */
+.paper-sheet-light input:not([type="checkbox"]):not([type="radio"]),
+.paper-sheet-light select,
+.paper-sheet-light textarea {
+  background-color: #f8fafc;
+  color: #0f172a;
+  -webkit-text-fill-color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.paper-sheet-light .editable-placeholder {
+  background-color: #f8fafc;
+  border-color: #7dd3fc;
+}
+
+.paper-sheet-light .editable-placeholder:hover,
+.paper-sheet-light [contenteditable="true"]:hover,
+.paper-sheet-light input:not([type="checkbox"]):not([type="radio"]):hover,
+.paper-sheet-light select:hover,
+.paper-sheet-light textarea:hover {
+  background-color: #f1f5f9;
+}
+
+.paper-sheet-light .editable-placeholder:focus,
+.paper-sheet-light [contenteditable="true"]:focus,
+.paper-sheet-light input:not([type="checkbox"]):not([type="radio"]):focus,
+.paper-sheet-light select:focus,
+.paper-sheet-light textarea:focus {
+  background-color: #ffffff;
+  color: #0f172a;
+  -webkit-text-fill-color: #0f172a;
+  border-color: #0284c7;
+  outline-color: #0284c7;
+}
+
+/* Placeholders inside paper sheet */
+.paper-sheet-light ::placeholder,
+.paper-sheet-light [data-placeholder]:empty::before,
+.paper-sheet-light .editable-placeholder:empty::before {
+  color: #64748b;
+  -webkit-text-fill-color: #64748b;
+  opacity: 0.8;
+}
+
+/* Dark mode cards & panel contrast outline */
+.dark .bg-\[\#111a36\] {
+  background-color: #111a36;
+  border-color: rgba(56, 189, 248, 0.2);
+}
+
+/* Dark mode scrollbars */
+.dark ::-webkit-scrollbar-thumb {
+  background-color: #223269;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background-color: #0b1329;
+}
+
+/* ==========================================
+   PRO LOADING ANIMATIONS
+   ========================================== */
+
+/* Smooth Spinner override for animate-spin */
+.animate-spin {
+  animation: makSmoothSpin 0.75s linear infinite !important;
+}
+
+@keyframes makSmoothSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
