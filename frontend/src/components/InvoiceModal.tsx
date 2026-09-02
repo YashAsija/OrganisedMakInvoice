@@ -15,7 +15,7 @@ import { SmartBillingBox } from './SmartBillingBox';
 import { getDocumentTypeDefaults } from '../lib/docTypeDefaults';
 import { getLocalizationConfig } from '../lib/localizationEngine';
 import { buildClientDetails, persistBilledParty } from '../lib/documentUtils';
-import { formatStateWithCode, getStateCode, findMatchingStateIso } from '../lib/stateUtils';
+import { formatStateWithCode, getStateCode, findMatchingStateIso, getStateNameFromGstCode } from '../lib/stateUtils';
 
 
 
@@ -253,7 +253,50 @@ export default function InvoiceModal({
   const [clientPan, setClientPan] = useState('');
   const [clientCompanyName, setClientCompanyName] = useState('');
   const updateClientGst = (gstVal: string) => {
-    setClientGstin(gstVal.trim().toUpperCase());
+    const cleanGst = gstVal.trim().toUpperCase();
+    setClientGstin(cleanGst);
+
+    if (!cleanGst) return;
+
+    // Auto extract PAN from 15-digit GSTIN
+    if (cleanGst.length === 15) {
+      setClientPan(cleanGst.substring(2, 12));
+    }
+
+    // Auto populate details from combined Client & Vendor database if matching record exists
+    const allKnown = [...(clients || []), ...registryClients];
+    const match = allKnown.find(item => {
+      const g = ((item as any).gstin || (item as any).taxId || (item as any).clientGstin || '').trim().toUpperCase();
+      return g && g === cleanGst;
+    });
+
+    if (match) {
+      if (match.name) setClientName(match.name);
+      const comp = (match as any).companyName || (match as any).company;
+      if (comp) setClientCompanyName(comp);
+      if (match.email) setClientEmail(match.email);
+      const ph = match.phone || (match as any).mobile;
+      if (ph) setClientPhone(ph);
+      if (match.address) setClientAddress(match.address);
+      const panVal = (match as any).pan || (match as any).clientPan || (cleanGst.length === 15 ? cleanGst.substring(2, 12) : '');
+      if (panVal) setClientPan(panVal);
+      if ((match as any).country || (match as any).clientCountry) {
+        setClientCountry((match as any).country || (match as any).clientCountry);
+      }
+      if ((match as any).state || (match as any).clientState) {
+        setClientState((match as any).state || (match as any).clientState);
+      }
+      const displayName = comp ? `${comp} - ${match.name}` : match.name;
+      if (displayName) setClientSearchQuery(displayName);
+    } else {
+      // If not yet in database, auto-detect Indian state from 2-digit GST state code if state is not set
+      if (cleanGst.length >= 2 && (!clientState || clientState.toLowerCase().includes('select state'))) {
+        const detectedState = getStateNameFromGstCode(cleanGst);
+        if (detectedState) {
+          setClientState(detectedState);
+        }
+      }
+    }
   };
   const [placeOfSupply, setPlaceOfSupply] = useState('');
   const [grRrNo, setGrRrNo] = useState('');
@@ -4185,7 +4228,7 @@ export default function InvoiceModal({
                           if (field === 'clientEmail') setClientEmail(val);
                           if (field === 'clientPhone') setClientPhone(val);
                           if (field === 'clientAddress') setClientAddress(val);
-                          if (field === 'clientGstin' || field === 'clientGST') {
+                          if (field === 'clientGstin' || field === 'clientGST' || field === 'clientTaxId' || field === 'taxId') {
                             updateClientGst(val);
                           }
                           if (field === 'clientState') setClientState(val);
