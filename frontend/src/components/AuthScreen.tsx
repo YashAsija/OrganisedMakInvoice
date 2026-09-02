@@ -392,7 +392,7 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
             console.warn('[Signup Subscription Warning]', subErr);
           }
 
-          const activeUserIdentifier = user.email || user.phone || formData.email || formData.phone || '';
+          const activeUserIdentifier = data.user.email || data.user.phone || formData.email || formData.phone || '';
           if (activeUserIdentifier) {
             localStorage.setItem(`invoice_maker_biz_profile_${encodeURIComponent(activeUserIdentifier)}`, JSON.stringify(initProf));
           }
