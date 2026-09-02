@@ -2725,6 +2725,9 @@ export default function App() {
 
         if (vendorsToUpsert.length > 0 && typeof window !== 'undefined') {
           localStorage.setItem(`makbills_masters_actual_vendors${suffixKey}`, JSON.stringify(existingVendors));
+          if (suffix) {
+            localStorage.setItem(`makbills_masters_actual_vendors${suffix}`, JSON.stringify(existingVendors));
+          }
           localStorage.setItem('makbills_masters_actual_vendors', JSON.stringify(existingVendors));
           window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
 
@@ -2745,7 +2748,8 @@ export default function App() {
     };
 
     // Process Bill To / Vendor — pass full invoice so all fields are available
-    const isPurchaseInvoice = ['purchases', 'purchase_order', 'purchase_debit_note'].includes(invoice.invoiceType || '');
+    const rawDocType = (invoice.invoiceType || '').toLowerCase().trim();
+    const isPurchaseInvoice = ['purchases', 'purchase', 'purchase_order', 'purchase_bill', 'vendor_bill', 'purchase_debit_note', 'purchase_debit'].includes(rawDocType) || rawDocType.startsWith('purchase');
     if (isPurchaseInvoice) {
       // Purchase docs: save to actual_vendors (billed vendors & shipped vendors)
       await processVendorDetails(invoice);

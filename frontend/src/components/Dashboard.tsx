@@ -986,23 +986,13 @@ export default function Dashboard({
 
 
   const [actualVendors, setActualVendors] = useState<MasterVendor[]>(() => {
-
-    const cached = localStorage.getItem('makbills_masters_actual_vendors' + suffix);
-
-    if (cached) return JSON.parse(cached);
-
-    if (suffix) return [];
-
-    return [
-
-      { id: 'av_1', name: 'AWS Cloud Hosting', company: 'Amazon Web Services', email: 'billing@aws.com', phone: '1-800-AWS', address: 'Seattle, WA', category: 'SaaS Subscriptions' },
-
-      { id: 'av_2', name: 'WeWork Office Space', company: 'WeWork LLC', email: 'billing@wework.com', phone: '+1-555-WEWORK', address: 'Tech Plaza, SF, CA', category: 'Rent & Overheads' },
-
-      { id: 'av_3', name: 'Google Suite Workspace', company: 'Google Cloud Corp', email: 'gsuite@google.com', phone: '1-800-GOOGLE', address: 'Mountain View, CA', category: 'SaaS Subscriptions' }
-
-    ];
-
+    const cached = localStorage.getItem('makbills_masters_actual_vendors' + suffix) || localStorage.getItem('makbills_masters_actual_vendors');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return [];
   });
 
 
@@ -4949,31 +4939,70 @@ export default function Dashboard({
 
 
 
-  // Purchasers Filtered
-
+  // Purchasers Filtered (Combines actualVendors from Purchase Ledger documents with referenced clients, deduplicated cleanly)
   const purchasersFiltered = useMemo(() => {
+    const mergedList: any[] = [];
+    const seenKeys = new Set<string>();
 
-    return clients.filter(c => {
+    const getVendorKeys = (v: any) => {
+      const keys: string[] = [];
+      const gstin = (v.gstin || v.taxId || '').trim().toLowerCase();
+      const email = (v.email || '').trim().toLowerCase();
+      const pan = (v.pan || '').trim().toLowerCase();
+      const name = (v.name || '').trim().toLowerCase();
+      const comp = (v.company || v.companyName || '').trim().toLowerCase();
 
-      const nameLower = (c.name || '').trim().toLowerCase();
+      if (gstin) keys.push(`gst_${gstin}`);
+      if (pan) keys.push(`pan_${pan}`);
+      if (email) keys.push(`email_${email}`);
+      if (name) keys.push(`name_${name}`);
+      if (comp) keys.push(`comp_${comp}`);
+      return keys;
+    };
 
-      const emailLower = (c.email || '').trim().toLowerCase();
+    const isSeen = (v: any) => {
+      const keys = getVendorKeys(v);
+      return keys.some(k => seenKeys.has(k));
+    };
 
-      const isManualPurchaser = manualPurchaserIds.includes(c.id);
+    const markSeen = (v: any) => {
+      const keys = getVendorKeys(v);
+      keys.forEach(k => seenKeys.add(k));
+    };
 
-      
-
-      if (isManualPurchaser) return true;
-
-      
-
-      const isReferencedInPurchases = purchaserNames.has(nameLower) || (c.email && purchaserEmails.has(emailLower));
-
-      return isReferencedInPurchases;
-
+    // 1. Include all actualVendors saved from purchase ledger documents
+    (actualVendors || []).forEach(v => {
+      if (!v) return;
+      if (!isSeen(v)) {
+        markSeen(v);
+        mergedList.push({
+          ...v,
+          companyName: v.companyName || v.company || '',
+          company: v.company || v.companyName || '',
+        });
+      }
     });
 
-  }, [clients, manualPurchaserIds, purchaserNames, purchaserEmails]);
+    // 2. Include any clients referenced in purchases or marked as manual purchasers
+    (clients || []).forEach(c => {
+      if (!c) return;
+      const nameLower = (c.name || '').trim().toLowerCase();
+      const emailLower = (c.email || '').trim().toLowerCase();
+      const isManualPurchaser = manualPurchaserIds.includes(c.id);
+      const isReferencedInPurchases = purchaserNames.has(nameLower) || (c.email && purchaserEmails.has(emailLower));
+
+      if ((isManualPurchaser || isReferencedInPurchases) && !isSeen(c)) {
+        markSeen(c);
+        mergedList.push({
+          ...c,
+          companyName: c.companyName || (c as any).company || '',
+          company: (c as any).company || c.companyName || '',
+        });
+      }
+    });
+
+    return mergedList;
+  }, [actualVendors, clients, manualPurchaserIds, purchaserNames, purchaserEmails]);
 
   // Billed Clients Searched & Sorted
   const displayBilledClients = useMemo(() => {
