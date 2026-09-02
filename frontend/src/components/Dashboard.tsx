@@ -22,6 +22,7 @@ import {
   FileText, 
 
   User, 
+  UserCheck, 
 
   Database, 
 
@@ -16634,147 +16635,178 @@ export default function Dashboard({
 
       {isClientEditorOpen && (
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/65 backdrop-blur-sm overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-md overflow-y-auto">
 
           <form 
             onSubmit={handleSaveClientForm}
-            className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-800 p-5 space-y-4 text-sans animate-in fade-in duration-200"
+            className="w-full max-w-lg bg-white dark:bg-[#111a36] rounded-3xl overflow-hidden shadow-2xl shadow-[#0284c7]/10 border border-[#bae6fd]/80 dark:border-[#223269]/80 text-sans animate-in zoom-in-95 duration-150"
           >
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-white">
-                {editingClient ? 'Edit Client Profile' : 'Register New Client'}
-              </h3>
+            {/* Header */}
+            <div className="flex justify-between items-center px-5 py-4 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f4f9ff] dark:bg-[#0b1329]/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#0284c7] text-white flex items-center justify-center font-bold shadow-md shadow-[#0284c7]/20">
+                  <UserCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
+                    {editingClient ? 'Edit Client Profile' : 'Register New Client'}
+                  </h3>
+                  <p className="text-[10px] text-[#64748b] dark:text-zinc-400 font-medium">Manage party billing metadata & tax compliance info</p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsClientEditorOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                className="p-1.5 hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#64748b] hover:text-[#0284c7] dark:hover:text-[#38bdf8] rounded-full transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4.5 h-4.5" />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div>
-                <label htmlFor="cl_fname" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Client Full Name *</label>
-                <input
-                  id="cl_fname"
-                  required
-                  type="text"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="e.g. John Doe"
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-                />
-              </div>
+            {/* Form Fields */}
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                <div>
+                  <label htmlFor="cl_fname" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    Client Full Name *
+                  </label>
+                  <input
+                    id="cl_fname"
+                    required
+                    type="text"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="e.g. John Doe"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="cl_comp" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Company Name</label>
-                <input
-                  id="cl_comp"
-                  type="text"
-                  value={clientCompany}
-                  onChange={(e) => setClientCompany(e.target.value)}
-                  placeholder="e.g. Marvelous Widgets Ltd"
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-                />
-              </div>
+                <div>
+                  <label htmlFor="cl_comp" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    Company Name
+                  </label>
+                  <input
+                    id="cl_comp"
+                    type="text"
+                    value={clientCompany}
+                    onChange={(e) => setClientCompany(e.target.value)}
+                    placeholder="e.g. Marvelous Widgets Ltd"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="cl_country" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Country</label>
-                <input
-                  id="cl_country"
-                  type="text"
-                  value={clientCountry}
-                  onChange={(e) => setClientCountry(e.target.value)}
-                  placeholder="e.g. India"
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-                />
-              </div>
+                <div>
+                  <label htmlFor="cl_country" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    Country
+                  </label>
+                  <input
+                    id="cl_country"
+                    type="text"
+                    value={clientCountry}
+                    onChange={(e) => setClientCountry(e.target.value)}
+                    placeholder="e.g. India"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="cl_state" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">State</label>
-                <input
-                  id="cl_state"
-                  type="text"
-                  value={clientState}
-                  onChange={(e) => setClientState(e.target.value)}
-                  placeholder="e.g. Maharashtra"
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-                />
-              </div>
+                <div>
+                  <label htmlFor="cl_state" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    State
+                  </label>
+                  <input
+                    id="cl_state"
+                    type="text"
+                    value={clientState}
+                    onChange={(e) => setClientState(e.target.value)}
+                    placeholder="e.g. Maharashtra"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="cl_gstin" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">GSTIN / Tax No.</label>
-                <input
-                  id="cl_gstin"
-                  type="text"
-                  value={clientGstin}
-                  onChange={(e) => setClientGstin(e.target.value)}
-                  placeholder="e.g. 27AAAAA0000A1Z5"
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-                />
-              </div>
+                <div>
+                  <label htmlFor="cl_gstin" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    GSTIN / Tax No.
+                  </label>
+                  <input
+                    id="cl_gstin"
+                    type="text"
+                    value={clientGstin}
+                    onChange={(e) => setClientGstin(e.target.value)}
+                    placeholder="e.g. 27AAAAA0000A1Z5"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none uppercase"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="cl_pan" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">PAN</label>
-                <input
-                  id="cl_pan"
-                  type="text"
-                  value={clientPan}
-                  onChange={(e) => setClientPan(e.target.value)}
-                  placeholder="e.g. ABCDE1234F"
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-                />
-              </div>
+                <div>
+                  <label htmlFor="cl_pan" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    PAN
+                  </label>
+                  <input
+                    id="cl_pan"
+                    type="text"
+                    value={clientPan}
+                    onChange={(e) => setClientPan(e.target.value)}
+                    placeholder="e.g. ABCDE1234F"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none uppercase"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="cl_em" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Client Email Address</label>
-                <input
-                  id="cl_em"
-                  type="email"
-                  value={clientEmail}
-                  onChange={(e) => setClientEmail(e.target.value)}
-                  placeholder="e.g. billing@widgets.com"
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-                />
-              </div>
+                <div>
+                  <label htmlFor="cl_em" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    Client Email Address
+                  </label>
+                  <input
+                    id="cl_em"
+                    type="email"
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                    placeholder="e.g. billing@widgets.com"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="cl_ph" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Client Phone number</label>
-                <input
-                  id="cl_ph"
-                  type="text"
-                  value={clientPhone}
-                  onChange={(e) => setClientPhone(e.target.value)}
-                  placeholder="e.g. +1 (555) 019-2834"
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-                />
-              </div>
+                <div>
+                  <label htmlFor="cl_ph" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    Client Phone Number
+                  </label>
+                  <input
+                    id="cl_ph"
+                    type="text"
+                    value={clientPhone}
+                    onChange={(e) => setClientPhone(e.target.value)}
+                    placeholder="e.g. +1 (555) 019-2834"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                  />
+                </div>
 
-              <div className="sm:col-span-2">
-                <label htmlFor="cl_ad" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Billing Address</label>
-                <textarea
-                  id="cl_ad"
-                  value={clientAddress || ''}
-                  onChange={(e) => setClientAddress(e.target.value)}
-                  placeholder="e.g. Building 10, Redwood Ave, CA"
-                  rows={2}
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none resize-none touch-action-manipulation"
-                />
+                <div className="sm:col-span-2">
+                  <label htmlFor="cl_ad" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    Billing Address
+                  </label>
+                  <textarea
+                    id="cl_ad"
+                    value={clientAddress || ''}
+                    onChange={(e) => setClientAddress(e.target.value)}
+                    placeholder="e.g. Building 10, Redwood Ave, CA"
+                    rows={2}
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none resize-none"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
+            {/* Footer */}
+            <div className="px-5 py-3.5 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setIsClientEditorOpen(false)}
-                className="px-3.5 py-1.5 text-xs text-slate-500 font-medium cursor-pointer hover:bg-slate-50"
+                className="px-4 py-2 bg-white hover:bg-slate-100 dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#64748b] dark:text-[#94a3b8] border border-slate-200 dark:border-[#223269] rounded-xl text-xs font-bold transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4.5 py-1.5 bg-sky-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer active:scale-95"
+                className="px-5 py-2 bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-[#0284c7]/25 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
                 Save Profile
               </button>
@@ -16791,201 +16823,126 @@ export default function Dashboard({
 
       {isExpenseLoggerOpen && (
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/65 backdrop-blur-sm overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-md overflow-y-auto">
 
           <form 
-
             onSubmit={handleSaveExpenseForm}
-
-            className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-200 p-4 space-y-4 text-sans animate-in fade-in duration-200"
-
+            className="w-full max-w-sm bg-white dark:bg-[#111a36] rounded-3xl overflow-hidden shadow-2xl shadow-[#0284c7]/10 border border-[#bae6fd]/80 dark:border-[#223269]/80 text-sans animate-in zoom-in-95 duration-150"
           >
-
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-805">
-
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-805">
-
-                Log Business Expense
-
-              </h3>
-
+            {/* Header */}
+            <div className="flex justify-between items-center px-5 py-4 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f4f9ff] dark:bg-[#0b1329]/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#0284c7] text-white flex items-center justify-center font-bold shadow-md shadow-[#0284c7]/20">
+                  <Banknote className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
+                    Log Business Expense
+                  </h3>
+                  <p className="text-[10px] text-[#64748b] dark:text-zinc-400 font-medium">Record operational overheads & vendor payouts</p>
+                </div>
+              </div>
               <button
-
                 type="button"
-
                 onClick={() => setIsExpenseLoggerOpen(false)}
-
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-
+                className="p-1.5 hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#64748b] hover:text-[#0284c7] dark:hover:text-[#38bdf8] rounded-full transition-colors cursor-pointer"
               >
-
-                <X className="w-4 h-4" />
-
+                <X className="w-4.5 h-4.5" />
               </button>
-
             </div>
 
-
-
-            <div className="space-y-3 text-xs">
-
+            {/* Form Fields */}
+            <div className="p-5 space-y-3.5 text-xs">
               <div>
-
-                <label htmlFor="exp_cat" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Expense Category</label>
-
+                <label htmlFor="exp_cat" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  Expense Category
+                </label>
                 <select
-
                   id="exp_cat"
-
                   value={expenseCategory}
-
                   onChange={(e) => setExpenseCategory(e.target.value)}
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-
+                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none cursor-pointer"
                 >
-
                   <option value="Rent & Overheads">Rent & Overheads</option>
-
                   <option value="Product Inventory">Product Inventory</option>
-
                   <option value="SaaS & Tooling Subscriptions">SaaS & Tooling Subscriptions</option>
-
                   <option value="Contractors & Suppliers cost">Contractors & Suppliers cost</option>
-
                   <option value="Advertisements & Marketing">Advertisements & Marketing</option>
-
                   <option value="Travel & Relocation expense">Travel & Relocation expense</option>
-
                   <option value="Other Corporate Sundry Expenses">Other Corporate Sundry Expenses</option>
-
                   <option value="Custom">Custom (Type below)</option>
-
                 </select>
 
                 {expenseCategory === 'Custom' && (
-
                   <input
-
                     type="text"
-
                     placeholder="Enter custom category..."
-
                     value={customExpenseCategory}
-
                     onChange={(e) => setCustomExpenseCategory(e.target.value)}
-
-                    className="w-full px-3.5 py-2 mt-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-
+                    className="w-full px-3.5 py-2.5 mt-2 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
                     required
-
                   />
-
                 )}
-
               </div>
 
-
-
               <div>
-
-                <label htmlFor="exp_amt" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Overhead Cost Amount ({currencySymbol}) *</label>
-
+                <label htmlFor="exp_amt" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  Overhead Cost Amount ({currencySymbol}) *
+                </label>
                 <input
-
                   id="exp_amt"
-
                   required
-
                   type="number"
-
                   min="0.01"
-
                   step="0.01"
-
                   value={expenseAmount}
-
                   onChange={(e) => setExpenseAmount(e.target.value)}
-
                   placeholder="0.00"
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none font-mono touch-action-manipulation"
-
+                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none font-mono"
                 />
-
               </div>
 
-
-
               <div>
-
-                <label htmlFor="exp_dt" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Expenditure Date *</label>
-
+                <label htmlFor="exp_dt" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  Expenditure Date *
+                </label>
                 <input
-
                   id="exp_dt"
-
                   required
-
                   type="date"
-
                   value={expenseDate}
-
                   onChange={(e) => setExpenseDate(e.target.value)}
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-
+                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
                 />
-
               </div>
-
-
 
               <div>
-
-                <label htmlFor="exp_desc" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Expenditure Description</label>
-
+                <label htmlFor="exp_desc" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  Expenditure Description
+                </label>
                 <textarea
-
                   id="exp_desc"
-
                   value={expenseDesc || ''}
-
                   onChange={(e) => setExpenseDesc(e.target.value)}
-
                   placeholder="e.g. AWS Multi-Region Node Cloud charges"
-
                   rows={2}
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none resize-none touch-action-manipulation"
-
+                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none resize-none"
                 />
-
               </div>
-
             </div>
 
-
-
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-805 flex items-center justify-end gap-2.5">
-
+            {/* Footer */}
+            <div className="px-5 py-3.5 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 flex items-center justify-end gap-3">
               <button
-
                 type="button"
-
                 onClick={() => setIsExpenseLoggerOpen(false)}
-
-                className="px-3.5 py-1.5 text-xs text-slate-550 font-medium cursor-pointer hover:bg-slate-5"
-
+                className="px-4 py-2 bg-white hover:bg-slate-100 dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#64748b] dark:text-[#94a3b8] border border-slate-200 dark:border-[#223269] rounded-xl text-xs font-bold transition-all cursor-pointer"
               >
-
                 Cancel
-
               </button>
-
               <button
                 type="submit"
-                className="px-5 py-1.5 bg-rose-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer active:scale-95"
+                className="px-5 py-2 bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-[#0284c7]/25 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
                 Log Expense
               </button>
