@@ -5096,15 +5096,45 @@ export default function Dashboard({
 
 
   const handleDeleteClientWrap = async (clientId: string) => {
+    // 1. Identify target profile
+    const target = (clients || []).find(c => c.id === clientId) ||
+                   (vendors || []).find(v => v.id === clientId) ||
+                   (actualVendors || []).find(v => v.id === clientId) ||
+                   (billedClientsFiltered || []).find(c => c.id === clientId) ||
+                   (purchasersFiltered || []).find(c => c.id === clientId);
 
-    onDeleteClient(clientId);
+    const targetName = (target?.name || target?.companyName || target?.company || '').trim();
 
+    // 2. Call app-level delete (triggers confirm modal and deletes from clients table)
+    await onDeleteClient(clientId);
+
+    // 3. Remove from master vendors (Client Database)
+    const newVendors = (vendors || []).filter(v => v.id !== clientId && (!targetName || (v.name || v.company || '').trim().toLowerCase() !== targetName.toLowerCase()));
+    setVendors(newVendors);
+    localStorage.setItem('makbills_masters_vendors' + suffix, JSON.stringify(newVendors));
+
+    // 4. Remove from master actualVendors (Vendor Database)
+    const newActualVendors = (actualVendors || []).filter(v => v.id !== clientId && (!targetName || (v.name || v.company || '').trim().toLowerCase() !== targetName.toLowerCase()));
+    setActualVendors(newActualVendors);
+    localStorage.setItem('makbills_masters_actual_vendors' + suffix, JSON.stringify(newActualVendors));
+
+    // 5. Remove from manual purchasers list
     const newManualIds = manualPurchaserIds.filter(id => id !== clientId);
-
     setManualPurchaserIds(newManualIds);
-
     localStorage.setItem('makbills_manual_purchasers', JSON.stringify(newManualIds));
 
+    // 6. Push updated master registries to Supabase company_settings
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        await pushMasterRegistriesToCloud(session.user.id, suffix, {
+          vendors: newVendors,
+          actualVendors: newActualVendors
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to push updated master registries after deletion:', e);
+    }
   };
 
 

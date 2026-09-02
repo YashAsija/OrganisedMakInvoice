@@ -3444,20 +3444,25 @@ export default function App() {
     });
     if (!confirmed) return;
 
+    // Find client in local clients state or fallback
     const clientToDelete = clients.find(c => c.id === clientId);
-    if (!clientToDelete) return;
+    const clientName = clientToDelete?.name?.trim() || '';
 
-    const nameLower = clientToDelete.name.trim().toLowerCase();
-
-    // Filter out all duplicates by name from local state
-    const remaining = clients.filter(c => c.name.trim().toLowerCase() !== nameLower);
+    // Filter out all duplicates by ID and by name from local state
+    const remaining = clients.filter(c => c.id !== clientId && (!clientName || c.name.trim().toLowerCase() !== clientName.toLowerCase()));
     setClients(remaining);
     localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(remaining));
 
     const activeUid = await resolveSessionUid();
     if (activeUid) {
       try {
-        const { error } = await supabase.from('clients').delete().eq('userId', activeUid).ilike('name', clientToDelete.name.trim());
+        let query = supabase.from('clients').delete().eq('userId', activeUid);
+        if (clientName) {
+          query = query.or(`id.eq.${clientId},name.ilike.${clientName}`);
+        } else {
+          query = query.eq('id', clientId);
+        }
+        const { error } = await query;
         if (error) {
           markClientPendingDelete(clientId);
         }
