@@ -2586,9 +2586,139 @@ export default function App() {
       }
     };
 
-    // Process Bill To — pass full invoice so all fields are available
+    // Process Vendor details for Purchase Ledger documents
+    const processVendorDetails = async (invoiceObj: Invoice) => {
+      try {
+        const suffixKey = typeof window !== 'undefined' ? (localStorage.getItem('makbills_company_suffix') || '') : '';
+        const cachedRaw = typeof window !== 'undefined' ? (localStorage.getItem(`makbills_masters_actual_vendors${suffixKey}`) || localStorage.getItem('makbills_masters_actual_vendors')) : null;
+        let existingVendors: any[] = cachedRaw ? JSON.parse(cachedRaw) : [];
+
+        const vendorsToUpsert: any[] = [];
+
+        const upsertOneVendor = (
+          nameVal?: string,
+          companyVal?: string,
+          emailVal?: string,
+          phoneVal?: string,
+          addressVal?: string,
+          gstinVal?: string,
+          panVal?: string,
+          stateVal?: string,
+          countryVal?: string
+        ) => {
+          const n = (nameVal || '').trim();
+          const companyName = (companyVal || '').trim();
+          const e = (emailVal || '').trim();
+          const p = (phoneVal || '').trim();
+          const a = (addressVal || '').trim();
+          const gstin = (gstinVal || '').trim();
+          const pan = (panVal || '').trim();
+          const state = (stateVal || '').trim();
+          const country = (countryVal || 'India').trim();
+
+          if (!n && !companyName && !e && !gstin) return; // Need at least one identifier
+
+          const existingIdx = existingVendors.findIndex((v) => {
+            if (gstin && v.gstin && v.gstin.toLowerCase() === gstin.toLowerCase()) return true;
+            if (e && v.email && v.email.toLowerCase() === e.toLowerCase()) return true;
+            if (companyName && v.company && v.company.toLowerCase() === companyName.toLowerCase()) return true;
+            if (n && v.name && v.name.toLowerCase() === n.toLowerCase()) return true;
+            return false;
+          });
+
+          if (existingIdx > -1) {
+            const existing = existingVendors[existingIdx];
+            const merged = {
+              ...existing,
+              name: n || existing.name || companyName,
+              company: companyName || existing.company || n,
+              email: e || existing.email,
+              phone: p || existing.phone,
+              address: a || existing.address,
+              gstin: gstin || existing.gstin,
+              pan: pan || existing.pan,
+              state: state || existing.state,
+              country: country || existing.country,
+              category: existing.category || 'Vendor',
+            };
+            existingVendors[existingIdx] = merged;
+            vendorsToUpsert.push(merged);
+            console.log('[App.tsx] processVendorDetails: UPDATED vendor:', merged.name);
+          } else {
+            const newVendor = {
+              id: `av_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+              name: n || companyName,
+              company: companyName || n,
+              email: e,
+              phone: p,
+              address: a,
+              gstin: gstin,
+              pan: pan,
+              state: state,
+              country: country,
+              category: 'Vendor',
+            };
+            existingVendors = [newVendor, ...existingVendors];
+            vendorsToUpsert.push(newVendor);
+            console.log('[App.tsx] processVendorDetails: INSERTED vendor:', newVendor.name);
+          }
+        };
+
+        // 1. Process Billed Vendor details
+        upsertOneVendor(
+          invoiceObj.clientName,
+          invoiceObj.clientCompanyName || invoiceObj.clientCompany,
+          invoiceObj.clientEmail,
+          invoiceObj.clientPhone,
+          invoiceObj.clientAddress,
+          invoiceObj.clientGstin,
+          invoiceObj.clientPan,
+          invoiceObj.clientState,
+          invoiceObj.clientCountry
+        );
+
+        // 2. Process Shipped Vendor / Consignor details if provided
+        if (invoiceObj.shippedToName || invoiceObj.shippedToCompanyName || invoiceObj.shippedToGstin) {
+          upsertOneVendor(
+            invoiceObj.shippedToName,
+            invoiceObj.shippedToCompanyName || invoiceObj.shippedToCompany,
+            invoiceObj.shippedToEmail,
+            invoiceObj.shippedToPhone,
+            invoiceObj.shippedToAddress,
+            invoiceObj.shippedToGstin,
+            invoiceObj.shippedToPan,
+            invoiceObj.shippedToState,
+            invoiceObj.shippedToCountry
+          );
+        }
+
+        if (vendorsToUpsert.length > 0 && typeof window !== 'undefined') {
+          localStorage.setItem(`makbills_masters_actual_vendors${suffixKey}`, JSON.stringify(existingVendors));
+          localStorage.setItem('makbills_masters_actual_vendors', JSON.stringify(existingVendors));
+          window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
+
+          const activeUid = await resolveSessionUid();
+          const effectiveUid = activeUid || user?.id || localStorage.getItem('makbills_user_id');
+          if (effectiveUid && effectiveUid !== 'local_user') {
+            try {
+              const vendorsWithUser = vendorsToUpsert.map(v => ({ ...v, user_id: effectiveUid }));
+              await supabase.from('actual_vendors').upsert(vendorsWithUser, { onConflict: 'id' });
+            } catch (vErr) {
+              console.warn('[handleSaveInvoice] Supabase vendor sync warning:', vErr);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[handleSaveInvoice] Vendor processing exception:', err);
+      }
+    };
+
+    // Process Bill To / Vendor — pass full invoice so all fields are available
     const isPurchaseInvoice = ['purchases', 'purchase_order', 'purchase_debit_note'].includes(invoice.invoiceType || '');
-    if (!isPurchaseInvoice) {
+    if (isPurchaseInvoice) {
+      // Purchase docs: save to actual_vendors (billed vendors & shipped vendors)
+      await processVendorDetails(invoice);
+    } else {
       // Sales docs: save to clients (billed clients)
       processClientDetails(invoice);
     }
@@ -3249,6 +3379,40 @@ export default function App() {
     const updated = exists ? expenses.map(e => e.id === expense.id ? expense : e) : [expense, ...expenses];
     setExpenses(updated);
     localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(updated));
+
+    // Save vendor to Billed Vendors Directory (actualVendors) if vendor string exists
+    if (expense.vendor && expense.vendor.trim()) {
+      try {
+        const vName = expense.vendor.trim();
+        const suffixKey = typeof window !== 'undefined' ? (localStorage.getItem('makbills_company_suffix') || '') : '';
+        const cachedRaw = typeof window !== 'undefined' ? (localStorage.getItem(`makbills_masters_actual_vendors${suffixKey}`) || localStorage.getItem('makbills_masters_actual_vendors')) : null;
+        let existingVendors: any[] = cachedRaw ? JSON.parse(cachedRaw) : [];
+        const existsVendor = existingVendors.some(v => (v.name || '').toLowerCase() === vName.toLowerCase() || (v.company || '').toLowerCase() === vName.toLowerCase());
+        if (!existsVendor) {
+          const newVendor = {
+            id: `av_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            name: vName,
+            company: vName,
+            email: '',
+            phone: '',
+            address: '',
+            gstin: '',
+            pan: '',
+            state: '',
+            country: 'India',
+            category: expense.category || 'Vendor',
+          };
+          existingVendors = [newVendor, ...existingVendors];
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(`makbills_masters_actual_vendors${suffixKey}`, JSON.stringify(existingVendors));
+            localStorage.setItem('makbills_masters_actual_vendors', JSON.stringify(existingVendors));
+            window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
+          }
+        }
+      } catch (eErr) {
+        console.warn('[handleSaveExpense] Vendor save warning:', eErr);
+      }
+    }
 
     const activeUid = await resolveSessionUid();
     if (activeUid) {
