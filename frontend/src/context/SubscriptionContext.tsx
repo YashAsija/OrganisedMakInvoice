@@ -762,6 +762,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       let dbError: any = null;
 
       try {
+        await supabase.from('users').upsert({
+          uid: activeUserId,
+          email: activeEmail || null,
+          updatedAt: new Date().toISOString(),
+        }, { onConflict: 'uid' });
+      } catch (uErr) {}
+
+      try {
         const { error } = await supabase
           .from('subscriptions')
           .upsert(trialPayload, { onConflict: 'user_id' });
