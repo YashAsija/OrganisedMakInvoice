@@ -15,7 +15,7 @@ import { SmartBillingBox } from './SmartBillingBox';
 import { getDocumentTypeDefaults } from '../lib/docTypeDefaults';
 import { getLocalizationConfig } from '../lib/localizationEngine';
 import { buildClientDetails, persistBilledParty } from '../lib/documentUtils';
-import { formatStateWithCode, getStateCode, findMatchingStateIso } from '../lib/stateUtils';
+import { formatStateWithCode, getStateCode, findMatchingStateIso, getStateNameFromGstCode } from '../lib/stateUtils';
 
 
 
@@ -144,35 +144,200 @@ export default function InvoiceModal({
     };
   }, []);
 
-  // Master Registry Client + Vendor Database loader (merges both, stays fresh via sync events)
+  // Advanced features and billing options
+  const [invoiceType, setInvoiceType] = useState<'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'estimate' | 'quote' | 'purchases' | 'purchase_order' | 'purchase_debit_note'>('invoice');
+
+  // Master Registry Combined Master Database loader (unifies Client DB, Vendor DB, Supabase Clients & Billed Parties)
   const [registryClients, setRegistryClients] = useState<any[]>([]);
 
   const loadRegistryClients = useCallback(() => {
     const suffix = profile?.email ? `_${encodeURIComponent(profile.email)}` : '';
-    const salesRaw = localStorage.getItem('makbills_masters_vendors' + suffix);
-    const purchaseRaw = localStorage.getItem('makbills_masters_actual_vendors' + suffix);
-    const sales: any[] = salesRaw ? (() => { try { return JSON.parse(salesRaw); } catch { return []; } })() : [];
-    const purchase: any[] = purchaseRaw ? (() => { try { return JSON.parse(purchaseRaw); } catch { return []; } })() : [];
-    // Merge deduped by name
-    const seenIds = new Set<string>();
-    const merged: any[] = [];
-    for (const r of [...sales, ...purchase]) {
-      const key = (r.name || r.companyName || r.company || '').toLowerCase().trim();
-      if (key && seenIds.has(key)) continue;
-      if (key) seenIds.add(key);
-      merged.push(r);
-    }
-    setRegistryClients(merged);
-  }, [profile]);
+    
+    // 1. Load Client Database (makbills_masters_vendors)
+    const rawClients = localStorage.getItem('makbills_masters_vendors' + suffix) || localStorage.getItem('makbills_masters_vendors') || '[]';
+    // 2. Load Vendor Database (makbills_masters_actual_vendors)
+    const rawVendors = localStorage.getItem('makbills_masters_actual_vendors' + suffix) || localStorage.getItem('makbills_masters_actual_vendors') || '[]';
 
+    let clientList: any[] = [];
+    let vendorList: any[] = [];
+    try { clientList = JSON.parse(rawClients); } catch { clientList = []; }
+    try { vendorList = JSON.parse(rawVendors); } catch { vendorList = []; }
+
+    const map = new Map<string, any>();
+
+    const normalizeKey = (name?: string, company?: string, gstin?: string, email?: string) => {
+      const cleanGst = (gstin || '').trim().toUpperCase();
+      if (cleanGst && cleanGst.length >= 10) return `gst_${cleanGst}`;
+      const cleanEmail = (email || '').trim().toLowerCase();
+      if (cleanEmail && cleanEmail.includes('@')) return `email_${cleanEmail}`;
+      const cleanComp = (company || '').trim().toLowerCase();
+      const cleanName = (name || '').trim().toLowerCase();
+      if (cleanComp) return `comp_${cleanComp}`;
+      if (cleanName) return `name_${cleanName}`;
+      return '';
+    };
+
+    // 1. Client Database
+    (Array.isArray(clientList) ? clientList : []).forEach((c) => {
+      const key = normalizeKey(c.name, c.company || c.companyName, c.gstin || c.taxId, c.email);
+      if (!key) return;
+      const gstinVal = c.gstin || c.taxId || '';
+      const panVal = c.pan || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+      const comp = c.company || c.companyName || '';
+      const name = c.name || comp || 'Client';
+      map.set(key, {
+        id: c.id || `cl_${key}`,
+        name,
+        companyName: comp,
+        company: comp,
+        email: c.email || '',
+        phone: c.phone || c.mobile || '',
+        address: c.address || '',
+        gstin: gstinVal,
+        taxId: gstinVal,
+        pan: panVal,
+        state: c.state || '',
+        country: c.country || 'India',
+        partyType: 'Client'
+      });
+    });
+
+    // 2. Vendor Database
+    (Array.isArray(vendorList) ? vendorList : []).forEach((v) => {
+      const key = normalizeKey(v.name, v.company || v.companyName, v.gstin || v.taxId, v.email);
+      if (!key) return;
+      const gstinVal = v.gstin || v.taxId || '';
+      const panVal = v.pan || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+      const comp = v.company || v.companyName || '';
+      const name = v.name || comp || 'Vendor';
+
+      if (map.has(key)) {
+        const existing = map.get(key)!;
+        existing.partyType = 'Client & Vendor';
+        if (!existing.email && v.email) existing.email = v.email;
+        if (!existing.phone && (v.phone || v.mobile)) existing.phone = v.phone || v.mobile;
+        if (!existing.address && v.address) existing.address = v.address;
+        if (!existing.gstin && gstinVal) { existing.gstin = gstinVal; existing.taxId = gstinVal; }
+        if (!existing.pan && panVal) existing.pan = panVal;
+      } else {
+        map.set(key, {
+          id: v.id || `ven_${key}`,
+          name,
+          companyName: comp,
+          company: comp,
+          email: v.email || '',
+          phone: v.phone || v.mobile || '',
+          address: v.address || '',
+          gstin: gstinVal,
+          taxId: gstinVal,
+          pan: panVal,
+          state: v.state || '',
+          country: v.country || 'India',
+          partyType: 'Vendor'
+        });
+      }
+    });
+
+    // 3. Supabase clients prop
+    (clients || []).forEach((c) => {
+      const key = normalizeKey(c.name, (c as any).companyName || (c as any).company, (c as any).gstin || (c as any).taxId, c.email);
+      if (!key) return;
+      const gstinVal = (c as any).gstin || (c as any).taxId || '';
+      const panVal = (c as any).pan || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+      const comp = (c as any).companyName || (c as any).company || '';
+      const name = c.name || comp || 'Client';
+
+      if (map.has(key)) {
+        const existing = map.get(key)!;
+        if (!existing.email && c.email) existing.email = c.email;
+        if (!existing.phone && c.phone) existing.phone = c.phone;
+        if (!existing.address && c.address) existing.address = c.address;
+        if (!existing.gstin && gstinVal) { existing.gstin = gstinVal; existing.taxId = gstinVal; }
+        if (!existing.pan && panVal) existing.pan = panVal;
+      } else {
+        map.set(key, {
+          id: c.id || `cl_prop_${key}`,
+          name,
+          companyName: comp,
+          company: comp,
+          email: c.email || '',
+          phone: c.phone || '',
+          address: c.address || '',
+          gstin: gstinVal,
+          taxId: gstinVal,
+          pan: panVal,
+          state: (c as any).state || '',
+          country: (c as any).country || 'India',
+          partyType: 'Client'
+        });
+      }
+    });
+
+    // 4. Invoices (Billed Clients and Billed Vendors)
+    (invoices || []).forEach((inv) => {
+      if (inv.isDeleted) return;
+      const rawType = (inv.invoiceType || '').toLowerCase();
+      const isPurchase = ['purchases', 'purchase_bill', 'purchase', 'purchase_order', 'po', 'purchase_debit_note'].includes(rawType);
+      const partyName = inv.clientName || (inv as any).vendorName || '';
+      const compName = (inv as any).clientCompanyName || (inv as any).companyName || '';
+      const gstinVal = (inv as any).clientGstin || (inv as any).taxId || (inv as any).gstin || '';
+      const email = inv.clientEmail || (inv as any).email || '';
+      const key = normalizeKey(partyName, compName, gstinVal, email);
+      if (!key) return;
+
+      const panVal = (inv as any).clientPan || (inv as any).pan || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+
+      if (map.has(key)) {
+        const existing = map.get(key)!;
+        if (isPurchase && existing.partyType === 'Client') {
+          existing.partyType = 'Client & Vendor';
+        } else if (!isPurchase && existing.partyType === 'Vendor') {
+          existing.partyType = 'Client & Vendor';
+        }
+        if (!existing.email && email) existing.email = email;
+        if (!existing.phone && (inv.clientPhone || (inv as any).phone)) existing.phone = inv.clientPhone || (inv as any).phone;
+        if (!existing.address && inv.clientAddress) existing.address = inv.clientAddress;
+        if (!existing.gstin && gstinVal) { existing.gstin = gstinVal; existing.taxId = gstinVal; }
+        if (!existing.pan && panVal) existing.pan = panVal;
+        if (!existing.state && (inv as any).clientState) existing.state = (inv as any).clientState;
+        if (!existing.country && (inv as any).clientCountry) existing.country = (inv as any).clientCountry;
+      } else {
+        const partyType: 'Client' | 'Vendor' = isPurchase ? 'Vendor' : 'Client';
+        map.set(key, {
+          id: `billed_${key}`,
+          name: partyName || compName,
+          companyName: compName,
+          company: compName,
+          email,
+          phone: inv.clientPhone || (inv as any).phone || '',
+          address: inv.clientAddress || '',
+          gstin: gstinVal,
+          taxId: gstinVal,
+          pan: panVal,
+          state: (inv as any).clientState || '',
+          country: (inv as any).clientCountry || 'India',
+          partyType
+        });
+      }
+    });
+
+    setRegistryClients(Array.from(map.values()));
+  }, [profile, clients, invoices]);
+
+  const prevIsOpenRef = useRef(false);
   useEffect(() => {
     if (isOpen) {
-      setSavedInvoiceForPreview(null);
+      if (!prevIsOpenRef.current) {
+        setSavedInvoiceForPreview(null);
+      }
       loadRegistryClients();
+    } else {
+      setSavedInvoiceForPreview(null);
     }
+    prevIsOpenRef.current = isOpen;
   }, [isOpen, loadRegistryClients]);
 
-  // Keep registry fresh when other parts of the app save new clients
+  // Keep registry fresh when other parts of the app save new clients or vendors
   useEffect(() => {
     const handleSync = () => loadRegistryClients();
     window.addEventListener('makbills_sync_vendors', handleSync);
@@ -219,7 +384,50 @@ export default function InvoiceModal({
   const [clientPan, setClientPan] = useState('');
   const [clientCompanyName, setClientCompanyName] = useState('');
   const updateClientGst = (gstVal: string) => {
-    setClientGstin(gstVal.trim().toUpperCase());
+    const cleanGst = gstVal.trim().toUpperCase();
+    setClientGstin(cleanGst);
+
+    if (!cleanGst) return;
+
+    // Auto extract PAN from 15-digit GSTIN
+    if (cleanGst.length === 15) {
+      setClientPan(cleanGst.substring(2, 12));
+    }
+
+    // Auto populate details from combined Client & Vendor database if matching record exists
+    const allKnown = [...(clients || []), ...registryClients];
+    const match = allKnown.find(item => {
+      const g = ((item as any).gstin || (item as any).taxId || (item as any).clientGstin || '').trim().toUpperCase();
+      return g && g === cleanGst;
+    });
+
+    if (match) {
+      if (match.name) setClientName(match.name);
+      const comp = (match as any).companyName || (match as any).company;
+      if (comp) setClientCompanyName(comp);
+      if (match.email) setClientEmail(match.email);
+      const ph = match.phone || (match as any).mobile;
+      if (ph) setClientPhone(ph);
+      if (match.address) setClientAddress(match.address);
+      const panVal = (match as any).pan || (match as any).clientPan || (cleanGst.length === 15 ? cleanGst.substring(2, 12) : '');
+      if (panVal) setClientPan(panVal);
+      if ((match as any).country || (match as any).clientCountry) {
+        setClientCountry((match as any).country || (match as any).clientCountry);
+      }
+      if ((match as any).state || (match as any).clientState) {
+        setClientState((match as any).state || (match as any).clientState);
+      }
+      const displayName = comp ? `${comp} - ${match.name}` : match.name;
+      if (displayName) setClientSearchQuery(displayName);
+    } else {
+      // If not yet in database, auto-detect Indian state from 2-digit GST state code if state is not set
+      if (cleanGst.length >= 2 && (!clientState || clientState.toLowerCase().includes('select state'))) {
+        const detectedState = getStateNameFromGstCode(cleanGst);
+        if (detectedState) {
+          setClientState(detectedState);
+        }
+      }
+    }
   };
   const [placeOfSupply, setPlaceOfSupply] = useState('');
   const [grRrNo, setGrRrNo] = useState('');
@@ -273,7 +481,6 @@ export default function InvoiceModal({
   }, []);
 
   // Advanced features and billing options
-  const [invoiceType, setInvoiceType] = useState<'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'estimate' | 'quote' | 'purchases' | 'purchase_order' | 'purchase_debit_note'>('invoice');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [poNumber, setPoNumber] = useState('');
   const [deliveryNote, setDeliveryNote] = useState('');
@@ -918,35 +1125,9 @@ export default function InvoiceModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filter billing clients dynamically — merge saved clients prop with master registry
+  // Filter master database directory dynamically
   const filteredClients = useMemo(() => {
-    // Merge: explicit ClientProfile[] prop + master registry (auto-added from documents)
-    const registryAsProfiles = registryClients.map((r: any) => ({
-      id: r.id || `reg_${Math.random().toString(36).substr(2, 6)}`,
-      name: r.name || r.companyName || r.company || '',
-      companyName: r.companyName || r.company || '',
-      company: r.company || r.companyName || '',
-      email: r.email || '',
-      phone: r.phone || r.mobile || '',
-      address: r.address || '',
-      gstin: r.gstin || r.taxId || '',
-      taxId: r.taxId || r.gstin || '',
-      pan: r.pan || '',
-      state: r.state || '',
-      country: r.country || 'India',
-    }));
-
-    // Merge, prefer clients prop entries over registry for duplicates
-    const seenNames = new Set<string>();
-    const merged: any[] = [];
-    for (const c of [...(clients || []), ...registryAsProfiles]) {
-      const key = (c.name || '').toLowerCase().trim();
-      if (key && seenNames.has(key)) continue;
-      if (key) seenNames.add(key);
-      merged.push(c);
-    }
-
-    const sorted = merged.sort((a, b) => {
+    const sorted = [...registryClients].sort((a, b) => {
       const compA = ((a as any).companyName || (a as any).company || '').toLowerCase();
       const compB = ((b as any).companyName || (b as any).company || '').toLowerCase();
       if (compA && compB && compA !== compB) return compA.localeCompare(compB);
@@ -964,14 +1145,15 @@ export default function InvoiceModal({
       const phone = (c.phone || '').toLowerCase();
       const gstin = ((c as any).gstin || (c as any).taxId || '').toLowerCase();
       const pan = ((c as any).pan || '').toLowerCase();
-      return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q) || pan.includes(q);
+      const pType = ((c as any).partyType || '').toLowerCase();
+      return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q) || pan.includes(q) || pType.includes(q);
     });
-  }, [clients, clientSearchQuery, registryClients]);
+  }, [clientSearchQuery, registryClients]);
 
-  // Filter shipping clients dynamically
+  // Filter shipping clients dynamically — also benefits from combined client + vendor list
   const filteredShipClients = useMemo(() => {
-    if (!clients || clients.length === 0) return [];
-    const sorted = [...clients].sort((a, b) => {
+    if (!filteredClients || filteredClients.length === 0) return [];
+    const sorted = [...filteredClients].sort((a, b) => {
       const compA = ((a as any).companyName || (a as any).company || '').toLowerCase();
       const compB = ((b as any).companyName || (b as any).company || '').toLowerCase();
       if (compA && compB && compA !== compB) return compA.localeCompare(compB);
@@ -990,7 +1172,7 @@ export default function InvoiceModal({
       const gstin = ((c as any).gstin || '').toLowerCase();
       return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q);
     });
-  }, [clients, shipClientSearchQuery]);
+  }, [filteredClients, shipClientSearchQuery]);
 
   // --- MATERIAL CATALOG DROPDOWN STATE & LOGIC ---
   const [isCatalogDropdownOpen, setIsCatalogDropdownOpen] = useState(false);
@@ -1357,9 +1539,9 @@ export default function InvoiceModal({
             return `${guestId} (${formattedDate})`;
           })())),
       isFreightAdded,
-      clientEmail: invoiceType === 'estimate' ? '' : (silent ? clientEmail : clientEmail.trim()),
-      clientPhone: invoiceType === 'estimate' ? '' : (silent ? clientPhone : clientPhone.trim()),
-      clientAddress: invoiceType === 'estimate' ? '' : (silent ? clientAddress : clientAddress.trim()),
+      clientEmail: silent ? clientEmail : clientEmail.trim(),
+      clientPhone: silent ? clientPhone : clientPhone.trim(),
+      clientAddress: silent ? clientAddress : clientAddress.trim(),
       notes: silent ? notes : notes.trim(),
       subtotal: Number.isFinite(calculatedSubtotal) ? parseFloat(calculatedSubtotal.toFixed(2)) : 0,
       discountType: discountType || 'none',
@@ -2050,9 +2232,13 @@ export default function InvoiceModal({
       return;
     }
 
-    let currentName = clientName;
-    if (!currentName || !currentName.trim()) {
-      currentName = `Guest_${invoiceNumber || Math.random().toString(36).substr(2, 6)}`;
+    let currentName = clientName?.trim() || '';
+    if (!currentName) {
+      if (clientCompanyName && clientCompanyName.trim()) {
+        currentName = clientCompanyName.trim();
+      } else {
+        currentName = `Guest_${invoiceNumber || Math.random().toString(36).substr(2, 6)}`;
+      }
       setClientName(currentName);
     }
 
@@ -2158,9 +2344,9 @@ export default function InvoiceModal({
           const guestId = `Guest-${Math.floor(1000 + Math.random() * 9000)}`;
           return `${guestId} (${formattedDate})`;
         })()),
-      clientEmail: invoiceType === 'estimate' ? '' : clientEmail.trim(),
-      clientPhone: invoiceType === 'estimate' ? '' : clientPhone.trim(),
-      clientAddress: invoiceType === 'estimate' ? '' : clientAddress.trim(),
+      clientEmail: clientEmail.trim(),
+      clientPhone: clientPhone.trim(),
+      clientAddress: clientAddress.trim(),
       notes: notes.trim(),
       subtotal: parseFloat(calculatedSubtotal.toFixed(2)),
       discountType,
@@ -2867,14 +3053,14 @@ export default function InvoiceModal({
                     <div className="space-y-3">
                       <h3 className="text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-1 flex justify-between items-center">
                         <span>Client Details</span>
-                        {clients && clients.length > 0 && (
+                        {(filteredClients.length > 0 || (clients && clients.length > 0) || registryClients.length > 0) && (
                           <span className="text-[9px] font-medium text-sky-500 font-mono">Select Profile to Auto-Fill</span>
                         )}
                       </h3>
 
-                      {clients && clients.length > 0 && (
+                      {(filteredClients.length > 0 || (clients && clients.length > 0) || registryClients.length > 0) && (
                         <div className="bg-sky-50/30 dark:bg-slate-950 p-2.5 rounded-2xl border border-sky-100/20 dark:border-slate-800/65">
-                          <label htmlFor="select-pre-client" className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-1">Populate from Clients:</label>
+                          <label htmlFor="select-pre-client" className="block text-[10px] font-bold uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1">Populate from Master Database:</label>
                           <div className="relative" ref={clientDropdownRef}>
                             <div className="relative flex items-center">
                               <input
@@ -2886,7 +3072,7 @@ export default function InvoiceModal({
                                   setIsClientDropdownOpen(true);
                                 }}
                                 onFocus={() => setIsClientDropdownOpen(true)}
-                                placeholder="-- Select or type to search client profile --"
+                                placeholder="-- Select or type to search from Master Database (Clients & Vendors) --"
                                 className="w-full pl-3 pr-16 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 shadow-xs"
                               />
                               <div className="absolute right-1.5 flex items-center gap-1">
@@ -2898,7 +3084,7 @@ export default function InvoiceModal({
                                       setIsClientDropdownOpen(false);
                                     }}
                                     className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                                    title="Clear client filter"
+                                    title="Clear filter"
                                   >
                                     <X className="w-3.5 h-3.5" />
                                   </button>
@@ -2906,7 +3092,7 @@ export default function InvoiceModal({
                                 <button
                                   type="button"
                                   onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
-                                  title="Toggle client list"
+                                  title="Toggle list"
                                   className="p-1 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 cursor-pointer"
                                 >
                                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isClientDropdownOpen ? 'rotate-180 text-sky-500' : ''}`} />
@@ -2919,7 +3105,7 @@ export default function InvoiceModal({
                               <div className="absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 border border-sky-200 dark:border-slate-700 rounded-xl shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800">
                                 <div className="px-3 py-1 bg-sky-50/90 dark:bg-slate-800/90 flex items-center justify-between sticky top-0 backdrop-blur-xs z-10">
                                   <span className="text-[10px] font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider">
-                                    Saved Clients ({filteredClients.length})
+                                    Master Database Directory ({filteredClients.length})
                                   </span>
                                   <button
                                     type="button"
@@ -2932,6 +3118,7 @@ export default function InvoiceModal({
                                 {filteredClients.map((c) => {
                                   const comp = (c as any).companyName || (c as any).company;
                                   const displayName = comp ? `${comp} - ${c.name}` : c.name;
+                                  const pType = (c as any).partyType || 'Client';
                                   return (
                                     <button
                                       key={c.id}
@@ -2954,11 +3141,22 @@ export default function InvoiceModal({
                                       className="w-full px-3 py-2 text-left hover:bg-sky-50 dark:hover:bg-slate-800/90 transition-colors flex items-center justify-between gap-2 group cursor-pointer"
                                     >
                                       <div className="min-w-0 flex-1">
-                                        <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400">
-                                          {displayName}
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400">
+                                            {displayName}
+                                          </span>
+                                          <span className={`px-1.5 py-0.2 text-[8.5px] font-bold rounded-md uppercase tracking-wider ${
+                                            pType === 'Vendor'
+                                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/80 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/40'
+                                              : pType === 'Client & Vendor'
+                                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40'
+                                              : 'bg-sky-100 text-sky-700 dark:bg-sky-950/80 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800/40'
+                                          }`}>
+                                            {pType}
+                                          </span>
                                         </div>
                                         {(c.email || c.phone) && (
-                                          <div className="text-[10px] text-slate-400 truncate">
+                                          <div className="text-[10px] text-slate-400 truncate mt-0.5">
                                             {[c.email, c.phone].filter(Boolean).join(' • ')}
                                           </div>
                                         )}
@@ -3127,9 +3325,9 @@ export default function InvoiceModal({
 
                       {activeTemplate.sections.shipTo?.visible !== false && (
                         <div className="space-y-3 pt-3 border-t border-slate-150 dark:border-slate-800">
-                          {clients && clients.length > 0 && (
+                          {(filteredShipClients.length > 0 || registryClients.length > 0) && (
                             <div className="bg-sky-50/30 dark:bg-slate-950 p-2.5 rounded-2xl border border-sky-100/20 dark:border-slate-800/65">
-                              <label htmlFor="select-pre-client-shipto" className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-1">Populate from Clients:</label>
+                              <label htmlFor="select-pre-client-shipto" className="block text-[10px] font-bold uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1">Populate from Master Database:</label>
                               <div className="relative" ref={shipClientDropdownRef}>
                                 <div className="relative flex items-center">
                                   <input
@@ -3141,7 +3339,7 @@ export default function InvoiceModal({
                                       setIsShipClientDropdownOpen(true);
                                     }}
                                     onFocus={() => setIsShipClientDropdownOpen(true)}
-                                    placeholder="-- Select or type to search ship-to client profile --"
+                                    placeholder="-- Select or type to search from Master Database --"
                                     className="w-full pl-3 pr-16 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 shadow-xs"
                                   />
                                   <div className="absolute right-1.5 flex items-center gap-1">
@@ -3174,7 +3372,7 @@ export default function InvoiceModal({
                                   <div className="absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 border border-sky-200 dark:border-slate-700 rounded-xl shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800">
                                     <div className="px-3 py-1 bg-sky-50/90 dark:bg-slate-800/90 flex items-center justify-between sticky top-0 backdrop-blur-xs z-10">
                                       <span className="text-[10px] font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider">
-                                        Saved Clients ({filteredShipClients.length})
+                                        Master Database Directory ({filteredShipClients.length})
                                       </span>
                                       <button
                                         type="button"
@@ -4118,7 +4316,7 @@ export default function InvoiceModal({
                           if (field === 'clientEmail') setClientEmail(val);
                           if (field === 'clientPhone') setClientPhone(val);
                           if (field === 'clientAddress') setClientAddress(val);
-                          if (field === 'clientGstin' || field === 'clientGST') {
+                          if (field === 'clientGstin' || field === 'clientGST' || field === 'clientTaxId' || field === 'taxId') {
                             updateClientGst(val);
                           }
                           if (field === 'clientState') setClientState(val);

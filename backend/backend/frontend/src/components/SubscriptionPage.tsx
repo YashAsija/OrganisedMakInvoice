@@ -17,6 +17,8 @@ import { getCurrentBillingCycleWindow } from '../lib/subscriptionGuard';
 import { openRazorpayCheckout } from '../lib/razorpay';
 import { openPaddleCheckout } from '../lib/paddle';
 import { supabase } from '../lib/supabase';
+import { getExpiryLabel } from '../context/SubscriptionContext';
+import { getExpiryDisplay } from '../lib/subscriptionUtils';
 import { SubscriptionStatus } from './SubscriptionStatus';
 import { useSubscription } from '../hooks/useSubscription';
 import { TrialConfirmModal } from './ui/TrialConfirmModal';
@@ -168,7 +170,7 @@ export default function SubscriptionPage({
   subscriptionTier, 
   onUpgrade 
 }: SubscriptionPageProps) {
-  const { subscription: ctxSub, isLoading: isCtxLoading, isRealtimeSyncing } = useSubscription();
+  const { subscription: ctxSub, usage: ctxUsage, isLoading: isCtxLoading, isRealtimeSyncing, startTrial } = useSubscription();
   const [isYearly, setIsYearly] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState<string | null>(null);
@@ -282,8 +284,12 @@ export default function SubscriptionPage({
     } catch (e) {}
   }, [region]);
 
-  // Normalise mapped subscription tier (enterprise maps to unlimited conceptually for limits check)
-  const activeTier = subscriptionTier === 'enterprise' ? 'unlimited' : subscriptionTier;
+  // Primary source of truth: SubscriptionContext (ctxSub). Fallback to subscriptionTier prop.
+  const rawPlanType = (ctxSub?.plan_type || ctxSub?.plan_name || subscriptionTier || 'free').toLowerCase();
+  const activeTier: 'free' | 'basic' | 'pro' | 'unlimited' = 
+    rawPlanType.includes('enterprise') || rawPlanType.includes('unlimited') ? 'unlimited' :
+    rawPlanType.includes('professional') || rawPlanType.includes('pro') ? 'pro' :
+    rawPlanType.includes('basic') ? 'basic' : 'free';
 
   const triggerCheckout = async (planKey: 'basic' | 'professional' | 'enterprise', mode: 'monthly' | 'yearly_recurring' | 'yearly_onetime') => {
     setLoadingPlan(planKey);
@@ -317,16 +323,20 @@ export default function SubscriptionPage({
     const startTime = start.getTime();
     const endTime = end.getTime();
 
+    const activationStr = ctxSub?.trial_started_at || ctxSub?.created_at;
+    const activationTime = activationStr ? new Date(activationStr).getTime() : 0;
+    const effectiveStartTime = Math.max(startTime, isNaN(activationTime) ? 0 : activationTime);
+
     return invoices.filter(inv => {
-      if (inv.status === 'draft') return false; // Drafts are un-published templates, but all created/finalized docs count
+      if (inv.status === 'draft') return false;
       const tsStr = inv.createdAt || inv.date;
       if (!tsStr) return false;
       const dTime = new Date(tsStr).getTime();
-      return !isNaN(dTime) && dTime >= startTime && dTime < endTime;
+      return !isNaN(dTime) && dTime >= effectiveStartTime && dTime < endTime;
     }).length;
   };
 
-  const usageCount = getMonthlyUsage();
+  const usageCount = ctxUsage?.documents_used ?? getMonthlyUsage();
   
   const getActiveLimit = () => {
     if (activeTier === 'free') return 10;
@@ -373,10 +383,10 @@ export default function SubscriptionPage({
             </div>
           </div>
 
-          <div className="bg-[#f4f9ff] dark:bg-[#0b1329] rounded-2xl p-5 border border-[#bae6fd]/50 dark:border-[#223269]/50 shrink-0 w-full md:w-80 shadow-3xs hover:shadow-2xs transition-shadow">
+          <div className="bg-[#f4f9ff] dark:bg-[#0b1329] rounded-2xl p-5 border border-[#bae6fd]/50 dark:border-[#223269]/50 shrink-0 w-full lg:w-80 shadow-3xs hover:shadow-2xs transition-shadow">
             <div className="flex justify-between items-center">
               <span className="text-[9px] text-[#64748b] dark:text-[#94a3b8] uppercase tracking-widest font-extrabold block">Current Status</span>
-              {activeTier !== 'free' && (
+              {activeTier !== 'free' && !isCtxLoading && (
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -384,37 +394,56 @@ export default function SubscriptionPage({
               )}
             </div>
             
-            <div className="flex items-baseline gap-2 mt-1.5">
-              <span className="text-lg font-black text-[#0f172a] dark:text-white capitalize">{activeTier} Plan</span>
-            </div>
+            {/* Plan name section */}
+            {!ctxSub?.plan_name && isCtxLoading ? (
+              <div className="animate-pulse h-6 bg-slate-200 dark:bg-slate-800 rounded w-32 mt-1.5" />
+            ) : (
+              <div className="flex items-baseline gap-2 mt-1.5">
+                <span className="text-lg font-black text-[#0f172a] dark:text-white capitalize">
+                  {ctxSub?.plan_name === 'Free' ? 'Starter' : ctxSub?.plan_name || activeTier} Plan
+                </span>
+              </div>
+            )}
             
-            <p className="text-[10px] text-[#64748b] dark:text-[#94a3b8] mt-1 font-medium">
-              {activeTier === 'free' 
-                ? 'Starter: Limit of 10 documents & 1 report/mo.' 
-                : activeTier === 'basic'
-                  ? 'Basic: Limit of 60 documents & 5 reports/mo.'
-                  : activeTier === 'pro' 
-                    ? 'Professional: Limit of 140 documents & 15 reports/mo with AI Smart Billing.'
-                    : 'Enterprise: Unlimited documents & reports fully unlocked.'}
-            </p>
+            {/* Subtitle section */}
+            {!ctxSub && isCtxLoading ? (
+              <div className="animate-pulse h-4 bg-slate-200 dark:bg-slate-800 rounded w-48 mt-1" />
+            ) : (
+              <p className="text-[10px] text-[#64748b] dark:text-[#94a3b8] mt-1 font-medium">
+                {activeTier === 'free' 
+                  ? 'Starter: Limit of 10 documents & 1 report/mo.' 
+                  : activeTier === 'basic'
+                    ? 'Basic: Limit of 60 documents & 5 reports/mo.'
+                    : activeTier === 'pro' 
+                      ? 'Professional: Limit of 140 documents & 15 reports/mo with AI Smart Billing.'
+                      : 'Enterprise: Unlimited documents & reports fully unlocked.'}
+              </p>
+            )}
 
             <div className="mt-2 text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/50 px-2.5 py-1 rounded-lg border border-sky-200 dark:border-sky-800/50 flex items-center justify-between gap-1.5 flex-wrap">
               <div className="flex items-center gap-1.5">
                 <span>Date of Activation:</span>
                 <span className="font-mono text-slate-800 dark:text-slate-200">
                   {(() => {
-                    const activatedAt = typeof window !== 'undefined' ? localStorage.getItem('makbills_sub_activated_at') : null;
+                    const activatedAt = ctxSub?.activated_at || 
+                      (ctxSub?.status === 'trialing' ? ctxSub?.trial_started_at : null) || 
+                      (ctxSub?.plan_type !== 'free' ? ctxSub?.updated_at : null) || 
+                      ctxSub?.created_at || 
+                      (typeof window !== 'undefined' ? localStorage.getItem('makbills_sub_activated_at') : null);
                     const dateObj = activatedAt ? new Date(activatedAt) : new Date();
                     return isNaN(dateObj.getTime()) ? new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
                   })()}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                <span>Expires / Renews:</span>
-                <span className="font-mono font-extrabold">
-                  {typeof window !== 'undefined' ? (localStorage.getItem('makbills_sub_expires_at') || 'Active Subscription') : 'Active Subscription'}
-                </span>
-              </div>
+              {(() => {
+                const expiryInfo = getExpiryDisplay(ctxSub);
+                return (
+                  <div className={`flex items-center gap-1.5 ${expiryInfo.color}`}>
+                    <span>{expiryInfo.label}:</span>
+                    <span className="font-mono font-extrabold">{expiryInfo.value}</span>
+                  </div>
+                );
+              })()}
             </div>
             
             {/* Usage limit meters */}
@@ -513,7 +542,21 @@ export default function SubscriptionPage({
                 
                 <div className="text-[#64748b] dark:text-[#94a3b8] text-[10px] font-black uppercase tracking-wider mb-1">{plan.tier}</div>
                 <div className="flex justify-between items-start">
-                  <h3 className="text-lg font-black text-[#0f172a] dark:text-white leading-tight">{plan.name}</h3>
+                  <div>
+                    <h3 className="text-lg font-black text-[#0f172a] dark:text-white leading-tight">{plan.name}</h3>
+                    {(() => {
+                      const trialUsedPlans = ctxSub?.trial_used_plans || [];
+                      const isClaimed = (plan.id === 'basic' && trialUsedPlans.includes('basic')) || (plan.id === 'pro' && trialUsedPlans.includes('professional'));
+                      if ((plan.id === 'basic' || plan.id === 'pro') && !isClaimed) {
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[9.5px] font-extrabold mt-1">
+                            ✓ 1 Month Free Trial Available
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
                   {isActive && (
                     <span className="text-[9px] px-2 py-0.5 bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] rounded-full font-bold">Active</span>
                   )}
@@ -537,7 +580,14 @@ export default function SubscriptionPage({
                   <span className="text-xs text-[#64748b] dark:text-[#94a3b8]">{isYearly ? '/yr' : '/mo'}</span>
                 </div>
                 <p className="text-[10px] font-mono text-[#64748b] dark:text-zinc-500 min-h-[24px]">
-                  {isYearly ? plan.annualNote : plan.monthlyNote}
+                  {(() => {
+                    const trialUsedPlans = ctxSub?.trial_used_plans || [];
+                    const isClaimed = (plan.id === 'basic' && trialUsedPlans.includes('basic')) || (plan.id === 'pro' && trialUsedPlans.includes('professional'));
+                    if ((plan.id === 'basic' || plan.id === 'pro') && !isClaimed) {
+                      return `Try free for 30 days, then ${isYearly ? plan.annual : plan.monthly}${isYearly ? '/yr' : '/mo'}`;
+                    }
+                    return isYearly ? plan.annualNote : plan.monthlyNote;
+                  })()}
                 </p>
 
                 <div className="border-t border-[#bae6fd]/30 dark:border-[#223269]/30 pt-4 space-y-2.5 mb-6 flex-1">
@@ -557,11 +607,13 @@ export default function SubscriptionPage({
               </div>
 
               {(() => {
-                const isBasicTrialClaimed = Boolean(typeof window !== 'undefined' && localStorage.getItem('makbills_trial_used_basic'));
-                const isProTrialClaimed = Boolean(typeof window !== 'undefined' && localStorage.getItem('makbills_trial_used_pro'));
+                const trialUsedPlans = ctxSub?.trial_used_plans || [];
+                const isBasicTrialClaimed = trialUsedPlans.includes('basic');
+                const isProTrialClaimed = trialUsedPlans.includes('professional');
 
                 const canTrialBasic = plan.id === 'basic' && !isBasicTrialClaimed && !isActive;
                 const canTrialPro = plan.id === 'pro' && !isProTrialClaimed && !isActive;
+                const isTrialEligible = canTrialBasic || canTrialPro;
 
                 // Check active valid subscription window for reclaim vs renew
                 const lastPaidTier = typeof window !== 'undefined' ? localStorage.getItem('makbills_last_active_paid_tier') : null;
@@ -582,178 +634,119 @@ export default function SubscriptionPage({
                   new Date(expiresIsoRaw).getTime() <= Date.now()
                 );
 
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+                const getButtonConfig = () => {
+                  if (plan.id === 'free') {
+                    const isFreeActive = activeTier === 'free';
+                    return {
+                      label: isFreeActive ? 'Currently Active' : 'Downgrade to Free',
+                      disabled: isFreeActive,
+                      variant: 'ghost',
+                      action: isFreeActive ? undefined : () => setShowDowngradeConfirm(true),
+                    };
+                  }
 
-  const handleStartTrial = async (planId: 'basic' | 'pro') => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      // Step 1 — Refresh session before any DB operation
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        await supabase.auth.refreshSession();
-      }
+                  if (plan.id === 'unlimited') {
+                    const isEntActive = activeTier === 'unlimited' || (activeTier as string) === 'enterprise';
+                    return {
+                      label: isEntActive ? 'Currently Active' : 'Get Enterprise',
+                      disabled: isEntActive,
+                      variant: isEntActive ? 'ghost' : 'outline',
+                      action: isEntActive ? undefined : () => triggerCheckout('enterprise', isYearly ? 'yearly_recurring' : 'monthly'),
+                    };
+                  }
 
-      // Step 2 — Get authenticated user ID
-      const { data: { user }, error: userErr } = await supabase.auth.getUser();
-      if (userErr || !user) {
-        console.error('[Free Trial Authentication Error] User not logged in', userErr);
-        alert('Authentication required to start free trial. Please log in.');
-        setIsSubmitting(false);
-        return;
-      }
+                  if (isActive) {
+                    return {
+                      label: 'Currently Active',
+                      disabled: true,
+                      variant: 'ghost',
+                      action: undefined,
+                    };
+                  }
 
-      // Step 3 — Insert to subscriptions for 1-Month (30 days) Free Trial
-      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-      const expiresIso = new Date(Date.now() + thirtyDaysMs).toISOString();
+                  if (ctxSub?.status === 'trialing' && ((plan.id === 'basic' && ctxSub.plan_type === 'basic') || (plan.id === 'pro' && ctxSub.plan_type === 'professional'))) {
+                    const daysLeft = ctxSub.expires_at ? Math.max(0, Math.ceil((new Date(ctxSub.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
+                    return {
+                      label: `Trial Active — ${daysLeft} days left`,
+                      disabled: true,
+                      variant: 'amber',
+                      action: undefined,
+                    };
+                  }
 
-      const targetPlanType = planId === 'pro' ? 'professional' : 'basic';
-      const targetPlanName = planId === 'pro' ? 'Professional' : 'Basic';
+                  if (isTrialEligible) {
+                    return {
+                      label: 'Start Free Trial →',
+                      disabled: false,
+                      variant: 'green',
+                      action: () => setTrialModalPlan(plan.id === 'pro' ? 'professional' : 'basic'),
+                    };
+                  }
 
-      const trialPayload = {
-        user_id: user.id,
-        plan_name: targetPlanName,
-        plan_type: targetPlanType,
-        status: 'trialing',
-        expires_at: expiresIso,
-        renews_at: expiresIso,
-        user_email: user.email || null,
-        user_phone: user.phone || null,
-        updated_at: new Date().toISOString(),
-      };
+                  if (isWithinActivationWindow) {
+                    return {
+                      label: `Reclaim ${plan.name} Plan`,
+                      disabled: false,
+                      variant: 'outline',
+                      action: () => {
+                        onUpgrade(plan.id as any);
+                        setShowSuccessModal(plan.id);
+                      },
+                    };
+                  }
 
-      // Step 4 — Execute upsert/insert and handle error explicitly
-      const { error: insertError } = await supabase
-        .from('subscriptions')
-        .upsert(trialPayload, { onConflict: 'user_id' });
+                  if (isExpiredPaidPlan) {
+                    return {
+                      label: `Renew ${plan.name} Plan`,
+                      disabled: false,
+                      variant: 'outline',
+                      action: () => triggerCheckout(plan.id === 'pro' ? 'professional' : 'basic', isYearly ? 'yearly_recurring' : 'monthly'),
+                    };
+                  }
 
-      if (insertError) {
-        console.error('[Free Trial Insert Error] Full error object:', insertError);
-        alert('Failed to activate trial: ' + (insertError.message || JSON.stringify(insertError)));
-        setIsSubmitting(false);
-        return;
-      }
+                  return {
+                    label: `Get ${plan.name}`,
+                    disabled: false,
+                    variant: 'outline',
+                    action: () => triggerCheckout(plan.id === 'pro' ? 'professional' : 'basic', isYearly ? 'yearly_recurring' : 'monthly'),
+                  };
+                };
 
-      // Broadcast subscription update to all other devices logged into this account
-      try {
-        const channel = supabase.channel(`subscription_updates:${user.id}`);
-        await channel.send({
-          type: 'broadcast',
-          event: 'subscription_changed',
-          payload: { tier: targetPlanType, expiresAt: expiresIso },
-        });
-      } catch (bcErr) {
-        console.warn('[Realtime Broadcast Warning]', bcErr);
-      }
+                const config = getButtonConfig();
 
-      // Step 5 — Verification SELECT to confirm row exists
-      try {
-        const { data: verify, error: verifyErr } = await supabase
-          .from('subscriptions')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-        if (verifyErr) {
-          console.error('[Subscription Verify Error] Row verification failed:', verifyErr);
-        } else {
-          console.log('[Subscription Verify] Confirmed row exists:', verify);
-        }
-      } catch (vErr) {
-        console.error('[Subscription Verify Exception]', vErr);
-      }
-
-      // Step 6 — On success: update local state & show success UI
-      const now = new Date();
-      localStorage.setItem('makbills_sub_activated_at', now.toISOString());
-      localStorage.setItem('makbills_sub_expires_iso', expiresIso);
-      localStorage.setItem('makbills_sub_expires_at', new Date(expiresIso).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) + ' (1-Month Free Trial)');
-      localStorage.setItem('makbills_last_active_paid_tier', planId);
-
-      if (planId === 'basic') {
-        localStorage.setItem('makbills_trial_used_basic', expiresIso);
-        onUpgrade('basic');
-        setShowSuccessModal('basic_trial');
-      } else {
-        localStorage.setItem('makbills_trial_used_pro', expiresIso);
-        onUpgrade('pro');
-        setShowSuccessModal('pro_trial');
-      }
-    } catch (e: any) {
-      console.error('[Free Trial Activation Error] Unhandled exception:', e);
-      alert('Failed to activate trial: ' + (e?.message || 'Unknown error'));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+                const getButtonStyle = (variant: string) => {
+                  switch (variant) {
+                    case 'ghost':
+                      return 'bg-[#e0f2fe] dark:bg-zinc-800/60 border-transparent text-[#64748b] dark:text-[#94a3b8] cursor-default';
+                    case 'amber':
+                      return 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 cursor-default font-extrabold';
+                    case 'green':
+                      return 'bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-md shadow-emerald-600/20 active:scale-98 cursor-pointer';
+                    case 'outline':
+                    default:
+                      return plan.popular
+                        ? 'bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] active:scale-98 text-white shadow-md shadow-[#0284c7]/20 font-bold'
+                        : 'border-[#bae6fd]/60 dark:border-[#223269]/60 hover:bg-[#e0f2fe]/40 dark:hover:bg-[#1b264f]/40 text-[#0284c7] dark:text-[#38bdf8] font-bold';
+                  }
+                };
 
                 return (
                   <div className="space-y-2 mt-2">
-                    {(canTrialBasic || canTrialPro) && (
-                      <button
-                        type="button"
-                        disabled={isSubmitting}
-                        onClick={() => handleStartTrial(plan.id as 'basic' | 'pro')}
-                        className={`w-full py-2.5 font-extrabold text-xs rounded-xl transition-all text-white shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 ${
-                          isSubmitting ? 'bg-emerald-800 opacity-60 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 active:scale-98 cursor-pointer'
-                        }`}
-                      >
-                        <Sparkles className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-spin' : ''}`} />
-                        <span>{isSubmitting ? 'Activating Trial...' : 'Start 1-Month Free Trial'}</span>
-                      </button>
-                    )}
-
                     <button
                       type="button"
-                      disabled={isActive || loadingPlan !== null}
-                      onClick={() => {
-                        if (plan.id === 'free') {
-                          setShowDowngradeConfirm(true);
-                          return;
-                        }
-
-                        // Reclaim active plan without payment IF within valid activation time window
-                        if (isWithinActivationWindow) {
-                          onUpgrade(plan.id as any);
-                          setShowSuccessModal(plan.id);
-                          return;
-                        }
-
-                        // Otherwise (expired or new subscription), trigger paid payment checkout / renewal
-                        const mappedKey = (plan.id === 'pro' ? 'professional' : plan.id === 'unlimited' ? 'enterprise' : plan.id) as 'basic' | 'professional' | 'enterprise';
-                        const mode = isYearly ? 'yearly_recurring' : 'monthly';
-                        triggerCheckout(mappedKey, mode);
-                      }}
-                      className={`w-full py-2.5 font-bold text-xs rounded-xl cursor-pointer transition-all border flex items-center justify-center gap-2 ${
-                        isActive
-                          ? 'bg-[#e0f2fe] dark:bg-zinc-800/60 border-transparent text-[#64748b] dark:text-[#94a3b8] dark:text-zinc-500 cursor-default'
-                          : plan.popular && !(canTrialBasic || canTrialPro)
-                            ? 'bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] active:scale-98 text-white shadow-md shadow-[#0284c7]/20'
-                            : 'border-[#bae6fd]/60 dark:border-[#223269]/60 hover:bg-[#e0f2fe]/40 dark:hover:bg-[#1b264f]/40 text-[#0284c7] dark:text-[#38bdf8]'
-                      }`}
+                      disabled={config.disabled || loadingPlan !== null}
+                      onClick={config.action}
+                      className={`w-full py-2.5 text-xs rounded-xl transition-all border flex items-center justify-center gap-2 ${getButtonStyle(config.variant)}`}
                     >
                       {loadingPlan === plan.id ? (
                         <>
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                           <span>Processing...</span>
                         </>
-                      ) : isActive ? (
-                        'Currently Active'
-                      ) : plan.id === 'free' ? (
-                        'Downgrade to Free'
-                      ) : isWithinActivationWindow ? (
-                        <>
-                          <Zap className="w-3.5 h-3.5 fill-[#0284c7] dark:fill-[#38bdf8]" />
-                          <span>Reclaim {plan.name} Plan</span>
-                        </>
-                      ) : isExpiredPaidPlan ? (
-                        <>
-                          <CreditCard className="w-3.5 h-3.5" />
-                          <span>Renew {plan.name} Plan</span>
-                        </>
                       ) : (
                         <>
-                          <CreditCard className="w-3.5 h-3.5" />
-                          <span>{(canTrialBasic || canTrialPro) ? `Buy Paid ${plan.name}` : `Get ${plan.name}`}</span>
+                          {config.variant === 'green' && <Sparkles className="w-3.5 h-3.5" />}
+                          <span>{config.label}</span>
                         </>
                       )}
                     </button>

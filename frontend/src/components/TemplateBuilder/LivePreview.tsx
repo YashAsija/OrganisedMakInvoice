@@ -2091,24 +2091,35 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
         })
       )}
       
-      {isInteractive && clients && clients.length > 0 && (
-        <>
-          <datalist id="billed-to-clients">
-            {clients.map((c) => (
-              <option key={`bill-${c.id}`} value={c.name}>
-                {c.companyName && c.companyName !== c.name ? `${c.companyName}` : ''}
-              </option>
-            ))}
-          </datalist>
-          <datalist id="shipped-to-clients">
-            {clients.map((c) => (
-              <option key={`ship-${c.id}`} value={c.name}>
-                {c.companyName && c.companyName !== c.name ? `${c.companyName}` : ''}
-              </option>
-            ))}
-          </datalist>
-        </>
-      )}
+      {isInteractive && clients && clients.length > 0 && (() => {
+        // Deduplicate clients by unique ID or clean name so duplicate database records never create identical React keys or duplicate option values
+        const seenIds = new Set<string>();
+        const uniqueClients = clients.filter((c, idx) => {
+          const keyIdentifier = c.id || c.name || `idx-${idx}`;
+          if (seenIds.has(keyIdentifier)) return false;
+          seenIds.add(keyIdentifier);
+          return true;
+        });
+
+        return (
+          <>
+            <datalist id="billed-to-clients">
+              {uniqueClients.map((c, idx) => (
+                <option key={`bill-${c.id || idx}-${c.name || idx}`} value={c.name}>
+                  {c.companyName && c.companyName !== c.name ? `${c.companyName}` : ''}
+                </option>
+              ))}
+            </datalist>
+            <datalist id="shipped-to-clients">
+              {uniqueClients.map((c, idx) => (
+                <option key={`ship-${c.id || idx}-${c.name || idx}`} value={c.name}>
+                  {c.companyName && c.companyName !== c.name ? `${c.companyName}` : ''}
+                </option>
+              ))}
+            </datalist>
+          </>
+        );
+      })()}
     </div>
   );
 };

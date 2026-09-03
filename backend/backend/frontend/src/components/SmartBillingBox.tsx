@@ -84,40 +84,6 @@ export function SmartBillingBox({ activeTemplate, setters, existingState, isAllo
   const [history, setHistory] = useState<InvoiceSnapshot[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
-  if (!isAllowed) {
-    return (
-      <div className="mx-1 mb-2.5 sm:mb-3 shrink-0">
-        <div className="p-3.5 bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/20">
-              <Lock className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200">AI Smart Billing</span>
-                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded-md border border-amber-300/40">
-                  Pro Feature 🔒
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-                Auto-fill invoice templates instantly from plain English text with AI. Upgrade to Professional plan to unlock.
-              </p>
-            </div>
-          </div>
-          {onUpgradeClick && (
-            <button
-              type="button"
-              onClick={onUpgradeClick}
-              className="w-full sm:w-auto px-3.5 py-1.5 bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer shrink-0 active:scale-95 transition-all"
-            >
-              Upgrade to Unlock →
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   // Helper to capture current invoice form state snapshot
   const captureSnapshot = useCallback((promptText = prompt): InvoiceSnapshot => {
     const s = existingState as any;
@@ -174,52 +140,52 @@ export function SmartBillingBox({ activeTemplate, setters, existingState, isAllo
 
   // Helper to restore snapshot back to form setters
   const restoreSnapshot = useCallback((snap: InvoiceSnapshot) => {
-    setters.setClientName(snap.clientName);
-    setters.setClientEmail(snap.clientEmail);
-    setters.setClientPhone(snap.clientPhone);
-    setters.setClientAddress(snap.clientAddress);
-    setters.setClientGstin(snap.clientGstin);
-    setters.setClientPan(snap.clientPan);
-    setters.setClientState(snap.clientState);
-    setters.setClientCountry(snap.clientCountry);
+    if (setters.setClientName) setters.setClientName(snap.clientName);
+    if (setters.setClientEmail) setters.setClientEmail(snap.clientEmail);
+    if (setters.setClientPhone) setters.setClientPhone(snap.clientPhone);
+    if (setters.setClientAddress) setters.setClientAddress(snap.clientAddress);
+    if (setters.setClientGstin) setters.setClientGstin(snap.clientGstin);
+    if (setters.setClientPan) setters.setClientPan(snap.clientPan);
+    if (setters.setClientState) setters.setClientState(snap.clientState);
+    if (setters.setClientCountry) setters.setClientCountry(snap.clientCountry);
 
-    setters.setShippedToName(snap.shippedToName);
-    setters.setShippedToPhone(snap.shippedToPhone);
-    setters.setShippedToEmail(snap.shippedToEmail);
-    setters.setShippedToAddress(snap.shippedToAddress);
-    setters.setShippedToGstin(snap.shippedToGstin);
-    setters.setShippedToPan(snap.shippedToPan);
-    setters.setShippedToState(snap.shippedToState);
-    setters.setShippedToCountry(snap.shippedToCountry);
+    if (setters.setShippedToName) setters.setShippedToName(snap.shippedToName);
+    if (setters.setShippedToPhone) setters.setShippedToPhone(snap.shippedToPhone);
+    if (setters.setShippedToEmail) setters.setShippedToEmail(snap.shippedToEmail);
+    if (setters.setShippedToAddress) setters.setShippedToAddress(snap.shippedToAddress);
+    if (setters.setShippedToGstin) setters.setShippedToGstin(snap.shippedToGstin);
+    if (setters.setShippedToPan) setters.setShippedToPan(snap.shippedToPan);
+    if (setters.setShippedToState) setters.setShippedToState(snap.shippedToState);
+    if (setters.setShippedToCountry) setters.setShippedToCountry(snap.shippedToCountry);
 
-    setters.setTransport(snap.transport);
-    setters.setVehicleNo(snap.vehicleNo);
-    setters.setGrRrNo(snap.grRrNo);
-    setters.setDriverMobile(snap.driverMobile);
-    setters.setStation(snap.station);
-    setters.setEwayBillNo(snap.ewayBillNo);
-    setters.setPlaceOfSupply(snap.placeOfSupply);
+    if (setters.setTransport) setters.setTransport(snap.transport);
+    if (setters.setVehicleNo) setters.setVehicleNo(snap.vehicleNo);
+    if (setters.setGrRrNo) setters.setGrRrNo(snap.grRrNo);
+    if (setters.setDriverMobile) setters.setDriverMobile(snap.driverMobile);
+    if (setters.setStation) setters.setStation(snap.station);
+    if (setters.setEwayBillNo) setters.setEwayBillNo(snap.ewayBillNo);
+    if (setters.setPlaceOfSupply) setters.setPlaceOfSupply(snap.placeOfSupply);
 
-    setters.setInvoiceNumber(snap.invoiceNumber);
-    setters.setDate(snap.date);
-    setters.setDueDate(snap.dueDate);
-    setters.setPoNumber(snap.poNumber);
-    setters.setReferenceNumber(snap.referenceNumber);
-    setters.setDeliveryNote(snap.deliveryNote);
+    if (setters.setInvoiceNumber) setters.setInvoiceNumber(snap.invoiceNumber);
+    if (setters.setDate) setters.setDate(snap.date);
+    if (setters.setDueDate) setters.setDueDate(snap.dueDate);
+    if (setters.setPoNumber) setters.setPoNumber(snap.poNumber);
+    if (setters.setReferenceNumber) setters.setReferenceNumber(snap.referenceNumber);
+    if (setters.setDeliveryNote) setters.setDeliveryNote(snap.deliveryNote);
 
-    setters.setNotes(() => snap.notes);
-    setters.setInvoiceTerms(snap.invoiceTerms);
-    setters.setItems(() => JSON.parse(JSON.stringify(snap.items)));
+    if (setters.setNotes) setters.setNotes(() => snap.notes);
+    if (setters.setInvoiceTerms) setters.setInvoiceTerms(snap.invoiceTerms);
+    if (setters.setItems) setters.setItems(() => JSON.parse(JSON.stringify(snap.items)));
 
-    setters.setDiscountValue(snap.discountValue);
-    setters.setDiscountType(snap.discountType as any);
-    setters.setFreightCharges(snap.freightCharges);
-    setters.setIsFreightAdded(snap.isFreightAdded);
-    setters.setInvoiceType(snap.invoiceType as any);
-    setters.setStatus(snap.status as any);
-    setters.setTaxMode(snap.taxMode as any);
-    setters.setCustomTaxName(snap.customTaxName);
-    setters.setCustomTaxPercentage(snap.customTaxPercentage);
+    if (setters.setDiscountValue) setters.setDiscountValue(snap.discountValue);
+    if (setters.setDiscountType) setters.setDiscountType(snap.discountType as any);
+    if (setters.setFreightCharges) setters.setFreightCharges(snap.freightCharges);
+    if (setters.setIsFreightAdded) setters.setIsFreightAdded(snap.isFreightAdded);
+    if (setters.setInvoiceType) setters.setInvoiceType(snap.invoiceType as any);
+    if (setters.setStatus) setters.setStatus(snap.status as any);
+    if (setters.setTaxMode) setters.setTaxMode(snap.taxMode as any);
+    if (setters.setCustomTaxName) setters.setCustomTaxName(snap.customTaxName);
+    if (setters.setCustomTaxPercentage) setters.setCustomTaxPercentage(snap.customTaxPercentage);
 
     if (snap.promptText !== undefined) {
       setPrompt(snap.promptText);

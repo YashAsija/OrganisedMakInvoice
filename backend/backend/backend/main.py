@@ -1,24 +1,19 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import sys
 import asyncio
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
-import os
-import sys
-
 # Ensure current directory and parent directory are in sys.path for module resolution
-backend_dir = os.path.dirname(os.path.abspath(__file__))
-if backend_dir not in sys.path:
-    sys.path.insert(0, backend_dir)
-parent_dir = os.path.dirname(backend_dir)
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
-load_dotenv(os.path.join(backend_dir, ".env"))
-load_dotenv(os.path.join(parent_dir, ".env"))
-load_dotenv(os.path.join(parent_dir, "..", "frontend", ".env.local"))
+load_dotenv(os.path.join(current_dir, ".env"))
+load_dotenv(os.path.join(current_dir, "..", ".env"))
+load_dotenv(os.path.join(current_dir, "..", "frontend", ".env.local"))
 
 from app.api import ai_routes
 from app.api import pin_routes
@@ -42,8 +37,6 @@ async def lifespan(app: FastAPI):
             pass
 
 app = FastAPI(title="MakInvoice Backend API", version="1.0.0", lifespan=lifespan)
-
-import os
 
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS")
 if allowed_origins_env:

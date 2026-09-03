@@ -228,8 +228,11 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
             defaultTaxRate: 18,
             updatedAt: new Date().toISOString()
           };
-          await supabase.from('users').upsert(initProf);
-          localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(initProf));
+          const activeUserIdentifier = user.email || user.phone || formData.phone || '';
+          if (activeUserIdentifier) {
+            localStorage.setItem(`invoice_maker_biz_profile_${encodeURIComponent(activeUserIdentifier)}`, JSON.stringify(initProf));
+          }
+          localStorage.removeItem('invoice_maker_biz_profile');
         }
         
         setSuccessMsg('Successfully authenticated! Redirecting...');
@@ -389,7 +392,11 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
             console.warn('[Signup Subscription Warning]', subErr);
           }
 
-          localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(initProf));
+          const activeUserIdentifier = data.user.email || data.user.phone || formData.email || formData.phone || '';
+          if (activeUserIdentifier) {
+            localStorage.setItem(`invoice_maker_biz_profile_${encodeURIComponent(activeUserIdentifier)}`, JSON.stringify(initProf));
+          }
+          localStorage.removeItem('invoice_maker_biz_profile');
           setSuccessMsg('Welcome aboard! Redirecting...');
           setTimeout(() => {
             if (onNavigate) {

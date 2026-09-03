@@ -17,6 +17,8 @@ import {
   mergePartyRecords,
   deduplicatePartyList
 } from '../lib/masterRegistrySync';
+import { Country, State } from 'country-state-city';
+import { cleanStateName, formatStateWithCode, getStateCode, getStateNameFromGstCode } from '../lib/stateUtils';
 import { isPurchaseDocument } from '../lib/documentUtils';
 
 import * as XLSX from 'xlsx';
@@ -34,10 +36,10 @@ import {
   Sparkles, 
 
   FileText, 
-
+  FileCode,
+  FileType,
   User, 
   UserCheck, 
-
   Database, 
 
   AlertCircle, 
@@ -637,19 +639,15 @@ export default function Dashboard({
   // Close actions & send menus when clicking outside
 
   useEffect(() => {
-
     const handleOutsideClick = () => {
-
       setActiveActionMenuId(null);
-
       setActiveSendMenuId(null);
-
+      setMasterImportDropdownOpen(false);
+      setMasterExportDropdownOpen(false);
     };
 
     window.addEventListener('click', handleOutsideClick);
-
     return () => window.removeEventListener('click', handleOutsideClick);
-
   }, []);
 
   
@@ -999,6 +997,18 @@ export default function Dashboard({
   // Reusable Master & Catalog form builders state
   const [editingMasterItem, setEditingMasterItem] = useState<MasterItemType | null>(null);
   const [isMasterModalOpen, setIsMasterModalOpen] = useState(false);
+  const [masterCountryDropdownOpen, setMasterCountryDropdownOpen] = useState(false);
+  const [masterStateDropdownOpen, setMasterStateDropdownOpen] = useState(false);
+  const [masterCountrySearch, setMasterCountrySearch] = useState('');
+  const [masterStateSearch, setMasterStateSearch] = useState('');
+  const [masterImportDropdownOpen, setMasterImportDropdownOpen] = useState(false);
+  const [masterExportDropdownOpen, setMasterExportDropdownOpen] = useState(false);
+  const [masterDbFilter, setMasterDbFilter] = useState<'all' | 'clients' | 'vendors' | 'both'>('all');
+  const [selectedMasterItemIds, setSelectedMasterItemIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setSelectedMasterItemIds([]);
+  }, [activeTab, masterDbFilter]);
 
   const [deletedRegistryRev, setDeletedRegistryRev] = useState(0);
 
@@ -1076,7 +1086,6 @@ export default function Dashboard({
   });
 
   // Master Database Unified Section State & Aggregator
-  const [masterDbFilter, setMasterDbFilter] = useState<'all' | 'clients' | 'vendors' | 'both'>('all');
   const [isMasterDbExpanded, setIsMasterDbExpanded] = useState<boolean>(true);
 
   useEffect(() => {
@@ -1926,6 +1935,238 @@ export default function Dashboard({
     );
   };
 
+  const handleBulkDeleteMasterItems = async (idsToDelete: string[]) => {
+    if (!idsToDelete || idsToDelete.length === 0) return;
+
+    const count = idsToDelete.length;
+    const confirmed = await confirm({
+      title: `Delete ${count} ${count === 1 ? 'Record' : 'Records'}`,
+      message: `Are you sure you want to permanently delete ${count} selected ${count === 1 ? 'record' : 'records'}? This action cannot be undone.`,
+      confirmText: `Delete ${count} ${count === 1 ? 'Record' : 'Records'}`
+    });
+    if (!confirmed) return;
+
+    const idSet = new Set(idsToDelete);
+
+    const tabLabels: Record<string, string> = {
+      master_database: 'Master Database',
+      master_vendor: 'Client Database',
+      master_actual_vendor: 'Vendor Database',
+      master_transport: 'Transport Database',
+      master_hsn: 'HSN Registry',
+      master_gl: 'GL Accounts',
+      catalog_material: 'Material Catalog',
+      catalog_category: 'Product Category',
+      catalog_sub_category: 'Sub-Category',
+      catalog_mapping: 'GL Mapping',
+      catalog_packing_unit: 'Packing Units',
+      catalog_measurement_unit: 'UOM Registry',
+    };
+
+    if (['master_database', 'master_vendor', 'master_actual_vendor'].includes(activeTab)) {
+      const clean = (s: any) => String(s || '').trim().toLowerCase();
+
+      // Collect all matching target items to tombstone
+      const targetsToDelete = masterDatabaseList.filter(m => idSet.has(m.id))
+        .concat(vendors.filter(v => idSet.has(v.id)))
+        .concat(actualVendors.filter(a => idSet.has(a.id)))
+        .concat((clients || []).filter(c => idSet.has(c.id)));
+
+      // Tombstone every ID and identifier
+      idsToDelete.forEach(id => {
+        markRegistryKeyDeleted(id, suffix);
+      });
+
+      targetsToDelete.forEach(t => {
+        markRegistryKeyDeleted(t, suffix);
+        const n = (t.name || '').trim();
+        const comp = (t.company || t.companyName || '').trim();
+        const gst = (t.gstin || t.taxId || '').trim();
+        const em = (t.email || '').trim();
+        const ph = (t.phone || t.mobile || '').replace(/\D/g, '');
+        if (n) markRegistryKeyDeleted(n, suffix);
+        if (comp) markRegistryKeyDeleted(comp, suffix);
+        if (gst) markRegistryKeyDeleted(gst, suffix);
+        if (em) markRegistryKeyDeleted(em, suffix);
+        if (ph) markRegistryKeyDeleted(ph, suffix);
+      });
+
+      const matchesAnyParty = (v: any) => {
+        if (!v) return false;
+        if (idSet.has(v.id)) return true;
+        const vGst = clean(v.gstin || v.taxId);
+        const vEmail = clean(v.email);
+        const vName = clean(v.name);
+        const vComp = clean(v.company || v.companyName);
+        const vPhone = String(v.phone || v.mobile || '').replace(/\D/g, '');
+
+        return targetsToDelete.some(t => {
+          const tGst = clean(t.gstin || t.taxId);
+          const tEmail = clean(t.email);
+          const tName = clean(t.name);
+          const tComp = clean(t.company || t.companyName);
+          const tPhone = String(t.phone || t.mobile || '').replace(/\D/g, '');
+
+          if (tGst && vGst && vGst === tGst) return true;
+          if (tEmail && vEmail && vEmail === tEmail) return true;
+          if (tPhone && vPhone && vPhone === tPhone && tPhone.length >= 7) return true;
+          if (tName && (vName === tName || vComp === tName)) return true;
+          if (tComp && (vComp === tComp || vName === tComp)) return true;
+          return false;
+        });
+      };
+
+      const newVendors = (vendors || []).filter(v => !matchesAnyParty(v));
+      const newActualVendors = (actualVendors || []).filter(v => !matchesAnyParty(v));
+
+      setVendors(newVendors);
+      setActualVendors(newActualVendors);
+      localStorage.setItem('makbills_masters_vendors' + suffix, JSON.stringify(newVendors));
+      localStorage.setItem('makbills_masters_actual_vendors' + suffix, JSON.stringify(newActualVendors));
+
+      const newManualIds = manualPurchaserIds.filter(mid => !idSet.has(mid));
+      setManualPurchaserIds(newManualIds);
+      localStorage.setItem('makbills_manual_purchasers', JSON.stringify(newManualIds));
+
+      if (typeof onDeleteClient === 'function') {
+        idsToDelete.forEach(id => onDeleteClient(id, true));
+        (clients || []).forEach(c => {
+          if (matchesAnyParty(c)) onDeleteClient(c.id, true);
+        });
+      }
+
+      setSelectedMasterItemIds([]);
+      setDeletedRegistryRev(r => r + 1);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
+        window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
+        window.dispatchEvent(new CustomEvent('makbills_registry_deleted'));
+      }
+
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        const uid = session?.user?.id;
+        if (uid) {
+          try {
+            await pushMasterRegistriesToCloud(uid, suffix, {
+              vendors: newVendors,
+              actualVendors: newActualVendors,
+              transports,
+              hsnCodes,
+              materials,
+              categories,
+            });
+
+            await supabase.from('actual_vendors').delete().eq('user_id', uid).in('id', idsToDelete);
+          } catch (cloudErr) {
+            console.warn('[handleBulkDeleteMasterItems] Cloud delete non-blocking warning:', cloudErr);
+          }
+        }
+      });
+
+      const label = tabLabels[activeTab] || 'Master Database';
+      emitNotification('Records Deleted', `Permanently deleted ${count} ${count === 1 ? 'record' : 'records'} from ${label}.`, 'info');
+      return;
+    }
+
+    let list: any[] = [];
+    let key = '';
+    let setter: any = null;
+
+    switch (activeTab) {
+      case 'master_transport':
+        list = transports;
+        key = 'makbills_masters_transports' + suffix;
+        setter = setTransports;
+        break;
+      case 'master_hsn':
+        list = hsnCodes;
+        key = 'makbills_masters_hsn' + suffix;
+        setter = setHsnCodes;
+        break;
+      case 'master_gl':
+        list = glAccounts;
+        key = 'makbills_masters_gl' + suffix;
+        setter = setGlAccounts;
+        break;
+      case 'catalog_material':
+        list = materials;
+        key = 'makbills_masters_materials' + suffix;
+        setter = setMaterials;
+        break;
+      case 'catalog_category':
+        list = categories;
+        key = 'makbills_masters_categories' + suffix;
+        setter = setCategories;
+        break;
+      case 'catalog_sub_category':
+        list = subCategories;
+        key = 'makbills_masters_subcategories' + suffix;
+        setter = setSubCategories;
+        break;
+      case 'catalog_mapping':
+        list = mappings;
+        key = 'makbills_masters_mappings' + suffix;
+        setter = setMappings;
+        break;
+      case 'catalog_packing_unit':
+        list = packingUnits;
+        key = 'makbills_masters_packing' + suffix;
+        setter = setPackingUnits;
+        break;
+      case 'catalog_measurement_unit':
+        list = measurementUnits;
+        key = 'makbills_masters_measurement' + suffix;
+        setter = setMeasurementUnits;
+        break;
+    }
+
+    if (!setter) return;
+
+    list.filter(i => idSet.has(i.id)).forEach(i => {
+      markRegistryKeyDeleted(i, suffix);
+      markRegistryKeyDeleted(i.id, suffix);
+    });
+
+    const updated = list.filter(i => !idSet.has(i.id));
+    setter(updated);
+    localStorage.setItem(key, JSON.stringify(updated));
+
+    setSelectedMasterItemIds([]);
+    setDeletedRegistryRev(r => r + 1);
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) {
+        pushMasterRegistriesToCloud(session.user.id, suffix, {
+          vendors,
+          actualVendors,
+          transports: activeTab === 'master_transport' ? updated : transports,
+          hsnCodes: activeTab === 'master_hsn' ? updated : hsnCodes,
+          materials: activeTab === 'catalog_material' ? updated : materials,
+          categories: activeTab === 'catalog_category' ? updated : categories,
+          subCategories: activeTab === 'catalog_sub_category' ? updated : subCategories,
+          glAccounts: activeTab === 'master_gl' ? updated : glAccounts,
+          mappings: activeTab === 'catalog_mapping' ? updated : mappings,
+        });
+      }
+    });
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('makbills_registry_deleted'));
+      if (activeTab === 'master_transport') window.dispatchEvent(new CustomEvent('makbills_sync_transports'));
+      if (activeTab === 'catalog_material') window.dispatchEvent(new CustomEvent('makbills_sync_materials'));
+      if (activeTab === 'master_hsn') window.dispatchEvent(new CustomEvent('makbills_sync_hsn'));
+      if (activeTab === 'catalog_category') window.dispatchEvent(new CustomEvent('makbills_sync_categories'));
+    }
+
+    const label = tabLabels[activeTab] || 'Registry';
+    emitNotification(
+      `${label} Records Removed`,
+      `Permanently deleted ${count} ${count === 1 ? 'record' : 'records'} from ${label}.`,
+      'warning'
+    );
+  };
+
   const renderNavMenuContent = (isMobileView: boolean = false) => {
 
     const handleTabClick = (tab: string) => {
@@ -2559,6 +2800,119 @@ export default function Dashboard({
 
 
 
+  const getMasterFields = (tab: string) => {
+    switch (tab) {
+      case 'master_database':
+        return [
+          { label: 'Party Type', key: 'partyType', type: 'select', options: ['Client', 'Vendor', 'Client & Vendor'] },
+          { label: 'Contact Name / Party', key: 'name', type: 'text' },
+          { label: 'Company Name', key: 'company', type: 'text' },
+          { label: 'Category / Tag', key: 'category', type: 'text' },
+          { label: 'Country', key: 'country', type: 'text' },
+          { label: 'State', key: 'state', type: 'text' },
+          { label: 'Billing Address', key: 'address', type: 'text' },
+          { label: 'GSTIN / Tax No.', key: 'taxId', type: 'text' },
+          { label: 'PAN', key: 'pan', type: 'text' },
+          { label: 'Phone Number', key: 'phone', type: 'text' },
+          { label: 'Email Address', key: 'email', type: 'email' }
+        ];
+      case 'master_vendor':
+        return [
+          { label: 'Client Name', key: 'name', type: 'text' },
+          { label: 'Company Name', key: 'company', type: 'text' },
+          { label: 'Category / Tag', key: 'category', type: 'text' },
+          { label: 'Country', key: 'country', type: 'text' },
+          { label: 'State', key: 'state', type: 'text' },
+          { label: 'Address', key: 'address', type: 'text' },
+          { label: 'GSTIN / Tax No.', key: 'taxId', type: 'text' },
+          { label: 'PAN', key: 'pan', type: 'text' },
+          { label: 'Phone Number', key: 'phone', type: 'text' },
+          { label: 'Email Address', key: 'email', type: 'email' }
+        ];
+      case 'master_actual_vendor':
+        return [
+          { label: 'Vendor Name', key: 'name', type: 'text' },
+          { label: 'Company Name', key: 'company', type: 'text' },
+          { label: 'Category / Tag', key: 'category', type: 'text' },
+          { label: 'Country', key: 'country', type: 'text' },
+          { label: 'State', key: 'state', type: 'text' },
+          { label: 'Address', key: 'address', type: 'text' },
+          { label: 'GSTIN / Tax No.', key: 'taxId', type: 'text' },
+          { label: 'PAN', key: 'pan', type: 'text' },
+          { label: 'Phone Number', key: 'phone', type: 'text' },
+          { label: 'Email Address', key: 'email', type: 'email' }
+        ];
+      case 'master_transport':
+        return [
+          { label: 'Vehicle No', key: 'vehicleNo', type: 'text' },
+          { label: 'Driver Mobile', key: 'phone', type: 'text' },
+          { label: 'E-Way Bill No', key: 'ewayBillNo', type: 'text' },
+          { label: 'Transport Name', key: 'name', type: 'text' },
+          { label: 'Station', key: 'station', type: 'text' },
+          { label: 'GR/RR No.', key: 'grRrNo', type: 'text' }
+        ];
+      case 'master_hsn':
+        return [
+          { label: 'HSN/SAC Code', key: 'code', type: 'text' },
+          { label: 'Description', key: 'description', type: 'text' },
+          { label: 'Tax Rate (%)', key: 'gstRate', type: 'number' }
+        ];
+      case 'master_gl':
+        return [
+          { label: 'GL Account Identifier Code', key: 'code', type: 'text' },
+          { label: 'Ledger Name', key: 'name', type: 'text' },
+          { label: 'Account Category Type', key: 'type', type: 'select', options: ['Revenue', 'Expense', 'Asset', 'Liability'] }
+        ];
+      case 'catalog_material':
+        return [
+          { label: 'Item Name', key: 'name', type: 'text' },
+          { label: 'Standard Rate / Unit Price', key: 'rate', type: 'number' },
+          { label: 'HSN/SAC Code', key: 'hsn', type: 'text' },
+          { label: 'Unit of Measure (UOM)', key: 'uom', type: 'text' },
+          { label: 'Category', key: 'category', type: 'text' }
+        ];
+      case 'catalog_category':
+        return [
+          { label: 'Category Name', key: 'name', type: 'text' },
+          { label: 'Description', key: 'description', type: 'text' }
+        ];
+      case 'catalog_sub_category':
+        return [
+          { label: 'Parent Category Name', key: 'category', type: 'text' },
+          { label: 'Sub-Category Code Name', key: 'name', type: 'text' }
+        ];
+      case 'catalog_mapping':
+        return [
+          { label: 'Target Item / Deliverable Name', key: 'item', type: 'text' },
+          { label: 'Destination GL Account Code', key: 'glAccount', type: 'text' },
+          { label: 'Default Tax Rate (%)', key: 'taxRate', type: 'number' }
+        ];
+      case 'catalog_packing_unit':
+        return [
+          { label: 'Packing Name Code', key: 'name', type: 'text' }
+        ];
+      case 'catalog_measurement_unit':
+        return [
+          { label: 'UOM System Code', key: 'code', type: 'text' },
+          { label: 'Descriptive Standard Name', key: 'name', type: 'text' }
+        ];
+      default:
+        return [
+          { label: 'Party Type', key: 'partyType', type: 'select', options: ['Client', 'Vendor', 'Client & Vendor'] },
+          { label: 'Contact Name / Party', key: 'name', type: 'text' },
+          { label: 'Company Name', key: 'company', type: 'text' },
+          { label: 'Category / Tag', key: 'category', type: 'text' },
+          { label: 'Country', key: 'country', type: 'text' },
+          { label: 'State', key: 'state', type: 'text' },
+          { label: 'Billing Address', key: 'address', type: 'text' },
+          { label: 'GSTIN / Tax No.', key: 'taxId', type: 'text' },
+          { label: 'PAN', key: 'pan', type: 'text' },
+          { label: 'Phone Number', key: 'phone', type: 'text' },
+          { label: 'Email Address', key: 'email', type: 'email' }
+        ];
+    }
+  };
+
   const renderMasterTableSection = () => {
 
     let title = '';
@@ -3189,10 +3543,8 @@ export default function Dashboard({
 
 
 
-        {/* â”€â”€ Header Banner â”€â”€ */}
-
-        <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 8px rgba(2,132,199,0.06)' }}>
-
+        {/* ── Header Banner ── */}
+        <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-visible relative" style={{ boxShadow: '0 1px 8px rgba(2,132,199,0.06)' }}>
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-4 sm:p-5 md:p-6">
 
             {/* Left: Icon + title + description */}
@@ -3241,433 +3593,838 @@ export default function Dashboard({
 
               {(activeTab === 'master_database' || activeTab === 'master_vendor' || activeTab === 'master_actual_vendor' || activeTab === 'master_transport' || activeTab === 'master_hsn' || activeTab === 'catalog_material' || activeTab === 'catalog_category') && (
                 <>
-                  {/* Download Template */}
-                  <button
-                    onClick={() => {
-                      let headers: string[] = [];
-                      let filename = '';
-                      let sampleRow: string[] = [];
-
-                      if (activeTab === 'master_database') {
-                        headers = ['Contact Person', 'Company Name', 'Party Type (Client / Vendor / Both)', 'Category / Tag', 'GSTIN / Tax ID', 'PAN Number', 'Email Address', 'Phone Number', 'State', 'Country', 'Billing Address'];
-                        sampleRow = ['John Doe', 'Acme Solutions Pvt Ltd', 'Client', 'VIP Client', '07AAAAA0000A1Z5', 'AAAAA0000A', 'john@acme.com', '+91 9876543210', 'Delhi', 'India', 'Plot 12, Okhla Industrial Area Phase 3, New Delhi - 110020'];
-                        filename = 'master_database_template.csv';
-                      } else if (activeTab === 'master_vendor') {
-                        headers = ['Client Name', 'Company Name', 'Category / Tag', 'GSTIN / Tax ID', 'PAN Number', 'Email Address', 'Phone Number', 'State', 'Country', 'Billing Address'];
-                        sampleRow = ['John Doe', 'Acme Solutions Pvt Ltd', 'VIP Client', '07AAAAA0000A1Z5', 'AAAAA0000A', 'john@acme.com', '+91 9876543210', 'Delhi', 'India', 'Plot 12, Okhla Industrial Area Phase 3, New Delhi - 110020'];
-                        filename = 'client_database_template.csv';
-                      } else if (activeTab === 'master_actual_vendor') {
-                        headers = ['Vendor Name', 'Company Name', 'Category / Tag', 'GSTIN / Tax ID', 'PAN Number', 'Email Address', 'Phone Number', 'State', 'Country', 'Billing Address'];
-                        sampleRow = ['Jane Smith', 'Global Supplies Pvt Ltd', 'Regular Supplier', '27BBBBB0000B1Z8', 'BBBBB0000B', 'jane@globalsupplies.com', '+91 9811122233', 'Maharashtra', 'India', '456 Industrial Estate, Andheri East, Mumbai - 400069'];
-                        filename = 'vendor_database_template.csv';
-                      } else if (activeTab === 'master_transport') {
-                        headers = ['Carrier Name', 'GSTIN / UIN', 'PAN', 'Phone Number', 'Email Address', 'State', 'Country', 'Address Details'];
-                        sampleRow = ['Safe Express Logistics', '07AAAAS0000A1Z1', 'AAAAS0000A', '+91 9888877777', 'info@safeexpress.com', 'Delhi', 'India', 'Okhla Phase 1, New Delhi'];
-                        filename = 'transport_database_template.csv';
-                      } else if (activeTab === 'master_hsn') {
-                        headers = ['HSN/SAC Code', 'Description', 'Tax Rate (%)'];
-                        sampleRow = ['998311', 'Management Consulting Services', '18'];
-                        filename = 'hsn_registry_template.csv';
-                      } else if (activeTab === 'catalog_material') {
-                        headers = ['Item Name', 'Standard Rate / Unit Price', 'HSN/SAC Code', 'Unit of Measure (UOM)', 'Category'];
-                        sampleRow = ['Premium Advisory Service', '150', '998311', 'hour', 'Consulting'];
-                        filename = 'material_catalog_template.csv';
-                      } else if (activeTab === 'catalog_category') {
-                        headers = ['Category Name', 'Description'];
-                        sampleRow = ['Consulting', 'Advisory and business optimization services'];
-                        filename = 'product_category_template.csv';
-                      }
-
-                      const csvContent = '\uFEFF' + [headers.map(h => `"${h.replace(/"/g, '""')}"`).join(','), sampleRow.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(',')].join('\n');
-                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                      const link = document.createElement('a');
-                      const url = URL.createObjectURL(blob);
-                      link.setAttribute('href', url);
-                      link.setAttribute('download', filename);
-                      link.style.visibility = 'hidden';
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-
-                      // Notify download
-                      const tabLabelDl: Record<string, string> = {
-                        master_database: 'Master Database',
-                        master_vendor: 'Client Database',
-                        master_actual_vendor: 'Vendor Database',
-                        master_transport: 'Transport Database',
-                        master_hsn: 'HSN Registry',
-                        catalog_material: 'Material Catalog',
-                        catalog_category: 'Product Category'
-                      };
-
-                      emitNotification('Template Downloaded', `${tabLabelDl[activeTab] || 'Registry'} CSV template saved — "${filename}".`, 'success');
+                  <div className="relative">
+                    {/* Single Unified Import Dropdown Toggle Button */}
+                    <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMasterImportDropdownOpen(!masterImportDropdownOpen);
                     }}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer border border-[#bae6fd] dark:border-[#223269] hover:-translate-y-px active:scale-[0.98]"
+                    className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer border ${
+                      masterImportDropdownOpen
+                        ? 'bg-[#0284c7] text-white border-[#0284c7] shadow-sm'
+                        : 'bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border-[#bae6fd] dark:border-[#223269]'
+                    } hover:-translate-y-px active:scale-[0.98]`}
                   >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download Template</span>
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Import Records</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${masterImportDropdownOpen ? 'rotate-180 text-white' : 'text-[#0284c7] dark:text-[#38bdf8]'}`} />
                   </button>
 
-                  {/* Bulk Upload */}
-                  <button
-                    onClick={() => {
-                      if (subscriptionTier === 'free') {
-                        emitNotification('Feature Locked 🔒', 'Bulk Database Upload is available on Basic, Professional, and Enterprise plans. Please upgrade your plan to unlock bulk operations.', 'error');
-                        if (typeof window !== 'undefined') {
-                          window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
-                        }
-                        return;
-                      }
+                  {/* Dropdown Menu Options */}
+                  {masterImportDropdownOpen && (
+                    <div 
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 z-[100] w-60 max-w-[calc(100vw-2.5rem)] bg-white dark:bg-[#111a36] border border-[#bae6fd] dark:border-[#223269] rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 animate-in fade-in-50 zoom-in-95 duration-150"
+                      style={{ boxShadow: '0 15px 35px -5px rgba(2, 132, 199, 0.2), 0 0 0 1px rgba(186, 230, 253, 0.6)' }}
+                    >
+                      {/* Option 1: Download CSV Template */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMasterImportDropdownOpen(false);
+                          let headers: string[] = [];
+                          let filename = '';
+                          let sampleRow: string[] = [];
 
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = '.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel';
+                          if (activeTab === 'master_database') {
+                            headers = ['Contact Person', 'Company Name', 'Party Type (Client / Vendor / Both)', 'Category / Tag', 'GSTIN / Tax ID', 'PAN Number', 'Email Address', 'Phone Number', 'State', 'Country', 'Billing Address'];
+                            sampleRow = ['John Doe', 'Acme Solutions Pvt Ltd', 'Client', 'VIP Client', '07AAAAA0000A1Z5', 'AAAAA0000A', 'john@acme.com', '+91 9876543210', 'Delhi', 'India', 'Plot 12, Okhla Industrial Area Phase 3, New Delhi - 110020'];
+                            filename = 'master_database_template.csv';
+                          } else if (activeTab === 'master_vendor') {
+                            headers = ['Client Name', 'Company Name', 'Category / Tag', 'GSTIN / Tax ID', 'PAN Number', 'Email Address', 'Phone Number', 'State', 'Country', 'Billing Address'];
+                            sampleRow = ['John Doe', 'Acme Solutions Pvt Ltd', 'VIP Client', '07AAAAA0000A1Z5', 'AAAAA0000A', 'john@acme.com', '+91 9876543210', 'Delhi', 'India', 'Plot 12, Okhla Industrial Area Phase 3, New Delhi - 110020'];
+                            filename = 'client_database_template.csv';
+                          } else if (activeTab === 'master_actual_vendor') {
+                            headers = ['Vendor Name', 'Company Name', 'Category / Tag', 'GSTIN / Tax ID', 'PAN Number', 'Email Address', 'Phone Number', 'State', 'Country', 'Billing Address'];
+                            sampleRow = ['Jane Smith', 'Global Supplies Pvt Ltd', 'Regular Supplier', '27BBBBB0000B1Z8', 'BBBBB0000B', 'jane@globalsupplies.com', '+91 9811122233', 'Maharashtra', 'India', '456 Industrial Estate, Andheri East, Mumbai - 400069'];
+                            filename = 'vendor_database_template.csv';
+                          } else if (activeTab === 'master_transport') {
+                            headers = ['Carrier Name', 'GSTIN / UIN', 'PAN', 'Phone Number', 'Email Address', 'State', 'Country', 'Address Details'];
+                            sampleRow = ['Safe Express Logistics', '07AAAAS0000A1Z1', 'AAAAS0000A', '+91 9888877777', 'info@safeexpress.com', 'Delhi', 'India', 'Okhla Phase 1, New Delhi'];
+                            filename = 'transport_database_template.csv';
+                          } else if (activeTab === 'master_hsn') {
+                            headers = ['HSN/SAC Code', 'Description', 'Tax Rate (%)'];
+                            sampleRow = ['998311', 'Management Consulting Services', '18'];
+                            filename = 'hsn_registry_template.csv';
+                          } else if (activeTab === 'catalog_material') {
+                            headers = ['Item Name', 'Standard Rate / Unit Price', 'HSN/SAC Code', 'Unit of Measure (UOM)', 'Category'];
+                            sampleRow = ['Premium Advisory Service', '150', '998311', 'hour', 'Consulting'];
+                            filename = 'material_catalog_template.csv';
+                          } else if (activeTab === 'catalog_category') {
+                            headers = ['Category Name', 'Description'];
+                            sampleRow = ['Consulting', 'Advisory and business optimization services'];
+                            filename = 'product_category_template.csv';
+                          }
 
-                      input.onchange = (e: any) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (evt) => {
-                            try {
-                              const data = evt.target?.result;
-                              const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                              const firstSheetName = workbook.SheetNames[0];
-                              const worksheet = workbook.Sheets[firstSheetName];
-                              let rawRows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                          const csvContent = '\uFEFF' + [headers.map(h => `"${h.replace(/"/g, '""')}"`).join(','), sampleRow.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(',')].join('\n');
+                          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                          const link = document.createElement('a');
+                          const url = URL.createObjectURL(blob);
+                          link.setAttribute('href', url);
+                          link.setAttribute('download', filename);
+                          link.style.visibility = 'hidden';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
 
-                              // Handle single-column delimiter fallback (e.g. semicolon or comma-separated single text cell)
-                              if (rawRows.length > 0 && rawRows[0].length === 1 && typeof rawRows[0][0] === 'string') {
-                                const sample = rawRows[0][0];
-                                const delim = sample.includes('\t') ? '\t' : (sample.includes(';') ? ';' : (sample.includes(',') ? ',' : ''));
-                                if (delim) {
-                                  rawRows = rawRows.map(r => typeof r[0] === 'string' ? r[0].split(delim).map(c => c.trim().replace(/^"|"$/g, '')) : r);
-                                }
-                              }
-
-                              if (!rawRows || rawRows.length < 2) {
-                                alert('No valid data rows found in file. Please ensure the file has a header row and data rows.');
-                                return;
-                              }
-
-                              // Find the first row that looks like a header (at least 2 non-empty cells)
-                              let headerRowIdx = 0;
-                              for (let i = 0; i < Math.min(rawRows.length, 5); i++) {
-                                const r = rawRows[i];
-                                if (r && Array.isArray(r) && r.filter((c: any) => String(c || '').trim() !== '').length >= 2) {
-                                  headerRowIdx = i;
-                                  break;
-                                }
-                              }
-
-                              const rawHeaders = rawRows[headerRowIdx].map((h: any) => String(h || '').trim());
-                              const normalizeStr = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-                              const normHeaders = rawHeaders.map(normalizeStr);
-
-                              const getVal = (rowArr: any[], aliases: string[]): string => {
-                                for (const alias of aliases) {
-                                  const target = normalizeStr(alias);
-                                  const idx = normHeaders.indexOf(target);
-                                  if (idx !== -1 && rowArr[idx] !== undefined && rowArr[idx] !== null) {
-                                    const v = String(rowArr[idx]).trim();
-                                    if (v) return v;
-                                  }
-                                }
-                                return '';
-                              };
-
-                              const dataRows = rawRows.slice(headerRowIdx + 1);
-                              const finalItems = dataRows
-                                .filter(r => r && Array.isArray(r) && r.some((cell: any) => String(cell || '').trim() !== ''))
-                                .map((row, index) => {
-                                  const id = `bulk_${activeTab}_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 6)}`;
-
-                                  if (activeTab === 'master_database') {
-                                    const rawType = getVal(row, ['partytype', 'partytypeclientvendorboth', 'type', 'role', 'category', 'status']).toLowerCase();
-                                    let partyType: 'Client' | 'Vendor' | 'Client & Vendor' = 'Client';
-                                    if (rawType.includes('both') || (rawType.includes('client') && rawType.includes('vendor'))) {
-                                      partyType = 'Client & Vendor';
-                                    } else if (rawType.includes('vendor') || rawType.includes('supplier')) {
-                                      partyType = 'Vendor';
-                                    }
-
-                                    const gstinVal = getVal(row, ['gstin', 'gst', 'gstnotaxid', 'gstintaxid', 'gstno', 'gstnumber', 'taxid', 'taxno', 'taxnumber', 'gstinuin', 'uin']).toUpperCase();
-                                    const panVal = getVal(row, ['pan', 'pannumber', 'panno', 'panitno']).toUpperCase() || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
-                                    const partyName = getVal(row, ['contactperson', 'partyname', 'clientname', 'vendorname', 'carriername', 'contactname', 'name', 'party', 'client', 'vendor', 'customer', 'customername', 'person', 'fullname']);
-                                    const companyName = getVal(row, ['companyname', 'company', 'firmname', 'firm', 'businessname', 'business', 'organization', 'orgname', 'accountname', 'legalname']);
-                                    const finalName = partyName || companyName || `Party ${index + 1}`;
-                                    const finalComp = companyName || partyName || '';
-
-                                    return {
-                                      id,
-                                      name: finalName,
-                                      company: finalComp,
-                                      companyName: finalComp,
-                                      partyType,
-                                      category: getVal(row, ['categorytag', 'category', 'tag', 'tags', 'group']) || partyType,
-                                      gstin: gstinVal,
-                                      taxId: gstinVal,
-                                      pan: panVal,
-                                      email: getVal(row, ['emailaddress', 'email', 'mail', 'emailid']),
-                                      phone: getVal(row, ['phonenumber', 'phone', 'mobile', 'mobilenumber', 'contactno', 'contactnumber', 'drivermobile', 'tel']),
-                                      state: getVal(row, ['state', 'region', 'province', 'stateregion']),
-                                      country: getVal(row, ['country', 'nation']) || 'India',
-                                      address: getVal(row, ['billingaddress', 'address', 'streetaddress', 'addressdetails', 'fulladdress', 'location'])
-                                    };
-                                  }
-
-                                  if (activeTab === 'master_vendor') {
-                                    const gstinVal = getVal(row, ['gstin', 'gst', 'gstnotaxid', 'gstintaxid', 'gstno', 'gstnumber', 'taxid', 'taxno', 'taxnumber', 'gstinuin', 'uin']).toUpperCase();
-                                    const panVal = getVal(row, ['pan', 'pannumber', 'panno', 'panitno']).toUpperCase() || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
-                                    const partyName = getVal(row, ['clientname', 'contactperson', 'partyname', 'contactname', 'name', 'party', 'client', 'customer', 'customername', 'person', 'fullname']);
-                                    const companyName = getVal(row, ['companyname', 'company', 'firmname', 'firm', 'businessname', 'business', 'organization', 'orgname', 'accountname', 'legalname']);
-                                    return {
-                                      id,
-                                      name: partyName || companyName || `Client ${index + 1}`,
-                                      company: companyName || partyName || '',
-                                      category: getVal(row, ['categorytag', 'category', 'tag', 'tags', 'group']),
-                                      gstin: gstinVal,
-                                      taxId: gstinVal,
-                                      pan: panVal,
-                                      email: getVal(row, ['emailaddress', 'email', 'mail', 'emailid']),
-                                      phone: getVal(row, ['phonenumber', 'phone', 'mobile', 'mobilenumber', 'contactno', 'contactnumber', 'tel']),
-                                      state: getVal(row, ['state', 'region', 'province', 'stateregion']),
-                                      country: getVal(row, ['country', 'nation']) || 'India',
-                                      address: getVal(row, ['billingaddress', 'address', 'streetaddress', 'addressdetails', 'fulladdress', 'location'])
-                                    };
-                                  }
-
-                                  if (activeTab === 'master_actual_vendor') {
-                                    const gstinVal = getVal(row, ['gstin', 'gst', 'gstnotaxid', 'gstintaxid', 'gstno', 'gstnumber', 'taxid', 'taxno', 'taxnumber', 'gstinuin', 'uin']).toUpperCase();
-                                    const panVal = getVal(row, ['pan', 'pannumber', 'panno', 'panitno']).toUpperCase() || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
-                                    const partyName = getVal(row, ['vendorname', 'contactperson', 'partyname', 'contactname', 'name', 'party', 'vendor', 'supplier', 'person', 'fullname']);
-                                    const companyName = getVal(row, ['companyname', 'company', 'firmname', 'firm', 'businessname', 'business', 'organization', 'orgname', 'accountname', 'legalname']);
-                                    return {
-                                      id,
-                                      name: partyName || companyName || `Vendor ${index + 1}`,
-                                      company: companyName || partyName || '',
-                                      category: getVal(row, ['categorytag', 'category', 'tag', 'tags', 'group']),
-                                      gstin: gstinVal,
-                                      taxId: gstinVal,
-                                      pan: panVal,
-                                      email: getVal(row, ['emailaddress', 'email', 'mail', 'emailid']),
-                                      phone: getVal(row, ['phonenumber', 'phone', 'mobile', 'mobilenumber', 'contactno', 'contactnumber', 'tel']),
-                                      state: getVal(row, ['state', 'region', 'province', 'stateregion']),
-                                      country: getVal(row, ['country', 'nation']) || 'India',
-                                      address: getVal(row, ['billingaddress', 'address', 'streetaddress', 'addressdetails', 'fulladdress', 'location'])
-                                    };
-                                  }
-
-                                  if (activeTab === 'master_transport') {
-                                    return {
-                                      id,
-                                      name: getVal(row, ['carriername', 'transportname', 'name', 'transporter', 'carrier', 'drivername']) || `Carrier ${index + 1}`,
-                                      phone: getVal(row, ['phonenumber', 'phone', 'drivermobile', 'mobile', 'contactno', 'contactnumber']),
-                                      vehicleNo: getVal(row, ['vehicleno', 'vehiclenumber', 'truckno', 'vehicle']),
-                                      ewayBillNo: getVal(row, ['ewaybillno', 'ewaybill', 'ewaybillnumber']),
-                                      station: getVal(row, ['station', 'destination', 'city', 'location']),
-                                      grRrNo: getVal(row, ['grrrno', 'grno', 'rrno'])
-                                    };
-                                  }
-
-                                  if (activeTab === 'master_hsn') {
-                                    const rawRate = getVal(row, ['taxrate', 'gstrate', 'tax', 'rate', 'gst', 'taxpercentage']);
-                                    return {
-                                      id,
-                                      code: getVal(row, ['hsnsaccode', 'hsncode', 'saccode', 'code', 'hsn']) || '000000',
-                                      description: getVal(row, ['description', 'desc', 'itemdescription', 'details']),
-                                      gstRate: rawRate ? Number(rawRate.replace(/[^0-9.]/g, '')) : 18
-                                    };
-                                  }
-
-                                  if (activeTab === 'catalog_material') {
-                                    const rawRate = getVal(row, ['standardrateunitprice', 'standardrate', 'rate', 'unitprice', 'price', 'mrp', 'amount']);
-                                    return {
-                                      id,
-                                      name: getVal(row, ['itemname', 'name', 'productname', 'materialname', 'item']) || `Item ${index + 1}`,
-                                      rate: rawRate ? Number(rawRate.replace(/[^0-9.]/g, '')) : 0,
-                                      hsn: getVal(row, ['hsnsaccode', 'hsncode', 'saccode', 'hsn']),
-                                      uom: getVal(row, ['unitofmeasureuom', 'unitofmeasure', 'uom', 'unit', 'measure']) || 'pcs',
-                                      category: getVal(row, ['category', 'group', 'tag'])
-                                    };
-                                  }
-
-                                  if (activeTab === 'catalog_category') {
-                                    return {
-                                      id,
-                                      name: getVal(row, ['categoryname', 'name', 'category', 'group']) || `Category ${index + 1}`,
-                                      description: getVal(row, ['description', 'desc', 'details'])
-                                    };
-                                  }
-
-                                  return null;
-                                })
-                                .filter(Boolean);
-
-                              if (finalItems.length === 0) {
-                                alert('No valid records found in the uploaded file.');
-                                return;
-                              }
-
-                              const findMatchIndex = (list: any[], item: any) => {
-                                return list.findIndex(e => isPartyMatch(e, item));
-                              };
-
-                              if (activeTab === 'master_database') {
-                                let newVendors = [...vendors];
-                                let newActualVendors = [...actualVendors];
-
-                                finalItems.forEach((item: any) => {
-                                  const isClient = item.partyType === 'Client' || item.partyType === 'Client & Vendor';
-                                  const isVendor = item.partyType === 'Vendor' || item.partyType === 'Client & Vendor';
-
-                                  if (isClient) {
-                                    const idx = findMatchIndex(newVendors, item);
-                                    if (idx >= 0) {
-                                      newVendors[idx] = mergePartyRecords(newVendors[idx], item);
-                                    } else {
-                                      newVendors.push(item);
-                                    }
-                                  }
-                                  if (isVendor) {
-                                    const idx = findMatchIndex(newActualVendors, item);
-                                    if (idx >= 0) {
-                                      newActualVendors[idx] = mergePartyRecords(newActualVendors[idx], item);
-                                    } else {
-                                      newActualVendors.push(item);
-                                    }
-                                  }
-                                });
-
-                                newVendors = deduplicatePartyList(newVendors);
-                                newActualVendors = deduplicatePartyList(newActualVendors);
-
-                                setVendors([...newVendors]);
-                                setActualVendors([...newActualVendors]);
-                                localStorage.setItem('makbills_masters_vendors' + suffix, JSON.stringify(newVendors));
-                                localStorage.setItem('makbills_masters_actual_vendors' + suffix, JSON.stringify(newActualVendors));
-
-                                supabase.auth.getSession().then(({ data: { session } }) => {
-                                  if (session?.user?.id) {
-                                    pushMasterRegistriesToCloud(session.user.id, suffix, {
-                                      vendors: newVendors,
-                                      actualVendors: newActualVendors,
-                                      transports,
-                                      hsnCodes,
-                                      materials,
-                                      categories,
-                                    });
-                                  }
-                                });
-
-                                if (typeof window !== 'undefined') {
-                                  window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
-                                  window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
-                                }
-
-                                emitNotification('Bulk Upload Complete', `Successfully imported and synced ${finalItems.length} records into Master Database.`, 'success');
-                                return;
-                              }
-
-                              let currentList: any[] = [], storageKey = '', setterFn: any = null;
-
-                              if (activeTab === 'master_vendor') { currentList = vendors; storageKey = 'makbills_masters_vendors' + suffix; setterFn = setVendors; }
-                              else if (activeTab === 'master_actual_vendor') { currentList = actualVendors; storageKey = 'makbills_masters_actual_vendors' + suffix; setterFn = setActualVendors; }
-                              else if (activeTab === 'master_transport') { currentList = transports; storageKey = 'makbills_masters_transports' + suffix; setterFn = setTransports; }
-                              else if (activeTab === 'master_hsn') { currentList = hsnCodes; storageKey = 'makbills_masters_hsn' + suffix; setterFn = setHsnCodes; }
-                              else if (activeTab === 'catalog_material') { currentList = materials; storageKey = 'makbills_masters_materials' + suffix; setterFn = setMaterials; }
-                              else if (activeTab === 'catalog_category') { currentList = categories; storageKey = 'makbills_masters_categories' + suffix; setterFn = setCategories; }
-
-                              if (setterFn) {
-                                let updatedList = [...currentList];
-                                finalItems.forEach((item: any) => {
-                                  const idx = findMatchIndex(updatedList, item);
-                                  if (idx >= 0) {
-                                    if (activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') {
-                                      updatedList[idx] = mergePartyRecords(updatedList[idx], item);
-                                    } else {
-                                      updatedList[idx] = { ...updatedList[idx], ...item, id: updatedList[idx].id };
-                                    }
-                                  } else {
-                                    updatedList.push(item);
-                                  }
-                                });
-
-                                if (activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') {
-                                  updatedList = deduplicatePartyList(updatedList);
-                                }
-
-                                setterFn([...updatedList]);
-                                localStorage.setItem(storageKey, JSON.stringify(updatedList));
-
-                                supabase.auth.getSession().then(({ data: { session } }) => {
-                                  if (session?.user?.id) {
-                                    pushMasterRegistriesToCloud(session.user.id, suffix, {
-                                      vendors: activeTab === 'master_vendor' ? updatedList : vendors,
-                                      actualVendors: activeTab === 'master_actual_vendor' ? updatedList : actualVendors,
-                                      transports: activeTab === 'master_transport' ? updatedList : transports,
-                                      hsnCodes: activeTab === 'master_hsn' ? updatedList : hsnCodes,
-                                      materials: activeTab === 'catalog_material' ? updatedList : materials,
-                                      categories: activeTab === 'catalog_category' ? updatedList : categories,
-                                    });
-                                  }
-                                });
-
-                                const tabLabelUp: Record<string, string> = { master_database: 'Master Database', master_vendor: 'Client Database', master_actual_vendor: 'Vendor Database', master_transport: 'Transport Database', master_hsn: 'HSN Registry', catalog_material: 'Material Catalog', catalog_category: 'Product Category' };
-                                emitNotification('Bulk Upload Complete', `Successfully imported ${finalItems.length} records into ${tabLabelUp[activeTab] || 'Registry'}.`, 'success');
-                              }
-
-                            } catch (err: any) { alert('Error parsing file: ' + err.message); }
+                          const tabLabelDl: Record<string, string> = {
+                            master_database: 'Master Database',
+                            master_vendor: 'Client Database',
+                            master_actual_vendor: 'Vendor Database',
+                            master_transport: 'Transport Database',
+                            master_hsn: 'HSN Registry',
+                            catalog_material: 'Material Catalog',
+                            catalog_category: 'Product Category'
                           };
 
-                          reader.readAsArrayBuffer(file);
-                        }
-                      };
+                          emitNotification('Template Downloaded', `${tabLabelDl[activeTab] || 'Registry'} CSV template saved — "${filename}".`, 'success');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 hover:bg-[#e0f2fe]/70 dark:hover:bg-[#1b264f] hover:text-[#0284c7] dark:hover:text-[#38bdf8] transition-colors cursor-pointer text-left"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] flex items-center justify-center shrink-0">
+                          <Download className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold">Download Template</span>
+                          <span className="text-[10px] text-[#64748b] dark:text-zinc-400 font-normal">Pre-formatted CSV template</span>
+                        </div>
+                      </button>
 
-                      input.click();
-                    }}
+                      {/* Option 2: Bulk Upload File */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMasterImportDropdownOpen(false);
+                          if (subscriptionTier === 'free') {
+                            emitNotification('Feature Locked 🔒', 'Bulk Database Upload is available on Basic, Professional, and Enterprise plans. Please upgrade your plan to unlock bulk operations.', 'error');
+                            if (typeof window !== 'undefined') {
+                              window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
+                            }
+                            return;
+                          }
 
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer border border-[#bae6fd] dark:border-[#223269] hover:-translate-y-px active:scale-[0.98]"
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = '.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel';
 
-                  >
+                          input.onchange = (e: any) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (evt) => {
+                                try {
+                                  const data = evt.target?.result;
+                                  const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                                  const firstSheetName = workbook.SheetNames[0];
+                                  const worksheet = workbook.Sheets[firstSheetName];
+                                  let rawRows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
-                    {subscriptionTier === 'free' ? (
-                      <Lock className="w-3.5 h-3.5 text-amber-500" />
-                    ) : (
-                      <Upload className="w-3.5 h-3.5" />
+                                  if (rawRows.length > 0 && rawRows[0].length === 1 && typeof rawRows[0][0] === 'string') {
+                                    const sample = rawRows[0][0];
+                                    const delim = sample.includes('\t') ? '\t' : (sample.includes(';') ? ';' : (sample.includes(',') ? ',' : ''));
+                                    if (delim) {
+                                      rawRows = rawRows.map(r => typeof r[0] === 'string' ? r[0].split(delim).map(c => c.trim().replace(/^"|"$/g, '')) : r);
+                                    }
+                                  }
+
+                                  if (!rawRows || rawRows.length < 2) {
+                                    alert('No valid data rows found in file. Please ensure the file has a header row and data rows.');
+                                    return;
+                                  }
+
+                                  let headerRowIdx = 0;
+                                  for (let i = 0; i < Math.min(rawRows.length, 5); i++) {
+                                    const r = rawRows[i];
+                                    if (r && Array.isArray(r) && r.filter((c: any) => String(c || '').trim() !== '').length >= 2) {
+                                      headerRowIdx = i;
+                                      break;
+                                    }
+                                  }
+
+                                  const rawHeaders = rawRows[headerRowIdx].map((h: any) => String(h || '').trim());
+                                  const normalizeStr = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                  const normHeaders = rawHeaders.map(normalizeStr);
+
+                                  const getVal = (rowArr: any[], aliases: string[]): string => {
+                                    for (const alias of aliases) {
+                                      const target = normalizeStr(alias);
+                                      const idx = normHeaders.indexOf(target);
+                                      if (idx !== -1 && rowArr[idx] !== undefined && rowArr[idx] !== null) {
+                                        const v = String(rowArr[idx]).trim();
+                                        if (v) return v;
+                                      }
+                                    }
+                                    return '';
+                                  };
+
+                                  const dataRows = rawRows.slice(headerRowIdx + 1);
+                                  const finalItems = dataRows
+                                    .filter(r => r && Array.isArray(r) && r.some((cell: any) => String(cell || '').trim() !== ''))
+                                    .map((row, index) => {
+                                      const id = `bulk_${activeTab}_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 6)}`;
+
+                                      if (activeTab === 'master_database') {
+                                        const rawType = getVal(row, ['partytype', 'partytypeclientvendorboth', 'type', 'role', 'category', 'status']).toLowerCase();
+                                        let partyType: 'Client' | 'Vendor' | 'Client & Vendor' = 'Client';
+                                        if (rawType.includes('both') || (rawType.includes('client') && rawType.includes('vendor'))) {
+                                          partyType = 'Client & Vendor';
+                                        } else if (rawType.includes('vendor') || rawType.includes('supplier')) {
+                                          partyType = 'Vendor';
+                                        }
+
+                                        const gstinVal = getVal(row, ['gstin', 'gst', 'gstnotaxid', 'gstintaxid', 'gstno', 'gstnumber', 'taxid', 'taxno', 'taxnumber', 'gstinuin', 'uin']).toUpperCase();
+                                        const panVal = getVal(row, ['pan', 'pannumber', 'panno', 'panitno']).toUpperCase() || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+                                        const partyName = getVal(row, ['contactperson', 'partyname', 'clientname', 'vendorname', 'carriername', 'contactname', 'name', 'party', 'client', 'vendor', 'customer', 'customername', 'person', 'fullname']);
+                                        const companyName = getVal(row, ['companyname', 'company', 'firmname', 'firm', 'businessname', 'business', 'organization', 'orgname', 'accountname', 'legalname']);
+                                        const finalName = partyName || companyName || `Party ${index + 1}`;
+                                        const finalComp = companyName || partyName || '';
+
+                                        return {
+                                          id,
+                                          name: finalName,
+                                          company: finalComp,
+                                          companyName: finalComp,
+                                          partyType,
+                                          category: getVal(row, ['categorytag', 'category', 'tag', 'tags', 'group']) || partyType,
+                                          gstin: gstinVal,
+                                          taxId: gstinVal,
+                                          pan: panVal,
+                                          email: getVal(row, ['emailaddress', 'email', 'mail', 'emailid']),
+                                          phone: getVal(row, ['phonenumber', 'phone', 'mobile', 'mobilenumber', 'contactno', 'contactnumber', 'drivermobile', 'tel']),
+                                          state: getVal(row, ['state', 'region', 'province', 'stateregion']),
+                                          country: getVal(row, ['country', 'nation']) || 'India',
+                                          address: getVal(row, ['billingaddress', 'address', 'streetaddress', 'addressdetails', 'fulladdress', 'location'])
+                                        };
+                                      }
+
+                                      if (activeTab === 'master_vendor') {
+                                        const gstinVal = getVal(row, ['gstin', 'gst', 'gstnotaxid', 'gstintaxid', 'gstno', 'gstnumber', 'taxid', 'taxno', 'taxnumber', 'gstinuin', 'uin']).toUpperCase();
+                                        const panVal = getVal(row, ['pan', 'pannumber', 'panno', 'panitno']).toUpperCase() || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+                                        const partyName = getVal(row, ['clientname', 'contactperson', 'partyname', 'contactname', 'name', 'party', 'client', 'customer', 'customername', 'person', 'fullname']);
+                                        const companyName = getVal(row, ['companyname', 'company', 'firmname', 'firm', 'businessname', 'business', 'organization', 'orgname', 'accountname', 'legalname']);
+                                        return {
+                                          id,
+                                          name: partyName || companyName || `Client ${index + 1}`,
+                                          company: companyName || partyName || '',
+                                          category: getVal(row, ['categorytag', 'category', 'tag', 'tags', 'group']),
+                                          gstin: gstinVal,
+                                          taxId: gstinVal,
+                                          pan: panVal,
+                                          email: getVal(row, ['emailaddress', 'email', 'mail', 'emailid']),
+                                          phone: getVal(row, ['phonenumber', 'phone', 'mobile', 'mobilenumber', 'contactno', 'contactnumber', 'tel']),
+                                          state: getVal(row, ['state', 'region', 'province', 'stateregion']),
+                                          country: getVal(row, ['country', 'nation']) || 'India',
+                                          address: getVal(row, ['billingaddress', 'address', 'streetaddress', 'addressdetails', 'fulladdress', 'location'])
+                                        };
+                                      }
+
+                                      if (activeTab === 'master_actual_vendor') {
+                                        const gstinVal = getVal(row, ['gstin', 'gst', 'gstnotaxid', 'gstintaxid', 'gstno', 'gstnumber', 'taxid', 'taxno', 'taxnumber', 'gstinuin', 'uin']).toUpperCase();
+                                        const panVal = getVal(row, ['pan', 'pannumber', 'panno', 'panitno']).toUpperCase() || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+                                        const partyName = getVal(row, ['vendorname', 'contactperson', 'partyname', 'contactname', 'name', 'party', 'vendor', 'supplier', 'person', 'fullname']);
+                                        const companyName = getVal(row, ['companyname', 'company', 'firmname', 'firm', 'businessname', 'business', 'organization', 'orgname', 'accountname', 'legalname']);
+                                        return {
+                                          id,
+                                          name: partyName || companyName || `Vendor ${index + 1}`,
+                                          company: companyName || partyName || '',
+                                          category: getVal(row, ['categorytag', 'category', 'tag', 'tags', 'group']),
+                                          gstin: gstinVal,
+                                          taxId: gstinVal,
+                                          pan: panVal,
+                                          email: getVal(row, ['emailaddress', 'email', 'mail', 'emailid']),
+                                          phone: getVal(row, ['phonenumber', 'phone', 'mobile', 'mobilenumber', 'contactno', 'contactnumber', 'tel']),
+                                          state: getVal(row, ['state', 'region', 'province', 'stateregion']),
+                                          country: getVal(row, ['country', 'nation']) || 'India',
+                                          address: getVal(row, ['billingaddress', 'address', 'streetaddress', 'addressdetails', 'fulladdress', 'location'])
+                                        };
+                                      }
+
+                                      if (activeTab === 'master_transport') {
+                                        return {
+                                          id,
+                                          name: getVal(row, ['carriername', 'transportname', 'name', 'transporter', 'carrier', 'drivername']) || `Carrier ${index + 1}`,
+                                          phone: getVal(row, ['phonenumber', 'phone', 'drivermobile', 'mobile', 'contactno', 'contactnumber']),
+                                          vehicleNo: getVal(row, ['vehicleno', 'vehiclenumber', 'truckno', 'vehicle']),
+                                          ewayBillNo: getVal(row, ['ewaybillno', 'ewaybill', 'ewaybillnumber']),
+                                          station: getVal(row, ['station', 'destination', 'city', 'location']),
+                                          grRrNo: getVal(row, ['grrrno', 'grno', 'rrno'])
+                                        };
+                                      }
+
+                                      if (activeTab === 'master_hsn') {
+                                        const rawRate = getVal(row, ['taxrate', 'gstrate', 'tax', 'rate', 'gst', 'taxpercentage']);
+                                        return {
+                                          id,
+                                          code: getVal(row, ['hsnsaccode', 'hsncode', 'saccode', 'code', 'hsn']) || '000000',
+                                          description: getVal(row, ['description', 'desc', 'itemdescription', 'details']),
+                                          gstRate: rawRate ? Number(rawRate.replace(/[^0-9.]/g, '')) : 18
+                                        };
+                                      }
+
+                                      if (activeTab === 'catalog_material') {
+                                        const rawRate = getVal(row, ['standardrateunitprice', 'standardrate', 'rate', 'unitprice', 'price', 'mrp', 'amount']);
+                                        return {
+                                          id,
+                                          name: getVal(row, ['itemname', 'name', 'productname', 'materialname', 'item']) || `Item ${index + 1}`,
+                                          rate: rawRate ? Number(rawRate.replace(/[^0-9.]/g, '')) : 0,
+                                          hsn: getVal(row, ['hsnsaccode', 'hsncode', 'saccode', 'hsn']),
+                                          uom: getVal(row, ['unitofmeasureuom', 'unitofmeasure', 'uom', 'unit', 'measure']) || 'pcs',
+                                          category: getVal(row, ['category', 'group', 'tag'])
+                                        };
+                                      }
+
+                                      if (activeTab === 'catalog_category') {
+                                        return {
+                                          id,
+                                          name: getVal(row, ['categoryname', 'name', 'category', 'group']) || `Category ${index + 1}`,
+                                          description: getVal(row, ['description', 'desc', 'details'])
+                                        };
+                                      }
+
+                                      return null;
+                                    })
+                                    .filter(Boolean);
+
+                                  if (finalItems.length === 0) {
+                                    alert('No valid records found in the uploaded file.');
+                                    return;
+                                  }
+
+                                  const findMatchIndex = (list: any[], item: any) => {
+                                    return list.findIndex(e => isPartyMatch(e, item));
+                                  };
+
+                                  if (activeTab === 'master_database') {
+                                    let newVendors = [...vendors];
+                                    let newActualVendors = [...actualVendors];
+
+                                    finalItems.forEach((item: any) => {
+                                      const isClient = item.partyType === 'Client' || item.partyType === 'Client & Vendor';
+                                      const isVendor = item.partyType === 'Vendor' || item.partyType === 'Client & Vendor';
+
+                                      if (isClient) {
+                                        const idx = findMatchIndex(newVendors, item);
+                                        if (idx >= 0) {
+                                          newVendors[idx] = mergePartyRecords(newVendors[idx], item);
+                                        } else {
+                                          newVendors.push(item);
+                                        }
+                                      }
+                                      if (isVendor) {
+                                        const idx = findMatchIndex(newActualVendors, item);
+                                        if (idx >= 0) {
+                                          newActualVendors[idx] = mergePartyRecords(newActualVendors[idx], item);
+                                        } else {
+                                          newActualVendors.push(item);
+                                        }
+                                      }
+                                    });
+
+                                    newVendors = deduplicatePartyList(newVendors);
+                                    newActualVendors = deduplicatePartyList(newActualVendors);
+
+                                    setVendors([...newVendors]);
+                                    setActualVendors([...newActualVendors]);
+                                    localStorage.setItem('makbills_masters_vendors' + suffix, JSON.stringify(newVendors));
+                                    localStorage.setItem('makbills_masters_actual_vendors' + suffix, JSON.stringify(newActualVendors));
+
+                                    supabase.auth.getSession().then(({ data: { session } }) => {
+                                      if (session?.user?.id) {
+                                        pushMasterRegistriesToCloud(session.user.id, suffix, {
+                                          vendors: newVendors,
+                                          actualVendors: newActualVendors,
+                                          transports,
+                                          hsnCodes,
+                                          materials,
+                                          categories,
+                                        });
+                                      }
+                                    });
+
+                                    if (typeof window !== 'undefined') {
+                                      window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
+                                      window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
+                                    }
+
+                                    emitNotification('Bulk Upload Complete', `Successfully imported and synced ${finalItems.length} records into Master Database.`, 'success');
+                                    return;
+                                  }
+
+                                  let currentList: any[] = [], storageKey = '', setterFn: any = null;
+
+                                  if (activeTab === 'master_vendor') { currentList = vendors; storageKey = 'makbills_masters_vendors' + suffix; setterFn = setVendors; }
+                                  else if (activeTab === 'master_actual_vendor') { currentList = actualVendors; storageKey = 'makbills_masters_actual_vendors' + suffix; setterFn = setActualVendors; }
+                                  else if (activeTab === 'master_transport') { currentList = transports; storageKey = 'makbills_masters_transports' + suffix; setterFn = setTransports; }
+                                  else if (activeTab === 'master_hsn') { currentList = hsnCodes; storageKey = 'makbills_masters_hsn' + suffix; setterFn = setHsnCodes; }
+                                  else if (activeTab === 'catalog_material') { currentList = materials; storageKey = 'makbills_masters_materials' + suffix; setterFn = setMaterials; }
+                                  else if (activeTab === 'catalog_category') { currentList = categories; storageKey = 'makbills_masters_categories' + suffix; setterFn = setCategories; }
+
+                                  if (setterFn) {
+                                    let updatedList = [...currentList];
+                                    finalItems.forEach((item: any) => {
+                                      const idx = findMatchIndex(updatedList, item);
+                                      if (idx >= 0) {
+                                        if (activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') {
+                                          updatedList[idx] = mergePartyRecords(updatedList[idx], item);
+                                        } else {
+                                          updatedList[idx] = { ...updatedList[idx], ...item, id: updatedList[idx].id };
+                                        }
+                                      } else {
+                                        updatedList.push(item);
+                                      }
+                                    });
+
+                                    if (activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') {
+                                      updatedList = deduplicatePartyList(updatedList);
+                                    }
+
+                                    setterFn([...updatedList]);
+                                    localStorage.setItem(storageKey, JSON.stringify(updatedList));
+
+                                    supabase.auth.getSession().then(({ data: { session } }) => {
+                                      if (session?.user?.id) {
+                                        pushMasterRegistriesToCloud(session.user.id, suffix, {
+                                          vendors: activeTab === 'master_vendor' ? updatedList : vendors,
+                                          actualVendors: activeTab === 'master_actual_vendor' ? updatedList : actualVendors,
+                                          transports: activeTab === 'master_transport' ? updatedList : transports,
+                                          hsnCodes: activeTab === 'master_hsn' ? updatedList : hsnCodes,
+                                          materials: activeTab === 'catalog_material' ? updatedList : materials,
+                                          categories: activeTab === 'catalog_category' ? updatedList : categories,
+                                        });
+                                      }
+                                    });
+
+                                    const tabLabelUp: Record<string, string> = { master_database: 'Master Database', master_vendor: 'Client Database', master_actual_vendor: 'Vendor Database', master_transport: 'Transport Database', master_hsn: 'HSN Registry', catalog_material: 'Material Catalog', catalog_category: 'Product Category' };
+                                    emitNotification('Bulk Upload Complete', `Successfully imported ${finalItems.length} records into ${tabLabelUp[activeTab] || 'Registry'}.`, 'success');
+                                  }
+
+                                } catch (err: any) { alert('Error parsing file: ' + err.message); }
+                              };
+
+                              reader.readAsArrayBuffer(file);
+                            }
+                          };
+
+                          input.click();
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 hover:bg-[#e0f2fe]/70 dark:hover:bg-[#1b264f] hover:text-[#0284c7] dark:hover:text-[#38bdf8] transition-colors cursor-pointer text-left"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-6 h-6 rounded-lg bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] flex items-center justify-center shrink-0">
+                            {subscriptionTier === 'free' ? (
+                              <Lock className="w-3.5 h-3.5 text-amber-500" />
+                            ) : (
+                              <Upload className="w-3.5 h-3.5" />
+                            )}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold">Bulk Upload File</span>
+                            <span className="text-[10px] text-[#64748b] dark:text-zinc-400 font-normal">Import CSV or Excel files</span>
+                          </div>
+                        </div>
+                        {subscriptionTier === 'free' && (
+                          <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">PRO</span>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Single Unified Export Dropdown Toggle Button */}
+                <div className="relative">
+                  <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMasterExportDropdownOpen(!masterExportDropdownOpen);
+                        setMasterImportDropdownOpen(false);
+                      }}
+                      className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer border ${
+                        masterExportDropdownOpen
+                          ? 'bg-[#0f766e] text-white border-[#0f766e] shadow-sm'
+                          : 'bg-[#f0fdfa] hover:bg-[#ccfbf1] dark:bg-[#134e4a]/30 dark:hover:bg-[#134e4a]/60 text-[#0f766e] dark:text-[#2dd4bf] border-[#99f6e4] dark:border-[#115e59]'
+                      } hover:-translate-y-px active:scale-[0.98]`}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Export Records</span>
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${masterExportDropdownOpen ? 'rotate-180 text-white' : 'text-[#0f766e] dark:text-[#2dd4bf]'}`} />
+                    </button>
+
+                    {/* Export Dropdown Menu Options */}
+                    {masterExportDropdownOpen && (
+                      <div 
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-0 top-full mt-2 z-[100] w-64 max-w-[calc(100vw-2rem)] bg-white dark:bg-[#111a36] border border-[#99f6e4] dark:border-[#115e59] rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 animate-in fade-in-50 zoom-in-95 duration-150"
+                        style={{ boxShadow: '0 15px 35px -5px rgba(15, 118, 110, 0.2), 0 0 0 1px rgba(153, 246, 228, 0.6)' }}
+                      >
+                        {/* Option 1: Export in Excel (.xlsx) */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMasterExportDropdownOpen(false);
+                            if (list.length === 0) {
+                              emitNotification('Export Notice', 'No records found to export.', 'info');
+                              return;
+                            }
+
+                            const exportData = list.map((item: any, idx: number) => {
+                              if (activeTab === 'master_database') {
+                                return {
+                                  'S.No': idx + 1,
+                                  'Contact Person': item.name || '',
+                                  'Company Name': item.company || item.companyName || '',
+                                  'Party Type': item.partyType || '',
+                                  'Category / Tag': item.category || '',
+                                  'GSTIN / Tax ID': item.gstin || item.taxId || '',
+                                  'PAN': item.pan || '',
+                                  'Email': item.email || '',
+                                  'Phone': item.phone || '',
+                                  'State': item.state || '',
+                                  'Country': item.country || 'India',
+                                  'Billing Address': item.address || ''
+                                };
+                              }
+                              if (activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') {
+                                return {
+                                  'S.No': idx + 1,
+                                  'Party Name': item.name || '',
+                                  'Company Name': item.company || item.companyName || '',
+                                  'Category / Tag': item.category || '',
+                                  'GSTIN / Tax ID': item.gstin || item.taxId || '',
+                                  'PAN': item.pan || '',
+                                  'Email': item.email || '',
+                                  'Phone': item.phone || '',
+                                  'State': item.state || '',
+                                  'Country': item.country || 'India',
+                                  'Billing Address': item.address || ''
+                                };
+                              }
+                              if (activeTab === 'master_transport') {
+                                return {
+                                  'S.No': idx + 1,
+                                  'Carrier / Driver Name': item.name || '',
+                                  'Phone Number': item.phone || '',
+                                  'Vehicle No': item.vehicleNo || '',
+                                  'E-way Bill No': item.ewayBillNo || '',
+                                  'Station / Destination': item.station || '',
+                                  'GR/RR No': item.grRrNo || ''
+                                };
+                              }
+                              if (activeTab === 'master_hsn') {
+                                return {
+                                  'S.No': idx + 1,
+                                  'HSN/SAC Code': item.code || '',
+                                  'Description': item.description || '',
+                                  'Tax Rate (%)': item.gstRate !== undefined ? `${item.gstRate}%` : ''
+                                };
+                              }
+                              if (activeTab === 'catalog_material') {
+                                return {
+                                  'S.No': idx + 1,
+                                  'Item Name': item.name || '',
+                                  'Standard Rate': item.rate || 0,
+                                  'HSN/SAC Code': item.hsn || '',
+                                  'Unit of Measure': item.uom || 'pcs',
+                                  'Category': item.category || ''
+                                };
+                              }
+                              if (activeTab === 'catalog_category') {
+                                return {
+                                  'S.No': idx + 1,
+                                  'Category Name': item.name || '',
+                                  'Description': item.description || ''
+                                };
+                              }
+                              return item;
+                            });
+
+                            const worksheet = XLSX.utils.json_to_sheet(exportData);
+                            const workbook = XLSX.utils.book_new();
+                            const cleanSheetName = (title || 'Registry').replace(/[*?:/\[\]\\]/g, '').substring(0, 31);
+                            XLSX.utils.book_append_sheet(workbook, worksheet, cleanSheetName);
+                            const fileName = `${(title || 'Registry').toLowerCase().replace(/\s+/g, '_')}_export_${Date.now()}.xlsx`;
+                            XLSX.writeFile(workbook, fileName);
+                            emitNotification('Export Complete', `Successfully exported ${list.length} records to Excel (${fileName}).`, 'success');
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 hover:bg-[#ccfbf1]/70 dark:hover:bg-[#134e4a]/50 hover:text-[#0f766e] dark:hover:text-[#2dd4bf] transition-colors cursor-pointer text-left"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-[#ccfbf1] dark:bg-[#134e4a] text-[#0f766e] dark:text-[#2dd4bf] flex items-center justify-center shrink-0">
+                            <FileSpreadsheet className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold">Export to Excel</span>
+                            <span className="text-[10px] text-[#64748b] dark:text-zinc-400 font-normal">Download formatted spreadsheet (.xlsx)</span>
+                          </div>
+                        </button>
+
+                        {/* Option 2: Export in JSON (.json) */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMasterExportDropdownOpen(false);
+                            if (list.length === 0) {
+                              emitNotification('Export Notice', 'No records found to export.', 'info');
+                              return;
+                            }
+
+                            const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(list, null, 2))}`;
+                            const downloadAnchor = document.createElement('a');
+                            const fileName = `${(title || 'Registry').toLowerCase().replace(/\s+/g, '_')}_export_${Date.now()}.json`;
+                            downloadAnchor.setAttribute('href', jsonString);
+                            downloadAnchor.setAttribute('download', fileName);
+                            document.body.appendChild(downloadAnchor);
+                            downloadAnchor.click();
+                            downloadAnchor.remove();
+
+                            emitNotification('Export Complete', `Successfully exported ${list.length} records as JSON (${fileName}).`, 'success');
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 hover:bg-[#ccfbf1]/70 dark:hover:bg-[#134e4a]/50 hover:text-[#0f766e] dark:hover:text-[#2dd4bf] transition-colors cursor-pointer text-left"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-[#ccfbf1] dark:bg-[#134e4a] text-[#0f766e] dark:text-[#2dd4bf] flex items-center justify-center shrink-0">
+                            <FileCode className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold">Export to JSON</span>
+                            <span className="text-[10px] text-[#64748b] dark:text-zinc-400 font-normal">Raw structured JSON dataset</span>
+                          </div>
+                        </button>
+
+                        {/* Option 3: Export in PDF (.pdf) */}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setMasterExportDropdownOpen(false);
+                            if (list.length === 0) {
+                              emitNotification('Export Notice', 'No records found to export.', 'info');
+                              return;
+                            }
+
+                            try {
+                              const { jsPDF } = await import('jspdf');
+                              const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+                              const pageWidth = doc.internal.pageSize.getWidth();
+                              const pageHeight = doc.internal.pageSize.getHeight();
+                              const margin = 14;
+
+                              // Document Header Banner
+                              doc.setFillColor(2, 132, 199);
+                              doc.rect(margin, margin, pageWidth - margin * 2, 14, 'F');
+
+                              doc.setFont('helvetica', 'bold');
+                              doc.setFontSize(13);
+                              doc.setTextColor(255, 255, 255);
+                              doc.text(`${(title || 'Master Registry').toUpperCase()} REPORT`, margin + 4, margin + 9.5);
+
+                              doc.setFont('helvetica', 'normal');
+                              doc.setFontSize(8);
+                              doc.setTextColor(100, 116, 139);
+                              const subInfo = `Total Records: ${list.length}   |   Export Date: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+                              doc.text(subInfo, margin, margin + 20);
+
+                              let cols: { title: string; width: number }[] = [];
+                              let rows: string[][] = [];
+
+                              if (activeTab === 'master_database') {
+                                cols = [
+                                  { title: '#', width: 10 },
+                                  { title: 'Contact Person', width: 38 },
+                                  { title: 'Company Name', width: 44 },
+                                  { title: 'Type', width: 22 },
+                                  { title: 'GSTIN / Tax ID', width: 32 },
+                                  { title: 'PAN', width: 24 },
+                                  { title: 'Phone', width: 28 },
+                                  { title: 'State', width: 24 },
+                                  { title: 'Address Details', width: 47 }
+                                ];
+                                rows = list.map((item: any, idx: number) => [
+                                  String(idx + 1),
+                                  String(item.name || ''),
+                                  String(item.company || item.companyName || ''),
+                                  String(item.partyType || 'Client'),
+                                  String(item.gstin || item.taxId || '-'),
+                                  String(item.pan || '-'),
+                                  String(item.phone || '-'),
+                                  String(item.state || '-'),
+                                  String(item.address || '-')
+                                ]);
+                              } else if (activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') {
+                                cols = [
+                                  { title: '#', width: 10 },
+                                  { title: 'Party Name', width: 42 },
+                                  { title: 'Company Name', width: 46 },
+                                  { title: 'Category', width: 26 },
+                                  { title: 'GSTIN / Tax ID', width: 34 },
+                                  { title: 'PAN', width: 24 },
+                                  { title: 'Phone', width: 28 },
+                                  { title: 'State', width: 24 },
+                                  { title: 'Address Details', width: 35 }
+                                ];
+                                rows = list.map((item: any, idx: number) => [
+                                  String(idx + 1),
+                                  String(item.name || ''),
+                                  String(item.company || item.companyName || ''),
+                                  String(item.category || '-'),
+                                  String(item.gstin || item.taxId || '-'),
+                                  String(item.pan || '-'),
+                                  String(item.phone || '-'),
+                                  String(item.state || '-'),
+                                  String(item.address || '-')
+                                ]);
+                              } else if (activeTab === 'master_transport') {
+                                cols = [
+                                  { title: '#', width: 12 },
+                                  { title: 'Carrier / Driver Name', width: 55 },
+                                  { title: 'Phone Number', width: 38 },
+                                  { title: 'Vehicle No', width: 40 },
+                                  { title: 'E-Way Bill No', width: 42 },
+                                  { title: 'Station / Destination', width: 45 },
+                                  { title: 'GR / RR No', width: 37 }
+                                ];
+                                rows = list.map((item: any, idx: number) => [
+                                  String(idx + 1),
+                                  String(item.name || ''),
+                                  String(item.phone || '-'),
+                                  String(item.vehicleNo || '-'),
+                                  String(item.ewayBillNo || '-'),
+                                  String(item.station || '-'),
+                                  String(item.grRrNo || '-')
+                                ]);
+                              } else if (activeTab === 'master_hsn') {
+                                cols = [
+                                  { title: '#', width: 15 },
+                                  { title: 'HSN / SAC Code', width: 55 },
+                                  { title: 'Description / Classification', width: 145 },
+                                  { title: 'GST Tax Rate', width: 54 }
+                                ];
+                                rows = list.map((item: any, idx: number) => [
+                                  String(idx + 1),
+                                  String(item.code || ''),
+                                  String(item.description || '-'),
+                                  item.gstRate !== undefined ? `${item.gstRate}%` : '18%'
+                                ]);
+                              } else if (activeTab === 'catalog_material') {
+                                cols = [
+                                  { title: '#', width: 12 },
+                                  { title: 'Item / Material Name', width: 75 },
+                                  { title: 'Standard Rate', width: 40 },
+                                  { title: 'HSN / SAC', width: 45 },
+                                  { title: 'Unit (UOM)', width: 40 },
+                                  { title: 'Category', width: 57 }
+                                ];
+                                rows = list.map((item: any, idx: number) => [
+                                  String(idx + 1),
+                                  String(item.name || ''),
+                                  `Rs. ${item.rate || 0}`,
+                                  String(item.hsn || '-'),
+                                  String(item.uom || 'pcs'),
+                                  String(item.category || '-')
+                                ]);
+                              } else if (activeTab === 'catalog_category') {
+                                cols = [
+                                  { title: '#', width: 15 },
+                                  { title: 'Category Name', width: 85 },
+                                  { title: 'Description / Scope', width: 169 }
+                                ];
+                                rows = list.map((item: any, idx: number) => [
+                                  String(idx + 1),
+                                  String(item.name || ''),
+                                  String(item.description || '-')
+                                ]);
+                              }
+
+                              // Draw Table Header
+                              let currentY = margin + 25;
+                              const rowHeight = 7.5;
+
+                              const drawTableHeader = (y: number) => {
+                                doc.setFillColor(241, 245, 249);
+                                doc.rect(margin, y, pageWidth - margin * 2, 7, 'F');
+                                doc.setDrawColor(226, 232, 240);
+                                doc.rect(margin, y, pageWidth - margin * 2, 7, 'S');
+
+                                doc.setFont('helvetica', 'bold');
+                                doc.setFontSize(7.5);
+                                doc.setTextColor(30, 41, 59);
+
+                                let curX = margin;
+                                cols.forEach(col => {
+                                  doc.text(col.title, curX + 2, y + 4.8);
+                                  curX += col.width;
+                                });
+                              };
+
+                              drawTableHeader(currentY);
+                              currentY += 7;
+
+                              // Draw Table Rows
+                              rows.forEach((row, rowIdx) => {
+                                if (currentY + rowHeight > pageHeight - margin) {
+                                  doc.addPage();
+                                  currentY = margin;
+                                  drawTableHeader(currentY);
+                                  currentY += 7;
+                                }
+
+                                if (rowIdx % 2 === 1) {
+                                  doc.setFillColor(248, 250, 252);
+                                  doc.rect(margin, currentY, pageWidth - margin * 2, rowHeight, 'F');
+                                }
+
+                                doc.setDrawColor(241, 245, 249);
+                                doc.line(margin, currentY + rowHeight, pageWidth - margin, currentY + rowHeight);
+
+                                doc.setFont('helvetica', 'normal');
+                                doc.setFontSize(7);
+                                doc.setTextColor(51, 65, 85);
+
+                                let curX = margin;
+                                row.forEach((cellText, cellIdx) => {
+                                  const colW = cols[cellIdx]?.width || 30;
+                                  const truncated = doc.splitTextToSize(cellText || '-', colW - 3)[0] || '';
+                                  doc.text(truncated, curX + 2, currentY + 5);
+                                  curX += colW;
+                                });
+
+                                currentY += rowHeight;
+                              });
+
+                              const fileName = `${(title || 'Registry').toLowerCase().replace(/\s+/g, '_')}_report_${Date.now()}.pdf`;
+                              doc.save(fileName);
+                              emitNotification('Export Complete', `Successfully generated and saved PDF (${fileName}).`, 'success');
+                            } catch (err: any) {
+                              emitNotification('Export Error', `Could not export PDF: ${err?.message || 'Unknown error'}`, 'error');
+                            }
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[#0f172a] dark:text-zinc-200 hover:bg-[#ccfbf1]/70 dark:hover:bg-[#134e4a]/50 hover:text-[#0f766e] dark:hover:text-[#2dd4bf] transition-colors cursor-pointer text-left"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-[#ccfbf1] dark:bg-[#134e4a] text-[#0f766e] dark:text-[#2dd4bf] flex items-center justify-center shrink-0">
+                            <FileType className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold">Export to PDF</span>
+                            <span className="text-[10px] text-[#64748b] dark:text-zinc-400 font-normal">Print-ready tabular PDF document</span>
+                          </div>
+                        </button>
+                      </div>
                     )}
-
-                    <span>Bulk Upload</span>
-
-                  </button>
-
+                  </div>
                 </>
-
               )}
 
-
-
               {/* Add Registry Record — always visible */}
-
               <button
-
                 onClick={() => {
-
                   setEditingMasterItem({ id: 'm_item_' + Date.now() });
-
                   setIsMasterModalOpen(true);
-
                 }}
-
                 className="flex items-center gap-1.5 px-4 py-2 bg-[#0284c7] dark:bg-[#38bdf8] border border-[#0369a1] dark:border-[#0284c7] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer hover:-translate-y-px active:scale-[0.98]"
-
               >
-
                 <Plus className="w-3.5 h-3.5" />
-
                 <span>Add Registry Record</span>
-
               </button>
-
             </div>
 
           </div>
@@ -3678,25 +4435,26 @@ export default function Dashboard({
 
         {/* Master Database Party Filters */}
         {activeTab === 'master_database' && (
-          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl">
+          <div className="flex items-center gap-1 sm:gap-1.5 p-1 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-x-auto no-scrollbar">
             {[
-              { id: 'all', label: 'All Parties', count: masterDatabaseList.length },
-              { id: 'clients', label: 'Clients', count: masterDatabaseList.filter(i => i.partyType === 'Client' || i.partyType === 'Client & Vendor').length },
-              { id: 'vendors', label: 'Vendors', count: masterDatabaseList.filter(i => i.partyType === 'Vendor' || i.partyType === 'Client & Vendor').length },
-              { id: 'both', label: 'Client & Vendor (Both)', count: masterDatabaseList.filter(i => i.partyType === 'Client & Vendor').length }
+              { id: 'all', mobileLabel: 'All', desktopLabel: 'All Parties', count: masterDatabaseList.length },
+              { id: 'clients', mobileLabel: 'Clients', desktopLabel: 'Clients', count: masterDatabaseList.filter(i => i.partyType === 'Client' || i.partyType === 'Client & Vendor').length },
+              { id: 'vendors', mobileLabel: 'Vendors', desktopLabel: 'Vendors', count: masterDatabaseList.filter(i => i.partyType === 'Vendor' || i.partyType === 'Client & Vendor').length },
+              { id: 'both', mobileLabel: 'Both', desktopLabel: 'Client & Vendor (Both)', count: masterDatabaseList.filter(i => i.partyType === 'Client & Vendor').length }
             ].map(tab => {
               const isActive = masterDbFilter === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => { setMasterDbFilter(tab.id as any); setClientPage(0); }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 sm:gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                     isActive
-                      ? 'bg-[#0284c7] text-white shadow-sm'
+                      ? 'bg-[#0284c7] text-white shadow-sm font-extrabold'
                       : 'text-[#64748b] dark:text-zinc-400 hover:bg-[#e0f2fe]/60 dark:hover:bg-[#1b264f]/40'
                   }`}
                 >
-                  <span>{tab.label}</span>
+                  <span className="sm:hidden">{tab.mobileLabel}</span>
+                  <span className="hidden sm:inline">{tab.desktopLabel}</span>
                   <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-black ${
                     isActive
                       ? 'bg-white/20 text-white'
@@ -3710,17 +4468,65 @@ export default function Dashboard({
           </div>
         )}
 
-        {/* ── Search Bar ── */}
-        <div className="relative">
-          <Search className="w-4 h-4 text-[#64748b]/60 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            placeholder={`Search through ${list.length} ${list.length === 1 ? 'directory' : 'directories'} live...`}
-            value={searchTerm}
-            onChange={(e) => { setSearchTerm(e.target.value); setClientPage(0); }}
-            className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269] rounded-2xl text-sm text-[#0f172a] dark:text-zinc-200 placeholder-[#64748b]/45 focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all"
-            style={{ boxShadow: '0 1px 4px rgba(2,132,199,0.06), inset 0 1px 3px rgba(2,132,199,0.04)' }}
-          />
+        {/* ── Search & Bulk Action Toolbar ── */}
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="w-4 h-4 text-[#64748b]/60 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder={`Search through ${list.length} ${list.length === 1 ? 'directory' : 'directories'} live...`}
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setClientPage(0); }}
+              className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269] rounded-2xl text-sm text-[#0f172a] dark:text-zinc-200 placeholder-[#64748b]/45 focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all"
+              style={{ boxShadow: '0 1px 4px rgba(2,132,199,0.06), inset 0 1px 3px rgba(2,132,199,0.04)' }}
+            />
+          </div>
+
+          {/* Bulk Selection Action Bar */}
+          {selectedMasterItemIds.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2.5 px-4 py-3 bg-gradient-to-r from-rose-50 via-rose-50/80 to-amber-50 dark:from-rose-950/40 dark:via-rose-950/30 dark:to-amber-950/30 border border-rose-200 dark:border-rose-900/50 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-150 shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-xl bg-rose-500 text-white flex items-center justify-center font-black text-xs shadow-sm">
+                  {selectedMasterItemIds.length}
+                </div>
+                <span className="text-xs font-bold text-rose-950 dark:text-rose-200">
+                  {selectedMasterItemIds.length === 1 ? '1 record selected' : `${selectedMasterItemIds.length} records selected`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allFilteredIds = filteredList.map(i => i.id);
+                    if (selectedMasterItemIds.length === allFilteredIds.length) {
+                      setSelectedMasterItemIds([]);
+                    } else {
+                      setSelectedMasterItemIds(allFilteredIds);
+                    }
+                  }}
+                  className="text-[11px] font-bold text-[#0284c7] dark:text-[#38bdf8] hover:underline cursor-pointer ml-1"
+                >
+                  {selectedMasterItemIds.length === filteredList.length ? 'Deselect All' : `Select All (${filteredList.length})`}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedMasterItemIds([])}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#64748b] dark:text-zinc-400 hover:bg-white/80 dark:hover:bg-zinc-800 transition-colors cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-zinc-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleBulkDeleteMasterItems(selectedMasterItemIds)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer shadow-sm hover:-translate-y-px active:scale-[0.98]"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Selected ({selectedMasterItemIds.length})</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Table Card ── */}
@@ -3740,6 +4546,24 @@ export default function Dashboard({
                   {/* Table Head */}
                   <thead>
                     <tr className={`border-b border-[#bae6fd]/30 dark:border-[#223269]/30 ${accent ? `${accent.theadBg}` : 'bg-[#f4f9ff] dark:bg-[#0b1329]'}`}>
+                      {/* Checkbox Column */}
+                      <th className="w-10 px-3.5 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={pagedList.length > 0 && pagedList.every(i => selectedMasterItemIds.includes(i.id))}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const newIds = Array.from(new Set([...selectedMasterItemIds, ...pagedList.map(i => i.id)]));
+                              setSelectedMasterItemIds(newIds);
+                            } else {
+                              const pagedIdSet = new Set(pagedList.map(i => i.id));
+                              setSelectedMasterItemIds(selectedMasterItemIds.filter(id => !pagedIdSet.has(id)));
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-slate-300 dark:border-zinc-700 text-[#0284c7] focus:ring-[#0284c7] cursor-pointer"
+                          aria-label="Select all rows on page"
+                        />
+                      </th>
                       {columns.map((col, idx) => (
                         <th key={idx} className="px-4 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#64748b]/75 dark:text-zinc-500 whitespace-nowrap">
                           {col.header}
@@ -3753,173 +4577,56 @@ export default function Dashboard({
 
                   {/* Table Body */}
                   <tbody className="divide-y divide-[#bae6fd]/20 dark:divide-[#223269]/20">
-                    {pagedList.map((item, rowIdx) => (
-                      <tr
-                        key={item.id}
-                        className="group hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 transition-colors duration-100"
-                      >
-                        {columns.map((col, idx2) => {
-                          const cellVal = item[col.key];
-                          const isFirstCol = idx2 === 0;
-
-                          return (
-                            <td key={idx2} className="px-4 py-3.5">
-                              {isFirstCol ? (
-                                <div className="flex items-center gap-3">
-                                  {/* Avatar — per-tab accent color */}
-                                  <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f] dark:border-[#223269]'}`}>
-                                    {activeTab === 'master_database' && <Layers className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#0284c7] dark:text-[#38bdf8]'}`} />}
-                                    {(activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') && <User className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-                                    {activeTab === 'master_transport' && <Truck className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-                                    {activeTab === 'master_hsn' && <FileSpreadsheet className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-                                    {activeTab === 'catalog_material' && <Wrench className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-                                    {activeTab === 'catalog_category' && <Tag className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-                                  </div>
-                                  <span className="text-xs font-extrabold uppercase tracking-tight text-[#0f172a] dark:text-white">
-                                    {String(cellVal || '')}
-                                  </span>
-                                </div>
-                              ) : col.key === 'partyType' ? (
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
-                                  cellVal === 'Vendor'
-                                    ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800/40'
-                                    : cellVal === 'Client & Vendor'
-                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40'
-                                    : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border-sky-200 dark:border-sky-800/40'
-                                }`}>
-                                  {cellVal || 'Client'}
-                                </span>
-                              ) : col.key === 'rate' ? (
-                                <span className="text-xs font-mono font-semibold text-[#0f172a] dark:text-zinc-200">
-                                  {currencySymbol}{formatNum(cellVal || 0)}
-                                </span>
-                              ) : col.key === 'category' ? (
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${getCategoryBadgeStyle(cellVal)}`}>
-                                  {cellVal || 'General'}
-                                </span>
-                              ) : col.key === 'email' ? (
-                                <span className="text-[11px] text-sky-600 dark:text-sky-400 font-medium font-mono lowercase">
-                                  {cellVal || '-'}
-                                </span>
-                              ) : col.key === 'phone' ? (
-                                <span className="text-[11px] text-[#64748b]/90 dark:text-zinc-400 font-mono">
-                                  {cellVal || '-'}
-                                </span>
-                              ) : (
-                                <span className="text-[11px] text-[#0f172a] dark:text-zinc-300 font-medium">
-                                  {String(cellVal || '-')}
-                                </span>
-                              )}
-                            </td>
-                          );
-                        })}
-
-                        {/* Actions */}
-                        <td className="px-4 py-3.5">
-                          <div className="flex justify-end items-center gap-0.5">
-                            <button
-                              onClick={() => {
-                                const normalized = {
-                                  ...item,
-                                  partyType: item.partyType || (activeTab === 'master_actual_vendor' ? 'Vendor' : 'Client'),
-                                  taxId: item.taxId || item.gstin || '',
-                                  gstin: item.gstin || item.taxId || '',
-                                  company: item.company || item.companyName || '',
-                                  companyName: item.companyName || item.company || '',
-                                  state: item.state || '',
-                                  country: item.country || 'India',
-                                  pan: item.pan || '',
-                                };
-                                setEditingMasterItem(normalized);
-                                setIsMasterModalOpen(true);
+                    {pagedList.map((item, rowIdx) => {
+                      const isSelected = selectedMasterItemIds.includes(item.id);
+                      return (
+                        <tr
+                          key={item.id}
+                          className={`group transition-colors duration-100 ${
+                            isSelected
+                              ? 'bg-rose-50/40 dark:bg-rose-950/20'
+                              : 'hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20'
+                          }`}
+                        >
+                          {/* Checkbox */}
+                          <td className="w-10 px-3.5 py-3.5 text-center">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedMasterItemIds(prev => [...prev, item.id]);
+                                } else {
+                                  setSelectedMasterItemIds(prev => prev.filter(id => id !== item.id));
+                                }
                               }}
-                              className="p-2 text-[#64748b]/70 hover:text-[#0284c7] dark:text-zinc-500 dark:hover:text-[#38bdf8] hover:bg-[#e0f2fe]/50 dark:hover:bg-zinc-800 rounded-lg transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
-                              aria-label="Edit record"
-                            >
-                              <PenTool className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteMasterItem(item.id)}
-                              className="p-2 text-rose-400/70 hover:text-rose-500 dark:text-rose-500/60 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
-                              aria-label="Delete record"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                              className="w-4 h-4 rounded border-slate-300 dark:border-zinc-700 text-[#0284c7] focus:ring-[#0284c7] cursor-pointer"
+                              aria-label={`Select ${String(item.name || item.code || 'item')}`}
+                            />
+                          </td>
+                          {columns.map((col, idx2) => {
+                            const cellVal = item[col.key];
+                            const isFirstCol = idx2 === 0;
 
-              {/* Mobile Card View */}
-              <div className="md:hidden flex flex-col divide-y divide-[#bae6fd]/20 dark:divide-zinc-800/60">
-                {pagedList.map((item, rowIdx) => (
-                  <div key={item.id} className="p-4 flex flex-col gap-3">
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex items-start gap-3">
-                        {/* Avatar */}
-                        <div className={`w-9 h-9 mt-0.5 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f] dark:border-[#223269]'}`}>
-                          {activeTab === 'master_database' && <Layers className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#0284c7] dark:text-[#38bdf8]'}`} />}
-                          {(activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') && <User className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-                          {activeTab === 'master_transport' && <Truck className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-                          {activeTab === 'master_hsn' && <FileSpreadsheet className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-                          {activeTab === 'catalog_material' && <Wrench className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-                          {activeTab === 'catalog_category' && <Tag className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-black uppercase tracking-tight text-[#0f172a] dark:text-white block truncate">
-                            {String(item[columns[0].key] || '')}
-                          </span>
-                          <span className="text-[10px] text-[#64748b]/70 font-bold uppercase tracking-wider block mt-0.5">
-                            {columns[0].header}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          onClick={() => {
-                            const normalized = {
-                              ...item,
-                              partyType: item.partyType || (activeTab === 'master_actual_vendor' ? 'Vendor' : 'Client'),
-                              taxId: item.taxId || item.gstin || '',
-                              gstin: item.gstin || item.taxId || '',
-                              company: item.company || item.companyName || '',
-                              companyName: item.companyName || item.company || '',
-                              state: item.state || '',
-                              country: item.country || 'India',
-                              pan: item.pan || '',
-                            };
-                            setEditingMasterItem(normalized);
-                            setIsMasterModalOpen(true);
-                          }}
-                          className="p-2 text-[#64748b]/70 hover:text-[#0284c7] dark:text-zinc-500 dark:hover:text-[#38bdf8] bg-[#e0f2fe]/40 hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] rounded-lg transition-all"
-                        >
-                          <PenTool className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteMasterItem(item.id)}
-                          className="p-2 text-rose-400/70 hover:text-rose-500 bg-rose-50/50 hover:bg-rose-50 dark:bg-rose-950/20 dark:hover:bg-rose-950/30 rounded-lg transition-all"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Remaining Columns */}
-                    {columns.length > 1 && (
-                      <div className="grid grid-cols-1 gap-2.5 mt-2 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border border-[#bae6fd]/40 dark:border-[#223269]/40 p-3 rounded-xl">
-                        {columns.slice(1).map((col, idx2) => {
-                          const cellVal = item[col.key];
-                          return (
-                            <div key={idx2} className="flex justify-between items-start gap-4">
-                              <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 font-bold uppercase tracking-wider shrink-0 mt-0.5">{col.header}</span>
-                              <span className="text-xs text-[#0f172a] dark:text-zinc-200 font-medium text-right break-words overflow-hidden">
-                                {col.key === 'partyType' ? (
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                            return (
+                              <td key={idx2} className="px-4 py-3.5">
+                                {isFirstCol ? (
+                                  <div className="flex items-center gap-3">
+                                    {/* Avatar — per-tab accent color */}
+                                    <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f] dark:border-[#223269]'}`}>
+                                      {activeTab === 'master_database' && <Layers className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#0284c7] dark:text-[#38bdf8]'}`} />}
+                                      {(activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') && <User className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                                      {activeTab === 'master_transport' && <Truck className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                                      {activeTab === 'master_hsn' && <FileSpreadsheet className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                                      {activeTab === 'catalog_material' && <Wrench className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                                      {activeTab === 'catalog_category' && <Tag className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                                    </div>
+                                    <span className="text-xs font-extrabold uppercase tracking-tight text-[#0f172a] dark:text-white">
+                                      {String(cellVal || '')}
+                                    </span>
+                                  </div>
+                                ) : col.key === 'partyType' ? (
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
                                     cellVal === 'Vendor'
                                       ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800/40'
                                       : cellVal === 'Client & Vendor'
@@ -3929,32 +4636,192 @@ export default function Dashboard({
                                     {cellVal || 'Client'}
                                   </span>
                                 ) : col.key === 'rate' ? (
-                                  <span className="font-mono font-bold">
+                                  <span className="text-xs font-mono font-semibold text-[#0f172a] dark:text-zinc-200">
                                     {currencySymbol}{formatNum(cellVal || 0)}
                                   </span>
                                 ) : col.key === 'category' ? (
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${getCategoryBadgeStyle(cellVal)}`}>
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${getCategoryBadgeStyle(cellVal)}`}>
                                     {cellVal || 'General'}
                                   </span>
                                 ) : col.key === 'email' ? (
-                                  <span className="text-sky-600 dark:text-sky-400 font-medium font-mono lowercase break-all">
+                                  <span className="text-[11px] text-sky-600 dark:text-sky-400 font-medium font-mono lowercase">
                                     {cellVal || '-'}
                                   </span>
                                 ) : col.key === 'phone' ? (
-                                  <span className="text-[#64748b]/90 dark:text-zinc-400 font-mono">
+                                  <span className="text-[11px] text-[#64748b]/90 dark:text-zinc-400 font-mono">
                                     {cellVal || '-'}
                                   </span>
                                 ) : (
-                                  <span>{String(cellVal || '-')}</span>
+                                  <span className="text-[11px] text-[#0f172a] dark:text-zinc-300 font-medium">
+                                    {String(cellVal || '-')}
+                                  </span>
                                 )}
-                              </span>
+                              </td>
+                            );
+                          })}
+
+                          {/* Actions */}
+                          <td className="px-4 py-3.5">
+                            <div className="flex justify-end items-center gap-0.5">
+                              <button
+                                onClick={() => {
+                                  const normalized = {
+                                    ...item,
+                                    partyType: item.partyType || (activeTab === 'master_actual_vendor' ? 'Vendor' : 'Client'),
+                                    taxId: item.taxId || item.gstin || '',
+                                    gstin: item.gstin || item.taxId || '',
+                                    company: item.company || item.companyName || '',
+                                    companyName: item.companyName || item.company || '',
+                                    state: item.state || '',
+                                    country: item.country || 'India',
+                                    pan: item.pan || '',
+                                  };
+                                  setEditingMasterItem(normalized);
+                                  setIsMasterModalOpen(true);
+                                }}
+                                className="p-2 text-[#64748b]/70 hover:text-[#0284c7] dark:text-zinc-500 dark:hover:text-[#38bdf8] hover:bg-[#e0f2fe]/50 dark:hover:bg-zinc-800 rounded-lg transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                                aria-label="Edit record"
+                              >
+                                <PenTool className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteMasterItem(item.id)}
+                                className="p-2 text-rose-400/70 hover:text-rose-500 dark:text-rose-500/60 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                                aria-label="Delete record"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
-                          );
-                        })}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden flex flex-col divide-y divide-[#bae6fd]/20 dark:divide-zinc-800/60">
+                {pagedList.map((item, rowIdx) => {
+                  const isSelected = selectedMasterItemIds.includes(item.id);
+                  return (
+                    <div key={item.id} className={`p-4 flex flex-col gap-3 transition-colors ${isSelected ? 'bg-rose-50/40 dark:bg-rose-950/20' : ''}`}>
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex items-start gap-2.5">
+                          {/* Mobile Checkbox */}
+                          <div className="pt-2">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedMasterItemIds(prev => [...prev, item.id]);
+                                } else {
+                                  setSelectedMasterItemIds(prev => prev.filter(id => id !== item.id));
+                                }
+                              }}
+                              className="w-4 h-4 rounded border-slate-300 dark:border-zinc-700 text-[#0284c7] focus:ring-[#0284c7] cursor-pointer"
+                              aria-label={`Select ${String(item.name || item.code || 'item')}`}
+                            />
+                          </div>
+
+                          {/* Avatar */}
+                          <div className={`w-9 h-9 mt-0.5 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f] dark:border-[#223269]'}`}>
+                            {activeTab === 'master_database' && <Layers className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#0284c7] dark:text-[#38bdf8]'}`} />}
+                            {(activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') && <User className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                            {activeTab === 'master_transport' && <Truck className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                            {activeTab === 'master_hsn' && <FileSpreadsheet className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                            {activeTab === 'catalog_material' && <Wrench className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                            {activeTab === 'catalog_category' && <Tag className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-black uppercase tracking-tight text-[#0f172a] dark:text-white block truncate">
+                              {String(item[columns[0].key] || '')}
+                            </span>
+                            <span className="text-[10px] text-[#64748b]/70 font-bold uppercase tracking-wider block mt-0.5">
+                              {columns[0].header}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => {
+                              const normalized = {
+                                ...item,
+                                partyType: item.partyType || (activeTab === 'master_actual_vendor' ? 'Vendor' : 'Client'),
+                                taxId: item.taxId || item.gstin || '',
+                                gstin: item.gstin || item.taxId || '',
+                                company: item.company || item.companyName || '',
+                                companyName: item.companyName || item.company || '',
+                                state: item.state || '',
+                                country: item.country || 'India',
+                                pan: item.pan || '',
+                              };
+                              setEditingMasterItem(normalized);
+                              setIsMasterModalOpen(true);
+                            }}
+                            className="p-2 text-[#64748b]/70 hover:text-[#0284c7] dark:text-zinc-500 dark:hover:text-[#38bdf8] bg-[#e0f2fe]/40 hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] rounded-lg transition-all"
+                          >
+                            <PenTool className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMasterItem(item.id)}
+                            className="p-2 text-rose-400/70 hover:text-rose-500 bg-rose-50/50 hover:bg-rose-50 dark:bg-rose-950/20 dark:hover:bg-rose-950/30 rounded-lg transition-all"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      {/* Remaining Columns */}
+                      {columns.length > 1 && (
+                        <div className="grid grid-cols-1 gap-2.5 mt-2 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border border-[#bae6fd]/40 dark:border-[#223269]/40 p-3 rounded-xl">
+                          {columns.slice(1).map((col, idx2) => {
+                            const cellVal = item[col.key];
+                            return (
+                              <div key={idx2} className="flex justify-between items-start gap-4">
+                                <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 font-bold uppercase tracking-wider shrink-0 mt-0.5">{col.header}</span>
+                                <span className="text-xs text-[#0f172a] dark:text-zinc-200 font-medium text-right break-words overflow-hidden">
+                                  {col.key === 'partyType' ? (
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                      cellVal === 'Vendor'
+                                        ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800/40'
+                                        : cellVal === 'Client & Vendor'
+                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40'
+                                        : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border-sky-200 dark:border-sky-800/40'
+                                    }`}>
+                                      {cellVal || 'Client'}
+                                    </span>
+                                  ) : col.key === 'rate' ? (
+                                    <span className="font-mono font-bold">
+                                      {currencySymbol}{formatNum(cellVal || 0)}
+                                    </span>
+                                  ) : col.key === 'category' ? (
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${getCategoryBadgeStyle(cellVal)}`}>
+                                      {cellVal || 'General'}
+                                    </span>
+                                  ) : col.key === 'email' ? (
+                                    <span className="text-sky-600 dark:text-sky-400 font-medium font-mono lowercase break-all">
+                                      {cellVal || '-'}
+                                    </span>
+                                  ) : col.key === 'phone' ? (
+                                    <span className="text-[#64748b]/90 dark:text-zinc-400 font-mono">
+                                      {cellVal || '-'}
+                                    </span>
+                                  ) : (
+                                    <span>{String(cellVal || '-')}</span>
+                                  )}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
 
@@ -4012,142 +4879,6 @@ export default function Dashboard({
           )}
 
         </div>
-
-
-
-
-
-        {/* ── Master Registry Form Modal ── */}
-
-        {isMasterModalOpen && editingMasterItem && (
-
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 bg-slate-950/65 backdrop-blur-sm overflow-y-auto pb-[env(safe-area-inset-bottom)]">
-
-            <div className="w-full max-w-lg bg-white dark:bg-[#111a36] border border-[#bae6fd]/80 dark:border-[#223269]/80 rounded-2xl sm:rounded-3xl flex flex-col max-h-[92vh] sm:max-h-[88vh] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
-
-              <div className="flex justify-between items-center px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 shrink-0 bg-[#f4f9ff] dark:bg-[#0b1329]/60">
-
-                <h3 className="text-xs sm:text-sm font-extrabold text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
-                  {editingMasterItem.id?.startsWith('m_item_') ? 'Add Registry Record' : 'Edit Registry Record'}
-                </h3>
-
-                <button
-
-                  onClick={() => { setIsMasterModalOpen(false); setEditingMasterItem(null); }}
-
-                  className="p-1 sm:p-1.5 hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#64748b] hover:text-[#0284c7] dark:hover:text-[#38bdf8] rounded-full transition-colors cursor-pointer"
-
-                >
-
-                  <X className="w-4 h-4" />
-
-                </button>
-
-              </div>
-
-
-
-              <div className="p-3.5 sm:p-5 md:p-6 overflow-y-auto flex-1">
-
-                <form
-
-                  onSubmit={(e) => { e.preventDefault(); handleSaveMasterItem(editingMasterItem); }}
-
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 text-left text-xs"
-
-                >
-
-                  {fields.map((f, idx3) => (
-
-                    <div key={idx3} className={f.key === 'address' ? 'sm:col-span-2' : ''}>
-
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#64748b] dark:text-zinc-400 mb-1 sm:mb-1.5">{f.label}</label>
-
-                      {f.type === 'select' ? (
-
-                        <select
-
-                          value={editingMasterItem[f.key] || ''}
-
-                          onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: e.target.value })}
-
-                          className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none cursor-pointer"
-
-                        >
-
-                          <option value="">Select type</option>
-
-                          {f.options?.map((opt, idxOpt) => (
-
-                            <option key={idxOpt} value={opt}>{opt}</option>
-
-                          ))}
-
-                        </select>
-
-                      ) : (
-
-                        <input
-
-                          type={f.type}
-
-                          value={editingMasterItem[f.key] || ''}
-
-                          placeholder={`Enter ${f.label.toLowerCase()}`}
-
-                          onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: f.type === 'number' ? parseFloat(e.target.value) : e.target.value })}
-
-                          className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
-
-                          required={f.key === 'name' || f.key === 'company' || idx3 === 0}
-
-                        />
-
-                      )}
-
-                    </div>
-
-                  ))}
-
-                  <div className="pt-3 sm:col-span-2 flex flex-wrap sm:flex-nowrap justify-end gap-2 sm:gap-2.5 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 mt-2">
-
-                    <button
-
-                      type="button"
-
-                      onClick={() => { setIsMasterModalOpen(false); setEditingMasterItem(null); }}
-
-                      className="flex-1 sm:flex-none px-4 py-2 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] rounded-xl text-xs font-bold cursor-pointer transition-colors"
-
-                    >
-
-                      Cancel
-
-                    </button>
-
-                    <button
-
-                      type="submit"
-
-                      className="flex-1 sm:flex-none px-5 py-2 bg-[#0284c7] dark:bg-[#38bdf8] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] rounded-xl text-xs font-black cursor-pointer transition-all shadow-md shadow-[#0284c7]/20"
-
-                    >
-
-                      Commit Record
-
-                    </button>
-
-                  </div>
-
-                </form>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        )}
 
       </div>
 
@@ -17552,6 +18283,367 @@ export default function Dashboard({
             onClose={() => dismissWelcomeTrialModal(subscription?.user_id)}
           />
         )}
+
+        {/* ── Global Master Registry Form Modal (Top-Level Portal: Overlays over Navbar, Non-scrollable all-visible layout) ── */}
+        {isMasterModalOpen && editingMasterItem && (() => {
+          const currentCountry = editingMasterItem.country || 'India';
+          const countriesList = Country.getAllCountries();
+          const selectedCountryObj = countriesList.find(c => c.name.toLowerCase() === currentCountry.toLowerCase()) || countriesList.find(c => c.isoCode === 'IN');
+          const statesList = selectedCountryObj ? State.getStatesOfCountry(selectedCountryObj.isoCode) : State.getStatesOfCountry('IN');
+
+          const filteredCountries = countriesList.filter(c => 
+            c.name.toLowerCase().includes(masterCountrySearch.toLowerCase()) ||
+            c.isoCode.toLowerCase().includes(masterCountrySearch.toLowerCase())
+          );
+
+          const filteredStates = statesList.filter(s =>
+            s.name.toLowerCase().includes(masterStateSearch.toLowerCase()) ||
+            s.isoCode.toLowerCase().includes(masterStateSearch.toLowerCase())
+          );
+
+          const modalFields = getMasterFields(activeTab);
+
+          return (
+            <div className="fixed inset-0 z-[999999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto sm:overflow-hidden pb-[env(safe-area-inset-bottom)] animate-in fade-in duration-200">
+              <div 
+                className="w-full max-w-2xl bg-white dark:bg-[#0f172a] border border-[#bae6fd]/80 dark:border-[#1e293b] rounded-2xl sm:rounded-3xl flex flex-col shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] overflow-visible animate-in zoom-in-95 duration-150 my-auto"
+                style={{ boxShadow: '0 25px 60px -15px rgba(2, 132, 199, 0.25), 0 0 0 1px rgba(186, 230, 253, 0.6)' }}
+              >
+                {/* Header */}
+                <div className="flex justify-between items-center px-4 sm:px-6 py-2.5 sm:py-3.5 border-b border-[#bae6fd]/40 dark:border-[#1e293b] shrink-0 bg-[#f4f9ff] dark:bg-[#0b1329]/95 rounded-t-2xl sm:rounded-t-3xl">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#0284c7]/10 dark:bg-[#38bdf8]/10 text-[#0284c7] dark:text-[#38bdf8] flex items-center justify-center font-black shadow-xs shrink-0">
+                      <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs sm:text-sm font-extrabold text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight leading-none" style={{ fontFamily: "'Fraunces', serif" }}>
+                        {editingMasterItem.id?.startsWith('m_item_') || editingMasterItem.id?.startsWith('cl_') || editingMasterItem.id?.startsWith('ven_') ? 'Add Registry Record' : 'Edit Registry Record'}
+                      </h3>
+                      <p className="text-[10px] text-[#64748b] dark:text-zinc-400 mt-0.5 font-medium">
+                        {activeTab === 'master_database' ? 'Master Database' : activeTab === 'master_vendor' ? 'Client Database' : activeTab === 'master_actual_vendor' ? 'Vendor Database' : 'Central Registry'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => { 
+                      setIsMasterModalOpen(false); 
+                      setEditingMasterItem(null); 
+                      setMasterCountryDropdownOpen(false);
+                      setMasterStateDropdownOpen(false);
+                    }}
+                    className="p-1 sm:p-1.5 hover:bg-[#e0f2fe] dark:hover:bg-[#1e293b] text-[#64748b] hover:text-[#0284c7] dark:hover:text-[#38bdf8] rounded-full transition-all cursor-pointer"
+                    aria-label="Close"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Form Container: Compact, all visible at once without scrolling */}
+                <div className="p-3.5 sm:p-5">
+                  <form
+                    onSubmit={(e) => { 
+                      e.preventDefault(); 
+                      handleSaveMasterItem(editingMasterItem); 
+                      setMasterCountryDropdownOpen(false);
+                      setMasterStateDropdownOpen(false);
+                    }}
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 text-left text-xs"
+                  >
+                    {modalFields.map((f, idx3) => {
+                      // Specific placement: Keep inputs in clean 2-column grid so all fields fit without scrolling
+                      const isFullSpan = f.key === 'address' && modalFields.length <= 6;
+                      
+                      // 1. SELECT INPUT (e.g. Party Type, GL Account Type)
+                      if (f.type === 'select') {
+                        return (
+                          <div key={idx3} className={isFullSpan ? 'sm:col-span-2' : ''}>
+                            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-0.5 sm:mb-1">
+                              {f.label}
+                            </label>
+                            <div className="relative">
+                              <select
+                                value={editingMasterItem[f.key] || ''}
+                                onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: e.target.value })}
+                                className="w-full px-3 py-1.5 sm:py-2 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/70 dark:border-[#1e293b] rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none cursor-pointer appearance-none pr-8"
+                              >
+                                <option value="">Select {f.label.toLowerCase()}</option>
+                                {f.options?.map((opt, idxOpt) => (
+                                  <option key={idxOpt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                              <ChevronDown className="w-3.5 h-3.5 text-[#64748b] dark:text-zinc-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // 2. COUNTRY FIELD - DUAL MODE (Custom Type + Rich Dropdown Popover Selector)
+                      if (f.key === 'country') {
+                        const countryVal = editingMasterItem.country || '';
+                        return (
+                          <div key={idx3} className="space-y-0.5 sm:space-y-1 relative">
+                            <div className="flex items-center justify-between">
+                              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8]">
+                                {f.label}
+                              </label>
+                              <span className="text-[8.5px] font-semibold text-[#0284c7] dark:text-[#38bdf8] bg-[#e0f2fe]/60 dark:bg-[#1e293b] px-1 py-0.2 rounded">Type or Select</span>
+                            </div>
+                            <div className="relative flex items-center">
+                              <input
+                                type="text"
+                                value={countryVal}
+                                placeholder="e.g. India or type custom"
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setEditingMasterItem({ ...editingMasterItem, country: val });
+                                  setMasterCountrySearch(val);
+                                  setMasterCountryDropdownOpen(true);
+                                  setMasterStateDropdownOpen(false);
+                                }}
+                                onFocus={() => {
+                                  setMasterCountryDropdownOpen(true);
+                                  setMasterStateDropdownOpen(false);
+                                }}
+                                className="w-full pl-3 pr-7 py-1.5 sm:py-2 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/70 dark:border-[#1e293b] rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
+                              />
+                              <button
+                                type="button"
+                                tabIndex={-1}
+                                onClick={() => {
+                                  setMasterCountryDropdownOpen(!masterCountryDropdownOpen);
+                                  setMasterStateDropdownOpen(false);
+                                }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[#64748b] hover:text-[#0284c7] dark:text-zinc-400 dark:hover:text-[#38bdf8] cursor-pointer"
+                              >
+                                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${masterCountryDropdownOpen ? 'rotate-180' : ''}`} />
+                              </button>
+                            </div>
+
+                            {/* Rich Country Dropdown Popover */}
+                            {masterCountryDropdownOpen && (
+                              <div className="absolute left-0 right-0 top-full mt-1 z-[100] bg-white dark:bg-[#111a36] border border-[#bae6fd] dark:border-[#223269] rounded-xl shadow-2xl overflow-hidden max-h-48 flex flex-col animate-in fade-in-50 duration-150">
+                                <div className="p-1.5 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f4f9ff] dark:bg-[#0b1329]">
+                                  <div className="relative">
+                                    <Search className="w-3 h-3 text-[#64748b] absolute left-2 top-1/2 -translate-y-1/2" />
+                                    <input
+                                      type="text"
+                                      value={masterCountrySearch}
+                                      onChange={(e) => setMasterCountrySearch(e.target.value)}
+                                      placeholder="Filter countries..."
+                                      className="w-full pl-7 pr-2 py-1 bg-white dark:bg-[#1b264f] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-lg text-[11px] outline-none text-[#0f172a] dark:text-white placeholder-[#94a3b8]"
+                                      autoFocus
+                                    />
+                                  </div>
+                                </div>
+                                <div className="overflow-y-auto flex-1 p-1 max-h-36">
+                                  {filteredCountries.length === 0 ? (
+                                    <div className="px-2 py-1.5 text-center text-[10px] text-[#64748b]">No matching country found</div>
+                                  ) : (
+                                    filteredCountries.slice(0, 100).map((c, cIdx) => (
+                                      <button
+                                        key={cIdx}
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingMasterItem({ ...editingMasterItem, country: c.name });
+                                          setMasterCountryDropdownOpen(false);
+                                          setMasterCountrySearch('');
+                                        }}
+                                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between cursor-pointer transition-colors ${
+                                          countryVal.toLowerCase() === c.name.toLowerCase()
+                                            ? 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8]'
+                                            : 'hover:bg-[#f4f9ff] dark:hover:bg-[#1b264f]/50 text-[#0f172a] dark:text-zinc-200'
+                                        }`}
+                                      >
+                                        <span className="flex items-center gap-1.5 truncate">
+                                          {c.flag ? <span>{c.flag}</span> : null}
+                                          <span>{c.name}</span>
+                                        </span>
+                                        <span className="text-[10px] text-[#64748b] dark:text-zinc-400 font-mono shrink-0 ml-2">{c.isoCode}</span>
+                                      </button>
+                                    ))
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      // 3. STATE FIELD - DUAL MODE (Custom Type + Dynamic Country-Aware Dropdown Popover + GSTIN Sync)
+                      if (f.key === 'state') {
+                        const stateVal = editingMasterItem.state || '';
+                        return (
+                          <div key={idx3} className="space-y-0.5 sm:space-y-1 relative">
+                            <div className="flex items-center justify-between">
+                              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8]">
+                                {f.label}
+                              </label>
+                              <span className="text-[8.5px] font-semibold text-[#0284c7] dark:text-[#38bdf8] bg-[#e0f2fe]/60 dark:bg-[#1e293b] px-1 py-0.2 rounded">Type or Select</span>
+                            </div>
+                            <div className="relative flex items-center">
+                              <input
+                                type="text"
+                                value={stateVal}
+                                placeholder="e.g. Maharashtra or type custom"
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setEditingMasterItem({ ...editingMasterItem, state: val });
+                                  setMasterStateSearch(val);
+                                  setMasterStateDropdownOpen(true);
+                                  setMasterCountryDropdownOpen(false);
+                                }}
+                                onFocus={() => {
+                                  setMasterStateDropdownOpen(true);
+                                  setMasterCountryDropdownOpen(false);
+                                }}
+                                className="w-full pl-3 pr-7 py-1.5 sm:py-2 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/70 dark:border-[#1e293b] rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
+                              />
+                              <button
+                                type="button"
+                                tabIndex={-1}
+                                onClick={() => {
+                                  setMasterStateDropdownOpen(!masterStateDropdownOpen);
+                                  setMasterCountryDropdownOpen(false);
+                                }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[#64748b] hover:text-[#0284c7] dark:text-zinc-400 dark:hover:text-[#38bdf8] cursor-pointer"
+                              >
+                                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${masterStateDropdownOpen ? 'rotate-180' : ''}`} />
+                              </button>
+                            </div>
+
+                            {/* Rich State Dropdown Popover */}
+                            {masterStateDropdownOpen && (
+                              <div className="absolute left-0 right-0 top-full mt-1 z-[100] bg-white dark:bg-[#111a36] border border-[#bae6fd] dark:border-[#223269] rounded-xl shadow-2xl overflow-hidden max-h-48 flex flex-col animate-in fade-in-50 duration-150">
+                                <div className="p-1.5 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f4f9ff] dark:bg-[#0b1329]">
+                                  <div className="relative">
+                                    <Search className="w-3 h-3 text-[#64748b] absolute left-2 top-1/2 -translate-y-1/2" />
+                                    <input
+                                      type="text"
+                                      value={masterStateSearch}
+                                      onChange={(e) => setMasterStateSearch(e.target.value)}
+                                      placeholder="Filter states/provinces..."
+                                      className="w-full pl-7 pr-2 py-1 bg-white dark:bg-[#1b264f] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-lg text-[11px] outline-none text-[#0f172a] dark:text-white placeholder-[#94a3b8]"
+                                      autoFocus
+                                    />
+                                  </div>
+                                </div>
+                                <div className="overflow-y-auto flex-1 p-1 max-h-36">
+                                  {filteredStates.length === 0 ? (
+                                    <div className="px-2 py-1.5 text-center text-[10px] text-[#64748b]">No matching state found (you can type custom)</div>
+                                  ) : (
+                                    filteredStates.map((s, sIdx) => {
+                                      const formattedState = selectedCountryObj?.isoCode === 'IN' 
+                                        ? formatStateWithCode(s.name) 
+                                        : s.name;
+                                      return (
+                                        <button
+                                          key={sIdx}
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingMasterItem({ ...editingMasterItem, state: formattedState });
+                                            setMasterStateDropdownOpen(false);
+                                            setMasterStateSearch('');
+                                          }}
+                                          className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between cursor-pointer transition-colors ${
+                                            stateVal.toLowerCase().includes(s.name.toLowerCase())
+                                              ? 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8]'
+                                              : 'hover:bg-[#f4f9ff] dark:hover:bg-[#1b264f]/50 text-[#0f172a] dark:text-zinc-200'
+                                          }`}
+                                        >
+                                          <span className="truncate">{formattedState}</span>
+                                          <span className="text-[10px] text-[#64748b] dark:text-zinc-400 font-mono shrink-0 ml-2">{s.isoCode}</span>
+                                        </button>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      // 4. GSTIN FIELD (With Auto State & PAN Resolution)
+                      if (f.key === 'taxId' || f.key === 'gstin') {
+                        return (
+                          <div key={idx3}>
+                            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-0.5 sm:mb-1">
+                              {f.label}
+                            </label>
+                            <input
+                              type="text"
+                              value={editingMasterItem[f.key] || ''}
+                              placeholder="e.g. 27AAAAA0000A1Z5"
+                              onChange={(e) => {
+                                const val = e.target.value.toUpperCase();
+                                const panAuto = (val.length === 15 && !editingMasterItem.pan) ? val.substring(2, 12) : editingMasterItem.pan;
+                                const stateAuto = (!editingMasterItem.state && val.length >= 2) ? (getStateNameFromGstCode(val) ? formatStateWithCode(getStateNameFromGstCode(val)!) : editingMasterItem.state) : editingMasterItem.state;
+                                setEditingMasterItem({
+                                  ...editingMasterItem,
+                                  [f.key]: val,
+                                  taxId: val,
+                                  gstin: val,
+                                  pan: panAuto || editingMasterItem.pan,
+                                  state: stateAuto || editingMasterItem.state,
+                                  country: editingMasterItem.country || 'India'
+                                });
+                              }}
+                              className="w-full px-3 py-1.5 sm:py-2 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/70 dark:border-[#1e293b] rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white uppercase focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
+                            />
+                          </div>
+                        );
+                      }
+
+                      // 5. STANDARD TEXT / NUMBER / EMAIL / ADDRESS INPUTS
+                      return (
+                        <div key={idx3} className={isFullSpan ? 'sm:col-span-2' : ''}>
+                          <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-0.5 sm:mb-1">
+                            {f.label}
+                          </label>
+                          <input
+                            type={f.type}
+                            value={editingMasterItem[f.key] !== undefined && editingMasterItem[f.key] !== null ? editingMasterItem[f.key] : ''}
+                            placeholder={`Enter ${f.label.toLowerCase()}`}
+                            onChange={(e) => setEditingMasterItem({ 
+                              ...editingMasterItem, 
+                              [f.key]: f.type === 'number' ? (e.target.value === '' ? '' : parseFloat(e.target.value)) : e.target.value 
+                            })}
+                            className="w-full px-3 py-1.5 sm:py-2 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/70 dark:border-[#1e293b] rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
+                            required={f.key === 'name' || f.key === 'company' || idx3 === 0}
+                          />
+                        </div>
+                      );
+                    })}
+
+                    {/* Action Buttons */}
+                    <div className="pt-2 sm:col-span-2 flex flex-row justify-end gap-2 sm:gap-2.5 border-t border-[#bae6fd]/40 dark:border-[#1e293b] mt-1 sm:mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => { 
+                          setIsMasterModalOpen(false); 
+                          setEditingMasterItem(null); 
+                          setMasterCountryDropdownOpen(false);
+                          setMasterStateDropdownOpen(false);
+                        }}
+                        className="px-4 sm:px-5 py-2 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1e293b]/60 dark:hover:bg-[#1e293b] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#1e293b] rounded-xl text-xs font-bold cursor-pointer transition-colors active:scale-[0.98] text-center"
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        type="submit"
+                        className="px-5 sm:px-6 py-2 bg-[#0284c7] dark:bg-[#38bdf8] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] rounded-xl text-xs font-black cursor-pointer transition-all shadow-md shadow-[#0284c7]/25 hover:shadow-lg hover:shadow-[#0284c7]/35 active:scale-[0.98] text-center"
+                      >
+                        Commit Record
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
     </div>
   );

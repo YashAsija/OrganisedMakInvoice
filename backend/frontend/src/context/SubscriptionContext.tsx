@@ -514,37 +514,33 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const syncSubscription = useCallback(async (uid: string) => {
     console.log('[Sync] Syncing for user:', uid);
     try {
-      const { data: existingSub, error } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', uid)
-        .maybeSingle();
+      const activeEmail = typeof window !== 'undefined' ? localStorage.getItem('makbills_active_email') : null;
+      let query = supabase.from('subscriptions').select('*');
+      if (uid && activeEmail) {
+        query = query.or(`user_id.eq.${uid},user_email.eq.${activeEmail}`);
+      } else {
+        query = query.eq('user_id', uid);
+      }
 
-      if (error) {
-        console.error('[Sync] Error fetching subscription:', error);
-        return;
+      const { data: fetchedSubs, error } = await query.order('updated_at', { ascending: false }).limit(1);
+      let existingSub = fetchedSubs && fetchedSubs.length > 0 ? fetchedSubs[0] : null;
+
+      if (!existingSub && (uid || activeEmail)) {
+        try {
+          const params = new URLSearchParams();
+          if (uid) params.set('userId', uid);
+          if (activeEmail) params.set('userEmail', activeEmail);
+          const apiRes = await fetch(`/api/payments/save-subscription?${params.toString()}`);
+          if (apiRes.ok) {
+            const json = await apiRes.json();
+            if (json.subscription) existingSub = json.subscription;
+          }
+        } catch (apiErr) {}
       }
 
       if (existingSub) {
         console.log('[Sync] ✅ Subscription found:', existingSub.plan_name, existingSub.status);
         setSubscription(validateSubscriptionPayload({ ...existingSub }) as Subscription);
-      } else {
-        console.log('[Sync] No subscription — creating Free starter');
-        const { data: newSub } = await supabase
-          .from('subscriptions')
-          .upsert({
-            user_id: uid,
-            plan_name: 'Free',
-            plan_type: 'free',
-            status: 'active',
-            expires_at: null,
-            renews_at: null,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'user_id' })
-          .select()
-          .single();
-
-        if (newSub) setSubscription(validateSubscriptionPayload(newSub) as Subscription);
       }
     } catch (err) {
       console.error('[Sync] Unexpected error:', err);

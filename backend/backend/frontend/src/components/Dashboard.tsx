@@ -16,12 +16,13 @@ import {
   Upload,
 
   Search, 
-
+  ArrowUpDown,
   Sparkles, 
 
   FileText, 
 
   User, 
+  UserCheck, 
 
   Database, 
 
@@ -195,6 +196,7 @@ import SupportPage from './SupportPage';
 import SupportChatPage from './SupportChatPage';
 
 import SubscriptionPage from './SubscriptionPage';
+import WelcomeTrialModal from './ui/WelcomeTrialModal';
 
 
 
@@ -356,7 +358,7 @@ export default function Dashboard({
 
   const { confirm } = useConfirm();
   const { expenses: supabaseExpenses, stats: expenseStats } = useExpenses();
-  const { subscription: subRecord, refetch: refetchSubscription, trackDocumentUsage, trackReportUsage } = useSubscription();
+  const { subscription, isOnTrial, refetch: refetchSubscription, trackDocumentUsage, trackReportUsage, showWelcomeTrialModal, dismissWelcomeTrialModal } = useSubscription();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -419,7 +421,13 @@ export default function Dashboard({
   const [draftsOrigin, setDraftsOrigin] = useState<'sales' | 'purchases'>('sales');
 
   const [activeActionMenuId, setActiveActionMenuId] = useState<string | null>(null);
+  const [clientSearchQuery, setClientSearchQuery] = useState<string>('');
+  const [clientSortBy, setClientSortBy] = useState<'name_asc' | 'name_desc' | 'company_asc' | 'company_desc' | 'newest' | 'oldest'>('name_asc');
+
+  const [vendorSearchQuery, setVendorSearchQuery] = useState<string>('');
+  const [vendorSortBy, setVendorSortBy] = useState<'name_asc' | 'name_desc' | 'company_asc' | 'company_desc' | 'newest' | 'oldest'>('name_asc');
   const [actionMenuPosition, setActionMenuPosition] = useState<'down' | 'up'>('down');
+  const [actionMenuRect, setActionMenuRect] = useState<{ top: number; bottom: number; left: number; right: number; width: number } | null>(null);
   const [activeSendMenuId, setActiveSendMenuId] = useState<string | null>(null);
   const [sendMenuPosition, setSendMenuPosition] = useState<'down' | 'up'>('down');
   // Interactive App Tutorial State & Data
@@ -723,215 +731,164 @@ export default function Dashboard({
       t.includes('quote') || m.includes('quote') ||
 
       t.includes('word document') || m.includes('word document') ||
-
       t.includes('bulk pdfs') || m.includes('bulk pdfs') ||
-
       t.includes('excel csv') || m.includes('excel csv')
-
     ) {
-
       return 'billing';
-
     }
-
     return 'system';
-
   };
 
+  const activeUserEmail = (userEmail || profile?.email || '').trim().toLowerCase();
+  const notifStorageKey = activeUserEmail
+    ? `makbills_notifications_${encodeURIComponent(activeUserEmail)}`
+    : null;
 
+  const [notifications, setNotifications] = useState<any[]>([]);
 
-  const [notifications, setNotifications] = useState<any[]>(() => {
+  // Re-sync notifications whenever active user session / account changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
 
-    const cached = localStorage.getItem('makbills_notifications');
+    // Wipe legacy un-scoped notifications key to prevent cross-account leakage
+    try {
+      localStorage.removeItem('makbills_notifications');
+    } catch (e) {}
 
-    if (cached) {
-
-      try { return JSON.parse(cached); } catch(e) {}
-
+    if (notifStorageKey) {
+      const cached = localStorage.getItem(notifStorageKey);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          const filtered = Array.isArray(parsed)
+            ? parsed.filter((n: any) => !n.userEmail || n.userEmail.toLowerCase() === activeUserEmail)
+            : [];
+          setNotifications(filtered);
+        } catch {
+          setNotifications([]);
+        }
+      } else {
+        setNotifications([]);
+      }
+    } else {
+      setNotifications([]);
     }
 
-    return [];
-
-  });
-
-
+    // Clear active toasts from previous user session
+    setActiveToasts([]);
+    setExitingToastIds(new Set());
+  }, [notifStorageKey, activeUserEmail]);
 
   useEffect(() => {
-
-    localStorage.setItem('makbills_notifications', JSON.stringify(notifications));
-
-  }, [notifications]);
-
-
+    if (typeof window === 'undefined' || !notifStorageKey) return;
+    localStorage.setItem(notifStorageKey, JSON.stringify(notifications));
+  }, [notifications, notifStorageKey]);
 
   interface ActiveToast {
-
     id: string;
-
     title: string;
-
     message: string;
-
     type: 'success' | 'info' | 'warning' | 'error';
-
     actionLabel?: string;
-
     actionTab?: string;
-
     timestamp: string;
-
   }
 
-
-
   const [activeToasts, setActiveToasts] = useState<ActiveToast[]>([]);
-
   const [exitingToastIds, setExitingToastIds] = useState<Set<string>>(new Set());
 
-
-
   // Smoothly animate-out a toast, then remove it from DOM after animation ends
-
   const dismissToast = (id: string) => {
-
     setExitingToastIds(prev => new Set(prev).add(id));
-
     setTimeout(() => {
-
       setActiveToasts(prev => prev.filter(t => t.id !== id));
-
       setExitingToastIds(prev => { const s = new Set(prev); s.delete(id); return s; });
-
     }, 400); // matches toastSlideOut duration (0.38s + tiny buffer)
-
   };
 
-
-
   useEffect(() => {
-
     const handleNotification = (e: any) => {
+      const { title, message, type, userEmail: targetEmail } = e.detail || {};
 
-      const { title, message, type } = e.detail;
+      // If no active user session is present, DO NOT record or show notifications
+      if (!activeUserEmail) {
+        return;
+      }
+
+      // Filter out notifications targeted to a different user account
+      if (targetEmail && targetEmail.trim().toLowerCase() !== activeUserEmail) {
+        return;
+      }
 
       const notifId = Date.now().toString() + Math.random().toString().slice(2, 6);
-
       const newNotif = {
-
         id: notifId,
-
         title,
-
         message,
-
         type: type || 'info',
-
         timestamp: new Date().toISOString(),
-
-        read: false
-
+        read: false,
+        userEmail: activeUserEmail
       };
 
       setNotifications(prev => [newNotif, ...prev]);
 
-
-
       let actionLabel: string | undefined = undefined;
-
       let actionTab: string | undefined = undefined;
-
-
-
       const lowerTitle = (title || '').toLowerCase();
 
-
-
       // Only add navigation for notifications that lead to a genuinely useful page
-
       if (lowerTitle.includes('bulk upload complete')) {
-
-        // Bulk upload: infer the correct registry tab from the message body
-
         const lowerMsg = (message || '').toLowerCase();
-
         if (lowerMsg.includes('client database')) { actionLabel = 'Go to Client Database'; actionTab = 'master_vendor'; }
-
         else if (lowerMsg.includes('hsn registry')) { actionLabel = 'Go to HSN Registry'; actionTab = 'master_hsn'; }
-
         else if (lowerMsg.includes('transport database')) { actionLabel = 'Go to Transport Database'; actionTab = 'master_transport'; }
-
         else if (lowerMsg.includes('material catalog')) { actionLabel = 'Go to Material Catalog'; actionTab = 'catalog_material'; }
-
         else if (lowerMsg.includes('product category')) { actionLabel = 'Go to Product Category'; actionTab = 'catalog_category'; }
-
       } else if (lowerTitle.includes('default template set')) {
-
         actionLabel = 'Go to Templates';
-
         actionTab = 'invoice_templates';
-
+      } else if (lowerTitle.includes('invoice') || lowerTitle.includes('estimate') || lowerTitle.includes('quote') || lowerTitle.includes('credit note')) {
+        actionLabel = 'View Invoices';
+        actionTab = 'invoices';
+      } else if (lowerTitle.includes('expense')) {
+        actionLabel = 'View Expenses';
+        actionTab = 'expenses';
+      } else if (lowerTitle.includes('client') || lowerTitle.includes('customer')) {
+        actionLabel = 'View Clients';
+        actionTab = 'clients';
+      } else if (lowerTitle.includes('subscription') || lowerTitle.includes('plan') || lowerTitle.includes('trial') || lowerTitle.includes('upgrade') || lowerTitle.includes('limit')) {
+        actionLabel = 'View Subscription';
+        actionTab = 'subscription';
       }
 
-
-
-      // No navigation for: Template Downloaded (CSV file), individual registry CRUD (already on page),
-
-      // Validation Errors, Draft Restored, GL Accounts, Download Failed
-
-
-
       const toastItem: ActiveToast = {
-
         id: notifId,
-
         title,
-
         message,
-
         type: type || 'info',
-
         actionLabel,
-
         actionTab,
-
-        timestamp: new Date().toISOString()
-
+        timestamp: new Date().toISOString(),
       };
-
-
 
       setActiveToasts(prev => [toastItem, ...prev].slice(0, 3));
 
-
-
       // Auto-dismiss: trigger exit animation at 5.6s, remove DOM at 6s
-
       setTimeout(() => {
-
         setExitingToastIds(prev => new Set(prev).add(notifId));
-
       }, 5600);
 
       setTimeout(() => {
-
         setActiveToasts(prev => prev.filter(t => t.id !== notifId));
-
         setExitingToastIds(prev => { const s = new Set(prev); s.delete(notifId); return s; });
-
       }, 6050);
-
     };
 
     window.addEventListener('mak_notification', handleNotification);
-
     return () => window.removeEventListener('mak_notification', handleNotification);
-
-  }, []);
-
-
-
+  }, [activeUserEmail]);
   const [hoveredDashboardChartIndex, setHoveredDashboardChartIndex] = useState<number | null>(null);
-
   const [hoveredReportsChartIndex1, setHoveredReportsChartIndex1] = useState<number | null>(null);
 
   const [hoveredReportsChartIndex2, setHoveredReportsChartIndex2] = useState<number | null>(null);
@@ -974,6 +931,26 @@ export default function Dashboard({
 
   }, [isProfileDropdownOpen, isNotificationsOpen]);
 
+  useEffect(() => {
+    if (!activeActionMenuId) return;
+    const handleScrollOrClickOutside = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.closest('.action-menu-dropdown-box') || target.closest('.action-menu-trigger-btn'))) {
+        return;
+      }
+      setActiveActionMenuId(null);
+      setActionMenuRect(null);
+    };
+    window.addEventListener('scroll', handleScrollOrClickOutside, true);
+    window.addEventListener('resize', handleScrollOrClickOutside, true);
+    window.addEventListener('click', handleScrollOrClickOutside, true);
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrClickOutside, true);
+      window.removeEventListener('resize', handleScrollOrClickOutside, true);
+      window.removeEventListener('click', handleScrollOrClickOutside, true);
+    };
+  }, [activeActionMenuId]);
+
 
 
   // Reusable Master & Catalog form builders state
@@ -1009,23 +986,13 @@ export default function Dashboard({
 
 
   const [actualVendors, setActualVendors] = useState<MasterVendor[]>(() => {
-
-    const cached = localStorage.getItem('makbills_masters_actual_vendors' + suffix);
-
-    if (cached) return JSON.parse(cached);
-
-    if (suffix) return [];
-
-    return [
-
-      { id: 'av_1', name: 'AWS Cloud Hosting', company: 'Amazon Web Services', email: 'billing@aws.com', phone: '1-800-AWS', address: 'Seattle, WA', category: 'SaaS Subscriptions' },
-
-      { id: 'av_2', name: 'WeWork Office Space', company: 'WeWork LLC', email: 'billing@wework.com', phone: '+1-555-WEWORK', address: 'Tech Plaza, SF, CA', category: 'Rent & Overheads' },
-
-      { id: 'av_3', name: 'Google Suite Workspace', company: 'Google Cloud Corp', email: 'gsuite@google.com', phone: '1-800-GOOGLE', address: 'Mountain View, CA', category: 'SaaS Subscriptions' }
-
-    ];
-
+    const cached = localStorage.getItem('makbills_masters_actual_vendors' + suffix) || localStorage.getItem('makbills_masters_actual_vendors');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return [];
   });
 
 
@@ -1261,6 +1228,42 @@ export default function Dashboard({
       window.removeEventListener('storage', handleSync);
 
       window.removeEventListener('makbills_sync_vendors', handleSync);
+
+    };
+
+  }, [suffix]);
+
+
+
+  // Sync Master Registry Vendor Database (actualVendors) with other views
+
+  useEffect(() => {
+
+    const handleActualVendorSync = () => {
+
+      const cached = localStorage.getItem('makbills_masters_actual_vendors' + suffix);
+
+      if (cached) {
+
+        try {
+
+          setActualVendors(JSON.parse(cached));
+
+        } catch (e) {}
+
+      }
+
+    };
+
+    window.addEventListener('storage', handleActualVendorSync);
+
+    window.addEventListener('makbills_sync_actual_vendors', handleActualVendorSync);
+
+    return () => {
+
+      window.removeEventListener('storage', handleActualVendorSync);
+
+      window.removeEventListener('makbills_sync_actual_vendors', handleActualVendorSync);
 
     };
 
@@ -1534,9 +1537,18 @@ export default function Dashboard({
 
 
 
-    const exists = list.some(i => i.id === item.id);
+    // Normalize field aliases to keep gstin/taxId and company/companyName in sync
+    const normalizedItem = {
+      ...item,
+      gstin: item.taxId || item.gstin || '',
+      taxId: item.taxId || item.gstin || '',
+      companyName: item.company || item.companyName || '',
+      company: item.company || item.companyName || '',
+    };
 
-    const updated = exists ? list.map(i => i.id === item.id ? item : i) : [item, ...list];
+    const exists = list.some(i => i.id === normalizedItem.id);
+
+    const updated = exists ? list.map(i => i.id === normalizedItem.id ? normalizedItem : i) : [normalizedItem, ...list];
 
     
 
@@ -2406,64 +2418,26 @@ export default function Dashboard({
 
         description = 'Pre-saved client profiles, company settings, and billing contact information';
 
-        const vendorSignatures = new Set(vendors.map(v => 
-
-          `${v.name?.trim().toLowerCase()}|${(v.email||'').trim().toLowerCase()}|${(v.phone||'').trim()}|${(v.address||'').trim()}`
-
-        ));
-
-        const additionalClients = clients
-
-          .filter(c => !vendorSignatures.has(`${c.name.trim().toLowerCase()}|${(c.email||'').trim().toLowerCase()}|${(c.phone||'').trim()}|${(c.address||'').trim()}`))
-
-          .map(c => ({
-
-            id: c.id,
-
-            name: c.name,
-
-            company: c.companyName,
-
-            email: c.email,
-
-            phone: c.phone,
-
-            address: c.address,
-
-            category: 'Billed Client'
-
-          }));
-
-        list = [...vendors, ...additionalClients];
+        list = vendors;
 
         columns = [
-
           { header: 'Client Name', key: 'name' },
-
           { header: 'Company Name', key: 'company' },
-
           { header: 'Email Address', key: 'email' },
-
           { header: 'Phone Number', key: 'phone' },
-
           { header: 'Category / Tag', key: 'category' }
-
         ];
 
         fields = [
-
           { label: 'Client Name', key: 'name', type: 'text' },
-
-          { label: 'Company / Organization', key: 'company', type: 'text' },
-
-          { label: 'Category / Tag', key: 'category', type: 'text' },
-
-          { label: 'Email Address', key: 'email', type: 'email' },
-
+          { label: 'Company Name', key: 'company', type: 'text' },
+          { label: 'Country', key: 'country', type: 'text' },
+          { label: 'State', key: 'state', type: 'text' },
+          { label: 'Address', key: 'address', type: 'text' },
+          { label: 'GSTIN / Tax No.', key: 'taxId', type: 'text' },
+          { label: 'PAN', key: 'pan', type: 'text' },
           { label: 'Phone Number', key: 'phone', type: 'text' },
-
-          { label: 'Billing Address', key: 'address', type: 'text' }
-
+          { label: 'Email Address', key: 'email', type: 'email' }
         ];
 
         break;
@@ -2474,64 +2448,26 @@ export default function Dashboard({
 
         description = 'Pre-saved vendor and supplier profiles, company configurations, and billing credentials';
 
-        const actualVendorSignatures = new Set(actualVendors.map(v => 
-
-          `${v.name?.trim().toLowerCase()}|${(v.email||'').trim().toLowerCase()}|${(v.phone||'').trim()}|${(v.address||'').trim()}`
-
-        ));
-
-        const additionalVendors = purchasersFiltered
-
-          .filter(c => !actualVendorSignatures.has(`${c.name.trim().toLowerCase()}|${(c.email||'').trim().toLowerCase()}|${(c.phone||'').trim()}|${(c.address||'').trim()}`))
-
-          .map(c => ({
-
-            id: c.id,
-
-            name: c.name,
-
-            company: c.companyName,
-
-            email: c.email,
-
-            phone: c.phone,
-
-            address: c.address,
-
-            category: 'Billed Vendor'
-
-          }));
-
-        list = [...actualVendors, ...additionalVendors];
+        list = actualVendors;
 
         columns = [
-
           { header: 'Vendor Name', key: 'name' },
-
           { header: 'Company Name', key: 'company' },
-
           { header: 'Email Address', key: 'email' },
-
           { header: 'Phone Number', key: 'phone' },
-
           { header: 'Category / Tag', key: 'category' }
-
         ];
 
         fields = [
-
           { label: 'Vendor Name', key: 'name', type: 'text' },
-
-          { label: 'Company / Organization', key: 'company', type: 'text' },
-
-          { label: 'Category / Tag', key: 'category', type: 'text' },
-
-          { label: 'Email Address', key: 'email', type: 'email' },
-
+          { label: 'Company Name', key: 'company', type: 'text' },
+          { label: 'Country', key: 'country', type: 'text' },
+          { label: 'State', key: 'state', type: 'text' },
+          { label: 'Address', key: 'address', type: 'text' },
+          { label: 'GSTIN / Tax No.', key: 'taxId', type: 'text' },
+          { label: 'PAN', key: 'pan', type: 'text' },
           { label: 'Phone Number', key: 'phone', type: 'text' },
-
-          { label: 'Billing Address', key: 'address', type: 'text' }
-
+          { label: 'Email Address', key: 'email', type: 'email' }
         ];
 
         break;
@@ -3123,57 +3059,32 @@ export default function Dashboard({
                       let sampleRow: string[] = [];
 
                       if (activeTab === 'master_vendor') {
-
-                        headers = ['Client Name', 'Company Name', 'Category / Tag', 'Email Address', 'Phone Number', 'Billing Address'];
-
-                        sampleRow = ['John Doe', 'Acme Corp', 'VIP Client', 'john@acme.com', '+1 555-0199', '123 Business Rd, New York'];
-
+                        headers = ['Client Name', 'Company Name', 'Category / Tag', 'GSTIN / Tax ID', 'PAN Number', 'Email Address', 'Phone Number', 'State', 'Country', 'Billing Address'];
+                        sampleRow = ['John Doe', 'Acme Solutions Pvt Ltd', 'VIP Client', '07AAAAA0000A1Z5', 'AAAAA0000A', 'john@acme.com', '+91 9876543210', 'Delhi', 'India', 'Plot 12, Okhla Industrial Area Phase 3, New Delhi - 110020'];
                         filename = 'client_database_template.csv';
-
                       } else if (activeTab === 'master_actual_vendor') {
-
-                        headers = ['Vendor Name', 'Company Name', 'Category / Tag', 'Email Address', 'Phone Number', 'Billing Address'];
-
-                        sampleRow = ['Jane Smith', 'Supplies Inc', 'Regular Supplier', 'jane@supplies.com', '+1 555-0245', '456 Vendor Blvd, Boston'];
-
+                        headers = ['Vendor Name', 'Company Name', 'Category / Tag', 'GSTIN / Tax ID', 'PAN Number', 'Email Address', 'Phone Number', 'State', 'Country', 'Billing Address'];
+                        sampleRow = ['Jane Smith', 'Global Supplies Pvt Ltd', 'Regular Supplier', '27BBBBB0000B1Z8', 'BBBBB0000B', 'jane@globalsupplies.com', '+91 9811122233', 'Maharashtra', 'India', '456 Industrial Estate, Andheri East, Mumbai - 400069'];
                         filename = 'vendor_database_template.csv';
-
                       } else if (activeTab === 'master_transport') {
-
                         headers = ['Carrier Name', 'GSTIN / UIN', 'PAN', 'Phone Number', 'Email Address', 'State', 'Country', 'Address Details'];
-
                         sampleRow = ['Safe Express Logistics', '07AAAAS0000A1Z1', 'AAAAS0000A', '+91 9888877777', 'info@safeexpress.com', 'Delhi', 'India', 'Okhla Phase 1, New Delhi'];
-
                         filename = 'transport_database_template.csv';
-
                       } else if (activeTab === 'master_hsn') {
-
                         headers = ['HSN/SAC Code', 'Description', 'Tax Rate (%)'];
-
                         sampleRow = ['998311', 'Management Consulting Services', '18'];
-
                         filename = 'hsn_registry_template.csv';
-
                       } else if (activeTab === 'catalog_material') {
-
                         headers = ['Item Name', 'Standard Rate / Unit Price', 'HSN/SAC Code', 'Unit of Measure (UOM)', 'Category'];
-
                         sampleRow = ['Premium Advisory Service', '150', '998311', 'hour', 'Consulting'];
-
                         filename = 'material_catalog_template.csv';
-
                       } else if (activeTab === 'catalog_category') {
-
                         headers = ['Category Name', 'Description'];
-
                         sampleRow = ['Consulting', 'Advisory and business optimization services'];
-
                         filename = 'product_category_template.csv';
-
                       }
 
-                      const csvContent = [headers.join(','), sampleRow.map(v => `"${v.replace(/"/g, '""')}"`).join(',')].join('\n');
-
+                      const csvContent = '\uFEFF' + [headers.map(h => `"${h.replace(/"/g, '""')}"`).join(','), sampleRow.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(',')].join('\n');
                       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
 
                       const link = document.createElement('a');
@@ -3282,9 +3193,9 @@ export default function Dashboard({
 
                                 const id = `bulk_${activeTab}_${Date.now()}_${index}`;
 
-                                if (activeTab === 'master_vendor') return { id, name: rowData.name || rowData['Client Name'] || 'Unnamed Client', company: rowData.company || rowData['Company Name'] || '', category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || '', email: rowData.email || rowData['Email Address'] || '', phone: rowData.phone || rowData['Phone Number'] || '', address: rowData.address || rowData['Billing Address'] || '' };
+                                if (activeTab === 'master_vendor') return { id, name: rowData.name || rowData['Client Name'] || 'Unnamed Client', company: rowData.company || rowData['Company Name'] || '', category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || '', gstin: rowData.gstin || rowData['GSTIN / Tax ID'] || rowData['GSTIN'] || rowData['Tax ID'] || '', pan: rowData.pan || rowData['PAN Number'] || rowData['PAN'] || '', email: rowData.email || rowData['Email Address'] || '', phone: rowData.phone || rowData['Phone Number'] || '', state: rowData.state || rowData['State'] || '', country: rowData.country || rowData['Country'] || '', address: rowData.address || rowData['Billing Address'] || '' };
 
-                                if (activeTab === 'master_actual_vendor') return { id, name: rowData.name || rowData['Vendor Name'] || 'Unnamed Vendor', company: rowData.company || rowData['Company Name'] || '', category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || '', email: rowData.email || rowData['Email Address'] || '', phone: rowData.phone || rowData['Phone Number'] || '', address: rowData.address || rowData['Billing Address'] || '' };
+                                if (activeTab === 'master_actual_vendor') return { id, name: rowData.name || rowData['Vendor Name'] || 'Unnamed Vendor', company: rowData.company || rowData['Company Name'] || '', category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || '', gstin: rowData.gstin || rowData['GSTIN / Tax ID'] || rowData['GSTIN'] || rowData['Tax ID'] || '', pan: rowData.pan || rowData['PAN Number'] || rowData['PAN'] || '', email: rowData.email || rowData['Email Address'] || '', phone: rowData.phone || rowData['Phone Number'] || '', state: rowData.state || rowData['State'] || '', country: rowData.country || rowData['Country'] || '', address: rowData.address || rowData['Billing Address'] || '' };
 
                                 if (activeTab === 'master_transport') return { id, name: rowData.name || rowData['Transport Name'] || 'Unnamed Carrier', phone: rowData.phone || rowData['Driver Mobile'] || '', vehicleNo: rowData.vehicleNo || rowData['Vehicle No'] || '', ewayBillNo: rowData.ewayBillNo || rowData['E-Way Bill No'] || '', station: rowData.station || rowData['Station'] || '', grRrNo: rowData.grRrNo || rowData['GR/RR No.'] || '' };
 
@@ -3574,7 +3485,21 @@ export default function Dashboard({
 
                             <button
 
-                              onClick={() => { setEditingMasterItem(item); setIsMasterModalOpen(true); }}
+                              onClick={() => {
+                                // Normalize field aliases so the edit form always reads the correct keys
+                                const normalized = {
+                                  ...item,
+                                  taxId: item.taxId || item.gstin || '',
+                                  gstin: item.gstin || item.taxId || '',
+                                  company: item.company || item.companyName || '',
+                                  companyName: item.companyName || item.company || '',
+                                  state: item.state || '',
+                                  country: item.country || 'India',
+                                  pan: item.pan || '',
+                                };
+                                setEditingMasterItem(normalized);
+                                setIsMasterModalOpen(true);
+                              }}
 
                               className="p-2 text-[#64748b]/70 hover:text-[#0284c7] dark:text-zinc-500 dark:hover:text-[#38bdf8] hover:bg-[#e0f2fe]/50 dark:hover:bg-zinc-800 rounded-lg transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
 
@@ -3670,7 +3595,20 @@ export default function Dashboard({
 
                         <button
 
-                          onClick={() => { setEditingMasterItem(item); setIsMasterModalOpen(true); }}
+                          onClick={() => {
+                            const normalized = {
+                              ...item,
+                              taxId: item.taxId || item.gstin || '',
+                              gstin: item.gstin || item.taxId || '',
+                              company: item.company || item.companyName || '',
+                              companyName: item.companyName || item.company || '',
+                              state: item.state || '',
+                              country: item.country || 'India',
+                              pan: item.pan || '',
+                            };
+                            setEditingMasterItem(normalized);
+                            setIsMasterModalOpen(true);
+                          }}
 
                           className="p-2 text-[#64748b]/70 hover:text-[#0284c7] dark:text-zinc-500 dark:hover:text-[#38bdf8] bg-[#e0f2fe]/40 hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] rounded-lg transition-all"
 
@@ -3832,17 +3770,19 @@ export default function Dashboard({
 
 
 
-        {/* â”€â”€ Master Registry Form Modal â”€â”€ */}
+        {/* ── Master Registry Form Modal ── */}
 
         {isMasterModalOpen && editingMasterItem && (
 
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
 
-            <div className="w-full max-w-sm bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-3xl flex flex-col max-h-[90vh] shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="w-full max-w-lg bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-3xl flex flex-col max-h-[90vh] shadow-2xl animate-in zoom-in-95 duration-150">
 
               <div className="flex justify-between items-center p-4 sm:p-5 pb-3 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 shrink-0 bg-[#f4f9ff] dark:bg-[#0b1329]/50">
 
-                <h3 className="text-xs font-extrabold text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>Record Editor</h3>
+                <h3 className="text-sm font-extrabold text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
+                  {editingMasterItem.id?.startsWith('m_item_') ? 'Add Registry Record' : 'Edit Registry Record'}
+                </h3>
 
                 <button
 
@@ -3852,7 +3792,7 @@ export default function Dashboard({
 
                 >
 
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
 
                 </button>
 
@@ -3860,19 +3800,19 @@ export default function Dashboard({
 
 
 
-              <div className="p-4 sm:p-5 overflow-y-auto">
+              <div className="p-4 sm:p-6 overflow-y-auto">
 
                 <form
 
                   onSubmit={(e) => { e.preventDefault(); handleSaveMasterItem(editingMasterItem); }}
 
-                  className="space-y-3 text-left"
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-left"
 
                 >
 
                   {fields.map((f, idx3) => (
 
-                    <div key={idx3}>
+                    <div key={idx3} className={f.key === 'address' ? 'sm:col-span-2' : ''}>
 
                       <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#64748b] dark:text-zinc-400 mb-1.5">{f.label}</label>
 
@@ -3884,9 +3824,7 @@ export default function Dashboard({
 
                           onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: e.target.value })}
 
-                          className="w-full px-3.5 py-2 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
-
-                          required
+                          className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
 
                         >
 
@@ -3908,11 +3846,13 @@ export default function Dashboard({
 
                           value={editingMasterItem[f.key] || ''}
 
+                          placeholder={`Enter ${f.label.toLowerCase()}`}
+
                           onChange={(e) => setEditingMasterItem({ ...editingMasterItem, [f.key]: f.type === 'number' ? parseFloat(e.target.value) : e.target.value })}
 
-                          className="w-full px-3.5 py-2 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
+                          className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-medium text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all outline-none"
 
-                          required
+                          required={f.key === 'name' || f.key === 'company' || idx3 === 0}
 
                         />
 
@@ -3922,7 +3862,7 @@ export default function Dashboard({
 
                   ))}
 
-                  <div className="pt-2 flex justify-end gap-2">
+                  <div className="pt-3 sm:col-span-2 flex justify-end gap-2.5 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 mt-2">
 
                     <button
 
@@ -3930,7 +3870,7 @@ export default function Dashboard({
 
                       onClick={() => { setIsMasterModalOpen(false); setEditingMasterItem(null); }}
 
-                      className="px-3 py-1.5 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] rounded-lg text-[9px] font-bold cursor-pointer transition-colors"
+                      className="px-4 py-2 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] rounded-xl text-xs font-bold cursor-pointer transition-colors"
 
                     >
 
@@ -3942,7 +3882,7 @@ export default function Dashboard({
 
                       type="submit"
 
-                      className="px-4 py-1.5 bg-[#0284c7] dark:bg-[#38bdf8] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] rounded-lg text-[9px] font-bold cursor-pointer transition-all shadow-md shadow-[#0284c7]/20"
+                      className="px-5 py-2 bg-[#0284c7] dark:bg-[#38bdf8] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] rounded-xl text-xs font-black cursor-pointer transition-all shadow-md shadow-[#0284c7]/20"
 
                     >
 
@@ -4999,31 +4939,148 @@ export default function Dashboard({
 
 
 
-  // Purchasers Filtered
-
+  // Purchasers Filtered (Combines actualVendors from Purchase Ledger documents with referenced clients, deduplicated cleanly)
   const purchasersFiltered = useMemo(() => {
+    const mergedList: any[] = [];
+    const seenKeys = new Set<string>();
 
-    return clients.filter(c => {
+    const getVendorKeys = (v: any) => {
+      const keys: string[] = [];
+      const gstin = (v.gstin || v.taxId || '').trim().toLowerCase();
+      const email = (v.email || '').trim().toLowerCase();
+      const pan = (v.pan || '').trim().toLowerCase();
+      const name = (v.name || '').trim().toLowerCase();
+      const comp = (v.company || v.companyName || '').trim().toLowerCase();
 
-      const nameLower = (c.name || '').trim().toLowerCase();
+      if (gstin) keys.push(`gst_${gstin}`);
+      if (pan) keys.push(`pan_${pan}`);
+      if (email) keys.push(`email_${email}`);
+      if (name) keys.push(`name_${name}`);
+      if (comp) keys.push(`comp_${comp}`);
+      return keys;
+    };
 
-      const emailLower = (c.email || '').trim().toLowerCase();
+    const isSeen = (v: any) => {
+      const keys = getVendorKeys(v);
+      return keys.some(k => seenKeys.has(k));
+    };
 
-      const isManualPurchaser = manualPurchaserIds.includes(c.id);
+    const markSeen = (v: any) => {
+      const keys = getVendorKeys(v);
+      keys.forEach(k => seenKeys.add(k));
+    };
 
-      
-
-      if (isManualPurchaser) return true;
-
-      
-
-      const isReferencedInPurchases = purchaserNames.has(nameLower) || (c.email && purchaserEmails.has(emailLower));
-
-      return isReferencedInPurchases;
-
+    // 1. Include all actualVendors saved from purchase ledger documents
+    (actualVendors || []).forEach(v => {
+      if (!v) return;
+      if (!isSeen(v)) {
+        markSeen(v);
+        mergedList.push({
+          ...v,
+          companyName: v.companyName || v.company || '',
+          company: v.company || v.companyName || '',
+        });
+      }
     });
 
-  }, [clients, manualPurchaserIds, purchaserNames, purchaserEmails]);
+    // 2. Include any clients referenced in purchases or marked as manual purchasers
+    (clients || []).forEach(c => {
+      if (!c) return;
+      const nameLower = (c.name || '').trim().toLowerCase();
+      const emailLower = (c.email || '').trim().toLowerCase();
+      const isManualPurchaser = manualPurchaserIds.includes(c.id);
+      const isReferencedInPurchases = purchaserNames.has(nameLower) || (c.email && purchaserEmails.has(emailLower));
+
+      if ((isManualPurchaser || isReferencedInPurchases) && !isSeen(c)) {
+        markSeen(c);
+        mergedList.push({
+          ...c,
+          companyName: c.companyName || (c as any).company || '',
+          company: (c as any).company || c.companyName || '',
+        });
+      }
+    });
+
+    return mergedList;
+  }, [actualVendors, clients, manualPurchaserIds, purchaserNames, purchaserEmails]);
+
+  // Billed Clients Searched & Sorted
+  const displayBilledClients = useMemo(() => {
+    let list = [...billedClientsFiltered];
+    if (clientSearchQuery.trim()) {
+      const q = clientSearchQuery.trim().toLowerCase();
+      list = list.filter(c => 
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.companyName || (c as any).company || '').toLowerCase().includes(q) ||
+        (c.gstin || '').toLowerCase().includes(q) ||
+        (c.phone || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
+        (c.state || '').toLowerCase().includes(q) ||
+        (c.address || '').toLowerCase().includes(q)
+      );
+    }
+    list.sort((a, b) => {
+      if (clientSortBy === 'name_asc') {
+        return (a.name || '').localeCompare(b.name || '');
+      }
+      if (clientSortBy === 'name_desc') {
+        return (b.name || '').localeCompare(a.name || '');
+      }
+      if (clientSortBy === 'company_asc') {
+        return (a.companyName || (a as any).company || a.name || '').localeCompare(b.companyName || (b as any).company || b.name || '');
+      }
+      if (clientSortBy === 'company_desc') {
+        return (b.companyName || (b as any).company || b.name || '').localeCompare(a.companyName || (a as any).company || a.name || '');
+      }
+      if (clientSortBy === 'newest') {
+        return (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      }
+      if (clientSortBy === 'oldest') {
+        return (a.createdAt ? new Date(a.createdAt).getTime() : 0) - (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+      }
+      return 0;
+    });
+    return list;
+  }, [billedClientsFiltered, clientSearchQuery, clientSortBy]);
+
+  // Billed Vendors Searched & Sorted
+  const displayBilledVendors = useMemo(() => {
+    let list = [...purchasersFiltered];
+    if (vendorSearchQuery.trim()) {
+      const q = vendorSearchQuery.trim().toLowerCase();
+      list = list.filter(c => 
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.companyName || (c as any).company || '').toLowerCase().includes(q) ||
+        (c.gstin || '').toLowerCase().includes(q) ||
+        (c.phone || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
+        (c.state || '').toLowerCase().includes(q) ||
+        (c.address || '').toLowerCase().includes(q)
+      );
+    }
+    list.sort((a, b) => {
+      if (vendorSortBy === 'name_asc') {
+        return (a.name || '').localeCompare(b.name || '');
+      }
+      if (vendorSortBy === 'name_desc') {
+        return (b.name || '').localeCompare(a.name || '');
+      }
+      if (vendorSortBy === 'company_asc') {
+        return (a.companyName || (a as any).company || a.name || '').localeCompare(b.companyName || (b as any).company || b.name || '');
+      }
+      if (vendorSortBy === 'company_desc') {
+        return (b.companyName || (b as any).company || b.name || '').localeCompare(a.companyName || (a as any).company || a.name || '');
+      }
+      if (vendorSortBy === 'newest') {
+        return (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      }
+      if (vendorSortBy === 'oldest') {
+        return (a.createdAt ? new Date(a.createdAt).getTime() : 0) - (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+      }
+      return 0;
+    });
+    return list;
+  }, [purchasersFiltered, vendorSearchQuery, vendorSortBy]);
 
 
 
@@ -5459,7 +5516,9 @@ export default function Dashboard({
 
     const fy = getFinancialYearShort(today);
     const prefix = prefixMap[section] || 'INV';
-    const num = `${prefix}-${fy}-${paddedNum}`;
+    const docTypeKey = typeMap[section] || 'invoice';
+    const startingInput = startingMap[section] || '1';
+    const num = getNextInvoiceNumber(prefix, startingInput, invoices, docTypeKey, today);
 
 
 
@@ -5516,11 +5575,11 @@ export default function Dashboard({
       invoiceTerms: defaults.terms,
 
       status: 'pending',
-
+      isNewDocument: true,
       invoiceType: typeMap[section],
       createdAt: today,
       updatedAt: today
-    };
+    } as any;
 
 
 
@@ -5700,6 +5759,7 @@ export default function Dashboard({
       date: todayStr,
       dueDate: todayStr,
       status: 'pending',
+      isNewDocument: true,
       parentInvoiceId: inv.id || undefined,
 
       // Bill To details (copied 100%)
@@ -6813,6 +6873,11 @@ export default function Dashboard({
 
   // --- CLIENT OPERATIONS ---
 
+  const [clientCountry, setClientCountry] = useState('India');
+  const [clientState, setClientState] = useState('');
+  const [clientGstin, setClientGstin] = useState('');
+  const [clientPan, setClientPan] = useState('');
+
   const handleOpenClientEditor = (cl: ClientProfile | null) => {
 
     if (cl) {
@@ -6829,6 +6894,14 @@ export default function Dashboard({
 
       setClientAddress(cl.address || '');
 
+      setClientCountry((cl as any).country || 'India');
+
+      setClientState((cl as any).state || '');
+
+      setClientGstin((cl as any).taxId || (cl as any).gstin || '');
+
+      setClientPan((cl as any).pan || '');
+
     } else {
 
       setEditingClient(null);
@@ -6842,6 +6915,14 @@ export default function Dashboard({
       setClientPhone('');
 
       setClientAddress('');
+
+      setClientCountry('India');
+
+      setClientState('');
+
+      setClientGstin('');
+
+      setClientPan('');
 
     }
 
@@ -6890,6 +6971,16 @@ export default function Dashboard({
       phone: clientPhone.trim(),
 
       address: clientAddress.trim(),
+
+      country: clientCountry.trim() || 'India',
+
+      state: clientState.trim(),
+
+      taxId: clientGstin.trim(),
+
+      gstin: clientGstin.trim(),
+
+      pan: clientPan.trim(),
 
       createdAt: editingClient ? editingClient.createdAt : new Date().toISOString(),
 
@@ -7233,13 +7324,13 @@ export default function Dashboard({
 
   return (
 
-    <div className="h-dvh w-full max-w-full overflow-hidden bg-[#f4f9ff] dark:bg-[#0b1329] text-slate-800 dark:text-slate-100 transition-colors duration-200" style={{fontFamily: "'IBM Plex Sans', sans-serif"}}>
+    <div className="h-dvh w-full max-w-full overflow-hidden bg-[#f4f9ff] dark:bg-[#0b1329] text-slate-800 dark:text-slate-100 transition-colors duration-200 flex flex-col" style={{fontFamily: "'IBM Plex Sans', sans-serif"}}>
 
       
 
       {/* Dynamic Main App Bar Header */}
 
-      <header className="sticky top-0 z-30 w-full bg-[#f4f9ff]/95 dark:bg-[#0b1329]/95 backdrop-blur-sm border-b border-[#bae6fd]/70 dark:border-[#223269] px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-[0_1px_12px_rgba(2,132,199,0.06)] transition-all duration-200">
+      <header className="shrink-0 relative z-[60] w-full bg-[#f4f9ff]/95 dark:bg-[#0b1329]/95 backdrop-blur-sm border-b border-[#bae6fd]/70 dark:border-[#223269] px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-[0_1px_12px_rgba(2,132,199,0.06)] transition-all duration-200">
 
         {/* Left Side: Logo + Mobile Menu Trigger + Breadcrumb */}
 
@@ -7352,7 +7443,7 @@ export default function Dashboard({
 
             {isNotificationsOpen && (
 
-              <div className="absolute right-[-60px] sm:right-0 mt-3 w-[320px] sm:w-[390px] rounded-2xl bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269] shadow-[0_8px_30px_rgba(2,132,199,0.1)] py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute right-[-60px] sm:right-0 mt-3 w-[320px] sm:w-[390px] rounded-2xl bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269] shadow-[0_8px_30px_rgba(2,132,199,0.1)] py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
 
                 <div className="px-4 py-2.5 border-b border-[#bae6fd]/50 dark:border-[#223269] flex items-center justify-between">
 
@@ -7653,7 +7744,7 @@ export default function Dashboard({
 
             {isProfileDropdownOpen && (
 
-              <div className="absolute right-0 mt-3 w-52 rounded-2xl bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269] shadow-[0_8px_30px_rgba(2,132,199,0.1)] py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute right-0 mt-3 w-52 rounded-2xl bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269] shadow-[0_8px_30px_rgba(2,132,199,0.1)] py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
 
                 <button 
 
@@ -7942,12 +8033,12 @@ export default function Dashboard({
       <TrialExpiredBanner onUpgradeClick={() => setActiveTab('subscription')} />
 
       {/* Dynamic Main Responsive Workspace - Grid layout turns dual-column on desktop */}
-      <main className="w-full max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4 pt-1.5 md:pt-3 space-y-4 xl:space-y-0 xl:flex xl:gap-6 xl:items-start overflow-hidden">
+      <main className="w-full flex-1 min-h-0 max-w-[1600px] mx-auto px-2 sm:px-3 lg:px-4 py-2 md:py-3 space-y-4 xl:space-y-0 xl:flex xl:gap-6 xl:items-stretch relative z-30">
         
         {/* DESKTOP BRANDING & CONTROL SIDEBAR - Visible on xl screens (1280px+) */}
-        <div className="hidden xl:block relative shrink-0">
+        <div className="hidden xl:block relative shrink-0 h-full">
 
-          <aside className={`flex flex-col bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/70 rounded-[1.75rem] shadow-[0_8px_30px_rgba(2,132,199,0.08)] h-[calc(100dvh-92px)] xl:h-[calc(100vh-110px)] overflow-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
+          <aside className={`flex flex-col bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/70 rounded-[1.75rem] shadow-[0_8px_30px_rgba(2,132,199,0.08)] h-full overflow-hidden transition-all duration-300 ${isDesktopSidebarExpanded ? 'w-[280px] p-5' : 'w-[88px] p-4 items-center [&_span]:hidden [&_.min-w-0]:hidden [&_button]:justify-center [&_button>div]:justify-center [&_.pl-2]:hidden [&_h4]:hidden'}`}>
 
             <div className="w-full h-full">
 
@@ -7978,7 +8069,7 @@ export default function Dashboard({
 
 
         {/* RIGHT CENTRAL WORKSPACE PANEL */}
-        <div className="flex-1 min-w-0 w-full m-0 p-0 h-[calc(100dvh-92px)] xl:h-[calc(100vh-110px)] overflow-y-auto pr-1 pb-16 md:pb-12 pb-safe">
+        <div className="flex-1 min-w-0 w-full m-0 p-0 h-full overflow-y-auto pr-1 pb-4 pb-safe">
 
 
 
@@ -8457,7 +8548,7 @@ export default function Dashboard({
 
                                 <span className="bg-sky-50 dark:bg-sky-950/30 text-sky-600 border border-sky-200/40 text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
 
-                                  ðŸ”„ Repeat {inv.recurringSettings.interval}
+                                  <Clock className="w-2.5 h-2.5 inline shrink-0" /> Repeat {inv.recurringSettings.interval}
 
                                 </span>
 
@@ -8604,27 +8695,53 @@ export default function Dashboard({
                                   </button>
                                 </div>
                               )}
-                            </div>
+                             </div>
 
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const spaceBelow = window.innerHeight - rect.bottom;
-                                setActionMenuPosition(spaceBelow < 220 ? 'up' : 'down');
-                                setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id);
-                              }}
-                              className="w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
-                              title="More Actions"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
+                             <button
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 if (activeActionMenuId === inv.id) {
+                                   setActiveActionMenuId(null);
+                                   setActionMenuRect(null);
+                                 } else {
+                                   const rect = e.currentTarget.getBoundingClientRect();
+                                   const spaceAbove = rect.top;
+                                   const spaceBelow = window.innerHeight - rect.bottom;
+                                   // NEVER open UPWARDS if rect.top < 500px! Rows in top/middle area MUST open DOWNWARDS.
+                                   // Only flip UPWARDS if rect.top >= 500px AND spaceBelow < 380px.
+                                   const shouldOpenUp = rect.top >= 500 && spaceBelow < 380 && spaceAbove > spaceBelow;
+                                   setActionMenuPosition(shouldOpenUp ? 'up' : 'down');
+                                   setActionMenuRect({
+                                     top: rect.top,
+                                     bottom: rect.bottom,
+                                     left: rect.left,
+                                     right: rect.right,
+                                     width: rect.width,
+                                   });
+                                   setActiveActionMenuId(inv.id);
+                                 }
+                               }}
+                               className="action-menu-trigger-btn w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
+                               title="More Actions"
+                             >
+                               <MoreVertical className="w-4 h-4" />
+                             </button>
 
-                            {activeActionMenuId === inv.id && (
-                              <div 
-                                className={`absolute right-0 ${actionMenuPosition === 'up' ? 'bottom-10 slide-in-from-bottom-2' : 'top-10 slide-in-from-top-2'} z-[120] w-52 py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in duration-150 text-left`}
-                                onClick={(e) => e.stopPropagation()}
-                              >
+                             {activeActionMenuId === inv.id && (
+                               <div 
+                                 className="action-menu-dropdown-box fixed z-[9999999] w-56 sm:w-60 overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269]/70 rounded-2xl shadow-[0_16px_45px_rgba(2,132,199,0.22)] dark:shadow-[0_16px_45px_rgba(0,0,0,0.6)] animate-in fade-in duration-150 text-left"
+                                 style={{
+                                   position: 'fixed',
+                                   right: actionMenuRect ? `${Math.max(8, window.innerWidth - actionMenuRect.right)}px` : '16px',
+                                   ...(actionMenuPosition === 'up' ? {
+                                     bottom: actionMenuRect ? `${window.innerHeight - actionMenuRect.top + 6}px` : 'auto',
+                                     maxHeight: actionMenuRect ? `min(380px, calc(${actionMenuRect.top}px - 140px))` : '380px',
+                                   } : {
+                                     top: actionMenuRect ? `${actionMenuRect.bottom + 6}px` : 'auto',
+                                     maxHeight: actionMenuRect ? `calc(100vh - ${actionMenuRect.bottom + 20}px)` : '380px',
+                                   })
+                                 }}
+                               >
 
                                 
         {showBinView ? (
@@ -9147,7 +9264,7 @@ export default function Dashboard({
 
                               {inv.recurringSettings?.isRecurring && (
 
-                                <span className="text-[10px]" title={`Auto Repeat ${inv.recurringSettings.interval}`}>ðŸ”„</span>
+                                <span className="text-[10px]" title={`Auto Repeat ${inv.recurringSettings.interval}`}>🔄</span>
 
                               )}
 
@@ -9288,24 +9405,49 @@ export default function Dashboard({
                               </div>
 
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  const spaceBelow = window.innerHeight - rect.bottom;
-                                  setActionMenuPosition(spaceBelow < 220 ? 'up' : 'down');
-                                  setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id);
-                                }}
-                                className="w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
-                                title="More Actions"
-                              >
-                                <MoreVertical className="w-4 h-4" />
-                              </button>
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   if (activeActionMenuId === inv.id) {
+                                     setActiveActionMenuId(null);
+                                     setActionMenuRect(null);
+                                   } else {
+                                     const rect = e.currentTarget.getBoundingClientRect();
+                                     const spaceAbove = rect.top;
+                                     const spaceBelow = window.innerHeight - rect.bottom;
+                                     const shouldOpenUp = rect.top >= 500 && spaceBelow < 380 && spaceAbove > spaceBelow;
+                                     setActionMenuPosition(shouldOpenUp ? 'up' : 'down');
+                                     setActionMenuRect({
+                                       top: rect.top,
+                                       bottom: rect.bottom,
+                                       left: rect.left,
+                                       right: rect.right,
+                                       width: rect.width,
+                                     });
+                                     setActiveActionMenuId(inv.id);
+                                   }
+                                 }}
+                                 className="action-menu-trigger-btn w-8 h-8 rounded-full hover:bg-[#f4f9ff]/80 dark:hover:bg-[#1b264f] flex items-center justify-center text-slate-500 dark:text-zinc-400 cursor-pointer transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#bae6fd]/40 dark:hover:border-[#223269]/40"
+                                 title="More Actions"
+                               >
+                                 <MoreVertical className="w-4 h-4" />
+                               </button>
 
-                              {activeActionMenuId === inv.id && (
-                                <div 
-                                  className={`absolute right-4 ${actionMenuPosition === 'up' ? 'bottom-10 slide-in-from-bottom-2' : 'top-10 slide-in-from-top-2'} z-[120] w-52 py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xl animate-in fade-in duration-150 text-left`}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
+                               {activeActionMenuId === inv.id && (
+                                 <div 
+                                   className="action-menu-dropdown-box fixed z-[9999999] w-56 sm:w-60 overflow-y-auto py-2 bg-white dark:bg-[#111a36] border border-[#bae6fd]/70 dark:border-[#223269]/70 rounded-2xl shadow-[0_16px_45px_rgba(2,132,199,0.22)] dark:shadow-[0_16px_45px_rgba(0,0,0,0.6)] animate-in fade-in duration-150 text-left"
+                                   style={{
+                                     position: 'fixed',
+                                     right: actionMenuRect ? `${Math.max(8, window.innerWidth - actionMenuRect.right)}px` : '16px',
+                                     ...(actionMenuPosition === 'up' ? {
+                                       bottom: actionMenuRect ? `${window.innerHeight - actionMenuRect.top + 6}px` : 'auto',
+                                       maxHeight: actionMenuRect ? `min(380px, calc(${actionMenuRect.top}px - 140px))` : '380px',
+                                     } : {
+                                       top: actionMenuRect ? `${actionMenuRect.bottom + 6}px` : 'auto',
+                                       maxHeight: actionMenuRect ? `calc(100vh - ${actionMenuRect.bottom + 20}px)` : '380px',
+                                     })
+                                   }}
+                                   onClick={(e) => e.stopPropagation()}
+                                 >
                                   {showBinView ? (
           <>
             <button
@@ -9402,6 +9544,8 @@ export default function Dashboard({
                                         ...inv,
 
                                         id: '',
+
+                                        isNewDocument: true,
 
                                         invoiceNumber: getSuccessorInvoiceNumber(inv, invoices),
 
@@ -10564,46 +10708,92 @@ export default function Dashboard({
 
             {/* ─── Page Header ─── */}
 
+            {/* ─── Page Header with Search & Sort ─── */}
+
             <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(2,132,199,0.06)' }}>
 
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-4 sm:p-5 md:p-6">
+              <div className="p-4 sm:p-5 md:p-6">
 
-                {/* Left: Icon + title + description */}
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 
-                <div className="flex items-start gap-4">
+                  {/* Left: Icon + title + description */}
 
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-[#0284c7] dark:bg-[#38bdf8]" style={{ boxShadow: '0 2px 8px rgba(2,132,199,0.3)' }}>
+                  <div className="flex items-start gap-4">
 
-                    <Users2 className="w-5 h-5 text-white dark:text-[#0b1329]" />
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-[#0284c7] dark:bg-[#38bdf8]" style={{ boxShadow: '0 2px 8px rgba(2,132,199,0.3)' }}>
 
-                  </div>
-
-                  <div>
-
-                    <div className="flex items-center gap-2.5 flex-wrap">
-
-                      <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white uppercase tracking-tight leading-none" style={{ fontFamily: "'Fraunces', serif" }}>
-
-                        Billed Clients Ledger Book
-
-                      </h2>
-
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f]/40 dark:border-[#223269]/40 text-[#0284c7] dark:text-[#38bdf8]">
-
-                        {billedClientsFiltered.length} {billedClientsFiltered.length === 1 ? 'Record' : 'Records'}
-
-                      </span>
+                      <Users2 className="w-5 h-5 text-white dark:text-[#0b1329]" />
 
                     </div>
 
-                    <p className="mt-1.5 text-xs text-[#64748b]/70 dark:text-[#94a3b8]/70 max-w-md leading-relaxed">
+                    <div>
 
-                      Manage client profiles for rapid auto-filling during billing creation (Sales Ledger only)
+                      <div className="flex items-center gap-2.5 flex-wrap">
 
-                    </p>
+                        <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white uppercase tracking-tight leading-none" style={{ fontFamily: "'Fraunces', serif" }}>
+
+                          Billed Clients Ledger Book
+
+                        </h2>
+
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f]/40 dark:border-[#223269]/40 text-[#0284c7] dark:text-[#38bdf8]">
+
+                          {displayBilledClients.length} of {billedClientsFiltered.length} {billedClientsFiltered.length === 1 ? 'Record' : 'Records'}
+
+                        </span>
+
+                      </div>
+
+                      <p className="mt-1.5 text-xs text-[#64748b]/70 dark:text-[#94a3b8]/70 max-w-md leading-relaxed">
+
+                        Manage client profiles for rapid auto-filling during billing creation (Sales Ledger only)
+
+                      </p>
+
+                    </div>
 
                   </div>
 
+                </div>
+
+                {/* ─── Search & Sort Bar ─── */}
+                <div className="mt-4 pt-4 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <div className="relative flex-1 w-full min-w-0">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0284c7]/70 dark:text-[#38bdf8]/70 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={clientSearchQuery}
+                      onChange={(e) => setClientSearchQuery(e.target.value)}
+                      placeholder="Search by name, company, GSTIN, phone, state..."
+                      className="w-full pl-9 pr-8 py-2 rounded-xl text-xs bg-[#f0f9ff]/80 dark:bg-[#0b1329]/80 border border-[#bae6fd] dark:border-[#223269] text-[#0f172a] dark:text-white placeholder-[#64748b]/60 dark:placeholder-[#94a3b8]/60 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/40 transition-all"
+                    />
+                    {clientSearchQuery && (
+                      <button
+                        onClick={() => setClientSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                        title="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="relative flex items-center w-full sm:w-auto bg-[#f0f9ff]/80 dark:bg-[#0b1329]/80 border border-[#bae6fd] dark:border-[#223269] rounded-xl px-3 py-2 text-xs font-bold focus-within:ring-2 focus-within:ring-[#0284c7]/40 transition-all cursor-pointer">
+                    <ArrowUpDown className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8] shrink-0 mr-2 pointer-events-none" />
+                    <select
+                      value={clientSortBy}
+                      onChange={(e: any) => setClientSortBy(e.target.value)}
+                      className="w-full bg-transparent text-[#0f172a] dark:text-white font-bold text-xs focus:outline-none cursor-pointer appearance-none pr-5"
+                    >
+                      <option value="name_asc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Name (A - Z)</option>
+                      <option value="name_desc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Name (Z - A)</option>
+                      <option value="company_asc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Company (A - Z)</option>
+                      <option value="company_desc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Company (Z - A)</option>
+                      <option value="newest" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Newest First</option>
+                      <option value="oldest" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Oldest First</option>
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8] absolute right-3 pointer-events-none" />
+                  </div>
                 </div>
 
               </div>
@@ -10632,29 +10822,31 @@ export default function Dashboard({
 
                 <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
 
-                  Add profiles to automatically inject contacts, GSTIN numbers, and addresses instantly on invoice templates.
+                  Client profiles will automatically populate here when you create sales invoices and billing documents.
 
                 </p>
 
+              </div>
+
+            ) : displayBilledClients.length === 0 ? (
+
+              <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl p-10 text-center relative overflow-hidden">
+                <Search className="w-8 h-8 mx-auto mb-2 text-[#0284c7]/50" />
+                <h3 className="text-xs font-bold text-[#0f172a] dark:text-zinc-300 uppercase tracking-wider">No matching clients found</h3>
+                <p className="text-[10px] text-[#64748b] dark:text-zinc-400 mt-1">No client records match "{clientSearchQuery}"</p>
                 <button
-
-                  onClick={() => handleOpenClientEditor(null)}
-
-                  className="mt-4 px-3.5 py-1.5 border border-[#0284c7] hover:bg-[#0284c7] text-[#0284c7] hover:text-white dark:text-[#38bdf8] dark:border-[#223269] dark:hover:bg-[#0284c7] rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer"
-
+                  onClick={() => setClientSearchQuery('')}
+                  className="mt-3 px-3.5 py-1.5 bg-[#f0f9ff] dark:bg-[#1b264f]/40 border border-[#bae6fd] dark:border-[#223269] text-[#0284c7] dark:text-[#38bdf8] text-[10px] font-bold rounded-lg hover:bg-[#e0f2fe]"
                 >
-
-                  Create First Profile
-
+                  Clear Search
                 </button>
-
               </div>
 
             ) : (
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-                {billedClientsFiltered.map(c => (
+                {displayBilledClients.map(c => (
 
                   <div
 
@@ -10682,17 +10874,17 @@ export default function Dashboard({
 
                           <h4 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-tight truncate">{c.name}</h4>
 
-                          {c.companyName && (
+                          {c.companyName && c.companyName.trim().toLowerCase() !== c.name.trim().toLowerCase() && (
 
                             <span 
 
-                              className="text-[9px] bg-[#FCFAF7] dark:bg-zinc-950 text-[#64748b] dark:text-zinc-300 border border-[#e2e8f0]/50 dark:border-zinc-800 font-extrabold px-2 py-0.5 rounded-md inline-block uppercase tracking-wider"
+                              className="text-[9px] bg-[#FCFAF7] dark:bg-zinc-950 text-[#64748b] dark:text-zinc-300 border border-[#e2e8f0]/50 dark:border-zinc-800 font-extrabold px-2 py-0.5 rounded-md inline-flex items-center gap-1 uppercase tracking-wider"
 
                               style={{ boxShadow: '0 1px 2px rgba(110,96,80,0.04)' }}
 
                             >
 
-                              🏢 {c.companyName}
+                              <Briefcase className="w-2.5 h-2.5 text-[#0284c7] dark:text-[#38bdf8] shrink-0" /> {c.companyName}
 
                             </span>
 
@@ -10822,48 +11014,88 @@ export default function Dashboard({
 
             
 
-            {/* ─── Page Header ─── */}
+            {/* ─── Page Header with Search & Sort ─── */}
 
             <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(2,132,199,0.06)' }}>
 
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between p-4 sm:p-5 md:p-6">
+              <div className="p-4 sm:p-5 md:p-6">
 
-                {/* Left: Icon + title + description */}
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 
-                <div className="flex items-start gap-4">
+                  {/* Left: Icon + title + description */}
 
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-[#0284c7] dark:bg-[#38bdf8]" style={{ boxShadow: '0 2px 8px rgba(2,132,199,0.3)' }}>
+                  <div className="flex items-start gap-4">
 
-                    <Users2 className="w-5 h-5 text-white dark:text-[#0b1329]" />
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-[#0284c7] dark:bg-[#38bdf8]" style={{ boxShadow: '0 2px 8px rgba(2,132,199,0.3)' }}>
 
-                  </div>
-
-                  <div>
-
-                    <div className="flex items-center gap-2.5 flex-wrap">
-
-                      <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white uppercase tracking-tight leading-none" style={{ fontFamily: "'Fraunces', serif" }}>
-
-                        Billed Vendors Directory
-
-                      </h2>
-
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f]/40 dark:border-[#223269]/40 text-[#0284c7] dark:text-[#38bdf8]">
-
-                        {purchasersFiltered.length} {purchasersFiltered.length === 1 ? 'Record' : 'Records'}
-
-                      </span>
+                      <Users2 className="w-5 h-5 text-white dark:text-[#0b1329]" />
 
                     </div>
 
-                    <p className="mt-1.5 text-xs text-[#64748b]/70 dark:text-[#94a3b8]/70 max-w-md leading-relaxed">
+                    <div>
 
-                      Manage vendor and supplier profiles captured from your purchases ledger bills, POs, and debit notes
+                      <div className="flex items-center gap-2.5 flex-wrap">
 
-                    </p>
+                        <h2 className="text-lg md:text-xl font-black text-[#0f172a] dark:text-white uppercase tracking-tight leading-none" style={{ fontFamily: "'Fraunces', serif" }}>
+
+                          Billed Vendors Directory
+
+                        </h2>
+
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f]/40 dark:border-[#223269]/40 text-[#0284c7] dark:text-[#38bdf8]">
+
+                          {displayBilledVendors.length} of {purchasersFiltered.length} {purchasersFiltered.length === 1 ? 'Record' : 'Records'}
+
+                        </span>
+
+                      </div>
+
+                      <p className="mt-1.5 text-xs text-[#64748b]/70 dark:text-[#94a3b8]/70 max-w-md leading-relaxed">
+                        Manage vendor and supplier profiles captured from your purchases ledger bills, POs, and debit notes
+                      </p>
+
+                    </div>
 
                   </div>
 
+                </div>
+                <div className="mt-4 pt-4 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <div className="relative flex-1 w-full min-w-0">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0284c7]/70 dark:text-[#38bdf8]/70 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={vendorSearchQuery}
+                      onChange={(e) => setVendorSearchQuery(e.target.value)}
+                      placeholder="Search vendors, company, GSTIN, phone, state..."
+                      className="w-full pl-9 pr-8 py-2 rounded-xl text-xs bg-[#f0f9ff]/80 dark:bg-[#0b1329]/80 border border-[#bae6fd] dark:border-[#223269] text-[#0f172a] dark:text-white placeholder-[#64748b]/60 dark:placeholder-[#94a3b8]/60 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/40 transition-all"
+                    />
+                    {vendorSearchQuery && (
+                      <button
+                        onClick={() => setVendorSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                        title="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="relative flex items-center w-full sm:w-auto bg-[#f0f9ff]/80 dark:bg-[#0b1329]/80 border border-[#bae6fd] dark:border-[#223269] rounded-xl px-3 py-2 text-xs font-bold focus-within:ring-2 focus-within:ring-[#0284c7]/40 transition-all cursor-pointer">
+                    <ArrowUpDown className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8] shrink-0 mr-2 pointer-events-none" />
+                    <select
+                      value={vendorSortBy}
+                      onChange={(e: any) => setVendorSortBy(e.target.value)}
+                      className="w-full bg-transparent text-[#0f172a] dark:text-white font-bold text-xs focus:outline-none cursor-pointer appearance-none pr-5"
+                    >
+                      <option value="name_asc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Name (A - Z)</option>
+                      <option value="name_desc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Name (Z - A)</option>
+                      <option value="company_asc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Company (A - Z)</option>
+                      <option value="company_desc" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Company (Z - A)</option>
+                      <option value="newest" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Newest First</option>
+                      <option value="oldest" className="bg-white dark:bg-[#0b1329] text-[#0f172a] dark:text-white">Sort: Oldest First</option>
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8] absolute right-3 pointer-events-none" />
+                  </div>
                 </div>
 
               </div>
@@ -10892,7 +11124,7 @@ export default function Dashboard({
 
                 <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
 
-                  Add profiles manually or create Purchase Bills, POs, and Debit Notes to automatically populate vendors here.
+                  Vendor profiles will automatically populate here when you create purchase bills, POs, and debit notes.
 
                 </p>
 
@@ -10942,17 +11174,17 @@ export default function Dashboard({
 
                           <h4 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-tight truncate">{c.name}</h4>
 
-                          {c.companyName && (
+                          {c.companyName && c.companyName.trim().toLowerCase() !== c.name.trim().toLowerCase() && (
 
                             <span 
 
-                              className="text-[9px] bg-[#FCFAF7] dark:bg-zinc-950 text-[#64748b] dark:text-zinc-300 border border-[#e2e8f0]/50 dark:border-zinc-800 font-extrabold px-2 py-0.5 rounded-md inline-block uppercase tracking-wider"
+                              className="text-[9px] bg-[#FCFAF7] dark:bg-zinc-950 text-[#64748b] dark:text-[#38bdf8] border border-[#e2e8f0]/50 dark:border-zinc-800 font-extrabold px-2 py-0.5 rounded-md inline-flex items-center gap-1 uppercase tracking-wider"
 
                               style={{ boxShadow: '0 1px 2px rgba(110,96,80,0.04)' }}
 
                             >
 
-                              ðŸ¢ {c.companyName}
+                              <Briefcase className="w-2.5 h-2.5 text-[#0284c7] dark:text-[#38bdf8] shrink-0" /> {c.companyName}
 
                             </span>
 
@@ -15526,7 +15758,7 @@ export default function Dashboard({
 
         return (
 
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-[#0b1329]/80 backdrop-blur-sm overflow-y-auto no-scrollbar">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-6 bg-[#0b1329]/80 backdrop-blur-sm overflow-y-auto no-scrollbar">
 
             <div className="w-full max-w-5xl h-full md:h-[92vh] bg-white dark:bg-[#111a36] rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-[#bae6fd]/30 dark:border-[#223269]/60 animate-in fade-in duration-200 doc-preview-modal invoice-preview-container preview-section no-privacy-blur" data-privacy-exempt="true">
 
@@ -16432,198 +16664,182 @@ export default function Dashboard({
 
       {isClientEditorOpen && (
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/65 backdrop-blur-sm overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-md overflow-y-auto">
 
           <form 
-
             onSubmit={handleSaveClientForm}
-
-            className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-80 border-slate-200 p-4 space-y-4 text-sans animate-in fade-in duration-200"
-
+            className="w-full max-w-lg bg-white dark:bg-[#111a36] rounded-3xl overflow-hidden shadow-2xl shadow-[#0284c7]/10 border border-[#bae6fd]/80 dark:border-[#223269]/80 text-sans animate-in zoom-in-95 duration-150"
           >
-
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
-
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-white">
-
-                {editingClient ? 'Edit Client Profile' : 'Register New Client'}
-
-              </h3>
-
+            {/* Header */}
+            <div className="flex justify-between items-center px-5 py-4 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f4f9ff] dark:bg-[#0b1329]/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#0284c7] text-white flex items-center justify-center font-bold shadow-md shadow-[#0284c7]/20">
+                  <UserCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
+                    {editingClient ? 'Edit Client Profile' : 'Register New Client'}
+                  </h3>
+                  <p className="text-[10px] text-[#64748b] dark:text-zinc-400 font-medium">Manage party billing metadata & tax compliance info</p>
+                </div>
+              </div>
               <button
-
                 type="button"
-
                 onClick={() => setIsClientEditorOpen(false)}
-
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-
+                className="p-1.5 hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#64748b] hover:text-[#0284c7] dark:hover:text-[#38bdf8] rounded-full transition-colors cursor-pointer"
               >
-
-                <X className="w-4 h-4" />
-
+                <X className="w-4.5 h-4.5" />
               </button>
-
             </div>
 
+            {/* Form Fields */}
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                <div>
+                  <label htmlFor="cl_fname" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    Client Full Name *
+                  </label>
+                  <input
+                    id="cl_fname"
+                    required
+                    type="text"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="e.g. John Doe"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                  />
+                </div>
 
+                <div>
+                  <label htmlFor="cl_comp" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    Company Name
+                  </label>
+                  <input
+                    id="cl_comp"
+                    type="text"
+                    value={clientCompany}
+                    onChange={(e) => setClientCompany(e.target.value)}
+                    placeholder="e.g. Marvelous Widgets Ltd"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                  />
+                </div>
 
-            <div className="space-y-3 text-xs">
+                <div>
+                  <label htmlFor="cl_country" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    Country
+                  </label>
+                  <input
+                    id="cl_country"
+                    type="text"
+                    value={clientCountry}
+                    onChange={(e) => setClientCountry(e.target.value)}
+                    placeholder="e.g. India"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                  />
+                </div>
 
-              <div>
+                <div>
+                  <label htmlFor="cl_state" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    State
+                  </label>
+                  <input
+                    id="cl_state"
+                    type="text"
+                    value={clientState}
+                    onChange={(e) => setClientState(e.target.value)}
+                    placeholder="e.g. Maharashtra"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                  />
+                </div>
 
-                <label htmlFor="cl_fname" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Client Full Name *</label>
+                <div>
+                  <label htmlFor="cl_gstin" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    GSTIN / Tax No.
+                  </label>
+                  <input
+                    id="cl_gstin"
+                    type="text"
+                    value={clientGstin}
+                    onChange={(e) => setClientGstin(e.target.value)}
+                    placeholder="e.g. 27AAAAA0000A1Z5"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none uppercase"
+                  />
+                </div>
 
-                <input
+                <div>
+                  <label htmlFor="cl_pan" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    PAN
+                  </label>
+                  <input
+                    id="cl_pan"
+                    type="text"
+                    value={clientPan}
+                    onChange={(e) => setClientPan(e.target.value)}
+                    placeholder="e.g. ABCDE1234F"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none uppercase"
+                  />
+                </div>
 
-                  id="cl_fname"
+                <div>
+                  <label htmlFor="cl_em" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    Client Email Address
+                  </label>
+                  <input
+                    id="cl_em"
+                    type="email"
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                    placeholder="e.g. billing@widgets.com"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                  />
+                </div>
 
-                  required
+                <div>
+                  <label htmlFor="cl_ph" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    Client Phone Number
+                  </label>
+                  <input
+                    id="cl_ph"
+                    type="text"
+                    value={clientPhone}
+                    onChange={(e) => setClientPhone(e.target.value)}
+                    placeholder="e.g. +1 (555) 019-2834"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
+                  />
+                </div>
 
-                  type="text"
-
-                  value={clientName}
-
-                  onChange={(e) => setClientName(e.target.value)}
-
-                  placeholder="e.g. John Doe"
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-
-                />
-
+                <div className="sm:col-span-2">
+                  <label htmlFor="cl_ad" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                    Billing Address
+                  </label>
+                  <textarea
+                    id="cl_ad"
+                    value={clientAddress || ''}
+                    onChange={(e) => setClientAddress(e.target.value)}
+                    placeholder="e.g. Building 10, Redwood Ave, CA"
+                    rows={2}
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none resize-none"
+                  />
+                </div>
               </div>
-
-
-
-              <div>
-
-                <label htmlFor="cl_comp" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Company Name</label>
-
-                <input
-
-                  id="cl_comp"
-
-                  type="text"
-
-                  value={clientCompany}
-
-                  onChange={(e) => setClientCompany(e.target.value)}
-
-                  placeholder="e.g. Marvelous Widgets Ltd"
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-
-                />
-
-              </div>
-
-
-
-              <div>
-
-                <label htmlFor="cl_em" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Client Email Address</label>
-
-                <input
-
-                  id="cl_em"
-
-                  type="email"
-
-                  value={clientEmail}
-
-                  onChange={(e) => setClientEmail(e.target.value)}
-
-                  placeholder="e.g. billing@widgets.com"
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-
-                />
-
-              </div>
-
-
-
-              <div>
-
-                <label htmlFor="cl_ph" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Client Phone number</label>
-
-                <input
-
-                  id="cl_ph"
-
-                  type="text"
-
-                  value={clientPhone}
-
-                  onChange={(e) => setClientPhone(e.target.value)}
-
-                  placeholder="e.g. +1 (555) 019-2834"
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-
-                />
-
-              </div>
-
-
-
-              <div>
-
-                <label htmlFor="cl_ad" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Billing Address</label>
-
-                <textarea
-
-                  id="cl_ad"
-
-                  value={clientAddress || ''}
-
-                  onChange={(e) => setClientAddress(e.target.value)}
-
-                  placeholder="e.g. Building 10, Redwood Ave, CA"
-
-                  rows={2}
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none resize-none touch-action-manipulation"
-
-                />
-
-              </div>
-
             </div>
 
-
-
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
-
+            {/* Footer */}
+            <div className="px-5 py-3.5 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 flex items-center justify-end gap-3">
               <button
-
                 type="button"
-
                 onClick={() => setIsClientEditorOpen(false)}
-
-                className="px-3.5 py-1.5 text-xs text-slate-500 font-medium cursor-pointer hover:bg-slate-50"
-
+                className="px-4 py-2 bg-white hover:bg-slate-100 dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#64748b] dark:text-[#94a3b8] border border-slate-200 dark:border-[#223269] rounded-xl text-xs font-bold transition-all cursor-pointer"
               >
-
                 Cancel
-
               </button>
-
               <button
-
                 type="submit"
-
-                className="px-4.5 py-1.5 bg-sky-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer active:scale-95"
-
+                className="px-5 py-2 bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-[#0284c7]/25 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
-
                 Save Profile
-
               </button>
-
             </div>
-
           </form>
 
         </div>
@@ -16636,201 +16852,126 @@ export default function Dashboard({
 
       {isExpenseLoggerOpen && (
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/65 backdrop-blur-sm overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-md overflow-y-auto">
 
           <form 
-
             onSubmit={handleSaveExpenseForm}
-
-            className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-200 p-4 space-y-4 text-sans animate-in fade-in duration-200"
-
+            className="w-full max-w-sm bg-white dark:bg-[#111a36] rounded-3xl overflow-hidden shadow-2xl shadow-[#0284c7]/10 border border-[#bae6fd]/80 dark:border-[#223269]/80 text-sans animate-in zoom-in-95 duration-150"
           >
-
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-805">
-
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-805">
-
-                Log Business Expense
-
-              </h3>
-
+            {/* Header */}
+            <div className="flex justify-between items-center px-5 py-4 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f4f9ff] dark:bg-[#0b1329]/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#0284c7] text-white flex items-center justify-center font-bold shadow-md shadow-[#0284c7]/20">
+                  <Banknote className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
+                    Log Business Expense
+                  </h3>
+                  <p className="text-[10px] text-[#64748b] dark:text-zinc-400 font-medium">Record operational overheads & vendor payouts</p>
+                </div>
+              </div>
               <button
-
                 type="button"
-
                 onClick={() => setIsExpenseLoggerOpen(false)}
-
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-
+                className="p-1.5 hover:bg-[#e0f2fe] dark:hover:bg-[#1b264f] text-[#64748b] hover:text-[#0284c7] dark:hover:text-[#38bdf8] rounded-full transition-colors cursor-pointer"
               >
-
-                <X className="w-4 h-4" />
-
+                <X className="w-4.5 h-4.5" />
               </button>
-
             </div>
 
-
-
-            <div className="space-y-3 text-xs">
-
+            {/* Form Fields */}
+            <div className="p-5 space-y-3.5 text-xs">
               <div>
-
-                <label htmlFor="exp_cat" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Expense Category</label>
-
+                <label htmlFor="exp_cat" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  Expense Category
+                </label>
                 <select
-
                   id="exp_cat"
-
                   value={expenseCategory}
-
                   onChange={(e) => setExpenseCategory(e.target.value)}
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-
+                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none cursor-pointer"
                 >
-
                   <option value="Rent & Overheads">Rent & Overheads</option>
-
                   <option value="Product Inventory">Product Inventory</option>
-
                   <option value="SaaS & Tooling Subscriptions">SaaS & Tooling Subscriptions</option>
-
                   <option value="Contractors & Suppliers cost">Contractors & Suppliers cost</option>
-
                   <option value="Advertisements & Marketing">Advertisements & Marketing</option>
-
                   <option value="Travel & Relocation expense">Travel & Relocation expense</option>
-
                   <option value="Other Corporate Sundry Expenses">Other Corporate Sundry Expenses</option>
-
                   <option value="Custom">Custom (Type below)</option>
-
                 </select>
 
                 {expenseCategory === 'Custom' && (
-
                   <input
-
                     type="text"
-
                     placeholder="Enter custom category..."
-
                     value={customExpenseCategory}
-
                     onChange={(e) => setCustomExpenseCategory(e.target.value)}
-
-                    className="w-full px-3.5 py-2 mt-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-
+                    className="w-full px-3.5 py-2.5 mt-2 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
                     required
-
                   />
-
                 )}
-
               </div>
 
-
-
               <div>
-
-                <label htmlFor="exp_amt" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Overhead Cost Amount ({currencySymbol}) *</label>
-
+                <label htmlFor="exp_amt" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  Overhead Cost Amount ({currencySymbol}) *
+                </label>
                 <input
-
                   id="exp_amt"
-
                   required
-
                   type="number"
-
                   min="0.01"
-
                   step="0.01"
-
                   value={expenseAmount}
-
                   onChange={(e) => setExpenseAmount(e.target.value)}
-
                   placeholder="0.00"
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none font-mono touch-action-manipulation"
-
+                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none font-mono"
                 />
-
               </div>
 
-
-
               <div>
-
-                <label htmlFor="exp_dt" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Expenditure Date *</label>
-
+                <label htmlFor="exp_dt" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  Expenditure Date *
+                </label>
                 <input
-
                   id="exp_dt"
-
                   required
-
                   type="date"
-
                   value={expenseDate}
-
                   onChange={(e) => setExpenseDate(e.target.value)}
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none touch-action-manipulation"
-
+                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none"
                 />
-
               </div>
-
-
 
               <div>
-
-                <label htmlFor="exp_desc" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Expenditure Description</label>
-
+                <label htmlFor="exp_desc" className="block text-[10px] font-black uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1.5">
+                  Expenditure Description
+                </label>
                 <textarea
-
                   id="exp_desc"
-
                   value={expenseDesc || ''}
-
                   onChange={(e) => setExpenseDesc(e.target.value)}
-
                   placeholder="e.g. AWS Multi-Region Node Cloud charges"
-
                   rows={2}
-
-                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none resize-none touch-action-manipulation"
-
+                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] dark:bg-[#0b1329]/60 border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white placeholder-[#94a3b8] focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7] transition-all outline-none resize-none"
                 />
-
               </div>
-
             </div>
 
-
-
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-805 flex items-center justify-end gap-2.5">
-
+            {/* Footer */}
+            <div className="px-5 py-3.5 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 flex items-center justify-end gap-3">
               <button
-
                 type="button"
-
                 onClick={() => setIsExpenseLoggerOpen(false)}
-
-                className="px-3.5 py-1.5 text-xs text-slate-550 font-medium cursor-pointer hover:bg-slate-5"
-
+                className="px-4 py-2 bg-white hover:bg-slate-100 dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#64748b] dark:text-[#94a3b8] border border-slate-200 dark:border-[#223269] rounded-xl text-xs font-bold transition-all cursor-pointer"
               >
-
                 Cancel
-
               </button>
-
               <button
                 type="submit"
-                className="px-5 py-1.5 bg-rose-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer active:scale-95"
+                className="px-5 py-2 bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-[#0284c7]/25 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
                 Log Expense
               </button>
@@ -17005,6 +17146,12 @@ export default function Dashboard({
               </div>
             </div>
           </div>
+        )}
+
+        {showWelcomeTrialModal && (
+          <WelcomeTrialModal
+            onClose={() => dismissWelcomeTrialModal(subscription?.user_id)}
+          />
         )}
 
     </div>

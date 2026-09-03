@@ -234,8 +234,13 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
         
         setSuccessMsg('Successfully authenticated! Redirecting...');
         setTimeout(() => {
-          window.location.href = '/dashboard';
-        }, 1500);
+          if (onNavigate) {
+            onNavigate('/invoices');
+          } else if (typeof window !== 'undefined') {
+            window.history.pushState(null, '', '/invoices');
+            window.dispatchEvent(new Event('popstate'));
+          }
+        }, 800);
       }
     } catch (err: any) {
       setFormErrors({ otp: err.message || 'OTP verification failed.' });
@@ -301,17 +306,34 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
         if (data.user && !data.session) {
           // Immediately upsert Starter subscription on signup
           try {
-            await supabase.from('subscriptions').upsert({
-              user_id: data.user.id,
-              plan_name: 'Free',
-              plan_type: 'free',
-              status: 'active',
-              expires_at: null,
-              renews_at: null,
-              user_email: formData.email || null,
-              user_phone: formData.phone || null,
-              updated_at: new Date().toISOString(),
-            }, { onConflict: 'user_id' });
+            const lockKey = `upgrade_lock_${data.user.id}`;
+            const lockTime = typeof window !== 'undefined' ? localStorage.getItem(lockKey) : null;
+            if (lockTime && Date.now() - parseInt(lockTime) < 10000) {
+              console.warn('[Signup] Skipping Free plan write — upgrade lock active for user:', data.user.id);
+            } else {
+              const { data: currentSub } = await supabase
+                .from('subscriptions')
+                .select('plan_type, status')
+                .eq('user_id', data.user.id)
+                .maybeSingle();
+
+              if (currentSub && (currentSub.status === 'active' || currentSub.status === 'trialing')) {
+                console.warn('[Signup] Blocked Free plan overwrite — user has active/trialing subscription:', currentSub.plan_type, currentSub.status);
+              } else {
+                console.log('[Signup] Creating Free starter subscription for new user');
+                await supabase.from('subscriptions').upsert({
+                  user_id: data.user.id,
+                  plan_name: 'Free',
+                  plan_type: 'free',
+                  status: 'active',
+                  expires_at: null,
+                  renews_at: null,
+                  user_email: formData.email || null,
+                  user_phone: formData.phone || null,
+                  updated_at: new Date().toISOString(),
+                }, { onConflict: 'user_id' });
+              }
+            }
           } catch (subErr) {
             console.warn('[Signup Subscription Warning]', subErr);
           }
@@ -335,17 +357,34 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
 
           // Immediately upsert Starter subscription on signup
           try {
-            await supabase.from('subscriptions').upsert({
-              user_id: data.user.id,
-              plan_name: 'Free',
-              plan_type: 'free',
-              status: 'active',
-              expires_at: null,
-              renews_at: null,
-              user_email: formData.email || null,
-              user_phone: formData.phone || null,
-              updated_at: new Date().toISOString(),
-            }, { onConflict: 'user_id' });
+            const lockKey = `upgrade_lock_${data.user.id}`;
+            const lockTime = typeof window !== 'undefined' ? localStorage.getItem(lockKey) : null;
+            if (lockTime && Date.now() - parseInt(lockTime) < 10000) {
+              console.warn('[Signup] Skipping Free plan write — upgrade lock active for user:', data.user.id);
+            } else {
+              const { data: currentSub } = await supabase
+                .from('subscriptions')
+                .select('plan_type, status')
+                .eq('user_id', data.user.id)
+                .maybeSingle();
+
+              if (currentSub && (currentSub.status === 'active' || currentSub.status === 'trialing')) {
+                console.warn('[Signup] Blocked Free plan overwrite — user has active/trialing subscription:', currentSub.plan_type, currentSub.status);
+              } else {
+                console.log('[Signup] Creating Free starter subscription for new user');
+                await supabase.from('subscriptions').upsert({
+                  user_id: data.user.id,
+                  plan_name: 'Free',
+                  plan_type: 'free',
+                  status: 'active',
+                  expires_at: null,
+                  renews_at: null,
+                  user_email: formData.email || null,
+                  user_phone: formData.phone || null,
+                  updated_at: new Date().toISOString(),
+                }, { onConflict: 'user_id' });
+              }
+            }
           } catch (subErr) {
             console.warn('[Signup Subscription Warning]', subErr);
           }
@@ -353,8 +392,13 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
           localStorage.setItem('invoice_maker_biz_profile', JSON.stringify(initProf));
           setSuccessMsg('Welcome aboard! Redirecting...');
           setTimeout(() => {
-            window.location.href = '/dashboard';
-          }, 1500);
+            if (onNavigate) {
+              onNavigate('/invoices');
+            } else if (typeof window !== 'undefined') {
+              window.history.pushState(null, '', '/invoices');
+              window.dispatchEvent(new Event('popstate'));
+            }
+          }, 800);
         }
       } else if (authMode === 'forgot-password') {
         if (!isSupabaseConfigured) {
@@ -397,8 +441,13 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
           if (error) throw error;
           setSuccessMsg('Welcome back! Redirecting...');
           setTimeout(() => {
-            window.location.href = '/dashboard';
-          }, 1500);
+            if (onNavigate) {
+              onNavigate('/invoices');
+            } else if (typeof window !== 'undefined') {
+              window.history.pushState(null, '', '/invoices');
+              window.dispatchEvent(new Event('popstate'));
+            }
+          }, 800);
         }
       }
     } catch (err: any) {

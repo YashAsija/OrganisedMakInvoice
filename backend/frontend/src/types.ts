@@ -309,3 +309,14 @@ export interface InvoiceTemplate {
 
 
 export type TaxClassification = any;
+
+export interface MasterVendor { id: string; name?: string; company?: string; email?: string; phone?: string; address?: string; category?: string; [key: string]: any; }
+export interface MasterHsnCode { id: string; code?: string; description?: string; gstRate?: number; [key: string]: any; }
+export interface MasterGlAccount { id: string; code?: string; name?: string; type?: string; [key: string]: any; }
+export interface MasterMaterial { id: string; name?: string; rate?: number; hsn?: string; uom?: string; category?: string; [key: string]: any; }
+export interface MasterCategory { id: string; name?: string; description?: string; [key: string]: any; }
+export interface MasterSubCategory { id: string; category?: string; name?: string; [key: string]: any; }
+export interface MasterMapping { id: string; item?: string; glAccount?: string; taxRate?: number; [key: string]: any; }
+export interface MasterPackingUnit { id: string; name?: string; [key: string]: any; }
+export interface MasterMeasurementUnit { id: string; name?: string; code?: string; [key: string]: any; }
+

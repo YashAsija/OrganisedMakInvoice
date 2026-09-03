@@ -1,0 +1,416 @@
+﻿
+> frontend@0.1.0 lint
+> eslint
+
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\App.tsx
+     6:71  warning  'hashPin' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   315:16  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+   329:16  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+   671:6   warning  React Hook useEffect has missing dependencies: 'loadLocalData', 'profile.address', 'profile.country', 'profile.currency', 'profile.currencySymbol', 'profile.customTaxName', 'profile.customTaxPercentage', 'profile.defaultTaxRate', 'profile.displayName', 'profile.email', 'profile.logoUrl', 'profile.name', 'profile.ownerName', 'profile.pan', 'profile.phone', 'profile.signature', 'profile.state', 'profile.stateCode', 'profile.taxId', and 'profile.taxMode'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+   791:17  warning  'data' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+  1392:6   warning  React Hook useEffect has missing dependencies: 'invoices' and 'suffix'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/exhaustive-deps
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\app\layout.tsx
+  41:9  warning  Custom fonts not added in `pages/_document.js` will only load for a single page. This is discouraged. See: https://nextjs.org/docs/messages/no-page-custom-font  @next/next/no-page-custom-font
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\AuthScreen.tsx
+    5:3   warning  'Lock' is defined but never used              @typescript-eslint/no-unused-vars
+    7:3   warning  'User' is defined but never used              @typescript-eslint/no-unused-vars
+    8:3   warning  'Building2' is defined but never used         @typescript-eslint/no-unused-vars
+   12:3   warning  'UserPlus' is defined but never used          @typescript-eslint/no-unused-vars
+   14:3   warning  'ArrowRight' is defined but never used        @typescript-eslint/no-unused-vars
+  132:23  warning  'session' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\BiometricVerification.tsx
+   6:3   warning  'hashPin' is defined but never used            @typescript-eslint/no-unused-vars
+   7:3   warning  'hashPinPBKDF2' is defined but never used      @typescript-eslint/no-unused-vars
+  28:10  warning  'settings' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\BusinessProfileModal.tsx
+     2:36   warning  'CreditCard' is defined but never used                                                                           @typescript-eslint/no-unused-vars
+     2:61   warning  'Sparkles' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+     2:193  warning  'SlidersHorizontal' is defined but never used                                                                    @typescript-eslint/no-unused-vars
+     2:212  warning  'Hash' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+     2:218  warning  'FileText' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+    38:10   warning  'phone' is assigned a value but never used                                                                       @typescript-eslint/no-unused-vars
+    43:10   warning  'defaultTaxRate' is assigned a value but never used                                                              @typescript-eslint/no-unused-vars
+   421:6    warning  React Hook useEffect has a missing dependency: 'isOnboarding'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   745:6    warning  React Hook useEffect has a missing dependency: 'signature'. Either include it or remove the dependency array     react-hooks/exhaustive-deps
+   995:45   warning  'sessionErr' is assigned a value but never used                                                                  @typescript-eslint/no-unused-vars
+  1058:45   warning  'sessionErr' is assigned a value but never used                                                                  @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\ContactPage.tsx
+   5:3   warning  'ChevronDown' is defined but never used                     @typescript-eslint/no-unused-vars
+   7:3   warning  'Menu' is defined but never used                            @typescript-eslint/no-unused-vars
+   8:3   warning  'X' is defined but never used                               @typescript-eslint/no-unused-vars
+  10:3   warning  'Layers' is defined but never used                          @typescript-eslint/no-unused-vars
+  11:3   warning  'BookOpen' is defined but never used                        @typescript-eslint/no-unused-vars
+  12:3   warning  'CreditCard' is defined but never used                      @typescript-eslint/no-unused-vars
+  13:3   warning  'HelpCircle' is defined but never used                      @typescript-eslint/no-unused-vars
+  16:3   warning  'ArrowRight' is defined but never used                      @typescript-eslint/no-unused-vars
+  25:58  warning  'onGoogleLogin' is defined but never used                   @typescript-eslint/no-unused-vars
+  26:10  warning  'isMobileNavOpen' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  26:27  warning  'setIsMobileNavOpen' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  27:10  warning  'selectedLanguage' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  27:28  warning  'setSelectedLanguage' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  28:10  warning  'isLangDropdownOpen' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  28:30  warning  'setIsLangDropdownOpen' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\Dashboard.tsx
+     8:3   warning  'Sparkles' is defined but never used                          @typescript-eslint/no-unused-vars
+    12:3   warning  'AlertCircle' is defined but never used                       @typescript-eslint/no-unused-vars
+    13:3   warning  'Wifi' is defined but never used                              @typescript-eslint/no-unused-vars
+    14:3   warning  'WifiOff' is defined but never used                           @typescript-eslint/no-unused-vars
+    15:3   warning  'Sun' is defined but never used                               @typescript-eslint/no-unused-vars
+    16:3   warning  'Moon' is defined but never used                              @typescript-eslint/no-unused-vars
+    19:3   warning  'Lock' is defined but never used                              @typescript-eslint/no-unused-vars
+    20:3   warning  'Briefcase' is defined but never used                         @typescript-eslint/no-unused-vars
+    22:3   warning  'Clock' is defined but never used                             @typescript-eslint/no-unused-vars
+    25:3   warning  'LogIn' is defined but never used                             @typescript-eslint/no-unused-vars
+    27:3   warning  'Sparkle' is defined but never used                           @typescript-eslint/no-unused-vars
+    30:3   warning  'Calendar' is defined but never used                          @typescript-eslint/no-unused-vars
+    31:3   warning  'DollarSign' is defined but never used                        @typescript-eslint/no-unused-vars
+    32:3   warning  'ArrowRight' is defined but never used                        @typescript-eslint/no-unused-vars
+    39:14  warning  'PrintIcon' is defined but never used                         @typescript-eslint/no-unused-vars
+    41:3   warning  'Check' is defined but never used                             @typescript-eslint/no-unused-vars
+    60:10  warning  'BUSINESS_TEMPLATES' is defined but never used                @typescript-eslint/no-unused-vars
+   112:3   warning  'presets' is defined but never used                           @typescript-eslint/no-unused-vars
+   115:3   warning  'isOnline' is defined but never used                          @typescript-eslint/no-unused-vars
+   118:3   warning  'userEmail' is defined but never used                         @typescript-eslint/no-unused-vars
+   119:3   warning  'onLogin' is defined but never used                           @typescript-eslint/no-unused-vars
+   126:3   warning  'onLoadPresetTemplate' is defined but never used              @typescript-eslint/no-unused-vars
+   129:3   warning  'onSyncLocalInvoices' is defined but never used               @typescript-eslint/no-unused-vars
+   148:10  warning  'isMasterExpanded' is assigned a value but never used         @typescript-eslint/no-unused-vars
+   148:28  warning  'setIsMasterExpanded' is assigned a value but never used      @typescript-eslint/no-unused-vars
+   149:10  warning  'isCatalogExpanded' is assigned a value but never used        @typescript-eslint/no-unused-vars
+   149:29  warning  'setIsCatalogExpanded' is assigned a value but never used     @typescript-eslint/no-unused-vars
+   283:18  warning  'e' is defined but never used                                 @typescript-eslint/no-unused-vars
+   301:18  warning  'e' is defined but never used                                 @typescript-eslint/no-unused-vars
+  1112:43  warning  'rowIdx' is defined but never used                            @typescript-eslint/no-unused-vars
+  1283:9   warning  'renderTrendChartSection' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  1498:9   warning  'handleExportAllCSV' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  1565:10  warning  'previewDataUri' is assigned a value but never used           @typescript-eslint/no-unused-vars
+  1566:10  warning  'isPreviewLoading' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  1651:12  warning  'resolveTaxMode' is defined but never used                    @typescript-eslint/no-unused-vars
+  3699:17  warning  'initials' is assigned a value but never used                 @typescript-eslint/no-unused-vars
+  4260:31  warning  'idx' is defined but never used                               @typescript-eslint/no-unused-vars
+  4611:30  warning  'e' is defined but never used                                 @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\GuidePage.tsx
+   4:3   warning  'Globe' is defined but never used                           @typescript-eslint/no-unused-vars
+   5:3   warning  'ChevronDown' is defined but never used                     @typescript-eslint/no-unused-vars
+   6:3   warning  'Check' is defined but never used                           @typescript-eslint/no-unused-vars
+   7:3   warning  'Menu' is defined but never used                            @typescript-eslint/no-unused-vars
+   8:3   warning  'X' is defined but never used                               @typescript-eslint/no-unused-vars
+  12:3   warning  'CreditCard' is defined but never used                      @typescript-eslint/no-unused-vars
+  13:3   warning  'HelpCircle' is defined but never used                      @typescript-eslint/no-unused-vars
+  14:3   warning  'Mail' is defined but never used                            @typescript-eslint/no-unused-vars
+  17:3   warning  'Sparkles' is defined but never used                        @typescript-eslint/no-unused-vars
+  26:56  warning  'onGoogleLogin' is defined but never used                   @typescript-eslint/no-unused-vars
+  27:10  warning  'isMobileNavOpen' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  27:27  warning  'setIsMobileNavOpen' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  28:10  warning  'selectedLanguage' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  28:28  warning  'setSelectedLanguage' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  29:10  warning  'isLangDropdownOpen' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  29:30  warning  'setIsLangDropdownOpen' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\Homepage.tsx
+    9:3   warning  'FileDown' is defined but never used                       @typescript-eslint/no-unused-vars
+   13:3   warning  'Laptop' is defined but never used                         @typescript-eslint/no-unused-vars
+   14:3   warning  'Play' is defined but never used                           @typescript-eslint/no-unused-vars
+   16:3   warning  'LogIn' is defined but never used                          @typescript-eslint/no-unused-vars
+   17:3   warning  'UserPlus' is defined but never used                       @typescript-eslint/no-unused-vars
+   19:3   warning  'BarChart3' is defined but never used                      @typescript-eslint/no-unused-vars
+   24:3   warning  'ShieldCheck' is defined but never used                    @typescript-eslint/no-unused-vars
+   26:3   warning  'Phone' is defined but never used                          @typescript-eslint/no-unused-vars
+   28:3   warning  'KeyRound' is defined but never used                       @typescript-eslint/no-unused-vars
+   29:3   warning  'RefreshCw' is defined but never used                      @typescript-eslint/no-unused-vars
+   32:3   warning  'DollarSign' is defined but never used                     @typescript-eslint/no-unused-vars
+   48:3   warning  'onGoogleLogin' is defined but never used                  @typescript-eslint/no-unused-vars
+   51:3   warning  'isOnline' is defined but never used                       @typescript-eslint/no-unused-vars
+   56:10  warning  'isAuthModalOpen' is assigned a value but never used       @typescript-eslint/no-unused-vars
+   56:27  warning  'setIsAuthModalOpen' is assigned a value but never used    @typescript-eslint/no-unused-vars
+   58:23  warning  'setLoginMethod' is assigned a value but never used        @typescript-eslint/no-unused-vars
+   59:20  warning  'setFormData' is assigned a value but never used           @typescript-eslint/no-unused-vars
+   67:20  warning  'setOtpValue' is assigned a value but never used           @typescript-eslint/no-unused-vars
+   68:10  warning  'isLoading' is assigned a value but never used             @typescript-eslint/no-unused-vars
+   69:10  warning  'successMsg' is assigned a value but never used            @typescript-eslint/no-unused-vars
+   78:10  warning  'isContactOpen' is assigned a value but never used         @typescript-eslint/no-unused-vars
+   78:25  warning  'setIsContactOpen' is assigned a value but never used      @typescript-eslint/no-unused-vars
+   79:10  warning  'contactForm' is assigned a value but never used           @typescript-eslint/no-unused-vars
+   79:23  warning  'setContactForm' is assigned a value but never used        @typescript-eslint/no-unused-vars
+   80:10  warning  'contactSubmitted' is assigned a value but never used      @typescript-eslint/no-unused-vars
+   80:28  warning  'setContactSubmitted' is assigned a value but never used   @typescript-eslint/no-unused-vars
+   81:10  warning  'contactLoading' is assigned a value but never used        @typescript-eslint/no-unused-vars
+   81:26  warning  'setContactLoading' is assigned a value but never used     @typescript-eslint/no-unused-vars
+   84:10  warning  'formErrors' is assigned a value but never used            @typescript-eslint/no-unused-vars
+   87:10  warning  'isYearly' is assigned a value but never used              @typescript-eslint/no-unused-vars
+   87:20  warning  'setIsYearly' is assigned a value but never used           @typescript-eslint/no-unused-vars
+   92:10  warning  'taxModeSelection' is assigned a value but never used      @typescript-eslint/no-unused-vars
+   92:28  warning  'setTaxModeSelection' is assigned a value but never used   @typescript-eslint/no-unused-vars
+   93:10  warning  'showcaseColor' is assigned a value but never used         @typescript-eslint/no-unused-vars
+   93:25  warning  'setShowcaseColor' is assigned a value but never used      @typescript-eslint/no-unused-vars
+   94:10  warning  'showcaseWatermark' is assigned a value but never used     @typescript-eslint/no-unused-vars
+   94:29  warning  'setShowcaseWatermark' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   97:10  warning  'catalogCategory' is assigned a value but never used       @typescript-eslint/no-unused-vars
+   97:27  warning  'setCatalogCategory' is assigned a value but never used    @typescript-eslint/no-unused-vars
+   98:10  warning  'newExpenseAmount' is assigned a value but never used      @typescript-eslint/no-unused-vars
+   98:28  warning  'setNewExpenseAmount' is assigned a value but never used   @typescript-eslint/no-unused-vars
+   99:10  warning  'demoExpenses' is assigned a value but never used          @typescript-eslint/no-unused-vars
+   99:24  warning  'setDemoExpenses' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  105:10  warning  'demoInvoiceItems' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  105:28  warning  'setDemoInvoiceItems' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  112:10  warning  'demoPinCode' is assigned a value but never used           @typescript-eslint/no-unused-vars
+  112:23  warning  'setDemoPinCode' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  113:10  warning  'isDemoPinEnabled' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  113:28  warning  'setIsDemoPinEnabled' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  114:10  warning  'isDemoBioEnabled' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  114:28  warning  'setIsDemoBioEnabled' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  165:10  warning  'langNotice' is assigned a value but never used            @typescript-eslint/no-unused-vars
+  255:9   warning  'strength' is assigned a value but never used              @typescript-eslint/no-unused-vars
+  257:9   warning  'handleFormSubmit' is assigned a value but never used      @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\InvoiceModal.tsx
+    1:47   warning  'useRef' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+    2:34   warning  'Sparkles' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+    2:44   warning  'AlertCircle' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+    2:70   warning  'Settings' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+    2:80   warning  'Download' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+    2:90   warning  'Save' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+    2:96   warning  'FileText' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+    2:106  warning  'ArrowDown' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+    4:10   warning  'EditableField' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+    6:10   warning  'toPng' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+    7:8    warning  'jsPDF' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+   83:18   warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   94:10   warning  'previewPdfUrl' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+   94:25   warning  'setPreviewPdfUrl' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   95:10   warning  'pdfZoom' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+   95:19   warning  'setPdfZoom' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  133:10   warning  'isAiLoading' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+  134:10   warning  'isAiGeneratingDescription' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  215:17   warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  238:17   warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  251:17   warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  419:6    warning  React Hook useEffect has missing dependencies: 'invoices', 'profile.additionalTaxes', 'profile.country', 'profile.customTaxName', 'profile.customTaxPercentage', 'profile.invoicePrefix', 'profile.startingInvoiceNumber', 'profile.state', and 'profile.taxMode'. Either include them or remove the dependency array. If 'setCompanyState' needs the current value of 'profile.state', you can also switch to useReducer instead of useState and read 'profile.state' in the reducer  react-hooks/exhaustive-deps
+  439:6    warning  React Hook useEffect has missing dependencies: 'driverMobile', 'ewayBillNo', 'grRrNo', 'station', 'transport', and 'vehicleNo'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                     react-hooks/exhaustive-deps
+  454:6    warning  React Hook useEffect has a missing dependency: 'items.length'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                        react-hooks/exhaustive-deps
+  530:9    warning  'pastTypes' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  559:9    warning  'applyCatalogPreset' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+  625:9    warning  'handleAIParseInvoice' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+  678:9    warning  'handleAIGenerateDescription' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+  903:9    warning  'handleUpdateItemCustomTax' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  912:9    warning  'handleFillCustomTaxColumn' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  924:9    warning  'handleUpdateItem' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\PricingPage.tsx
+  15:58  warning  'onGoogleLogin' is defined but never used  @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\PublicNavbar.tsx
+  11:40  warning  'theme' is defined but never used  @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\SettingsPage.tsx
+    3:20  warning  'BellOff' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+    3:29  warning  'Lock' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+    5:3   warning  'Globe' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+    5:19  warning  'FileText' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+    5:40  warning  'Eye' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+    5:45  warning  'EyeOff' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+    6:3   warning  'Smartphone' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+    6:24  warning  'Zap' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+  135:27  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\SettingsPage.tsx:135:27
+  133 |                 label="Compact Layout"
+  134 |                 description="Reduce spacing and padding for a denser workspace view"
+> 135 |                 control={<Toggle checked={compactMode} onChange={() => setCompactMode(v => !v)} />}
+      |                           ^^^^^^ This component is created during render
+  136 |               />
+  137 |               <Row
+  138 |                 label="Invoice Font"
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\SettingsPage.tsx:61:18
+  59 |   ];
+  60 |
+> 61 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 62 |     <button
+     | ^^^^^^^^^^^
+> 63 |       type="button"
+     ΓÇª
+     | ^^^^^^^^^^^
+> 72 |     </button>
+     | ^^^^^^^^^^^
+> 73 |   );
+     | ^^^^ The component is created during render here
+  74 |
+  75 |
+  76 |                                                                                                                                                                                                                 react-hooks/static-components
+  174:27  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\SettingsPage.tsx:174:27
+  172 |                 label="Invoice Activity Alerts"
+  173 |                 description="Get notified on invoice creation, edit, and deletion events"
+> 174 |                 control={<Toggle checked={notifInvoice} onChange={() => setNotifInvoice(v => !v)} />}
+      |                           ^^^^^^ This component is created during render
+  175 |               />
+  176 |               <Row
+  177 |                 label="Payment Reminders"
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\SettingsPage.tsx:61:18
+  59 |   ];
+  60 |
+> 61 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 62 |     <button
+     | ^^^^^^^^^^^
+> 63 |       type="button"
+     ΓÇª
+     | ^^^^^^^^^^^
+> 72 |     </button>
+     | ^^^^^^^^^^^
+> 73 |   );
+     | ^^^^ The component is created during render here
+  74 |
+  75 |
+  76 |                                                                                                                                                                                            react-hooks/static-components
+  179:27  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\SettingsPage.tsx:179:27
+  177 |                 label="Payment Reminders"
+  178 |                 description="Receive smart reminders when invoices approach due dates"
+> 179 |                 control={<Toggle checked={notifReminders} onChange={() => setNotifReminders(v => !v)} />}
+      |                           ^^^^^^ This component is created during render
+  180 |               />
+  181 |               <Row
+  182 |                 label="Cloud Sync Alerts"
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\SettingsPage.tsx:61:18
+  59 |   ];
+  60 |
+> 61 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 62 |     <button
+     | ^^^^^^^^^^^
+> 63 |       type="button"
+     ΓÇª
+     | ^^^^^^^^^^^
+> 72 |     </button>
+     | ^^^^^^^^^^^
+> 73 |   );
+     | ^^^^ The component is created during render here
+  74 |
+  75 |
+  76 |                                                                                                                                                                                                 react-hooks/static-components
+  184:27  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\SettingsPage.tsx:184:27
+  182 |                 label="Cloud Sync Alerts"
+  183 |                 description="Notifications on successful or failed cloud synchronization"
+> 184 |                 control={<Toggle checked={notifCloud} onChange={() => setNotifCloud(v => !v)} />}
+      |                           ^^^^^^ This component is created during render
+  185 |               />
+  186 |               <div className="mt-6 p-4 bg-[#FCFAF7] dark:bg-zinc-950 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800">
+  187 |                 <span className="text-[9px] uppercase font-extrabold text-[#64748b] block mb-2">Notification Channels</span>
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\SettingsPage.tsx:61:18
+  59 |   ];
+  60 |
+> 61 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 62 |     <button
+     | ^^^^^^^^^^^
+> 63 |       type="button"
+     ΓÇª
+     | ^^^^^^^^^^^
+> 72 |     </button>
+     | ^^^^^^^^^^^
+> 73 |   );
+     | ^^^^ The component is created during render here
+  74 |
+  75 |
+  76 |    react-hooks/static-components
+  222:27  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\SettingsPage.tsx:222:27
+  220 |                 label="Auto-Save Drafts"
+  221 |                 description="Automatically save invoice drafts while editing to prevent data loss"
+> 222 |                 control={<Toggle checked={autoSave} onChange={() => setAutoSave(v => !v)} />}
+      |                           ^^^^^^ This component is created during render
+  223 |               />
+  224 |               <div className="mt-6 p-4 bg-[#FCFAF7] dark:bg-zinc-950 rounded-xl border border-[#e2e8f0]/40 dark:border-zinc-800 space-y-3">
+  225 |                 <span className="text-[9px] uppercase font-extrabold text-[#64748b] block">Active Session</span>
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\SettingsPage.tsx:61:18
+  59 |   ];
+  60 |
+> 61 |   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 62 |     <button
+     | ^^^^^^^^^^^
+> 63 |       type="button"
+     ΓÇª
+     | ^^^^^^^^^^^
+> 72 |     </button>
+     | ^^^^^^^^^^^
+> 73 |   );
+     | ^^^^ The component is created during render here
+  74 |
+  75 |
+  76 |  react-hooks/static-components
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\SupportPage.tsx
+  3:24  warning  'Phone' is defined but never used         @typescript-eslint/no-unused-vars
+  3:41  warning  'ChevronRight' is defined but never used  @typescript-eslint/no-unused-vars
+  4:25  warning  'Zap' is defined but never used           @typescript-eslint/no-unused-vars
+  4:40  warning  'AlertCircle' is defined but never used   @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\TemplateBuilder\AdvancedStudio.tsx
+  3:37  warning  'Type' is defined but never used              @typescript-eslint/no-unused-vars
+  3:66  warning  'Smartphone' is defined but never used        @typescript-eslint/no-unused-vars
+  3:99  warning  'X' is defined but never used                 @typescript-eslint/no-unused-vars
+  5:10  warning  'TEMPLATE_PRESETS' is defined but never used  @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\TemplateBuilder\LivePreview.tsx
+   20:10  warning  'EditableField' is defined but never used         @typescript-eslint/no-unused-vars
+  460:9   warning  'shipCountry' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  742:21  warning  'isSecondCol' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  813:21  warning  'isSecondCol' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\TemplateBuilder\QuickBuilder.tsx
+  169:25  warning  'borderColors' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\TemplateBuilder\TemplateCreationHub.tsx
+   3:10  warning  'Layout' is defined but never used  @typescript-eslint/no-unused-vars
+  25:26  warning  'temp' is defined but never used    @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\components\TemplateManager.tsx
+    2:32  warning  'FileText' is defined but never used                    @typescript-eslint/no-unused-vars
+    2:80  warning  'Upload' is defined but never used                      @typescript-eslint/no-unused-vars
+   51:18  warning  'e' is defined but never used                           @typescript-eslint/no-unused-vars
+  208:9   warning  'handleImportClick' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  212:9   warning  'handleFileUpload' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  230:16  warning  'err' is defined but never used                         @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\lib\pdfExporter.ts
+  223:18  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  404:20  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  456:36  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  458:60  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+F:\Projects\MakInvoices\OrganisedMakInvoice\frontend\src\lib\presets.ts
+  93:9  warning  'defaultPf' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+Γ£û 222 problems (5 errors, 217 warnings)
+

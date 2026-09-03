@@ -1219,7 +1219,7 @@ export default function App() {
 
           // 1c. Realtime listener for Subscription table, Broadcast, & User updates (Strictly Isolated Per-User Account)
           const subscriptionChannel = supabase
-            .channel(`subscription_updates:${uid}`)
+            .channel(`subscription_updates:${uid}:${Date.now()}`)
             .on(
               'postgres_changes',
               { event: '*', schema: 'public', table: 'subscriptions' },

@@ -185,9 +185,10 @@ export default function Homepage({
         .trust-strip {
           background: var(--ink-panel); color: var(--text-dark-bg); padding: 22px 0; border-top: 1px solid var(--paper-line); border-bottom: 1px solid var(--paper-line);
         }
-        .trust-inner { display: flex; flex-wrap: wrap; gap: 10px 24px; justify-content: center; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; color: var(--text-dark-bg-dim); text-align: center; }
-        .trust-inner b { color: var(--text-dark-bg); font-weight: 600; }
-        .trust-inner .sep { color: var(--paper-line); }
+        .trust-inner { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: center; align-items: center; font-family: 'IBM Plex Sans', sans-serif; font-size: 0.85rem; color: var(--text-dark-bg-dim); text-align: center; }
+        .trust-inner b { color: var(--text-dark-bg); font-weight: 700; }
+        .trust-item { display: inline-flex; align-items: center; gap: 6px; }
+        .trust-inner .sep { color: var(--stamp-red); opacity: 0.5; font-weight: bold; }
 
         /* ---------- SECTION SHELL ---------- */
         section.block { padding: 90px 0; }
@@ -349,42 +350,40 @@ export default function Homepage({
         .footer-badge:hover { background: var(--stamp-red); color: #fff; border-color: var(--stamp-red); }
 
         /* ---------- MOBILE RESPONSIVENESS OVERRIDES ---------- */
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
           section.block { padding: 50px 0; }
           .hero { padding: 90px 0 35px; }
-          h1.hero-h1 { font-size: 1.85rem; margin: 0 0 14px; line-height: 1.15; }
-          .hero-sub { font-size: 0.92rem; margin: 0 0 20px; line-height: 1.5; }
+          h1.hero-h1 { font-size: 2.1rem; margin: 0 0 14px; line-height: 1.15; }
+          .hero-sub { font-size: 0.95rem; margin: 0 0 20px; line-height: 1.55; }
           .cta-row { gap: 10px; flex-direction: column; align-items: stretch; }
           .btn-primary, .btn-secondary { justify-content: center; width: 100%; text-align: center; }
           .btn-secondary { padding: 11px 0; border-bottom: 2px solid var(--stamp-red); }
-          .deck { height: 250px; margin-top: 20px; }
-          .doc { width: 145px; height: 200px; padding: 10px; }
-          .doc .tag { font-size: 0.48rem; padding: 2px 5px; top: -9px; left: 8px; }
-          .doc.d1 { transform: rotate(-9deg) translate(-45px, 4px); }
-          .doc.d2 { transform: rotate(-3deg) translate(-12px, -4px); }
-          .doc.d3 { transform: rotate(3deg) translate(12px, -2px); }
-          .doc.d4 { transform: rotate(9deg) translate(45px, 6px); }
-          .doc.d1:hover { transform: rotate(-9deg) translate(-50px, -2px) scale(1.02); }
-          .doc.d2:hover { transform: rotate(-3deg) translate(-16px, -6px) scale(1.02); }
-          .doc.d3:hover { transform: rotate(3deg) translate(16px, -4px) scale(1.02); }
-          .doc.d4:hover { transform: rotate(9deg) translate(50px, -2px) scale(1.02); }
-          .doc .brandline { margin-bottom: 6px; gap: 4px; }
-          .doc .brandbox { width: 10px; height: 10px; border-radius: 2px; }
-          .doc .brandtext { font-size: 0.42rem; line-height: 1.2; }
-          .doc .row { font-size: 0.42rem; margin-bottom: 4px; }
-          .doc .stamp { margin-top: 6px; padding: 2px 5px; font-size: 0.45rem; border-radius: 4px; }
-          .doc .sig { margin-top: 6px; font-size: 0.65rem; padding-top: 4px; }
+          .deck { height: 280px; margin-top: 20px; }
+          .doc { width: 170px; height: 230px; padding: 14px; }
+          .doc .tag { font-size: 0.52rem; padding: 3px 6px; top: -10px; left: 10px; }
+          .doc.d1 { transform: rotate(-6deg) translate(-35px, 4px); }
+          .doc.d2 { transform: rotate(-2deg) translate(-10px, -4px); }
+          .doc.d3 { transform: rotate(2deg) translate(10px, -2px); }
+          .doc.d4 { transform: rotate(6deg) translate(35px, 6px); }
+          .doc .brandline { margin-bottom: 8px; gap: 6px; }
+          .doc .brandbox { width: 14px; height: 14px; border-radius: 3px; }
+          .doc .brandtext { font-size: 0.5rem; line-height: 1.2; }
+          .doc .row { font-size: 0.5rem; margin-bottom: 5px; }
+          .doc .stamp { margin-top: 8px; padding: 2px 6px; font-size: 0.5rem; border-radius: 4px; }
+          .doc .sig { margin-top: 8px; font-size: 0.75rem; padding-top: 6px; }
           
           .trust-strip { padding: 14px 0; }
-          .trust-inner { gap: 6px 12px; font-size: 0.72rem; }
+          .trust-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.78rem; text-align: center; }
+          .trust-inner .sep { display: none; }
+          .trust-item { justify-content: center; background: var(--ink-panel-2); padding: 8px 10px; border-radius: 10px; border: 1px solid var(--paper-line); }
           
-          .overview-grid { gap: 24px; }
+          .overview-grid { gap: 28px; }
           .block-head { margin-bottom: 28px; }
           .comp-table th, .comp-table td { padding: 10px 8px; font-size: 0.75rem; }
           .comp-note { font-size: 0.82rem; margin-top: 16px; }
           
           .site-footer { padding-top: 36px; }
-          .footer-grid { gap: 20px; padding-bottom: 28px; }
+          .footer-grid { gap: 24px; padding-bottom: 28px; }
           .footer-bottom { padding: 14px 0; flex-direction: column; text-align: center; gap: 10px; }
         }
       ` }} />
@@ -395,10 +394,10 @@ export default function Homepage({
           <div className="logo-container group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <img src="/logo.svg" alt="MakInvoices Logo" className="w-10 h-10 object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300 shrink-0" />
             <div>
-              <span className="text-base font-black tracking-tight text-slate-805 dark:text-white block leading-none">
+              <span className="text-base font-black tracking-tight text-slate-800 dark:text-white block leading-none">
                 Mak<span style={{ color: '#0ea5e9' }}>Invoices</span>
               </span>
-              <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-500 block tracking-wider uppercase mt-1">Advanced Ledger Hub</span>
+              <span className="text-[9px] font-medium text-slate-500 dark:text-slate-400 tracking-wider uppercase block mt-0.5">Smart Invoicing Ledger</span>
             </div>
           </div>
           <div className="navlinks">
@@ -420,14 +419,21 @@ export default function Homepage({
       <header className="hero">
         <div className="wrap hero-grid">
           <div>
-            <div className="eyebrow">AI-Powered Billing</div>
-            <h1 className="hero-h1">Billing software that <em>thinks</em> with you — not just for you.</h1>
-            <p className="hero-sub">Build fully editable, interactive invoices layer by layer. Let AI draft the line items. Manage invoices, quotations, purchase orders, debit notes and credit notes — from one dashboard.</p>
+            <div className="eyebrow">
+              Smart Invoicing &amp; Billing Ledger
+            </div>
+            <h1 className="hero-h1">
+              Built Easy. Billed Better.
+              <span className="block mt-2.5 text-xl sm:text-2xl md:text-3xl font-normal text-[#0ea5e9] dark:text-[#38bdf8] italic font-serif">
+                Professional Tax Invoices &amp; Ledger Records.
+              </span>
+            </h1>
+            <p className="hero-sub">Generate tax-compliant invoices, quick bills, and purchase ledgers in seconds. Built for freelancers, retailers, and modern businesses that demand speed and accuracy.</p>
             <div className="cta-row">
               <button type="button" className="btn-primary" onClick={() => onNavigate('/signup')}>Create Your First Invoice Free →</button>
-              <button type="button" className="btn-secondary" onClick={() => handleNavScroll('features')}>▸ Watch how it works</button>
+              <button type="button" className="btn-secondary" onClick={() => handleNavScroll('features')}>▸ Explore Features</button>
             </div>
-            <div className="micro-trust">No credit card required · Tax-ready · Mobile, tablet & desktop</div>
+            <div className="micro-trust">Free Tier Available · No Credit Card Required · Instant A4 PDF Export</div>
           </div>
 
           <div className="deck" aria-label="Interactive invoice layers demo">
@@ -466,10 +472,13 @@ export default function Homepage({
 
       <div className="trust-strip">
         <div className="wrap trust-inner">
-          <span><b>10,000+</b> invoices generated</span><span className="sep">·</span>
-          <span><b>4.8/5</b> average rating</span><span className="sep">·</span>
-          <span>Trusted across <b>15+ countries</b></span><span className="sep">·</span>
-          <span>Bank-grade <b>encryption</b></span>
+          <div className="trust-item"><span><b>10,000+</b> invoices generated</span></div>
+          <span className="sep">·</span>
+          <div className="trust-item"><span><b>4.8/5</b> average rating</span></div>
+          <span className="sep">·</span>
+          <div className="trust-item"><span>Trusted across <b>15+ countries</b></span></div>
+          <span className="sep">·</span>
+          <div className="trust-item"><span>Bank-grade <b>encryption</b></span></div>
         </div>
       </div>
 
@@ -532,15 +541,15 @@ export default function Homepage({
             <p className="block-sub">Nine tools, one dashboard — built so beginners and accountants both feel at home.</p>
           </div>
           <div className="feat-grid">
-            <div className="feat-card"><div className="tab font-mono">AI</div><h3>AI Smart Billing</h3><p>Describe transactions naturally. AI drafts line items, rates, and updates total fields in your active invoice instantly.</p></div>
-            <div className="feat-card"><div className="tab font-mono">AI</div><h3>MakInvoices Live AI Chat</h3><p>AI Support trained on vector embeddings. Get instant guidance on A4 printing layout fixes, smart billing configurations, and exports.</p></div>
-            <div className="feat-card"><div className="tab font-mono">Inventory</div><h3>Smart Quantity Sync</h3><p>Adding existing items via the smart billing prompt automatically increments and accumulates quantities rather than creating repeated rows.</p></div>
-            <div className="feat-card"><div className="tab font-mono">Ledger</div><h3>Sales &amp; Purchase Ledgers</h3><p>Track both sales and purchases from the sidebar menu, complete with multi-column sorting and flexible filter options.</p></div>
-            <div className="feat-card"><div className="tab font-mono">Safety</div><h3>Persistent Client Profiles</h3><p>Changing a customer name automatically resets linked fields (Tax ID, Phone, Email, Region) so you never send an invoice with mismatched records.</p></div>
-            <div className="feat-card"><div className="tab font-mono">Design</div><h3>Bespoke Custom Templates</h3><p>Add logo files, custom border themes, signature drawings, and control printing options like background colors for official document formats.</p></div>
-            <div className="feat-card"><div className="tab font-mono">Tax</div><h3>Multi-Rate Tax Splits</h3><p>Automatically calculates split tax rates (e.g. dual-rate or tiered VAT/GST structures) and maps product tax codes to your regional tax registry.</p></div>
-            <div className="feat-card"><div className="tab font-mono">Formatting</div><h3>Region-Aware Number Formatting</h3><p>Automatically formats all revenue and ledger figures to match your country's local number standard.</p></div>
-            <div className="feat-card"><div className="tab font-mono">Auth</div><h3>Enterprise Auth Shield</h3><p>Full encryption of all ledger transactions and profiles using secure credential management and hardened backend authentication logic.</p></div>
+            <div className="feat-card"><div className="tab font-mono">Smart</div><h3>Smart Invoice Drafting</h3><p>Describe your billing line items naturally. The editor automatically generates rows, rates, quantities, and totals instantly.</p></div>
+            <div className="feat-card"><div className="tab font-mono">Support</div><h3>Instant Guidance Assistant</h3><p>Built-in help assistant provides step-by-step guidance on A4 printing layout fixes, smart billing configurations, and exports.</p></div>
+            <div className="feat-card"><div className="tab font-mono">Inventory</div><h3>Quantity Accumulation</h3><p>Adding existing catalog items automatically increments item quantities cleanly without cluttering your invoice with repeated rows.</p></div>
+            <div className="feat-card"><div className="tab font-mono">Ledger</div><h3>Sales &amp; Purchase Ledgers</h3><p>Track customer billing and supplier expenses from a unified dashboard with real-time search, sorting, and status tracking.</p></div>
+            <div className="feat-card"><div className="tab font-mono">Profile</div><h3>Client Profile Sync</h3><p>Selecting or updating a customer automatically populates linked GSTIN, phone, email, and state codes cleanly.</p></div>
+            <div className="feat-card"><div className="tab font-mono">Design</div><h3>Custom Template Studio</h3><p>Upload business logos, set custom color accents, draw digital signatures, and customize print borders for official A4 formats.</p></div>
+            <div className="feat-card"><div className="tab font-mono">Tax</div><h3>GST &amp; Split Tax Rules</h3><p>Automatically calculates split tax rates (CGST/SGST/IGST or dual VAT) and maps product tax codes to your regional registry.</p></div>
+            <div className="feat-card"><div className="tab font-mono">Currency</div><h3>Localized Number Formatting</h3><p>Formats currency figures and totals to match your regional number standards automatically.</p></div>
+            <div className="feat-card"><div className="tab font-mono">Security</div><h3>Bank-Grade Data Shield</h3><p>End-to-end transport encryption and cloud backups keep all your financial records and ledger data completely private and protected.</p></div>
           </div>
         </div>
       </section>
@@ -673,11 +682,11 @@ export default function Homepage({
                 <img src="/logo.svg" alt="MakInvoices Logo" />
                 <div className="footer-brand-text">
                   <span className="footer-brand-name">Mak<span>Invoices</span></span>
-                  <span className="footer-brand-sub">Advanced Ledger Hub</span>
+                  <span className="footer-brand-sub">Smart Invoicing Platform</span>
                 </div>
               </div>
               <p className="footer-tagline">
-                Invoicing and billing ledger for freelancers, retailers, <span className="hl">and finance teams</span>. Audit-ready by design.
+                Smart invoicing &amp; GST ledger platform for modern businesses and growing teams.
               </p>
             </div>
 

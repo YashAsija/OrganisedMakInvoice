@@ -90,6 +90,7 @@ export async function POST(req: NextRequest) {
         plan_name: finalPlanName,
         plan_type: finalPlanType,
         status: 'active',
+        activated_at: now.toISOString(),
         expires_at: expiresAt,
         renews_at: expiresAt,
         authorized_token_node: subIdToSave || null,
@@ -106,9 +107,16 @@ export async function POST(req: NextRequest) {
           console.error('[Paid Subscription Save Error]', error);
           return NextResponse.json({ error: error.message, success: false }, { status: 500 });
         }
-      }
 
-      if (resolvedUserId) {
+        // Seed fresh usage rows (1 month for monthly, 12 months for yearly)
+        try {
+          const { seedUsagePeriods } = await import('@/lib/subscriptionUtils');
+          const isYearlyPlan = billingMode === 'yearly' || billingMode === 'yearly_onetime' || billingMode === 'yearly_recurring';
+          await seedUsagePeriods(supabaseAdmin, resolvedUserId, isYearlyPlan, now);
+        } catch (seedErr) {
+          console.warn('[Razorpay Verify] Usage seed warning:', seedErr);
+        }
+
         await supabaseAdmin.from('users').update({ updatedAt: now.toISOString() }).eq('uid', resolvedUserId);
       }
     }

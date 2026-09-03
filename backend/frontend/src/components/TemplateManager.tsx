@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, LayoutTemplate, FileText, Check, Trash2, Edit2, Copy, Download, Upload, Search, Filter, ChevronDown, Lock } from 'lucide-react';
 import { InvoiceTemplate, BusinessProfile } from '../types';
 import { LivePreview } from './TemplateBuilder/LivePreview';
@@ -42,6 +43,11 @@ function TemplatePreview({ template, businessProfile }: { template: InvoiceTempl
 
 export default function TemplateManager({ businessProfile, subscriptionTier = 'free' }: { businessProfile?: BusinessProfile; subscriptionTier?: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise' }) {
   const { confirm } = useConfirm();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('makbills_custom_templates');
@@ -669,9 +675,9 @@ export default function TemplateManager({ businessProfile, subscriptionTier = 'f
         </div>
       </div>
       
-      {selectedTemplateForModal && (
+      {selectedTemplateForModal && isMounted && createPortal(
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-100"
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 bg-slate-950/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-100"
           onClick={(e) => {
             if (e.target === e.currentTarget) setSelectedTemplateForModal(null);
           }}
@@ -821,7 +827,8 @@ export default function TemplateManager({ businessProfile, subscriptionTier = 'f
               
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
