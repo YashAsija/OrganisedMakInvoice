@@ -4,7 +4,20 @@ import { useExpenses } from '../hooks/useExpenses';
 import { ExpensesPage } from './ExpensesPage';
 import { supabase } from '../lib/supabase';
 import { useSubscription } from '../hooks/useSubscription';
-import { pullMasterRegistriesFromCloud, pushMasterRegistriesToCloud, MasterRegistriesPayload, getLocalMasterRegistry, setLocalMasterRegistry } from '../lib/masterRegistrySync';
+import {
+  pullMasterRegistriesFromCloud,
+  pushMasterRegistriesToCloud,
+  MasterRegistriesPayload,
+  getLocalMasterRegistry,
+  setLocalMasterRegistry,
+  markRegistryKeyDeleted,
+  unmarkRegistryKeyDeleted,
+  isRegistryItemDeleted,
+  isPartyMatch,
+  mergePartyRecords,
+  deduplicatePartyList
+} from '../lib/masterRegistrySync';
+import { isPurchaseDocument } from '../lib/documentUtils';
 
 import * as XLSX from 'xlsx';
 
@@ -113,6 +126,7 @@ import {
   MinusCircle,
 
   Users2,
+  Layers,
 
   Truck,
 
@@ -276,7 +290,7 @@ interface DashboardProps {
 
   onSaveClient: (client: ClientProfile) => void;
 
-  onDeleteClient: (id: string) => void;
+  onDeleteClient: (id: string, skipConfirm?: boolean) => void;
 
   onSaveExpense: (expense: Expense) => void;
 
@@ -983,10 +997,24 @@ export default function Dashboard({
 
 
   // Reusable Master & Catalog form builders state
-
   const [editingMasterItem, setEditingMasterItem] = useState<MasterItemType | null>(null);
+  const [isMasterModalOpen, setIsMasterModalOpen] = useState(false);
 
-  const [isMasterModalOpen, setIsMasterModalOpen] = useState(false);  // Master databases initialized strictly from user-scoped storage (defaults to empty array)
+  const [deletedRegistryRev, setDeletedRegistryRev] = useState(0);
+
+  useEffect(() => {
+    const handleRev = () => {
+      setDeletedRegistryRev(r => r + 1);
+    };
+    window.addEventListener('makbills_registry_deleted', handleRev);
+    window.addEventListener('makbills_sync_vendors', handleRev);
+    window.addEventListener('makbills_sync_actual_vendors', handleRev);
+    return () => {
+      window.removeEventListener('makbills_registry_deleted', handleRev);
+      window.removeEventListener('makbills_sync_vendors', handleRev);
+      window.removeEventListener('makbills_sync_actual_vendors', handleRev);
+    };
+  }, []);  // Master databases initialized strictly from user-scoped storage (defaults to empty array)
   const [vendors, setVendors] = useState<MasterVendor[]>(() => {
     return getLocalMasterRegistry('makbills_masters_vendors', suffix, []).filter(item => {
       const cat = (item.category || '').toLowerCase();
@@ -1047,7 +1075,114 @@ export default function Dashboard({
     ]);
   });
 
-  // Cross-Device Master Registries Sync & Account-Switch Reset
+  // Master Database Unified Section State & Aggregator
+  const [masterDbFilter, setMasterDbFilter] = useState<'all' | 'clients' | 'vendors' | 'both'>('all');
+  const [isMasterDbExpanded, setIsMasterDbExpanded] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (['master_database', 'master_vendor', 'master_actual_vendor'].includes(activeTab)) {
+      setIsMasterDbExpanded(true);
+    }
+  }, [activeTab]);
+
+  const masterDatabaseList = useMemo(() => {
+    const list: any[] = [];
+
+    const addOrMerge = (incoming: any) => {
+      if (!incoming) return;
+      if (isRegistryItemDeleted(incoming, suffix)) return;
+
+      const idx = list.findIndex(item => isPartyMatch(item, incoming));
+      if (idx >= 0) {
+        list[idx] = mergePartyRecords(list[idx], incoming);
+      } else {
+        const gstinVal = incoming.gstin || incoming.taxId || incoming.clientGstin || '';
+        const panVal = incoming.pan || incoming.clientPan || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+        const comp = incoming.company || incoming.companyName || incoming.clientCompanyName || incoming.clientCompany || '';
+        const name = incoming.name || incoming.clientName || incoming.contactPerson || comp || 'Unnamed';
+        const partyType = incoming.partyType || (incoming.category?.includes('Vendor') ? 'Vendor' : 'Client');
+        const displayName = comp && comp !== name ? `${comp} (${name})` : name;
+
+        list.push({
+          id: incoming.id || `m_${Math.random().toString(36).substr(2, 9)}`,
+          name,
+          company: comp,
+          companyName: comp,
+          displayName,
+          email: incoming.email || incoming.clientEmail || '',
+          phone: incoming.phone || incoming.mobile || incoming.clientPhone || '',
+          address: incoming.address || incoming.clientAddress || '',
+          state: incoming.state || incoming.clientState || '',
+          country: incoming.country || incoming.clientCountry || 'India',
+          gstin: gstinVal,
+          taxId: gstinVal,
+          pan: panVal,
+          category: incoming.category || partyType,
+          partyType,
+          documentCount: incoming.documentCount || 0,
+          totalBilled: incoming.totalBilled || 0,
+        });
+      }
+    };
+
+    // 1. Add Client database entries (vendors)
+    (vendors || []).forEach((v) => {
+      addOrMerge({ ...v, partyType: 'Client', category: v.category || 'Client' });
+    });
+
+    // 2. Add Vendor database entries (actualVendors)
+    (actualVendors || []).forEach((v) => {
+      addOrMerge({ ...v, partyType: 'Vendor', category: v.category || 'Vendor' });
+    });
+
+    // 3. Add Supabase clients prop
+    (clients || []).forEach((c) => {
+      addOrMerge({ ...c, partyType: 'Client', category: 'Client' });
+    });
+
+    // 4. Incorporate billed clients & vendors from invoices & purchase bills
+    (invoices || []).forEach((inv) => {
+      if (inv.isDeleted) return;
+      const rawType = (inv.invoiceType || '').toLowerCase();
+      const isPurchase = ['purchases', 'purchase_bill', 'purchase', 'purchase_order', 'po', 'purchase_debit_note'].includes(rawType);
+      const partyName = inv.clientName || (inv as any).vendorName || '';
+      const compName = (inv as any).clientCompanyName || (inv as any).companyName || '';
+      const gstinVal = (inv as any).clientGstin || (inv as any).taxId || (inv as any).gstin || '';
+      const email = inv.clientEmail || (inv as any).email || '';
+      const phone = inv.clientPhone || (inv as any).phone || '';
+
+      if (!partyName && !compName && !gstinVal && !email && !phone) return;
+
+      const invoicePartyObj = {
+        name: partyName || compName,
+        company: compName,
+        companyName: compName,
+        gstin: gstinVal,
+        taxId: gstinVal,
+        email,
+        phone,
+        mobile: phone,
+        address: inv.clientAddress || '',
+        state: (inv as any).clientState || '',
+        country: (inv as any).clientCountry || 'India',
+        pan: (inv as any).clientPan || (inv as any).pan || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : ''),
+        partyType: isPurchase ? 'Vendor' : 'Client',
+        category: isPurchase ? 'Billed Vendor' : 'Billed Client',
+        documentCount: 1,
+        totalBilled: inv.grandTotal || 0,
+      };
+
+      addOrMerge(invoicePartyObj);
+    });
+
+    return list.sort((a, b) => {
+      const compA = (a.company || a.name || '').toLowerCase();
+      const compB = (b.company || b.name || '').toLowerCase();
+      return compA.localeCompare(compB);
+    });
+  }, [vendors, actualVendors, clients, invoices, suffix, deletedRegistryRev]);
+
+  // Cross-Device Master Registries Sync & Account-Switch Reset (with Realtime & Focus Polling)
   useEffect(() => {
     // 1. Immediately reset master states to the active user's scoped storage (empty if new account)
     const loadScopedMasterState = <T,>(key: string, fallback: T[] = []): T[] => {
@@ -1070,6 +1205,8 @@ export default function Dashboard({
 
     // 2. Fetch remote cloud data directly from Supabase for this active session user
     let isCancelled = false;
+    let realtimeChannel: any = null;
+
     const syncCloudMasters = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
@@ -1089,122 +1226,54 @@ export default function Dashboard({
       if (cloudData.mappings !== undefined) setMappings(cloudData.mappings);
     };
 
+    // Initial sync
     syncCloudMasters();
-    return () => { isCancelled = true; };
+
+    // 3. Setup Supabase Realtime channel for instant multi-device reflection
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const uid = session?.user?.id;
+      if (uid && !isCancelled) {
+        realtimeChannel = supabase
+          .channel(`company_settings_realtime_${uid}_${Date.now()}`)
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'company_settings', filter: `user_id=eq.${uid}` },
+            () => {
+              syncCloudMasters();
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'clients', filter: `userId=eq.${uid}` },
+            () => {
+              syncCloudMasters();
+            }
+          )
+          .subscribe();
+      }
+    });
+
+    // 4. Focus & visibility listener + steady 15s poll for multi-device sync
+    const handleFocusSync = () => {
+      syncCloudMasters();
+    };
+    window.addEventListener('focus', handleFocusSync);
+    window.addEventListener('visibilitychange', handleFocusSync);
+
+    const pollInterval = setInterval(() => {
+      syncCloudMasters();
+    }, 15_000);
+
+    return () => {
+      isCancelled = true;
+      window.removeEventListener('focus', handleFocusSync);
+      window.removeEventListener('visibilitychange', handleFocusSync);
+      clearInterval(pollInterval);
+      if (realtimeChannel) {
+        supabase.removeChannel(realtimeChannel);
+      }
+    };
   }, [suffix]);
-
-  // --- Auto-extract Billed Clients into Client DB and Billed Vendors into Vendor DB ---
-  useEffect(() => {
-    let vendorsChanged = false;
-    let actualVendorsChanged = false;
-
-    // IMPORTANT: Always read fresh scoped state for current suffix, not old closure variables
-    let updatedVendors = getLocalMasterRegistry('makbills_masters_vendors', suffix);
-    let updatedActualVendors = getLocalMasterRegistry('makbills_masters_actual_vendors', suffix);
-
-    const norm = (s: string | null | undefined) => (s || '').trim().toLowerCase();
-
-    // 1. Extract from current user's invoices
-    if (Array.isArray(invoices) && invoices.length > 0) {
-      invoices.forEach(inv => {
-        const docType = (inv.invoiceType || '').toLowerCase();
-        const isPurchase = ['purchases', 'purchase', 'purchase_order', 'purchase_bill', 'vendor_bill', 'purchase_debit_note', 'purchase_debit'].includes(docType) || docType.startsWith('purchase');
-
-        const rawName = inv.clientName || inv.clientCompanyName || inv.clientCompany;
-        if (!rawName || rawName.trim() === '' || rawName.startsWith('Guest-') || rawName === 'Quote / Estimate') return;
-
-        const record = {
-          name: (inv.clientName || inv.clientCompanyName || inv.clientCompany || '').trim(),
-          company: (inv.clientCompanyName || inv.clientCompany || inv.clientName || '').trim(),
-          companyName: (inv.clientCompanyName || inv.clientCompany || inv.clientName || '').trim(),
-          email: (inv.clientEmail || '').trim(),
-          phone: (inv.clientPhone || '').trim(),
-          mobile: (inv.clientPhone || '').trim(),
-          address: (inv.clientAddress || '').trim(),
-          gstin: (inv.clientGstin || '').trim(),
-          taxId: (inv.clientGstin || '').trim(),
-          pan: (inv.clientPan || '').trim(),
-          state: (inv.clientState || '').trim(),
-          country: (inv.clientCountry || 'India').trim(),
-        };
-
-        if (isPurchase) {
-          const nameLower = norm(record.name);
-          const compLower = norm(record.company);
-          const gstinLower = norm(record.gstin);
-          const emailLower = norm(record.email);
-
-          const exists = updatedActualVendors.some(v => {
-            if (gstinLower && norm(v.gstin) === gstinLower) return true;
-            if (emailLower && norm(v.email) === emailLower) return true;
-            if (nameLower && (norm(v.name) === nameLower || norm(v.company) === nameLower)) return true;
-            if (compLower && (norm(v.name) === compLower || norm(v.company) === compLower)) return true;
-            return false;
-          });
-
-          if (!exists) {
-            actualVendorsChanged = true;
-            updatedActualVendors = [
-              {
-                id: `av_auto_${Math.random().toString(36).substr(2, 9)}`,
-                ...record,
-                category: 'Vendor',
-                createdAt: new Date().toISOString(),
-              },
-              ...updatedActualVendors
-            ];
-          }
-        } else {
-          const nameLower = norm(record.name);
-          const compLower = norm(record.company);
-          const gstinLower = norm(record.gstin);
-          const emailLower = norm(record.email);
-
-          const exists = updatedVendors.some(v => {
-            if (gstinLower && norm(v.gstin) === gstinLower) return true;
-            if (emailLower && norm(v.email) === emailLower) return true;
-            if (nameLower && (norm(v.name) === nameLower || norm(v.company) === nameLower)) return true;
-            if (compLower && (norm(v.name) === compLower || norm(v.company) === compLower)) return true;
-            return false;
-          });
-
-          if (!exists) {
-            vendorsChanged = true;
-            updatedVendors = [
-              {
-                id: `v_auto_${Math.random().toString(36).substr(2, 9)}`,
-                ...record,
-                category: 'Client',
-                createdAt: new Date().toISOString(),
-              },
-              ...updatedVendors
-            ];
-          }
-        }
-      });
-    }
-
-    if (vendorsChanged) {
-      setVendors(updatedVendors);
-      localStorage.setItem('makbills_masters_vendors' + suffix, JSON.stringify(updatedVendors));
-    }
-
-    if (actualVendorsChanged) {
-      setActualVendors(updatedActualVendors);
-      localStorage.setItem('makbills_masters_actual_vendors' + suffix, JSON.stringify(updatedActualVendors));
-    }
-
-    if (vendorsChanged || actualVendorsChanged) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user?.id) {
-          pushMasterRegistriesToCloud(session.user.id, suffix, {
-            vendors: updatedVendors,
-            actualVendors: updatedActualVendors,
-          });
-        }
-      });
-    }
-  }, [invoices, suffix]);
 
   // Sync Master Registry Client Database (vendors) with other views
   useEffect(() => {
@@ -1349,55 +1418,90 @@ export default function Dashboard({
 
 
     const tabLabels: Record<string, string> = {
-
+      master_database: 'Master Database',
       master_vendor: 'Client Database',
-
       master_actual_vendor: 'Vendor Database',
-
       master_transport: 'Transport Database',
-
       master_hsn: 'HSN Registry',
-
       master_gl: 'GL Accounts',
-
       catalog_material: 'Material Catalog',
-
       catalog_category: 'Product Category',
-
       catalog_sub_category: 'Sub-Category',
-
       catalog_mapping: 'GL Mapping',
-
       catalog_packing_unit: 'Packing Units',
-
       catalog_measurement_unit: 'UOM Registry',
-
     };
 
+    // Normalize field aliases to keep gstin/taxId and company/companyName in sync
+    const normalizedItem = {
+      ...item,
+      name: item.name || item.company || 'Unknown',
+      companyName: item.company || item.companyName || '',
+      company: item.company || item.companyName || '',
+      gstin: item.taxId || item.gstin || '',
+      taxId: item.taxId || item.gstin || '',
+      pan: item.pan || ((item.taxId || item.gstin || '').length === 15 ? (item.taxId || item.gstin).substring(2, 12) : ''),
+    };
 
+    unmarkRegistryKeyDeleted(normalizedItem, suffix);
+
+    if (['master_database', 'master_vendor', 'master_actual_vendor'].includes(activeTab)) {
+      const partyType = activeTab === 'master_vendor' ? 'Client' : (activeTab === 'master_actual_vendor' ? 'Vendor' : (normalizedItem.partyType || 'Client'));
+      const isClient = partyType === 'Client' || partyType === 'Client & Vendor';
+      const isVendor = partyType === 'Vendor' || partyType === 'Client & Vendor';
+
+      let newVendors = [...vendors];
+      let newActualVendors = [...actualVendors];
+
+      if (isClient) {
+        const idx = newVendors.findIndex(v => isPartyMatch(v, normalizedItem));
+        if (idx >= 0) newVendors[idx] = mergePartyRecords(newVendors[idx], { ...normalizedItem, partyType: 'Client', category: normalizedItem.category || 'Client' });
+        else newVendors.unshift({ ...normalizedItem, id: normalizedItem.id || `cl_${Date.now()}`, partyType: 'Client', category: normalizedItem.category || 'Client' });
+      } else {
+        newVendors = newVendors.filter(v => !isPartyMatch(v, normalizedItem));
+      }
+
+      if (isVendor) {
+        const idx = newActualVendors.findIndex(v => isPartyMatch(v, normalizedItem));
+        if (idx >= 0) newActualVendors[idx] = mergePartyRecords(newActualVendors[idx], { ...normalizedItem, partyType: 'Vendor', category: normalizedItem.category || 'Vendor' });
+        else newActualVendors.unshift({ ...normalizedItem, id: normalizedItem.id || `ven_${Date.now()}`, partyType: 'Vendor', category: normalizedItem.category || 'Vendor' });
+      } else {
+        newActualVendors = newActualVendors.filter(v => !isPartyMatch(v, normalizedItem));
+      }
+
+      newVendors = deduplicatePartyList(newVendors);
+      newActualVendors = deduplicatePartyList(newActualVendors);
+
+      setVendors(newVendors);
+      setActualVendors(newActualVendors);
+      localStorage.setItem('makbills_masters_vendors' + suffix, JSON.stringify(newVendors));
+      localStorage.setItem('makbills_masters_actual_vendors' + suffix, JSON.stringify(newActualVendors));
+
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user?.id) {
+          pushMasterRegistriesToCloud(session.user.id, suffix, {
+            vendors: newVendors,
+            actualVendors: newActualVendors,
+            transports,
+            hsnCodes,
+            materials,
+            categories,
+          });
+        }
+      });
+
+      setIsMasterModalOpen(false);
+      setEditingMasterItem(null);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
+        window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
+      }
+      const label = tabLabels[activeTab] || 'Master Database';
+      emitNotification('Record Saved', `${label} profile committed and synced across devices.`, 'success');
+      return;
+    }
 
     switch (activeTab) {
-
-      case 'master_vendor':
-
-        list = vendors;
-
-        key = 'makbills_masters_vendors' + suffix;
-
-        setter = setVendors;
-
-        break;
-
-      case 'master_actual_vendor':
-
-        list = actualVendors;
-
-        key = 'makbills_masters_actual_vendors' + suffix;
-
-        setter = setActualVendors;
-
-        break;
-
       case 'master_transport':
 
         list = transports;
@@ -1497,7 +1601,7 @@ export default function Dashboard({
 
 
     // Normalize field aliases to keep gstin/taxId and company/companyName in sync
-    const normalizedItem = {
+    const otherNormalizedItem = {
       ...item,
       gstin: item.taxId || item.gstin || '',
       taxId: item.taxId || item.gstin || '',
@@ -1505,9 +1609,9 @@ export default function Dashboard({
       company: item.company || item.companyName || '',
     };
 
-    const exists = list.some(i => i.id === normalizedItem.id);
+    const exists = list.some(i => i.id === otherNormalizedItem.id);
 
-    const updated = exists ? list.map(i => i.id === normalizedItem.id ? normalizedItem : i) : [normalizedItem, ...list];
+    const updated = exists ? list.map(i => i.id === otherNormalizedItem.id ? otherNormalizedItem : i) : [otherNormalizedItem, ...list];
 
     
 
@@ -1563,191 +1667,235 @@ export default function Dashboard({
 
 
   const handleDeleteMasterItem = async (id: string) => {
-
     const confirmed = await confirm({
-
       title: 'Delete Record',
-
       message: 'Are you sure you want to permanently delete this record? This action cannot be undone.',
-
       confirmText: 'Delete'
-
     });
-
     if (!confirmed) return;
 
-
-
     let list: any[] = [];
-
     let key = '';
-
     let setter: any = null;
 
-
-
     const tabLabels: Record<string, string> = {
-
+      master_database: 'Master Database',
       master_vendor: 'Client Database',
-
       master_actual_vendor: 'Vendor Database',
-
       master_transport: 'Transport Database',
-
       master_hsn: 'HSN Registry',
-
       master_gl: 'GL Accounts',
-
       catalog_material: 'Material Catalog',
-
       catalog_category: 'Product Category',
-
       catalog_sub_category: 'Sub-Category',
-
       catalog_mapping: 'GL Mapping',
-
       catalog_packing_unit: 'Packing Units',
-
       catalog_measurement_unit: 'UOM Registry',
-
     };
 
+    if (['master_database', 'master_vendor', 'master_actual_vendor'].includes(activeTab)) {
+      const clean = (s: any) => String(s || '').trim().toLowerCase();
 
+      // 1. Locate the target party across all aggregated and individual sources
+      const target = masterDatabaseList.find(m => m.id === id) ||
+        vendors.find(v => v.id === id) ||
+        actualVendors.find(a => a.id === id) ||
+        (clients || []).find(c => c.id === id) ||
+        masterDatabaseList.find(m => {
+          if (!id) return false;
+          const idClean = clean(id);
+          const n = clean(m.name);
+          const comp = clean(m.company || m.companyName);
+          const gst = clean(m.gstin || m.taxId);
+          const em = clean(m.email);
+          return (n && idClean.includes(n)) || (comp && idClean.includes(comp)) || (gst && idClean.includes(gst)) || (em && idClean.includes(em));
+        });
+
+      const targetAny = target as any;
+      const nameToMatch = (targetAny?.name || '').trim();
+      const compToMatch = (targetAny?.company || targetAny?.companyName || '').trim();
+      const gstinToMatch = (targetAny?.gstin || targetAny?.taxId || '').trim();
+      const emailToMatch = (targetAny?.email || '').trim();
+      const phoneToMatch = (targetAny?.phone || targetAny?.mobile || '').replace(/\D/g, '');
+
+      // 2. Mark permanent tombstones for all party identifiers
+      if (target) {
+        markRegistryKeyDeleted(target, suffix);
+      }
+      markRegistryKeyDeleted(id, suffix);
+      if (nameToMatch) markRegistryKeyDeleted(nameToMatch, suffix);
+      if (compToMatch) markRegistryKeyDeleted(compToMatch, suffix);
+      if (gstinToMatch) markRegistryKeyDeleted(gstinToMatch, suffix);
+      if (emailToMatch) markRegistryKeyDeleted(emailToMatch, suffix);
+      if (phoneToMatch) markRegistryKeyDeleted(phoneToMatch, suffix);
+
+      const matchesParty = (v: any) => {
+        if (!v) return false;
+        if (v.id === id) return true;
+        if (target?.id && v.id === target.id) return true;
+        const vGst = clean(v.gstin || v.taxId);
+        const vEmail = clean(v.email);
+        const vName = clean(v.name);
+        const vComp = clean(v.company || v.companyName);
+        const vPhone = String(v.phone || v.mobile || '').replace(/\D/g, '');
+
+        if (gstinToMatch && vGst && vGst === clean(gstinToMatch)) return true;
+        if (emailToMatch && vEmail && vEmail === clean(emailToMatch)) return true;
+        if (phoneToMatch && vPhone && vPhone === phoneToMatch && phoneToMatch.length >= 7) return true;
+        if (nameToMatch && (vName === clean(nameToMatch) || vComp === clean(nameToMatch))) return true;
+        if (compToMatch && (vComp === clean(compToMatch) || vName === clean(compToMatch))) return true;
+        return false;
+      };
+
+      // 3. Remove from Client Database (vendors) and Vendor Database (actualVendors)
+      const newVendors = (vendors || []).filter(v => !matchesParty(v));
+      const newActualVendors = (actualVendors || []).filter(v => !matchesParty(v));
+
+      setVendors(newVendors);
+      setActualVendors(newActualVendors);
+      localStorage.setItem('makbills_masters_vendors' + suffix, JSON.stringify(newVendors));
+      localStorage.setItem('makbills_masters_actual_vendors' + suffix, JSON.stringify(newActualVendors));
+
+      // 4. Remove from manual purchasers list
+      const newManualIds = manualPurchaserIds.filter(mid => mid !== id && (!target?.id || mid !== target.id));
+      setManualPurchaserIds(newManualIds);
+      localStorage.setItem('makbills_manual_purchasers', JSON.stringify(newManualIds));
+
+      // 5. Delete from Supabase clients state & table if onDeleteClient is available
+      if (typeof onDeleteClient === 'function') {
+        onDeleteClient(id, true);
+        if (target?.id && target.id !== id) {
+          onDeleteClient(target.id, true);
+        }
+        (clients || []).forEach(c => {
+          if (matchesParty(c)) {
+            onDeleteClient(c.id, true);
+          }
+        });
+      }
+
+      // 6. Force immediate recomputation across all views
+      setDeletedRegistryRev(r => r + 1);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
+        window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
+        window.dispatchEvent(new CustomEvent('makbills_registry_deleted'));
+      }
+
+      // 7. Push updated master registries to Supabase company_settings & delete remote records
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        const uid = session?.user?.id;
+        if (uid) {
+          try {
+            await pushMasterRegistriesToCloud(uid, suffix, {
+              vendors: newVendors,
+              actualVendors: newActualVendors,
+              transports,
+              hsnCodes,
+              materials,
+              categories,
+            });
+
+            // Delete from actual_vendors table if present
+            let avQuery = supabase.from('actual_vendors').delete().eq('user_id', uid);
+            if (gstinToMatch) {
+              avQuery = avQuery.or(`id.eq.${id},gstin.eq.${gstinToMatch}${nameToMatch ? `,name.ilike.${nameToMatch}` : ''}`);
+            } else if (nameToMatch) {
+              avQuery = avQuery.or(`id.eq.${id},name.ilike.${nameToMatch}`);
+            } else {
+              avQuery = avQuery.eq('id', id);
+            }
+            await avQuery;
+          } catch (cloudErr) {
+            console.warn('[handleDeleteMasterItem] Cloud delete non-blocking warning:', cloudErr);
+          }
+        }
+      });
+
+      const label = tabLabels[activeTab] || 'Master Database';
+      const itemName = targetAny?.displayName || targetAny?.name || targetAny?.company || 'Profile';
+      emitNotification('Record Removed', `"${itemName}" has been permanently deleted from ${label}.`, 'info');
+      return;
+    }
 
     switch (activeTab) {
-
-      case 'master_vendor':
-
-        list = vendors;
-
-        key = 'makbills_masters_vendors' + suffix;
-
-        setter = setVendors;
-
-        break;
-
-      case 'master_actual_vendor':
-
-        list = actualVendors;
-
-        key = 'makbills_masters_actual_vendors' + suffix;
-
-        setter = setActualVendors;
-
-        break;
-
       case 'master_transport':
-
         list = transports;
-
         key = 'makbills_masters_transports' + suffix;
-
         setter = setTransports;
-
         break;
 
       case 'master_hsn':
-
         list = hsnCodes;
-
         key = 'makbills_masters_hsn' + suffix;
-
         setter = setHsnCodes;
-
         break;
 
       case 'master_gl':
-
         list = glAccounts;
-
         key = 'makbills_masters_gl' + suffix;
-
         setter = setGlAccounts;
-
         break;
 
       case 'catalog_material':
-
         list = materials;
-
         key = 'makbills_masters_materials' + suffix;
-
         setter = setMaterials;
-
         break;
 
       case 'catalog_category':
-
         list = categories;
-
         key = 'makbills_masters_categories' + suffix;
-
         setter = setCategories;
-
         break;
 
       case 'catalog_sub_category':
-
         list = subCategories;
-
         key = 'makbills_masters_subcategories' + suffix;
-
         setter = setSubCategories;
-
         break;
 
       case 'catalog_mapping':
-
         list = mappings;
-
         key = 'makbills_masters_mappings' + suffix;
-
         setter = setMappings;
-
         break;
 
       case 'catalog_packing_unit':
-
         list = packingUnits;
-
         key = 'makbills_masters_packing' + suffix;
-
         setter = setPackingUnits;
-
         break;
 
       case 'catalog_measurement_unit':
-
         list = measurementUnits;
-
         key = 'makbills_masters_measurement' + suffix;
-
         setter = setMeasurementUnits;
-
         break;
-
     }
-
-
 
     if (!setter) return;
 
-
-
     const deletedItem = list.find(i => i.id === id);
+    if (deletedItem) {
+      markRegistryKeyDeleted(deletedItem, suffix);
+      markRegistryKeyDeleted(id, suffix);
+    }
 
     const updated = list.filter(i => i.id !== id);
-
     setter(updated);
-
     localStorage.setItem(key, JSON.stringify(updated));
+
+    // Force recomputation
+    setDeletedRegistryRev(r => r + 1);
 
     // Also push to Supabase Cloud for cross-device synchronization
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user?.id) {
         pushMasterRegistriesToCloud(session.user.id, suffix, {
-          vendors: activeTab === 'master_vendor' ? updated : vendors,
-          actualVendors: activeTab === 'master_actual_vendor' ? updated : actualVendors,
+          vendors,
+          actualVendors,
           transports: activeTab === 'master_transport' ? updated : transports,
           hsnCodes: activeTab === 'master_hsn' ? updated : hsnCodes,
           materials: activeTab === 'catalog_material' ? updated : materials,
@@ -1759,27 +1907,24 @@ export default function Dashboard({
       }
     });
 
-
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('makbills_registry_deleted'));
+      if (activeTab === 'master_transport') window.dispatchEvent(new CustomEvent('makbills_sync_transports'));
+      if (activeTab === 'catalog_material') window.dispatchEvent(new CustomEvent('makbills_sync_materials'));
+      if (activeTab === 'master_hsn') window.dispatchEvent(new CustomEvent('makbills_sync_hsn'));
+      if (activeTab === 'catalog_category') window.dispatchEvent(new CustomEvent('makbills_sync_categories'));
+    }
 
     // Emit notification for deletion
-
     const label = tabLabels[activeTab] || 'Registry';
-
     const itemName = deletedItem?.name || deletedItem?.code || deletedItem?.vehicleNo || 'Record';
 
     emitNotification(
-
       `${label} Record Removed`,
-
       `"${itemName}" has been permanently deleted from the ${label}.`,
-
       'warning'
-
     );
-
   };
-
-
 
   const renderNavMenuContent = (isMobileView: boolean = false) => {
 
@@ -2170,38 +2315,65 @@ export default function Dashboard({
 
 
           {/* MASTER REGISTRY */}
-
           <div className="space-y-1">
-
             <span className="text-[9px] uppercase font-extrabold tracking-widest block px-2 pb-1 mt-2" style={{fontFamily: "'IBM Plex Mono', monospace", color: '#0284c7', opacity: 0.7}}>Master Registry</span>
 
+            {/* Master Database Accordion Section */}
+            <div className="space-y-0.5">
+              <button
+                onClick={() => {
+                  if (activeTab !== 'master_database' && activeTab !== 'master_vendor' && activeTab !== 'master_actual_vendor') {
+                    handleTabClick('master_database');
+                  }
+                  setIsMasterDbExpanded(!isMasterDbExpanded);
+                }}
+                className={navItemClass('master_database')}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={iconWrapper(['master_database', 'master_vendor', 'master_actual_vendor'].includes(activeTab), 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}>
+                    <Layers className="w-3.5 h-3.5" />
+                  </div>
+                  <span>Master Database</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${['master_database', 'master_vendor', 'master_actual_vendor'].includes(activeTab) ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269]'}`}>
+                    {masterDatabaseList.length}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-[#64748b]/70 transition-transform duration-200 ${isMasterDbExpanded ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
 
-
-            <button onClick={() => handleTabClick('master_vendor')} className={navItemClass('master_vendor')}>
-
-              <div className="flex items-center gap-2.5">
-
-                <div className={iconWrapper(activeTab === 'master_vendor', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Users2 className="w-3.5 h-3.5" /></div>
-
-                <span>Client Database</span>
-
-              </div>
-
-            </button>
-
-
-
-            <button onClick={() => handleTabClick('master_actual_vendor')} className={navItemClass('master_actual_vendor')}>
-
-              <div className="flex items-center gap-2.5">
-
-                <div className={iconWrapper(activeTab === 'master_actual_vendor', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Users2 className="w-3.5 h-3.5" /></div>
-
-                <span>Vendor Database</span>
-
-              </div>
-
-            </button>
+              {/* Accordion Sub-items */}
+              {isMasterDbExpanded && (
+                <div className="pl-6 space-y-0.5 pt-0.5">
+                  {[
+                    { id: 'master_database', label: 'All Parties Directory', count: masterDatabaseList.length, activeBg: 'bg-[#0284c7] dark:bg-[#0284c7] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0284c7] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' },
+                    { id: 'master_vendor', label: 'Client Database', count: masterDatabaseList.filter(i => i.partyType === 'Client' || i.partyType === 'Client & Vendor').length, activeBg: 'bg-[#0369a1] dark:bg-[#0369a1] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0369a1] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' },
+                    { id: 'master_actual_vendor', label: 'Vendor Database', count: masterDatabaseList.filter(i => i.partyType === 'Vendor' || i.partyType === 'Client & Vendor').length, activeBg: 'bg-[#0284c7] dark:bg-[#0284c7] text-white dark:text-white font-extrabold shadow-sm', color: 'hover:text-[#0284c7] dark:hover:text-[#38bdf8]', activeBadge: 'bg-white/20 text-white', badge: 'bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]' }
+                  ].map(sub => {
+                    const isSubActive = activeTab === sub.id;
+                    return (
+                      <button
+                        key={sub.id}
+                        onClick={() => {
+                          handleTabClick(sub.id);
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-left text-[11px] font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
+                          isSubActive
+                            ? sub.activeBg
+                            : `text-[#0f172a] dark:text-zinc-300 ${sub.color} hover:bg-[#e0f2fe]/60 dark:hover:bg-[#1b264f]/50`
+                        }`}
+                      >
+                        <span className="truncate">{sub.label}</span>
+                        <span className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-black ${isSubActive ? sub.activeBadge : sub.badge}`}>
+                          {sub.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
 
 
@@ -2402,26 +2574,62 @@ export default function Dashboard({
 
 
     switch (activeTab) {
+      case 'master_database':
+        title = 'Master Database';
+        description = 'Unified directory combining all client profiles, vendor databases, and billed party contacts';
+        if (masterDbFilter === 'clients') {
+          list = masterDatabaseList.filter(item => item.partyType === 'Client' || item.partyType === 'Client & Vendor');
+        } else if (masterDbFilter === 'vendors') {
+          list = masterDatabaseList.filter(item => item.partyType === 'Vendor' || item.partyType === 'Client & Vendor');
+        } else if (masterDbFilter === 'both') {
+          list = masterDatabaseList.filter(item => item.partyType === 'Client & Vendor');
+        } else {
+          list = masterDatabaseList;
+        }
+        columns = [
+          { header: 'Party Name', key: 'name' },
+          { header: 'Company Name', key: 'company' },
+          { header: 'Party Type', key: 'partyType' },
+          { header: 'GSTIN / Tax No.', key: 'taxId' },
+          { header: 'PAN', key: 'pan' },
+          { header: 'Email Address', key: 'email' },
+          { header: 'Phone Number', key: 'phone' },
+          { header: 'State / Region', key: 'state' },
+          { header: 'Category / Tag', key: 'category' }
+        ];
+        fields = [
+          { label: 'Party Type', key: 'partyType', type: 'select', options: ['Client', 'Vendor', 'Client & Vendor'] },
+          { label: 'Contact Name / Party', key: 'name', type: 'text' },
+          { label: 'Company Name', key: 'company', type: 'text' },
+          { label: 'Category / Tag', key: 'category', type: 'text' },
+          { label: 'Country', key: 'country', type: 'text' },
+          { label: 'State', key: 'state', type: 'text' },
+          { label: 'Billing Address', key: 'address', type: 'text' },
+          { label: 'GSTIN / Tax No.', key: 'taxId', type: 'text' },
+          { label: 'PAN', key: 'pan', type: 'text' },
+          { label: 'Phone Number', key: 'phone', type: 'text' },
+          { label: 'Email Address', key: 'email', type: 'email' }
+        ];
+        break;
 
       case 'master_vendor':
-
         title = 'Client Database';
-
         description = 'Pre-saved client profiles, company settings, and billing contact information';
-
-        list = vendors;
-
+        list = masterDatabaseList.filter(item => item.partyType === 'Client' || item.partyType === 'Client & Vendor');
         columns = [
           { header: 'Client Name', key: 'name' },
           { header: 'Company Name', key: 'company' },
+          { header: 'GSTIN / Tax No.', key: 'taxId' },
+          { header: 'PAN', key: 'pan' },
           { header: 'Email Address', key: 'email' },
           { header: 'Phone Number', key: 'phone' },
+          { header: 'State / Region', key: 'state' },
           { header: 'Category / Tag', key: 'category' }
         ];
-
         fields = [
           { label: 'Client Name', key: 'name', type: 'text' },
           { label: 'Company Name', key: 'company', type: 'text' },
+          { label: 'Category / Tag', key: 'category', type: 'text' },
           { label: 'Country', key: 'country', type: 'text' },
           { label: 'State', key: 'state', type: 'text' },
           { label: 'Address', key: 'address', type: 'text' },
@@ -2430,28 +2638,26 @@ export default function Dashboard({
           { label: 'Phone Number', key: 'phone', type: 'text' },
           { label: 'Email Address', key: 'email', type: 'email' }
         ];
-
         break;
 
       case 'master_actual_vendor':
-
         title = 'Vendor Database';
-
         description = 'Pre-saved vendor and supplier profiles, company configurations, and billing credentials';
-
-        list = actualVendors;
-
+        list = masterDatabaseList.filter(item => item.partyType === 'Vendor' || item.partyType === 'Client & Vendor');
         columns = [
           { header: 'Vendor Name', key: 'name' },
           { header: 'Company Name', key: 'company' },
+          { header: 'GSTIN / Tax No.', key: 'taxId' },
+          { header: 'PAN', key: 'pan' },
           { header: 'Email Address', key: 'email' },
           { header: 'Phone Number', key: 'phone' },
+          { header: 'State / Region', key: 'state' },
           { header: 'Category / Tag', key: 'category' }
         ];
-
         fields = [
           { label: 'Vendor Name', key: 'name', type: 'text' },
           { label: 'Company Name', key: 'company', type: 'text' },
+          { label: 'Category / Tag', key: 'category', type: 'text' },
           { label: 'Country', key: 'country', type: 'text' },
           { label: 'State', key: 'state', type: 'text' },
           { label: 'Address', key: 'address', type: 'text' },
@@ -2460,7 +2666,6 @@ export default function Dashboard({
           { label: 'Phone Number', key: 'phone', type: 'text' },
           { label: 'Email Address', key: 'email', type: 'email' }
         ];
-
         break;
 
       case 'master_transport':
@@ -2742,34 +2947,35 @@ export default function Dashboard({
     // Per-tab accent palette — subtle, professional, not gimmicky
 
     const tabAccent: Record<string, {
-
       topBar: string;
-
       iconBg: string;
-
       iconBgDark: string;
-
       iconColor: string;
-
       iconColorDark: string;
-
       badgeBg: string;
-
       badgeText: string;
-
       theadBg: string;
-
       theadBgDark: string;
-
       avatarBg: string;
-
       avatarBgDark: string;
-
       avatarIcon: string;
-
       avatarIconDark: string;
-
     }> = {
+      master_database: {
+        topBar:        'bg-gradient-to-r from-[#0284c7] to-indigo-600',
+        iconBg:        'bg-[#0284c7]',
+        iconBgDark:    'dark:bg-[#0369a1]',
+        iconColor:     'text-white',
+        iconColorDark: 'dark:text-white',
+        badgeBg:       'bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f] dark:border-[#223269]',
+        badgeText:     'text-[#0284c7] dark:text-[#38bdf8]',
+        theadBg:       'bg-[#f4f9ff] dark:bg-[#0b1329]',
+        theadBgDark:   '',
+        avatarBg:      'bg-[#e0f2fe] border-[#bae6fd]',
+        avatarBgDark:  'dark:bg-[#1b264f] dark:border-[#223269]',
+        avatarIcon:    'text-[#0284c7]',
+        avatarIconDark:'dark:text-[#38bdf8]',
+      },
 
       master_vendor: {
 
@@ -3033,23 +3239,20 @@ export default function Dashboard({
 
             <div className="flex flex-wrap items-center gap-2 shrink-0">
 
-              {(activeTab === 'master_vendor' || activeTab === 'master_actual_vendor' || activeTab === 'master_transport' || activeTab === 'master_hsn' || activeTab === 'catalog_material' || activeTab === 'catalog_category') && (
-
+              {(activeTab === 'master_database' || activeTab === 'master_vendor' || activeTab === 'master_actual_vendor' || activeTab === 'master_transport' || activeTab === 'master_hsn' || activeTab === 'catalog_material' || activeTab === 'catalog_category') && (
                 <>
-
                   {/* Download Template */}
-
                   <button
-
                     onClick={() => {
-
                       let headers: string[] = [];
-
                       let filename = '';
-
                       let sampleRow: string[] = [];
 
-                      if (activeTab === 'master_vendor') {
+                      if (activeTab === 'master_database') {
+                        headers = ['Contact Person', 'Company Name', 'Party Type (Client / Vendor / Both)', 'Category / Tag', 'GSTIN / Tax ID', 'PAN Number', 'Email Address', 'Phone Number', 'State', 'Country', 'Billing Address'];
+                        sampleRow = ['John Doe', 'Acme Solutions Pvt Ltd', 'Client', 'VIP Client', '07AAAAA0000A1Z5', 'AAAAA0000A', 'john@acme.com', '+91 9876543210', 'Delhi', 'India', 'Plot 12, Okhla Industrial Area Phase 3, New Delhi - 110020'];
+                        filename = 'master_database_template.csv';
+                      } else if (activeTab === 'master_vendor') {
                         headers = ['Client Name', 'Company Name', 'Category / Tag', 'GSTIN / Tax ID', 'PAN Number', 'Email Address', 'Phone Number', 'State', 'Country', 'Billing Address'];
                         sampleRow = ['John Doe', 'Acme Solutions Pvt Ltd', 'VIP Client', '07AAAAA0000A1Z5', 'AAAAA0000A', 'john@acme.com', '+91 9876543210', 'Delhi', 'India', 'Plot 12, Okhla Industrial Area Phase 3, New Delhi - 110020'];
                         filename = 'client_database_template.csv';
@@ -3077,63 +3280,37 @@ export default function Dashboard({
 
                       const csvContent = '\uFEFF' + [headers.map(h => `"${h.replace(/"/g, '""')}"`).join(','), sampleRow.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(',')].join('\n');
                       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-
                       const link = document.createElement('a');
-
                       const url = URL.createObjectURL(blob);
-
                       link.setAttribute('href', url);
-
                       link.setAttribute('download', filename);
-
                       link.style.visibility = 'hidden';
-
                       document.body.appendChild(link);
-
                       link.click();
-
                       document.body.removeChild(link);
 
                       // Notify download
-
                       const tabLabelDl: Record<string, string> = {
-
+                        master_database: 'Master Database',
                         master_vendor: 'Client Database',
-
                         master_actual_vendor: 'Vendor Database',
-
                         master_transport: 'Transport Database',
-
                         master_hsn: 'HSN Registry',
-
                         catalog_material: 'Material Catalog',
-
                         catalog_category: 'Product Category'
-
                       };
 
                       emitNotification('Template Downloaded', `${tabLabelDl[activeTab] || 'Registry'} CSV template saved — "${filename}".`, 'success');
-
                     }}
-
                     className="flex items-center gap-1.5 px-3.5 py-2 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer border border-[#bae6fd] dark:border-[#223269] hover:-translate-y-px active:scale-[0.98]"
-
                   >
-
                     <Download className="w-3.5 h-3.5" />
-
                     <span>Download Template</span>
-
                   </button>
 
-
-
                   {/* Bulk Upload */}
-
                   <button
-
                     onClick={() => {
-
                       if (subscriptionTier === 'free') {
                         emitNotification('Feature Locked 🔒', 'Bulk Database Upload is available on Basic, Professional, and Enterprise plans. Please upgrade your plan to unlock bulk operations.', 'error');
                         if (typeof window !== 'undefined') {
@@ -3143,82 +3320,283 @@ export default function Dashboard({
                       }
 
                       const input = document.createElement('input');
-
                       input.type = 'file';
-
                       input.accept = '.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel';
 
                       input.onchange = (e: any) => {
-
                         const file = e.target.files?.[0];
-
                         if (file) {
-
                           const reader = new FileReader();
-
                           reader.onload = (evt) => {
-
                             try {
-
                               const data = evt.target?.result;
-
-                              const workbook = XLSX.read(data, { type: 'binary' });
-
+                              const workbook = XLSX.read(data, { type: 'array', cellDates: true });
                               const firstSheetName = workbook.SheetNames[0];
-
                               const worksheet = workbook.Sheets[firstSheetName];
+                              let rawRows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
-                              const parsedData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                              // Handle single-column delimiter fallback (e.g. semicolon or comma-separated single text cell)
+                              if (rawRows.length > 0 && rawRows[0].length === 1 && typeof rawRows[0][0] === 'string') {
+                                const sample = rawRows[0][0];
+                                const delim = sample.includes('\t') ? '\t' : (sample.includes(';') ? ';' : (sample.includes(',') ? ',' : ''));
+                                if (delim) {
+                                  rawRows = rawRows.map(r => typeof r[0] === 'string' ? r[0].split(delim).map(c => c.trim().replace(/^"|"$/g, '')) : r);
+                                }
+                              }
 
-                              if (parsedData.length === 0) { alert('No valid items found in file.'); return; }
+                              if (!rawRows || rawRows.length < 2) {
+                                alert('No valid data rows found in file. Please ensure the file has a header row and data rows.');
+                                return;
+                              }
 
-                              const headers = parsedData[0].map((h: any) => String(h || '').trim().replace(/^"|"$/g, ''));
+                              // Find the first row that looks like a header (at least 2 non-empty cells)
+                              let headerRowIdx = 0;
+                              for (let i = 0; i < Math.min(rawRows.length, 5); i++) {
+                                const r = rawRows[i];
+                                if (r && Array.isArray(r) && r.filter((c: any) => String(c || '').trim() !== '').length >= 2) {
+                                  headerRowIdx = i;
+                                  break;
+                                }
+                              }
 
-                              const rows = parsedData.slice(1);
+                              const rawHeaders = rawRows[headerRowIdx].map((h: any) => String(h || '').trim());
+                              const normalizeStr = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+                              const normHeaders = rawHeaders.map(normalizeStr);
 
-                              const finalItems = rows.filter(r => r && r.length > 0).map((row, index) => {
+                              const getVal = (rowArr: any[], aliases: string[]): string => {
+                                for (const alias of aliases) {
+                                  const target = normalizeStr(alias);
+                                  const idx = normHeaders.indexOf(target);
+                                  if (idx !== -1 && rowArr[idx] !== undefined && rowArr[idx] !== null) {
+                                    const v = String(rowArr[idx]).trim();
+                                    if (v) return v;
+                                  }
+                                }
+                                return '';
+                              };
 
-                                const rowData: any = {};
+                              const dataRows = rawRows.slice(headerRowIdx + 1);
+                              const finalItems = dataRows
+                                .filter(r => r && Array.isArray(r) && r.some((cell: any) => String(cell || '').trim() !== ''))
+                                .map((row, index) => {
+                                  const id = `bulk_${activeTab}_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 6)}`;
 
-                                headers.forEach((header: string, headerIdx: number) => { if (header) rowData[header] = row[headerIdx] !== undefined ? row[headerIdx] : ''; });
+                                  if (activeTab === 'master_database') {
+                                    const rawType = getVal(row, ['partytype', 'partytypeclientvendorboth', 'type', 'role', 'category', 'status']).toLowerCase();
+                                    let partyType: 'Client' | 'Vendor' | 'Client & Vendor' = 'Client';
+                                    if (rawType.includes('both') || (rawType.includes('client') && rawType.includes('vendor'))) {
+                                      partyType = 'Client & Vendor';
+                                    } else if (rawType.includes('vendor') || rawType.includes('supplier')) {
+                                      partyType = 'Vendor';
+                                    }
 
-                                const id = `bulk_${activeTab}_${Date.now()}_${index}`;
+                                    const gstinVal = getVal(row, ['gstin', 'gst', 'gstnotaxid', 'gstintaxid', 'gstno', 'gstnumber', 'taxid', 'taxno', 'taxnumber', 'gstinuin', 'uin']).toUpperCase();
+                                    const panVal = getVal(row, ['pan', 'pannumber', 'panno', 'panitno']).toUpperCase() || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+                                    const partyName = getVal(row, ['contactperson', 'partyname', 'clientname', 'vendorname', 'carriername', 'contactname', 'name', 'party', 'client', 'vendor', 'customer', 'customername', 'person', 'fullname']);
+                                    const companyName = getVal(row, ['companyname', 'company', 'firmname', 'firm', 'businessname', 'business', 'organization', 'orgname', 'accountname', 'legalname']);
+                                    const finalName = partyName || companyName || `Party ${index + 1}`;
+                                    const finalComp = companyName || partyName || '';
 
-                                if (activeTab === 'master_vendor') return { id, name: rowData.name || rowData['Client Name'] || 'Unnamed Client', company: rowData.company || rowData['Company Name'] || '', category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || '', gstin: rowData.gstin || rowData['GSTIN / Tax ID'] || rowData['GSTIN'] || rowData['Tax ID'] || '', pan: rowData.pan || rowData['PAN Number'] || rowData['PAN'] || '', email: rowData.email || rowData['Email Address'] || '', phone: rowData.phone || rowData['Phone Number'] || '', state: rowData.state || rowData['State'] || '', country: rowData.country || rowData['Country'] || '', address: rowData.address || rowData['Billing Address'] || '' };
+                                    return {
+                                      id,
+                                      name: finalName,
+                                      company: finalComp,
+                                      companyName: finalComp,
+                                      partyType,
+                                      category: getVal(row, ['categorytag', 'category', 'tag', 'tags', 'group']) || partyType,
+                                      gstin: gstinVal,
+                                      taxId: gstinVal,
+                                      pan: panVal,
+                                      email: getVal(row, ['emailaddress', 'email', 'mail', 'emailid']),
+                                      phone: getVal(row, ['phonenumber', 'phone', 'mobile', 'mobilenumber', 'contactno', 'contactnumber', 'drivermobile', 'tel']),
+                                      state: getVal(row, ['state', 'region', 'province', 'stateregion']),
+                                      country: getVal(row, ['country', 'nation']) || 'India',
+                                      address: getVal(row, ['billingaddress', 'address', 'streetaddress', 'addressdetails', 'fulladdress', 'location'])
+                                    };
+                                  }
 
-                                if (activeTab === 'master_actual_vendor') return { id, name: rowData.name || rowData['Vendor Name'] || 'Unnamed Vendor', company: rowData.company || rowData['Company Name'] || '', category: rowData.category || rowData['Category / Tag'] || rowData['Category'] || '', gstin: rowData.gstin || rowData['GSTIN / Tax ID'] || rowData['GSTIN'] || rowData['Tax ID'] || '', pan: rowData.pan || rowData['PAN Number'] || rowData['PAN'] || '', email: rowData.email || rowData['Email Address'] || '', phone: rowData.phone || rowData['Phone Number'] || '', state: rowData.state || rowData['State'] || '', country: rowData.country || rowData['Country'] || '', address: rowData.address || rowData['Billing Address'] || '' };
+                                  if (activeTab === 'master_vendor') {
+                                    const gstinVal = getVal(row, ['gstin', 'gst', 'gstnotaxid', 'gstintaxid', 'gstno', 'gstnumber', 'taxid', 'taxno', 'taxnumber', 'gstinuin', 'uin']).toUpperCase();
+                                    const panVal = getVal(row, ['pan', 'pannumber', 'panno', 'panitno']).toUpperCase() || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+                                    const partyName = getVal(row, ['clientname', 'contactperson', 'partyname', 'contactname', 'name', 'party', 'client', 'customer', 'customername', 'person', 'fullname']);
+                                    const companyName = getVal(row, ['companyname', 'company', 'firmname', 'firm', 'businessname', 'business', 'organization', 'orgname', 'accountname', 'legalname']);
+                                    return {
+                                      id,
+                                      name: partyName || companyName || `Client ${index + 1}`,
+                                      company: companyName || partyName || '',
+                                      category: getVal(row, ['categorytag', 'category', 'tag', 'tags', 'group']),
+                                      gstin: gstinVal,
+                                      taxId: gstinVal,
+                                      pan: panVal,
+                                      email: getVal(row, ['emailaddress', 'email', 'mail', 'emailid']),
+                                      phone: getVal(row, ['phonenumber', 'phone', 'mobile', 'mobilenumber', 'contactno', 'contactnumber', 'tel']),
+                                      state: getVal(row, ['state', 'region', 'province', 'stateregion']),
+                                      country: getVal(row, ['country', 'nation']) || 'India',
+                                      address: getVal(row, ['billingaddress', 'address', 'streetaddress', 'addressdetails', 'fulladdress', 'location'])
+                                    };
+                                  }
 
-                                if (activeTab === 'master_transport') return { id, name: rowData.name || rowData['Transport Name'] || 'Unnamed Carrier', phone: rowData.phone || rowData['Driver Mobile'] || '', vehicleNo: rowData.vehicleNo || rowData['Vehicle No'] || '', ewayBillNo: rowData.ewayBillNo || rowData['E-Way Bill No'] || '', station: rowData.station || rowData['Station'] || '', grRrNo: rowData.grRrNo || rowData['GR/RR No.'] || '' };
+                                  if (activeTab === 'master_actual_vendor') {
+                                    const gstinVal = getVal(row, ['gstin', 'gst', 'gstnotaxid', 'gstintaxid', 'gstno', 'gstnumber', 'taxid', 'taxno', 'taxnumber', 'gstinuin', 'uin']).toUpperCase();
+                                    const panVal = getVal(row, ['pan', 'pannumber', 'panno', 'panitno']).toUpperCase() || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+                                    const partyName = getVal(row, ['vendorname', 'contactperson', 'partyname', 'contactname', 'name', 'party', 'vendor', 'supplier', 'person', 'fullname']);
+                                    const companyName = getVal(row, ['companyname', 'company', 'firmname', 'firm', 'businessname', 'business', 'organization', 'orgname', 'accountname', 'legalname']);
+                                    return {
+                                      id,
+                                      name: partyName || companyName || `Vendor ${index + 1}`,
+                                      company: companyName || partyName || '',
+                                      category: getVal(row, ['categorytag', 'category', 'tag', 'tags', 'group']),
+                                      gstin: gstinVal,
+                                      taxId: gstinVal,
+                                      pan: panVal,
+                                      email: getVal(row, ['emailaddress', 'email', 'mail', 'emailid']),
+                                      phone: getVal(row, ['phonenumber', 'phone', 'mobile', 'mobilenumber', 'contactno', 'contactnumber', 'tel']),
+                                      state: getVal(row, ['state', 'region', 'province', 'stateregion']),
+                                      country: getVal(row, ['country', 'nation']) || 'India',
+                                      address: getVal(row, ['billingaddress', 'address', 'streetaddress', 'addressdetails', 'fulladdress', 'location'])
+                                    };
+                                  }
 
-                                if (activeTab === 'master_hsn') return { id, code: rowData.code || rowData['HSN/SAC Code'] || '000000', description: rowData.description || rowData['Description'] || '', gstRate: Number(rowData.gstRate || rowData['Tax Rate (%)'] || 18) };
+                                  if (activeTab === 'master_transport') {
+                                    return {
+                                      id,
+                                      name: getVal(row, ['carriername', 'transportname', 'name', 'transporter', 'carrier', 'drivername']) || `Carrier ${index + 1}`,
+                                      phone: getVal(row, ['phonenumber', 'phone', 'drivermobile', 'mobile', 'contactno', 'contactnumber']),
+                                      vehicleNo: getVal(row, ['vehicleno', 'vehiclenumber', 'truckno', 'vehicle']),
+                                      ewayBillNo: getVal(row, ['ewaybillno', 'ewaybill', 'ewaybillnumber']),
+                                      station: getVal(row, ['station', 'destination', 'city', 'location']),
+                                      grRrNo: getVal(row, ['grrrno', 'grno', 'rrno'])
+                                    };
+                                  }
 
-                                if (activeTab === 'catalog_material') return { id, name: rowData.name || rowData['Item Name'] || 'Unnamed Material', rate: Number(rowData.rate || rowData['Standard Rate / Unit Price'] || 0), hsn: rowData.hsn || rowData['HSN/SAC Code'] || '', uom: rowData.uom || rowData['Unit of Measure (UOM)'] || 'pcs', category: rowData.category || rowData['Category'] || '' };
+                                  if (activeTab === 'master_hsn') {
+                                    const rawRate = getVal(row, ['taxrate', 'gstrate', 'tax', 'rate', 'gst', 'taxpercentage']);
+                                    return {
+                                      id,
+                                      code: getVal(row, ['hsnsaccode', 'hsncode', 'saccode', 'code', 'hsn']) || '000000',
+                                      description: getVal(row, ['description', 'desc', 'itemdescription', 'details']),
+                                      gstRate: rawRate ? Number(rawRate.replace(/[^0-9.]/g, '')) : 18
+                                    };
+                                  }
 
-                                if (activeTab === 'catalog_category') return { id, name: rowData.name || rowData['Category Name'] || 'Unnamed Category', description: rowData.description || rowData['Description'] || '' };
+                                  if (activeTab === 'catalog_material') {
+                                    const rawRate = getVal(row, ['standardrateunitprice', 'standardrate', 'rate', 'unitprice', 'price', 'mrp', 'amount']);
+                                    return {
+                                      id,
+                                      name: getVal(row, ['itemname', 'name', 'productname', 'materialname', 'item']) || `Item ${index + 1}`,
+                                      rate: rawRate ? Number(rawRate.replace(/[^0-9.]/g, '')) : 0,
+                                      hsn: getVal(row, ['hsnsaccode', 'hsncode', 'saccode', 'hsn']),
+                                      uom: getVal(row, ['unitofmeasureuom', 'unitofmeasure', 'uom', 'unit', 'measure']) || 'pcs',
+                                      category: getVal(row, ['category', 'group', 'tag'])
+                                    };
+                                  }
 
-                                return null;
+                                  if (activeTab === 'catalog_category') {
+                                    return {
+                                      id,
+                                      name: getVal(row, ['categoryname', 'name', 'category', 'group']) || `Category ${index + 1}`,
+                                      description: getVal(row, ['description', 'desc', 'details'])
+                                    };
+                                  }
 
-                              }).filter(Boolean);
+                                  return null;
+                                })
+                                .filter(Boolean);
 
-                              if (finalItems.length === 0) { alert('No valid items found in file.'); return; }
+                              if (finalItems.length === 0) {
+                                alert('No valid records found in the uploaded file.');
+                                return;
+                              }
+
+                              const findMatchIndex = (list: any[], item: any) => {
+                                return list.findIndex(e => isPartyMatch(e, item));
+                              };
+
+                              if (activeTab === 'master_database') {
+                                let newVendors = [...vendors];
+                                let newActualVendors = [...actualVendors];
+
+                                finalItems.forEach((item: any) => {
+                                  const isClient = item.partyType === 'Client' || item.partyType === 'Client & Vendor';
+                                  const isVendor = item.partyType === 'Vendor' || item.partyType === 'Client & Vendor';
+
+                                  if (isClient) {
+                                    const idx = findMatchIndex(newVendors, item);
+                                    if (idx >= 0) {
+                                      newVendors[idx] = mergePartyRecords(newVendors[idx], item);
+                                    } else {
+                                      newVendors.push(item);
+                                    }
+                                  }
+                                  if (isVendor) {
+                                    const idx = findMatchIndex(newActualVendors, item);
+                                    if (idx >= 0) {
+                                      newActualVendors[idx] = mergePartyRecords(newActualVendors[idx], item);
+                                    } else {
+                                      newActualVendors.push(item);
+                                    }
+                                  }
+                                });
+
+                                newVendors = deduplicatePartyList(newVendors);
+                                newActualVendors = deduplicatePartyList(newActualVendors);
+
+                                setVendors([...newVendors]);
+                                setActualVendors([...newActualVendors]);
+                                localStorage.setItem('makbills_masters_vendors' + suffix, JSON.stringify(newVendors));
+                                localStorage.setItem('makbills_masters_actual_vendors' + suffix, JSON.stringify(newActualVendors));
+
+                                supabase.auth.getSession().then(({ data: { session } }) => {
+                                  if (session?.user?.id) {
+                                    pushMasterRegistriesToCloud(session.user.id, suffix, {
+                                      vendors: newVendors,
+                                      actualVendors: newActualVendors,
+                                      transports,
+                                      hsnCodes,
+                                      materials,
+                                      categories,
+                                    });
+                                  }
+                                });
+
+                                if (typeof window !== 'undefined') {
+                                  window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
+                                  window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
+                                }
+
+                                emitNotification('Bulk Upload Complete', `Successfully imported and synced ${finalItems.length} records into Master Database.`, 'success');
+                                return;
+                              }
 
                               let currentList: any[] = [], storageKey = '', setterFn: any = null;
 
                               if (activeTab === 'master_vendor') { currentList = vendors; storageKey = 'makbills_masters_vendors' + suffix; setterFn = setVendors; }
-
                               else if (activeTab === 'master_actual_vendor') { currentList = actualVendors; storageKey = 'makbills_masters_actual_vendors' + suffix; setterFn = setActualVendors; }
-
                               else if (activeTab === 'master_transport') { currentList = transports; storageKey = 'makbills_masters_transports' + suffix; setterFn = setTransports; }
-
                               else if (activeTab === 'master_hsn') { currentList = hsnCodes; storageKey = 'makbills_masters_hsn' + suffix; setterFn = setHsnCodes; }
-
                               else if (activeTab === 'catalog_material') { currentList = materials; storageKey = 'makbills_masters_materials' + suffix; setterFn = setMaterials; }
-
                               else if (activeTab === 'catalog_category') { currentList = categories; storageKey = 'makbills_masters_categories' + suffix; setterFn = setCategories; }
 
                               if (setterFn) {
-                                const updatedList = [...finalItems, ...currentList];
-                                setterFn(updatedList);
+                                let updatedList = [...currentList];
+                                finalItems.forEach((item: any) => {
+                                  const idx = findMatchIndex(updatedList, item);
+                                  if (idx >= 0) {
+                                    if (activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') {
+                                      updatedList[idx] = mergePartyRecords(updatedList[idx], item);
+                                    } else {
+                                      updatedList[idx] = { ...updatedList[idx], ...item, id: updatedList[idx].id };
+                                    }
+                                  } else {
+                                    updatedList.push(item);
+                                  }
+                                });
+
+                                if (activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') {
+                                  updatedList = deduplicatePartyList(updatedList);
+                                }
+
+                                setterFn([...updatedList]);
                                 localStorage.setItem(storageKey, JSON.stringify(updatedList));
 
                                 supabase.auth.getSession().then(({ data: { session } }) => {
@@ -3234,22 +3612,18 @@ export default function Dashboard({
                                   }
                                 });
 
-                                const tabLabelUp: Record<string, string> = { master_vendor: 'Client Database', master_actual_vendor: 'Vendor Database', master_transport: 'Transport Database', master_hsn: 'HSN Registry', catalog_material: 'Material Catalog', catalog_category: 'Product Category' };
-                                emitNotification('Bulk Upload Complete', `${finalItems.length} records imported into ${tabLabelUp[activeTab] || 'Registry'} successfully.`, 'info');
+                                const tabLabelUp: Record<string, string> = { master_database: 'Master Database', master_vendor: 'Client Database', master_actual_vendor: 'Vendor Database', master_transport: 'Transport Database', master_hsn: 'HSN Registry', catalog_material: 'Material Catalog', catalog_category: 'Product Category' };
+                                emitNotification('Bulk Upload Complete', `Successfully imported ${finalItems.length} records into ${tabLabelUp[activeTab] || 'Registry'}.`, 'success');
                               }
 
                             } catch (err: any) { alert('Error parsing file: ' + err.message); }
-
                           };
 
-                          reader.readAsBinaryString(file);
-
+                          reader.readAsArrayBuffer(file);
                         }
-
                       };
 
                       input.click();
-
                     }}
 
                     className="flex items-center gap-1.5 px-3.5 py-2 bg-[#f4f9ff] hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer border border-[#bae6fd] dark:border-[#223269] hover:-translate-y-px active:scale-[0.98]"
@@ -3302,204 +3676,152 @@ export default function Dashboard({
 
 
 
-        {/* â”€â”€ Search Bar â”€â”€ */}
+        {/* Master Database Party Filters */}
+        {activeTab === 'master_database' && (
+          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl">
+            {[
+              { id: 'all', label: 'All Parties', count: masterDatabaseList.length },
+              { id: 'clients', label: 'Clients', count: masterDatabaseList.filter(i => i.partyType === 'Client' || i.partyType === 'Client & Vendor').length },
+              { id: 'vendors', label: 'Vendors', count: masterDatabaseList.filter(i => i.partyType === 'Vendor' || i.partyType === 'Client & Vendor').length },
+              { id: 'both', label: 'Client & Vendor (Both)', count: masterDatabaseList.filter(i => i.partyType === 'Client & Vendor').length }
+            ].map(tab => {
+              const isActive = masterDbFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => { setMasterDbFilter(tab.id as any); setClientPage(0); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    isActive
+                      ? 'bg-[#0284c7] text-white shadow-sm'
+                      : 'text-[#64748b] dark:text-zinc-400 hover:bg-[#e0f2fe]/60 dark:hover:bg-[#1b264f]/40'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-black ${
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8]'
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
+        {/* ── Search Bar ── */}
         <div className="relative">
-
           <Search className="w-4 h-4 text-[#64748b]/60 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-
           <input
-
             type="text"
-
             placeholder={`Search through ${list.length} ${list.length === 1 ? 'directory' : 'directories'} live...`}
-
             value={searchTerm}
-
             onChange={(e) => { setSearchTerm(e.target.value); setClientPage(0); }}
-
             className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269] rounded-2xl text-sm text-[#0f172a] dark:text-zinc-200 placeholder-[#64748b]/45 focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] transition-all"
-
             style={{ boxShadow: '0 1px 4px rgba(2,132,199,0.06), inset 0 1px 3px rgba(2,132,199,0.04)' }}
-
           />
-
         </div>
 
-
-
-        {/* â”€â”€ Table Card â”€â”€ */}
-
+        {/* ── Table Card ── */}
         <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl overflow-hidden shadow-xs">
-
           {filteredList.length === 0 ? (
-
             <div className="py-16 text-center">
-
               <div className="w-12 h-12 rounded-2xl bg-[#e0f2fe] dark:bg-[#1b264f] flex items-center justify-center mx-auto mb-3">
-
                 <Database className="w-5 h-5 text-[#0284c7] dark:text-[#38bdf8] animate-pulse" />
-
               </div>
-
               <p className="text-xs font-semibold text-[#64748b]/85 dark:text-zinc-500">No synchronized registry records matching search query</p>
-
             </div>
-
           ) : (
-
             <>
-
               {/* Desktop Table View */}
-
               <div className="hidden md:block overflow-x-auto">
-
                 <table className="w-full text-left border-collapse">
-
                   {/* Table Head */}
-
                   <thead>
-
                     <tr className={`border-b border-[#bae6fd]/30 dark:border-[#223269]/30 ${accent ? `${accent.theadBg}` : 'bg-[#f4f9ff] dark:bg-[#0b1329]'}`}>
-
                       {columns.map((col, idx) => (
-
                         <th key={idx} className="px-4 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#64748b]/75 dark:text-zinc-500 whitespace-nowrap">
-
                           {col.header}
-
                         </th>
-
                       ))}
-
                       <th className="px-4 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#64748b]/75 dark:text-zinc-500 text-right">
-
                         Actions
-
                       </th>
-
                     </tr>
-
                   </thead>
 
-
-
                   {/* Table Body */}
-
                   <tbody className="divide-y divide-[#bae6fd]/20 dark:divide-[#223269]/20">
-
                     {pagedList.map((item, rowIdx) => (
-
                       <tr
-
                         key={item.id}
-
                         className="group hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 transition-colors duration-100"
-
                       >
-
                         {columns.map((col, idx2) => {
-
                           const cellVal = item[col.key];
-
                           const isFirstCol = idx2 === 0;
 
-
-
                           return (
-
                             <td key={idx2} className="px-4 py-3.5">
-
                               {isFirstCol ? (
-
                                 <div className="flex items-center gap-3">
-
                                   {/* Avatar — per-tab accent color */}
-
                                   <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f] dark:border-[#223269]'}`}>
-
+                                    {activeTab === 'master_database' && <Layers className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#0284c7] dark:text-[#38bdf8]'}`} />}
                                     {(activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') && <User className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-
                                     {activeTab === 'master_transport' && <Truck className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-
                                     {activeTab === 'master_hsn' && <FileSpreadsheet className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-
                                     {activeTab === 'catalog_material' && <Wrench className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-
                                     {activeTab === 'catalog_category' && <Tag className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-
                                   </div>
-
                                   <span className="text-xs font-extrabold uppercase tracking-tight text-[#0f172a] dark:text-white">
-
                                     {String(cellVal || '')}
-
                                   </span>
-
                                 </div>
-
+                              ) : col.key === 'partyType' ? (
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                  cellVal === 'Vendor'
+                                    ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800/40'
+                                    : cellVal === 'Client & Vendor'
+                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40'
+                                    : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border-sky-200 dark:border-sky-800/40'
+                                }`}>
+                                  {cellVal || 'Client'}
+                                </span>
                               ) : col.key === 'rate' ? (
-
                                 <span className="text-xs font-mono font-semibold text-[#0f172a] dark:text-zinc-200">
-
                                   {currencySymbol}{formatNum(cellVal || 0)}
-
                                 </span>
-
                               ) : col.key === 'category' ? (
-
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${getCategoryBadgeStyle(cellVal)}`}>
-
                                   {cellVal || 'General'}
-
                                 </span>
-
                               ) : col.key === 'email' ? (
-
                                 <span className="text-[11px] text-sky-600 dark:text-sky-400 font-medium font-mono lowercase">
-
                                   {cellVal || '-'}
-
                                 </span>
-
                               ) : col.key === 'phone' ? (
-
                                 <span className="text-[11px] text-[#64748b]/90 dark:text-zinc-400 font-mono">
-
                                   {cellVal || '-'}
-
                                 </span>
-
                               ) : (
-
                                 <span className="text-[11px] text-[#0f172a] dark:text-zinc-300 font-medium">
-
                                   {String(cellVal || '-')}
-
                                 </span>
-
                               )}
-
                             </td>
-
                           );
-
                         })}
 
-
-
                         {/* Actions */}
-
                         <td className="px-4 py-3.5">
-
                           <div className="flex justify-end items-center gap-0.5">
-
                             <button
-
                               onClick={() => {
-                                // Normalize field aliases so the edit form always reads the correct keys
                                 const normalized = {
                                   ...item,
+                                  partyType: item.partyType || (activeTab === 'master_actual_vendor' ? 'Vendor' : 'Client'),
                                   taxId: item.taxId || item.gstin || '',
                                   gstin: item.gstin || item.taxId || '',
                                   company: item.company || item.companyName || '',
@@ -3511,104 +3833,58 @@ export default function Dashboard({
                                 setEditingMasterItem(normalized);
                                 setIsMasterModalOpen(true);
                               }}
-
                               className="p-2 text-[#64748b]/70 hover:text-[#0284c7] dark:text-zinc-500 dark:hover:text-[#38bdf8] hover:bg-[#e0f2fe]/50 dark:hover:bg-zinc-800 rounded-lg transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
-
                               aria-label="Edit record"
-
                             >
-
                               <PenTool className="w-3.5 h-3.5" />
-
                             </button>
-
                             <button
-
                               onClick={() => handleDeleteMasterItem(item.id)}
-
                               className="p-2 text-rose-400/70 hover:text-rose-500 dark:text-rose-500/60 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
-
                               aria-label="Delete record"
-
                             >
-
                               <Trash2 className="w-3.5 h-3.5" />
-
                             </button>
-
                           </div>
-
                         </td>
-
                       </tr>
-
                     ))}
-
                   </tbody>
-
                 </table>
-
               </div>
 
-
-
               {/* Mobile Card View */}
-
               <div className="md:hidden flex flex-col divide-y divide-[#bae6fd]/20 dark:divide-zinc-800/60">
-
                 {pagedList.map((item, rowIdx) => (
-
                   <div key={item.id} className="p-4 flex flex-col gap-3">
-
                     <div className="flex justify-between items-start gap-2">
-
                       <div className="flex items-start gap-3">
-
                         {/* Avatar */}
-
                         <div className={`w-9 h-9 mt-0.5 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f] dark:border-[#223269]'}`}>
-
+                          {activeTab === 'master_database' && <Layers className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#0284c7] dark:text-[#38bdf8]'}`} />}
                           {(activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') && <User className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-
                           {activeTab === 'master_transport' && <Truck className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-
                           {activeTab === 'master_hsn' && <FileSpreadsheet className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-
                           {activeTab === 'catalog_material' && <Wrench className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-
                           {activeTab === 'catalog_category' && <Tag className={`w-4 h-4 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
-
                         </div>
-
                         <div className="flex-1 min-w-0">
-
                           <span className="text-sm font-black uppercase tracking-tight text-[#0f172a] dark:text-white block truncate">
-
                             {String(item[columns[0].key] || '')}
-
                           </span>
-
                           <span className="text-[10px] text-[#64748b]/70 font-bold uppercase tracking-wider block mt-0.5">
-
                             {columns[0].header}
-
                           </span>
-
                         </div>
-
                       </div>
 
-
-
                       {/* Actions */}
-
                       <div className="flex items-center gap-1 shrink-0">
-
                         <button
-
                           onClick={() => {
                             const normalized = {
                               ...item,
+                              partyType: item.partyType || (activeTab === 'master_actual_vendor' ? 'Vendor' : 'Client'),
                               taxId: item.taxId || item.gstin || '',
                               gstin: item.gstin || item.taxId || '',
                               company: item.company || item.companyName || '',
@@ -3620,105 +3896,65 @@ export default function Dashboard({
                             setEditingMasterItem(normalized);
                             setIsMasterModalOpen(true);
                           }}
-
                           className="p-2 text-[#64748b]/70 hover:text-[#0284c7] dark:text-zinc-500 dark:hover:text-[#38bdf8] bg-[#e0f2fe]/40 hover:bg-[#e0f2fe] dark:bg-[#1b264f]/40 dark:hover:bg-[#1b264f] rounded-lg transition-all"
-
                         >
-
                           <PenTool className="w-3.5 h-3.5" />
-
                         </button>
-
                         <button
-
                           onClick={() => handleDeleteMasterItem(item.id)}
-
                           className="p-2 text-rose-400/70 hover:text-rose-500 bg-rose-50/50 hover:bg-rose-50 dark:bg-rose-950/20 dark:hover:bg-rose-950/30 rounded-lg transition-all"
-
                         >
-
                           <Trash2 className="w-3.5 h-3.5" />
-
                         </button>
-
                       </div>
-
                     </div>
 
-
-
                     {/* Remaining Columns */}
-
                     {columns.length > 1 && (
-
                       <div className="grid grid-cols-1 gap-2.5 mt-2 bg-[#f4f9ff] dark:bg-[#0b1329]/60 border border-[#bae6fd]/40 dark:border-[#223269]/40 p-3 rounded-xl">
-
                         {columns.slice(1).map((col, idx2) => {
-
                           const cellVal = item[col.key];
-
                           return (
-
                             <div key={idx2} className="flex justify-between items-start gap-4">
-
                               <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 font-bold uppercase tracking-wider shrink-0 mt-0.5">{col.header}</span>
-
                               <span className="text-xs text-[#0f172a] dark:text-zinc-200 font-medium text-right break-words overflow-hidden">
-
-                                {col.key === 'rate' ? (
-
+                                {col.key === 'partyType' ? (
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                    cellVal === 'Vendor'
+                                      ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800/40'
+                                      : cellVal === 'Client & Vendor'
+                                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40'
+                                      : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border-sky-200 dark:border-sky-800/40'
+                                  }`}>
+                                    {cellVal || 'Client'}
+                                  </span>
+                                ) : col.key === 'rate' ? (
                                   <span className="font-mono font-bold">
-
                                     {currencySymbol}{formatNum(cellVal || 0)}
-
                                   </span>
-
                                 ) : col.key === 'category' ? (
-
                                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${getCategoryBadgeStyle(cellVal)}`}>
-
                                     {cellVal || 'General'}
-
                                   </span>
-
                                 ) : col.key === 'email' ? (
-
                                   <span className="text-sky-600 dark:text-sky-400 font-medium font-mono lowercase break-all">
-
                                     {cellVal || '-'}
-
                                   </span>
-
                                 ) : col.key === 'phone' ? (
-
                                   <span className="text-[#64748b]/90 dark:text-zinc-400 font-mono">
-
                                     {cellVal || '-'}
-
                                   </span>
-
                                 ) : (
-
                                   <span>{String(cellVal || '-')}</span>
-
                                 )}
-
                               </span>
-
                             </div>
-
                           );
-
                         })}
-
                       </div>
-
                     )}
-
                   </div>
-
                 ))}
-
               </div>
 
 
@@ -4853,15 +5089,13 @@ export default function Dashboard({
   // Set of names/emails associated with purchase documents
 
   const purchaseInvoices = useMemo(() => {
-
     return invoices.filter(inv => {
-
-      const docType = getInvoiceDocumentType(inv);
-
-      return ['purchases', 'purchase_order', 'purchase_debit_note'].includes(docType);
-
+      const rawType = (inv.invoiceType || '').toLowerCase().trim();
+      if (isPurchaseDocument(rawType) || rawType.startsWith('purchase')) return true;
+      const title = (inv.embeddedTemplate?.config?.header?.invoiceTitle || '').toLowerCase();
+      if (title.includes('purchase')) return true;
+      return false;
     });
-
   }, [invoices]);
 
 
@@ -4885,15 +5119,13 @@ export default function Dashboard({
   // Set of names/emails associated with sales documents
 
   const salesInvoices = useMemo(() => {
-
     return invoices.filter(inv => {
-
-      const docType = getInvoiceDocumentType(inv);
-
-      return !['purchases', 'purchase_order', 'purchase_debit_note'].includes(docType);
-
+      const rawType = (inv.invoiceType || '').toLowerCase().trim();
+      if (isPurchaseDocument(rawType) || rawType.startsWith('purchase')) return false;
+      const title = (inv.embeddedTemplate?.config?.header?.invoiceTitle || '').toLowerCase();
+      if (title.includes('purchase')) return false;
+      return true;
     });
-
   }, [invoices]);
 
 
@@ -4907,113 +5139,126 @@ export default function Dashboard({
 
 
   const salesClientEmails = useMemo(() => {
-
     return new Set(salesInvoices.map(i => (i.clientEmail || '').trim().toLowerCase()));
-
   }, [salesInvoices]);
 
-
-
-  // Billed Clients Filtered
-
+  // Billed Clients Filtered: ONLY parties that appear on actual sales documents (invoices, proformas, quotes, credit/debit notes)
   const billedClientsFiltered = useMemo(() => {
+    const list: any[] = [];
 
-    return clients.filter(c => {
+    const findAndMerge = (incoming: any) => {
+      for (let i = 0; i < list.length; i++) {
+        if (isPartyMatch(list[i], incoming)) {
+          list[i] = mergePartyRecords(list[i], incoming);
+          return;
+        }
+      }
+      list.push(incoming);
+    };
 
-      const nameLower = (c.name || '').trim().toLowerCase();
+    // Build a lookup from clients array to enrich document-sourced parties with saved contact details
+    const clientsArr = clients || [];
 
-      const emailLower = (c.email || '').trim().toLowerCase();
+    // ONLY pull from actual sales documents — not from clients array
+    (salesInvoices || []).forEach(inv => {
+      if (inv.isDeleted) return;
+      const pName = (inv.clientName || (inv as any).clientCompanyName || (inv as any).clientCompany || '').trim();
+      const cName = ((inv as any).clientCompanyName || (inv as any).clientCompany || inv.clientName || '').trim();
+      if (!pName && !cName) return;
+      if (pName.startsWith('Guest-') && !cName && !(inv as any).clientGstin) return;
+      if (pName === 'Quote / Estimate' && !cName && !(inv as any).clientGstin) return;
 
-      const isManualPurchaser = manualPurchaserIds.includes(c.id);
+      const party: any = {
+        id: `billed_cl_${inv.id}`,
+        name: pName || cName || 'Billed Client',
+        companyName: cName || pName || '',
+        company: cName || pName || '',
+        email: inv.clientEmail || '',
+        phone: inv.clientPhone || '',
+        address: inv.clientAddress || '',
+        gstin: (inv as any).clientGstin || (inv as any).taxId || '',
+        pan: (inv as any).clientPan || '',
+        state: (inv as any).clientState || '',
+        country: (inv as any).clientCountry || 'India',
+        createdAt: inv.createdAt || (inv as any).invoiceDate || inv.date || new Date().toISOString()
+      };
 
-      
+      // Enrich with saved client profile data (email, phone, etc.) if available
+      const savedClient = clientsArr.find(c => isPartyMatch(c, party));
+      if (savedClient) {
+        if (!party.email && savedClient.email) party.email = savedClient.email;
+        if (!party.phone && savedClient.phone) party.phone = savedClient.phone;
+        if (!party.address && savedClient.address) party.address = savedClient.address;
+        if (!(party.gstin) && ((savedClient as any).gstin || (savedClient as any).taxId)) party.gstin = (savedClient as any).gstin || (savedClient as any).taxId;
+        if (!party.pan && (savedClient as any).pan) party.pan = (savedClient as any).pan;
+        if (!party.state && (savedClient as any).state) party.state = (savedClient as any).state;
+        party.id = savedClient.id; // Use the saved ID for consistency
+      }
 
-      if (isManualPurchaser) return false;
-
-      
-
-      const isReferencedInSales = salesClientNames.has(nameLower) || (c.email && salesClientEmails.has(emailLower));
-
-      const isReferencedInPurchases = purchaserNames.has(nameLower) || (c.email && purchaserEmails.has(emailLower));
-
-      
-
-      if (isReferencedInSales) return true;
-
-      if (isReferencedInPurchases) return false;
-
-      return true; // Default
-
+      if (isRegistryItemDeleted(party, suffix)) return;
+      findAndMerge(party);
     });
 
-  }, [clients, manualPurchaserIds, salesClientNames, salesClientEmails, purchaserNames, purchaserEmails]);
+    return list;
+  }, [salesInvoices, clients, suffix, deletedRegistryRev]);
 
-
-
-  // Purchasers Filtered (Combines actualVendors from Purchase Ledger documents with referenced clients, deduplicated cleanly)
+  // Purchasers Filtered: ONLY vendors that appear on actual purchase documents (purchases, purchase orders, purchase debit notes)
   const purchasersFiltered = useMemo(() => {
-    const mergedList: any[] = [];
-    const seenKeys = new Set<string>();
+    const list: any[] = [];
 
-    const getVendorKeys = (v: any) => {
-      const keys: string[] = [];
-      const gstin = (v.gstin || v.taxId || '').trim().toLowerCase();
-      const email = (v.email || '').trim().toLowerCase();
-      const pan = (v.pan || '').trim().toLowerCase();
-      const name = (v.name || '').trim().toLowerCase();
-      const comp = (v.company || v.companyName || '').trim().toLowerCase();
-
-      if (gstin) keys.push(`gst_${gstin}`);
-      if (pan) keys.push(`pan_${pan}`);
-      if (email) keys.push(`email_${email}`);
-      if (name) keys.push(`name_${name}`);
-      if (comp) keys.push(`comp_${comp}`);
-      return keys;
-    };
-
-    const isSeen = (v: any) => {
-      const keys = getVendorKeys(v);
-      return keys.some(k => seenKeys.has(k));
-    };
-
-    const markSeen = (v: any) => {
-      const keys = getVendorKeys(v);
-      keys.forEach(k => seenKeys.add(k));
-    };
-
-    // 1. Include all actualVendors saved from purchase ledger documents
-    (actualVendors || []).forEach(v => {
-      if (!v) return;
-      if (!isSeen(v)) {
-        markSeen(v);
-        mergedList.push({
-          ...v,
-          companyName: v.companyName || v.company || '',
-          company: v.company || v.companyName || '',
-        });
+    const findAndMerge = (incoming: any) => {
+      for (let i = 0; i < list.length; i++) {
+        if (isPartyMatch(list[i], incoming)) {
+          list[i] = mergePartyRecords(list[i], incoming);
+          return;
+        }
       }
+      list.push(incoming);
+    };
+
+    // Build a lookup from actualVendors array to enrich document-sourced parties
+    const vendorsArr = actualVendors || [];
+
+    // ONLY pull from actual purchase documents — not from actualVendors array
+    (purchaseInvoices || []).forEach(inv => {
+      if (inv.isDeleted) return;
+      const pName = (inv.clientName || (inv as any).vendorName || (inv as any).companyName || '').trim();
+      const cName = ((inv as any).clientCompanyName || (inv as any).companyName || (inv as any).vendorCompany || pName).trim();
+      if (!pName && !cName) return;
+
+      const party: any = {
+        id: `billed_ven_${inv.id}`,
+        name: pName || cName || 'Billed Vendor',
+        companyName: cName || pName || '',
+        company: cName || pName || '',
+        email: inv.clientEmail || (inv as any).email || '',
+        phone: inv.clientPhone || (inv as any).phone || '',
+        address: inv.clientAddress || '',
+        gstin: (inv as any).clientGstin || (inv as any).taxId || '',
+        pan: (inv as any).clientPan || '',
+        state: (inv as any).clientState || '',
+        country: (inv as any).clientCountry || 'India',
+        createdAt: inv.createdAt || (inv as any).invoiceDate || inv.date || new Date().toISOString()
+      };
+
+      // Enrich with saved vendor profile data if available
+      const savedVendor = vendorsArr.find(v => isPartyMatch(v, party));
+      if (savedVendor) {
+        if (!party.email && savedVendor.email) party.email = savedVendor.email;
+        if (!party.phone && (savedVendor.phone || savedVendor.mobile)) party.phone = savedVendor.phone || savedVendor.mobile;
+        if (!party.address && savedVendor.address) party.address = savedVendor.address;
+        if (!party.gstin && (savedVendor.gstin || savedVendor.taxId)) party.gstin = savedVendor.gstin || savedVendor.taxId;
+        if (!party.pan && savedVendor.pan) party.pan = savedVendor.pan;
+        if (!party.state && savedVendor.state) party.state = savedVendor.state;
+        party.id = savedVendor.id;
+      }
+
+      if (isRegistryItemDeleted(party, suffix)) return;
+      findAndMerge(party);
     });
 
-    // 2. Include any clients referenced in purchases or marked as manual purchasers
-    (clients || []).forEach(c => {
-      if (!c) return;
-      const nameLower = (c.name || '').trim().toLowerCase();
-      const emailLower = (c.email || '').trim().toLowerCase();
-      const isManualPurchaser = manualPurchaserIds.includes(c.id);
-      const isReferencedInPurchases = purchaserNames.has(nameLower) || (c.email && purchaserEmails.has(emailLower));
-
-      if ((isManualPurchaser || isReferencedInPurchases) && !isSeen(c)) {
-        markSeen(c);
-        mergedList.push({
-          ...c,
-          companyName: c.companyName || (c as any).company || '',
-          company: (c as any).company || c.companyName || '',
-        });
-      }
-    });
-
-    return mergedList;
-  }, [actualVendors, clients, manualPurchaserIds, purchaserNames, purchaserEmails]);
+    return list;
+  }, [purchaseInvoices, actualVendors, suffix, deletedRegistryRev]);
 
   // Billed Clients Searched & Sorted
   const displayBilledClients = useMemo(() => {
@@ -5093,8 +5338,6 @@ export default function Dashboard({
     return list;
   }, [purchasersFiltered, vendorSearchQuery, vendorSortBy]);
 
-
-
   const handleDeleteClientWrap = async (clientId: string) => {
     // 1. Identify target profile
     const target = (clients || []).find(c => c.id === clientId) ||
@@ -5104,6 +5347,18 @@ export default function Dashboard({
                    (purchasersFiltered || []).find(c => c.id === clientId);
 
     const targetName = (target?.name || target?.companyName || target?.company || '').trim();
+    const targetComp = (target?.companyName || target?.company || target?.name || '').trim();
+    const targetGst = (target?.gstin || target?.taxId || '').trim();
+    const targetEmail = (target?.email || '').trim();
+
+    if (target) {
+      markRegistryKeyDeleted(target, suffix);
+    }
+    markRegistryKeyDeleted(clientId, suffix);
+    if (targetName) markRegistryKeyDeleted(targetName, suffix);
+    if (targetComp) markRegistryKeyDeleted(targetComp, suffix);
+    if (targetGst) markRegistryKeyDeleted(targetGst, suffix);
+    if (targetEmail) markRegistryKeyDeleted(targetEmail, suffix);
 
     // 2. Call app-level delete (triggers confirm modal and deletes from clients table)
     await onDeleteClient(clientId);
@@ -5123,7 +5378,16 @@ export default function Dashboard({
     setManualPurchaserIds(newManualIds);
     localStorage.setItem('makbills_manual_purchasers', JSON.stringify(newManualIds));
 
-    // 6. Push updated master registries to Supabase company_settings
+    // 6. Force immediate recomputation across all views
+    setDeletedRegistryRev(r => r + 1);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
+      window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
+      window.dispatchEvent(new CustomEvent('makbills_registry_deleted'));
+    }
+
+    // 7. Push updated master registries to Supabase company_settings
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.id) {

@@ -14,6 +14,16 @@ import { MakLoader } from './components/MakLoader';
 import { getLocalizationConfig } from './lib/localizationEngine';
 import { getTierLimits, getCurrentBillingCycleWindow } from './lib/subscriptionGuard';
 import { SubscriptionProvider } from './lib/subscriptionContext';
+import {
+  pushMasterRegistriesToCloud,
+  getLocalMasterRegistry,
+  markRegistryKeyDeleted,
+  unmarkRegistryKeyDeleted,
+  isPartyMatch,
+  mergePartyRecords,
+  deduplicatePartyList
+} from './lib/masterRegistrySync';
+import { upsertMasterRegistry, buildClientDetails, isSalesDocument, isPurchaseDocument } from './lib/documentUtils';
 
 const ALLOWED_SUPABASE_COLUMNS = [
   'id', 'userId', 'invoiceType', 'invoiceNumber', 'referenceNumber', 'poNumber', 'date', 
@@ -2581,8 +2591,15 @@ export default function App() {
     const clientsToUpsert: ClientProfile[] = [];
     let updatedClients = [...clients];
 
-    const processClientDetails = (invoice: Invoice) => {
+    // Clear any prior deleted tombstones so newly billed party immediately shows in Billed Clients/Vendors
+    unmarkRegistryKeyDeleted(invoice, suffix);
+    if (invoice.id) unmarkRegistryKeyDeleted(invoice.id, suffix);
+    if (invoice.clientName) unmarkRegistryKeyDeleted(invoice.clientName, suffix);
+    if (invoice.clientCompanyName || invoice.clientCompany) unmarkRegistryKeyDeleted(invoice.clientCompanyName || invoice.clientCompany, suffix);
+    if (invoice.clientGstin) unmarkRegistryKeyDeleted(invoice.clientGstin, suffix);
+    if (invoice.clientEmail) unmarkRegistryKeyDeleted(invoice.clientEmail, suffix);
 
+    const processClientDetails = (invoice: Invoice) => {
       const n = (invoice.clientName || '').trim();
       const companyName = (invoice.clientCompanyName || invoice.clientCompany || '').trim();
       const e = (invoice.clientEmail || '').trim();
@@ -2593,26 +2610,33 @@ export default function App() {
       const gstin = (invoice.clientGstin || '').trim();
       const pan = (invoice.clientPan || '').trim();
 
-      if (!n && !companyName && !e && !gstin) return; // need at least one identifier
+      if (!n && !companyName && !e && !gstin && !p) return;
 
-      // Upsert matching priority: gstin → email → companyName → name
-      const existingIdx = updatedClients.findIndex((c) => {
-        if (gstin && c.gstin && c.gstin.toLowerCase() === gstin.toLowerCase()) return true;
-        if (e && c.email && c.email.toLowerCase() === e.toLowerCase()) return true;
-        if (companyName && c.companyName && c.companyName.toLowerCase() === companyName.toLowerCase()) return true;
-        if (n && c.name && c.name.toLowerCase() === n.toLowerCase()) return true;
-        return false;
-      });
+      const incomingClient = {
+        name: n || companyName,
+        companyName: companyName || n,
+        email: e,
+        phone: p,
+        address: a,
+        country,
+        state,
+        gstin,
+        taxId: gstin,
+        pan,
+        updatedAt: new Date().toISOString(),
+      };
 
+      const existingIdx = updatedClients.findIndex(c => isPartyMatch(c, incomingClient));
       const now = new Date().toISOString();
 
       if (existingIdx > -1) {
-        // UPDATE — merge non-empty values over existing record
         const existing = updatedClients[existingIdx];
         const merged: ClientProfile = {
           ...existing,
-          name: n || existing.name,
-          companyName: companyName || existing.companyName,
+          ...incomingClient,
+          id: existing.id,
+          name: n || existing.name || companyName,
+          companyName: companyName || existing.companyName || n,
           email: e || existing.email,
           phone: p || existing.phone,
           address: a || existing.address,
@@ -2630,7 +2654,6 @@ export default function App() {
         }
         console.log('[App.tsx] processClientDetails: UPDATED client:', merged.name);
       } else {
-        // INSERT new record
         const clientToSave: ClientProfile = {
           id: crypto.randomUUID(),
           userId: user?.id || '',
@@ -2639,11 +2662,11 @@ export default function App() {
           address: a,
           email: e,
           phone: p,
-          country: country,
-          state: state,
-          gstin: gstin,
+          country,
+          state,
+          gstin,
           taxId: gstin,
-          pan: pan,
+          pan,
           createdAt: now,
           updatedAt: now,
           _pendingSync: true,
@@ -2652,6 +2675,8 @@ export default function App() {
         updatedClients = [clientToSave, ...updatedClients];
         console.log('[App.tsx] processClientDetails: INSERTED client:', clientToSave.name);
       }
+
+      updatedClients = deduplicatePartyList(updatedClients);
     };
 
     // Process Vendor details for Purchase Ledger documents
@@ -2685,38 +2710,26 @@ export default function App() {
           const state = (stateVal || '').trim();
           const country = (countryVal || 'India').trim();
 
-          if (!n && !companyName && !e && !gstin) return; // Need at least one identifier
+          if (!n && !companyName && !e && !gstin && !p) return;
 
-          const pClean = p.replace(/\D/g, '');
+          const incomingVendor = {
+            name: n || companyName,
+            company: companyName || n,
+            email: e,
+            phone: p,
+            address: a,
+            gstin,
+            pan,
+            state,
+            country,
+            category: 'Vendor',
+          };
 
-          // Cross-match identifiers to prevent duplicate vendor creation
-          const existingIdx = existingVendors.findIndex((v) => {
-            if (gstin && v.gstin && v.gstin.toLowerCase() === gstin.toLowerCase()) return true;
-            if (pan && v.pan && v.pan.toLowerCase() === pan.toLowerCase()) return true;
-            if (e && v.email && v.email.toLowerCase() === e.toLowerCase()) return true;
-            if (pClean && v.phone && v.phone.replace(/\D/g, '') === pClean && pClean.length >= 7) return true;
-            if (companyName && v.company && companyName.toLowerCase() === v.company.toLowerCase()) return true;
-            if (companyName && v.name && companyName.toLowerCase() === v.name.toLowerCase()) return true;
-            if (n && v.name && n.toLowerCase() === v.name.toLowerCase()) return true;
-            if (n && v.company && n.toLowerCase() === v.company.toLowerCase()) return true;
-            return false;
-          });
+          const existingIdx = existingVendors.findIndex(v => isPartyMatch(v, incomingVendor));
 
           if (existingIdx > -1) {
             const existing = existingVendors[existingIdx];
-            const merged = {
-              ...existing,
-              name: n || existing.name || companyName,
-              company: companyName || existing.company || n,
-              email: e || existing.email,
-              phone: p || existing.phone,
-              address: a || existing.address,
-              gstin: gstin || existing.gstin,
-              pan: pan || existing.pan,
-              state: state || existing.state,
-              country: country || existing.country,
-              category: existing.category || 'Vendor',
-            };
+            const merged = mergePartyRecords(existing, incomingVendor);
             existingVendors[existingIdx] = merged;
             if (!vendorsToUpsert.some(v => v.id === merged.id)) {
               vendorsToUpsert.push(merged);
@@ -2725,21 +2738,15 @@ export default function App() {
           } else {
             const newVendor = {
               id: `av_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-              name: n || companyName,
-              company: companyName || n,
-              email: e,
-              phone: p,
-              address: a,
-              gstin: gstin,
-              pan: pan,
-              state: state,
-              country: country,
+              ...incomingVendor,
               category: 'Vendor',
             };
             existingVendors = [newVendor, ...existingVendors];
             vendorsToUpsert.push(newVendor);
             console.log('[App.tsx] processVendorDetails: INSERTED vendor:', newVendor.name);
           }
+
+          existingVendors = deduplicatePartyList(existingVendors);
         };
 
         // 1. Process Billed Vendor details
@@ -2810,13 +2817,32 @@ export default function App() {
 
     // Process Bill To / Vendor — pass full invoice so all fields are available
     const rawDocType = (invoice.invoiceType || '').toLowerCase().trim();
-    const isPurchaseInvoice = ['purchases', 'purchase', 'purchase_order', 'purchase_bill', 'vendor_bill', 'purchase_debit_note', 'purchase_debit'].includes(rawDocType) || rawDocType.startsWith('purchase');
+    const isPurchaseInvoice = isPurchaseDocument(rawDocType) || ['purchase', 'purchase_bill', 'vendor_bill', 'purchase_debit'].includes(rawDocType) || rawDocType.startsWith('purchase');
     if (isPurchaseInvoice) {
       // Purchase docs: save to actual_vendors (billed vendors & shipped vendors)
       await processVendorDetails(invoice);
     } else {
       // Sales docs: save to clients (billed clients)
       processClientDetails(invoice);
+    }
+
+    // ─── Sync to Master Registry (localStorage) ─────────────────────────────────
+    // This ensures the party appears in Master Database and Billed Clients/Vendors views immediately.
+    try {
+      const partyDetails = buildClientDetails({
+        clientName: (invoice.clientName || '').trim(),
+        clientCompanyName: (invoice.clientCompanyName || invoice.clientCompany || '').trim(),
+        clientEmail: (invoice.clientEmail || '').trim(),
+        clientPhone: (invoice.clientPhone || '').trim(),
+        clientAddress: (invoice.clientAddress || '').trim(),
+        clientCountry: (invoice.clientCountry || 'India').trim(),
+        clientState: (invoice.clientState || '').trim(),
+        clientGstin: (invoice.clientGstin || '').trim(),
+        clientPan: (invoice.clientPan || '').trim(),
+      });
+      upsertMasterRegistry(partyDetails, rawDocType, suffix);
+    } catch (regErr) {
+      console.warn('[handleSaveInvoice] Master registry sync warning:', regErr);
     }
 
     // Commit all client state updates and sync to database at once
@@ -2862,6 +2888,9 @@ export default function App() {
     localStorage.setItem('invoice_maker_invoices', JSON.stringify(matchesList));
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('invoice_updated', { detail: invoice }));
+      window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
+      window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
+      window.dispatchEvent(new CustomEvent('makbills_registry_deleted'));
     }
 
     const activeUid = await resolveSessionUid();
@@ -3436,28 +3465,85 @@ export default function App() {
     }
   };
 
-  const handleDeleteClient = async (clientId: string) => {
-    const confirmed = await confirm({
-      title: 'Delete Client',
-      message: 'Are you sure you want to permanently delete this client profile? This action cannot be undone.',
-      confirmText: 'Delete'
-    });
-    if (!confirmed) return;
+  const handleDeleteClient = async (clientId: string, skipConfirm = false) => {
+    if (!skipConfirm) {
+      const confirmed = await confirm({
+        title: 'Delete Client',
+        message: 'Are you sure you want to permanently delete this client profile? This action cannot be undone.',
+        confirmText: 'Delete'
+      });
+      if (!confirmed) return;
+    }
 
-    // Find client in local clients state or fallback
-    const clientToDelete = clients.find(c => c.id === clientId);
+    const clean = (s: any) => String(s || '').trim().toLowerCase();
+
+    // Find client in local clients state by ID or cross-field matching
+    const clientToDelete = clients.find(c => c.id === clientId) ||
+      clients.find(c => {
+        if (!clientId) return false;
+        const cId = clean(clientId);
+        const n = clean(c.name);
+        const comp = clean((c as any).companyName || (c as any).company);
+        const gst = clean((c as any).gstin || (c as any).taxId);
+        const em = clean(c.email);
+        return (n && cId.includes(n)) || (comp && cId.includes(comp)) || (gst && cId.includes(gst)) || (em && cId.includes(em));
+      });
+
     const clientName = clientToDelete?.name?.trim() || '';
+    const compName = ((clientToDelete as any)?.companyName || (clientToDelete as any)?.company || '').trim();
+    const gstin = ((clientToDelete as any)?.gstin || (clientToDelete as any)?.taxId || '').trim();
+    const email = (clientToDelete?.email || '').trim();
 
-    // Filter out all duplicates by ID and by name from local state
-    const remaining = clients.filter(c => c.id !== clientId && (!clientName || c.name.trim().toLowerCase() !== clientName.toLowerCase()));
+    // Mark tombstones to prevent resurrecting
+    if (clientToDelete) {
+      markRegistryKeyDeleted(clientToDelete, suffix);
+    }
+    markRegistryKeyDeleted(clientId, suffix);
+    if (clientName) markRegistryKeyDeleted(clientName, suffix);
+    if (compName) markRegistryKeyDeleted(compName, suffix);
+    if (gstin) markRegistryKeyDeleted(gstin, suffix);
+    if (email) markRegistryKeyDeleted(email, suffix);
+
+    const matchesClient = (c: any) => {
+      if (c.id === clientId) return true;
+      if (clientToDelete && c.id === clientToDelete.id) return true;
+      const cName = clean(c.name);
+      const cComp = clean((c as any).companyName || (c as any).company);
+      const cGst = clean((c as any).gstin || (c as any).taxId);
+      const cEmail = clean(c.email);
+
+      if (gstin && cGst && cGst === clean(gstin)) return true;
+      if (email && cEmail && cEmail === clean(email)) return true;
+      if (clientName && (cName === clean(clientName) || cComp === clean(clientName))) return true;
+      if (compName && (cComp === clean(compName) || cName === clean(compName))) return true;
+      return false;
+    };
+
+    // Filter out all duplicates by ID and by name/comp/gstin from local state
+    const remaining = clients.filter(c => !matchesClient(c));
     setClients(remaining);
     localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(remaining));
+
+    // Also update and sync Master Registry Client Database (vendors)
+    const existingVendors = getLocalMasterRegistry('makbills_masters_vendors', suffix);
+    const updatedVendors = existingVendors.filter((v: any) => !matchesClient(v));
+    localStorage.setItem(`makbills_masters_vendors${suffix}`, JSON.stringify(updatedVendors));
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
+      window.dispatchEvent(new CustomEvent('makbills_registry_deleted'));
+    }
 
     const activeUid = await resolveSessionUid();
     if (activeUid) {
       try {
+        // Push updated vendors to company_settings
+        pushMasterRegistriesToCloud(activeUid, suffix, { vendors: updatedVendors });
+
         let query = supabase.from('clients').delete().eq('userId', activeUid);
-        if (clientName) {
+        if (clientToDelete?.id && clientToDelete.id !== clientId) {
+          query = query.or(`id.eq.${clientId},id.eq.${clientToDelete.id}${clientName ? `,name.ilike.${clientName}` : ''}`);
+        } else if (clientName) {
           query = query.or(`id.eq.${clientId},name.ilike.${clientName}`);
         } else {
           query = query.eq('id', clientId);

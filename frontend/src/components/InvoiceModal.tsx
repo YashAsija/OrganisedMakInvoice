@@ -147,7 +147,7 @@ export default function InvoiceModal({
   // Advanced features and billing options
   const [invoiceType, setInvoiceType] = useState<'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'estimate' | 'quote' | 'purchases' | 'purchase_order' | 'purchase_debit_note'>('invoice');
 
-  // Master Registry Combined Client + Vendor Database loader (unifies Client DB and Vendor DB)
+  // Master Registry Combined Master Database loader (unifies Client DB, Vendor DB, Supabase Clients & Billed Parties)
   const [registryClients, setRegistryClients] = useState<any[]>([]);
 
   const loadRegistryClients = useCallback(() => {
@@ -163,47 +163,178 @@ export default function InvoiceModal({
     try { clientList = JSON.parse(rawClients); } catch { clientList = []; }
     try { vendorList = JSON.parse(rawVendors); } catch { vendorList = []; }
 
-    const seenKeys = new Set<string>();
-    const combined: any[] = [];
+    const map = new Map<string, any>();
 
-    // Tag and append Client database records
-    for (const c of (Array.isArray(clientList) ? clientList : [])) {
-      const key = (c.name || c.companyName || c.company || '').toLowerCase().trim();
-      if (!key) continue;
-      seenKeys.add(key);
-      combined.push({
-        ...c,
-        id: c.id || `cl_reg_${Math.random().toString(36).substr(2, 6)}`,
+    const normalizeKey = (name?: string, company?: string, gstin?: string, email?: string) => {
+      const cleanGst = (gstin || '').trim().toUpperCase();
+      if (cleanGst && cleanGst.length >= 10) return `gst_${cleanGst}`;
+      const cleanEmail = (email || '').trim().toLowerCase();
+      if (cleanEmail && cleanEmail.includes('@')) return `email_${cleanEmail}`;
+      const cleanComp = (company || '').trim().toLowerCase();
+      const cleanName = (name || '').trim().toLowerCase();
+      if (cleanComp) return `comp_${cleanComp}`;
+      if (cleanName) return `name_${cleanName}`;
+      return '';
+    };
+
+    // 1. Client Database
+    (Array.isArray(clientList) ? clientList : []).forEach((c) => {
+      const key = normalizeKey(c.name, c.company || c.companyName, c.gstin || c.taxId, c.email);
+      if (!key) return;
+      const gstinVal = c.gstin || c.taxId || '';
+      const panVal = c.pan || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+      const comp = c.company || c.companyName || '';
+      const name = c.name || comp || 'Client';
+      map.set(key, {
+        id: c.id || `cl_${key}`,
+        name,
+        companyName: comp,
+        company: comp,
+        email: c.email || '',
+        phone: c.phone || c.mobile || '',
+        address: c.address || '',
+        gstin: gstinVal,
+        taxId: gstinVal,
+        pan: panVal,
+        state: c.state || '',
+        country: c.country || 'India',
         partyType: 'Client'
       });
-    }
+    });
 
-    // Tag and append Vendor database records (if not already added)
-    for (const v of (Array.isArray(vendorList) ? vendorList : [])) {
-      const key = (v.name || v.companyName || v.company || '').toLowerCase().trim();
-      if (!key) continue;
-      if (seenKeys.has(key)) {
-        // Find existing and tag as Both if from both databases
-        const existing = combined.find(item => (item.name || item.companyName || item.company || '').toLowerCase().trim() === key);
-        if (existing) existing.partyType = 'Client & Vendor';
-        continue;
+    // 2. Vendor Database
+    (Array.isArray(vendorList) ? vendorList : []).forEach((v) => {
+      const key = normalizeKey(v.name, v.company || v.companyName, v.gstin || v.taxId, v.email);
+      if (!key) return;
+      const gstinVal = v.gstin || v.taxId || '';
+      const panVal = v.pan || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+      const comp = v.company || v.companyName || '';
+      const name = v.name || comp || 'Vendor';
+
+      if (map.has(key)) {
+        const existing = map.get(key)!;
+        existing.partyType = 'Client & Vendor';
+        if (!existing.email && v.email) existing.email = v.email;
+        if (!existing.phone && (v.phone || v.mobile)) existing.phone = v.phone || v.mobile;
+        if (!existing.address && v.address) existing.address = v.address;
+        if (!existing.gstin && gstinVal) { existing.gstin = gstinVal; existing.taxId = gstinVal; }
+        if (!existing.pan && panVal) existing.pan = panVal;
+      } else {
+        map.set(key, {
+          id: v.id || `ven_${key}`,
+          name,
+          companyName: comp,
+          company: comp,
+          email: v.email || '',
+          phone: v.phone || v.mobile || '',
+          address: v.address || '',
+          gstin: gstinVal,
+          taxId: gstinVal,
+          pan: panVal,
+          state: v.state || '',
+          country: v.country || 'India',
+          partyType: 'Vendor'
+        });
       }
-      seenKeys.add(key);
-      combined.push({
-        ...v,
-        id: v.id || `ven_reg_${Math.random().toString(36).substr(2, 6)}`,
-        partyType: 'Vendor'
-      });
-    }
+    });
 
-    setRegistryClients(combined);
-  }, [profile]);
+    // 3. Supabase clients prop
+    (clients || []).forEach((c) => {
+      const key = normalizeKey(c.name, (c as any).companyName || (c as any).company, (c as any).gstin || (c as any).taxId, c.email);
+      if (!key) return;
+      const gstinVal = (c as any).gstin || (c as any).taxId || '';
+      const panVal = (c as any).pan || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+      const comp = (c as any).companyName || (c as any).company || '';
+      const name = c.name || comp || 'Client';
 
+      if (map.has(key)) {
+        const existing = map.get(key)!;
+        if (!existing.email && c.email) existing.email = c.email;
+        if (!existing.phone && c.phone) existing.phone = c.phone;
+        if (!existing.address && c.address) existing.address = c.address;
+        if (!existing.gstin && gstinVal) { existing.gstin = gstinVal; existing.taxId = gstinVal; }
+        if (!existing.pan && panVal) existing.pan = panVal;
+      } else {
+        map.set(key, {
+          id: c.id || `cl_prop_${key}`,
+          name,
+          companyName: comp,
+          company: comp,
+          email: c.email || '',
+          phone: c.phone || '',
+          address: c.address || '',
+          gstin: gstinVal,
+          taxId: gstinVal,
+          pan: panVal,
+          state: (c as any).state || '',
+          country: (c as any).country || 'India',
+          partyType: 'Client'
+        });
+      }
+    });
+
+    // 4. Invoices (Billed Clients and Billed Vendors)
+    (invoices || []).forEach((inv) => {
+      if (inv.isDeleted) return;
+      const rawType = (inv.invoiceType || '').toLowerCase();
+      const isPurchase = ['purchases', 'purchase_bill', 'purchase', 'purchase_order', 'po', 'purchase_debit_note'].includes(rawType);
+      const partyName = inv.clientName || (inv as any).vendorName || '';
+      const compName = (inv as any).clientCompanyName || (inv as any).companyName || '';
+      const gstinVal = (inv as any).clientGstin || (inv as any).taxId || (inv as any).gstin || '';
+      const email = inv.clientEmail || (inv as any).email || '';
+      const key = normalizeKey(partyName, compName, gstinVal, email);
+      if (!key) return;
+
+      const panVal = (inv as any).clientPan || (inv as any).pan || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+
+      if (map.has(key)) {
+        const existing = map.get(key)!;
+        if (isPurchase && existing.partyType === 'Client') {
+          existing.partyType = 'Client & Vendor';
+        } else if (!isPurchase && existing.partyType === 'Vendor') {
+          existing.partyType = 'Client & Vendor';
+        }
+        if (!existing.email && email) existing.email = email;
+        if (!existing.phone && (inv.clientPhone || (inv as any).phone)) existing.phone = inv.clientPhone || (inv as any).phone;
+        if (!existing.address && inv.clientAddress) existing.address = inv.clientAddress;
+        if (!existing.gstin && gstinVal) { existing.gstin = gstinVal; existing.taxId = gstinVal; }
+        if (!existing.pan && panVal) existing.pan = panVal;
+        if (!existing.state && (inv as any).clientState) existing.state = (inv as any).clientState;
+        if (!existing.country && (inv as any).clientCountry) existing.country = (inv as any).clientCountry;
+      } else {
+        const partyType: 'Client' | 'Vendor' = isPurchase ? 'Vendor' : 'Client';
+        map.set(key, {
+          id: `billed_${key}`,
+          name: partyName || compName,
+          companyName: compName,
+          company: compName,
+          email,
+          phone: inv.clientPhone || (inv as any).phone || '',
+          address: inv.clientAddress || '',
+          gstin: gstinVal,
+          taxId: gstinVal,
+          pan: panVal,
+          state: (inv as any).clientState || '',
+          country: (inv as any).clientCountry || 'India',
+          partyType
+        });
+      }
+    });
+
+    setRegistryClients(Array.from(map.values()));
+  }, [profile, clients, invoices]);
+
+  const prevIsOpenRef = useRef(false);
   useEffect(() => {
     if (isOpen) {
-      setSavedInvoiceForPreview(null);
+      if (!prevIsOpenRef.current) {
+        setSavedInvoiceForPreview(null);
+      }
       loadRegistryClients();
+    } else {
+      setSavedInvoiceForPreview(null);
     }
+    prevIsOpenRef.current = isOpen;
   }, [isOpen, loadRegistryClients]);
 
   // Keep registry fresh when other parts of the app save new clients or vendors
@@ -994,56 +1125,9 @@ export default function InvoiceModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filter billing clients dynamically — merge saved clients prop with master registry (clients + vendors)
+  // Filter master database directory dynamically
   const filteredClients = useMemo(() => {
-    // Convert registry records (both Client & Vendor databases) into unified profiles
-    const registryAsProfiles = registryClients.map((r: any) => ({
-      id: r.id || `reg_${Math.random().toString(36).substr(2, 6)}`,
-      name: r.name || r.companyName || r.company || '',
-      companyName: r.companyName || r.company || '',
-      company: r.company || r.companyName || '',
-      email: r.email || '',
-      phone: r.phone || r.mobile || '',
-      address: r.address || '',
-      gstin: r.gstin || r.taxId || '',
-      taxId: r.taxId || r.gstin || '',
-      pan: r.pan || '',
-      state: r.state || '',
-      country: r.country || 'India',
-      partyType: r.partyType || 'Client',
-    }));
-
-    // Merge, prefer clients prop entries over registry for duplicates
-    const seenNames = new Set<string>();
-    const merged: any[] = [];
-
-    // First add explicit ClientProfile[] prop
-    for (const c of (clients || [])) {
-      const key = (c.name || (c as any).companyName || (c as any).company || '').toLowerCase().trim();
-      if (key && seenNames.has(key)) continue;
-      if (key) seenNames.add(key);
-      merged.push({
-        ...c,
-        partyType: (c as any).partyType || 'Client'
-      });
-    }
-
-    // Next add combined registry profiles (client + vendor DB)
-    for (const r of registryAsProfiles) {
-      const key = (r.name || r.companyName || r.company || '').toLowerCase().trim();
-      if (key && seenNames.has(key)) {
-        // Find existing and update partyType if vendor
-        const existing = merged.find(item => (item.name || item.companyName || item.company || '').toLowerCase().trim() === key);
-        if (existing && r.partyType === 'Vendor') {
-          existing.partyType = existing.partyType === 'Client' ? 'Client & Vendor' : 'Vendor';
-        }
-        continue;
-      }
-      if (key) seenNames.add(key);
-      merged.push(r);
-    }
-
-    const sorted = merged.sort((a, b) => {
+    const sorted = [...registryClients].sort((a, b) => {
       const compA = ((a as any).companyName || (a as any).company || '').toLowerCase();
       const compB = ((b as any).companyName || (b as any).company || '').toLowerCase();
       if (compA && compB && compA !== compB) return compA.localeCompare(compB);
@@ -1064,7 +1148,7 @@ export default function InvoiceModal({
       const pType = ((c as any).partyType || '').toLowerCase();
       return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q) || pan.includes(q) || pType.includes(q);
     });
-  }, [clients, clientSearchQuery, registryClients]);
+  }, [clientSearchQuery, registryClients]);
 
   // Filter shipping clients dynamically — also benefits from combined client + vendor list
   const filteredShipClients = useMemo(() => {
@@ -1455,9 +1539,9 @@ export default function InvoiceModal({
             return `${guestId} (${formattedDate})`;
           })())),
       isFreightAdded,
-      clientEmail: invoiceType === 'estimate' ? '' : (silent ? clientEmail : clientEmail.trim()),
-      clientPhone: invoiceType === 'estimate' ? '' : (silent ? clientPhone : clientPhone.trim()),
-      clientAddress: invoiceType === 'estimate' ? '' : (silent ? clientAddress : clientAddress.trim()),
+      clientEmail: silent ? clientEmail : clientEmail.trim(),
+      clientPhone: silent ? clientPhone : clientPhone.trim(),
+      clientAddress: silent ? clientAddress : clientAddress.trim(),
       notes: silent ? notes : notes.trim(),
       subtotal: Number.isFinite(calculatedSubtotal) ? parseFloat(calculatedSubtotal.toFixed(2)) : 0,
       discountType: discountType || 'none',
@@ -2148,9 +2232,13 @@ export default function InvoiceModal({
       return;
     }
 
-    let currentName = clientName;
-    if (!currentName || !currentName.trim()) {
-      currentName = `Guest_${invoiceNumber || Math.random().toString(36).substr(2, 6)}`;
+    let currentName = clientName?.trim() || '';
+    if (!currentName) {
+      if (clientCompanyName && clientCompanyName.trim()) {
+        currentName = clientCompanyName.trim();
+      } else {
+        currentName = `Guest_${invoiceNumber || Math.random().toString(36).substr(2, 6)}`;
+      }
       setClientName(currentName);
     }
 
@@ -2256,9 +2344,9 @@ export default function InvoiceModal({
           const guestId = `Guest-${Math.floor(1000 + Math.random() * 9000)}`;
           return `${guestId} (${formattedDate})`;
         })()),
-      clientEmail: invoiceType === 'estimate' ? '' : clientEmail.trim(),
-      clientPhone: invoiceType === 'estimate' ? '' : clientPhone.trim(),
-      clientAddress: invoiceType === 'estimate' ? '' : clientAddress.trim(),
+      clientEmail: clientEmail.trim(),
+      clientPhone: clientPhone.trim(),
+      clientAddress: clientAddress.trim(),
       notes: notes.trim(),
       subtotal: parseFloat(calculatedSubtotal.toFixed(2)),
       discountType,
@@ -2972,7 +3060,7 @@ export default function InvoiceModal({
 
                       {(filteredClients.length > 0 || (clients && clients.length > 0) || registryClients.length > 0) && (
                         <div className="bg-sky-50/30 dark:bg-slate-950 p-2.5 rounded-2xl border border-sky-100/20 dark:border-slate-800/65">
-                          <label htmlFor="select-pre-client" className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-1">Populate from Clients & Vendors:</label>
+                          <label htmlFor="select-pre-client" className="block text-[10px] font-bold uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1">Populate from Master Database:</label>
                           <div className="relative" ref={clientDropdownRef}>
                             <div className="relative flex items-center">
                               <input
@@ -2984,7 +3072,7 @@ export default function InvoiceModal({
                                   setIsClientDropdownOpen(true);
                                 }}
                                 onFocus={() => setIsClientDropdownOpen(true)}
-                                placeholder="-- Select or type to search client or vendor profile --"
+                                placeholder="-- Select or type to search from Master Database (Clients & Vendors) --"
                                 className="w-full pl-3 pr-16 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 shadow-xs"
                               />
                               <div className="absolute right-1.5 flex items-center gap-1">
@@ -3017,7 +3105,7 @@ export default function InvoiceModal({
                               <div className="absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 border border-sky-200 dark:border-slate-700 rounded-xl shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800">
                                 <div className="px-3 py-1 bg-sky-50/90 dark:bg-slate-800/90 flex items-center justify-between sticky top-0 backdrop-blur-xs z-10">
                                   <span className="text-[10px] font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider">
-                                    Saved Profiles ({filteredClients.length})
+                                    Master Database Directory ({filteredClients.length})
                                   </span>
                                   <button
                                     type="button"
@@ -3237,9 +3325,9 @@ export default function InvoiceModal({
 
                       {activeTemplate.sections.shipTo?.visible !== false && (
                         <div className="space-y-3 pt-3 border-t border-slate-150 dark:border-slate-800">
-                          {clients && clients.length > 0 && (
+                          {(filteredShipClients.length > 0 || registryClients.length > 0) && (
                             <div className="bg-sky-50/30 dark:bg-slate-950 p-2.5 rounded-2xl border border-sky-100/20 dark:border-slate-800/65">
-                              <label htmlFor="select-pre-client-shipto" className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-1">Populate from Clients:</label>
+                              <label htmlFor="select-pre-client-shipto" className="block text-[10px] font-bold uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1">Populate from Master Database:</label>
                               <div className="relative" ref={shipClientDropdownRef}>
                                 <div className="relative flex items-center">
                                   <input
@@ -3251,7 +3339,7 @@ export default function InvoiceModal({
                                       setIsShipClientDropdownOpen(true);
                                     }}
                                     onFocus={() => setIsShipClientDropdownOpen(true)}
-                                    placeholder="-- Select or type to search ship-to client profile --"
+                                    placeholder="-- Select or type to search from Master Database --"
                                     className="w-full pl-3 pr-16 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 shadow-xs"
                                   />
                                   <div className="absolute right-1.5 flex items-center gap-1">
@@ -3284,7 +3372,7 @@ export default function InvoiceModal({
                                   <div className="absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 border border-sky-200 dark:border-slate-700 rounded-xl shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800">
                                     <div className="px-3 py-1 bg-sky-50/90 dark:bg-slate-800/90 flex items-center justify-between sticky top-0 backdrop-blur-xs z-10">
                                       <span className="text-[10px] font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider">
-                                        Saved Clients ({filteredShipClients.length})
+                                        Master Database Directory ({filteredShipClients.length})
                                       </span>
                                       <button
                                         type="button"
