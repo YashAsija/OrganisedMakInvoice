@@ -751,13 +751,33 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 }}>
                 {[
                   { key: 'email', icon: <Mail style={{ width: 14, height: 14 }} />, label: 'Email' },
-                  { key: 'phone', icon: <Phone style={{ width: 14, height: 14 }} />, label: 'Phone' },
+                  { key: 'phone', icon: <Phone style={{ width: 14, height: 14 }} />, label: 'Phone', badge: 'Soon' },
                   { key: 'google', icon: <LogIn style={{ width: 14, height: 14 }} />, label: 'Google' }
                 ].map(m => (
                   <button key={m.key} type="button"
                     onClick={() => { setLoginMethod(m.key as any); setOtpSent(false); setFormErrors({}); setSuccessMsg(''); }}
                     className={`auth-method-btn ${loginMethod === m.key ? 'active' : 'inactive'}`}
+                    style={{ position: 'relative' }}
                   >
+                    {m.badge && (
+                      <span style={{
+                        position: 'absolute',
+                        top: -6,
+                        right: -3,
+                        background: '#f59e0b',
+                        color: '#000000',
+                        fontSize: '0.52rem',
+                        fontWeight: 800,
+                        padding: '1px 5px',
+                        borderRadius: 99,
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        boxShadow: '0 2px 6px rgba(245,158,11,0.3)',
+                        lineHeight: 1.2
+                      }}>
+                        Soon
+                      </span>
+                    )}
                     {m.icon}
                     {m.label}
                   </button>
@@ -1023,86 +1043,87 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
               </form>
 
             ) : (
-              /* ===== PHONE / OTP METHOD ===== */
-              otpSent ? (
-                <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div>
-                    <label className="auth-label">Verification Code (OTP)</label>
-                    <input className="auth-input" type="text" required placeholder="e.g. 123456" value={otpValue} onChange={e => setOtpValue(e.target.value)} />
+              /* ===== PHONE / OTP METHOD (COMING SOON) ===== */
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '16px 8px', gap: 16 }}>
+                <div style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 14,
+                  background: theme === 'dark' ? 'rgba(245,158,11,0.12)' : '#fef3c7',
+                  border: `1.5px solid ${theme === 'dark' ? 'rgba(245,158,11,0.3)' : '#fde68a'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#f59e0b'
+                }}>
+                  <Phone style={{ width: 24, height: 24 }} />
+                </div>
+
+                <div>
+                  <div style={{
+                    display: 'inline-block',
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: '0.65rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: '#d97706',
+                    background: theme === 'dark' ? 'rgba(245,158,11,0.15)' : '#fef3c7',
+                    border: '1px solid rgba(245,158,11,0.3)',
+                    padding: '3px 10px',
+                    borderRadius: 99,
+                    marginBottom: 10
+                  }}>
+                    Coming Soon
                   </div>
-                  <button type="submit" disabled={isLoading} className="auth-btn-primary">
-                    {isLoading ? <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} /> : <><KeyRound style={{ width: 15, height: 15 }} />Verify & Proceed</>}
+                  <h3 style={{
+                    fontFamily: "'Fraunces', serif",
+                    fontSize: '1.2rem',
+                    fontWeight: 600,
+                    color: theme === 'dark' ? '#f8fafc' : '#0f172a',
+                    marginBottom: 6
+                  }}>
+                    Phone Authentication
+                  </h3>
+                  <p style={{ fontSize: '0.82rem', color: theme === 'dark' ? '#94a3b8' : '#64748b', lineHeight: 1.5, maxWidth: 320, margin: '0 auto' }}>
+                    SMS & phone verification is currently in development. Please use <strong>Email</strong> or <strong>Google</strong> to {authMode === 'signup' ? 'create your account' : 'log into your workspace'}.
+                  </p>
+                </div>
+
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => { setLoginMethod('email'); setFormErrors({}); }}
+                    className="auth-btn-primary"
+                  >
+                    <Mail style={{ width: 15, height: 15 }} />
+                    Continue with Email
                   </button>
-                </form>
-              ) : (
-                <form onSubmit={handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {authMode === 'signup' && (
-                    <>
-                      <div><label className="auth-label">Your Name</label><input className="auth-input" type="text" required placeholder="e.g. John Doe" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
-                      <div><label className="auth-label">Company Name</label><input className="auth-input" type="text" required placeholder="e.g. Acme Tech Solutions" value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} /></div>
-                    </>
-                  )}
-                  <div>
-                    <label className="auth-label">Phone Number</label>
-                    <input className="auth-input" type="tel" required placeholder="e.g. +1 555 000 0000" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-                  </div>
-                  {authMode === 'signup' && (
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 2, marginBottom: 2 }}>
-                      <input
-                        type="checkbox"
-                        id="accept-terms-checkbox-phone"
-                        checked={acceptedTerms}
-                        onChange={(e) => {
-                          setAcceptedTerms(e.target.checked);
-                          if (e.target.checked) {
-                            setFormErrors(prev => {
-                              const copy = { ...prev };
-                              delete copy.terms;
-                              delete copy.email;
-                              delete copy.phone;
-                              return copy;
-                            });
-                          }
-                        }}
-                        style={{
-                          marginTop: 3,
-                          width: 16,
-                          height: 16,
-                          accentColor: theme === 'dark' ? '#38bdf8' : '#0284c7',
-                          cursor: 'pointer',
-                          flexShrink: 0,
-                          borderRadius: 4
-                        }}
-                      />
-                      <label htmlFor="accept-terms-checkbox-phone" style={{ fontSize: '0.78rem', color: theme === 'dark' ? '#94a3b8' : '#475569', lineHeight: 1.45, cursor: 'pointer', userSelect: 'none' }}>
-                        I agree to the{' '}
-                        <a
-                          href="/terms"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          style={{ color: theme === 'dark' ? '#38bdf8' : '#0284c7', fontWeight: 600, textDecoration: 'underline' }}
-                        >
-                          Terms & Conditions
-                        </a>{' '}
-                        and{' '}
-                        <a
-                          href="/privacy"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          style={{ color: theme === 'dark' ? '#38bdf8' : '#0284c7', fontWeight: 600, textDecoration: 'underline' }}
-                        >
-                          Privacy Policy
-                        </a>
-                      </label>
-                    </div>
-                  )}
-                  <button type="submit" disabled={isLoading} className="auth-btn-primary">
-                    {isLoading ? <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} /> : <><Phone style={{ width: 15, height: 15 }} />Send Verification Code</>}
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    style={{
+                      width: '100%',
+                      padding: '11px 18px',
+                      background: theme === 'dark' ? '#111a36' : '#ffffff',
+                      border: `1.5px solid ${theme === 'dark' ? '#223269' : '#bae6fd'}`,
+                      borderRadius: 10,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      fontFamily: "'IBM Plex Sans', sans-serif",
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      color: theme === 'dark' ? '#f8fafc' : '#0f172a'
+                    }}
+                  >
+                    <LogIn style={{ width: 14, height: 14 }} />
+                    Continue with Google
                   </button>
-                </form>
-              )
+                </div>
+              </div>
             )}
           </div>
 
