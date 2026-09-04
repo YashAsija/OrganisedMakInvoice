@@ -211,6 +211,8 @@ export default function UsersAdminPage() {
     return `${diffDays} days`;
   };
 
+  const verifiedCount = users.filter(u => u.email_verified).length;
+
   const activeSubscriptionsCount = users.filter(u => {
     const sub = u.subscription;
     if (!sub) return false;
