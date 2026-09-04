@@ -220,7 +220,7 @@ export default function App() {
           const desc = searchParams.get('error_description') || hashParams.get('error_description');
           const code = searchParams.get('error_code') || hashParams.get('error_code');
           if (code === 'otp_expired' || (desc && desc.toLowerCase().includes('expired'))) {
-            return 'The password reset link is invalid or has expired. Please enter your email below to request a new link.';
+            return 'This verification or reset link has expired or has already been used. Please log in or request a new link.';
           }
           return desc ? decodeURIComponent(desc.replace(/\+/g, ' ')) : 'Authentication link is invalid or has expired.';
         } catch (e) {}
@@ -576,7 +576,11 @@ export default function App() {
         }
       } else {
         const expectedPath = publicPath;
-        if (path !== expectedPath) {
+        const currentPath = window.location.pathname;
+        const currentSearch = window.location.search;
+        const currentHash = window.location.hash;
+        // Don't overwrite if query params like ?token= or ?code= or ?verified= are present
+        if (currentPath !== expectedPath && !currentSearch.includes('token=') && !currentSearch.includes('code=')) {
           window.history.replaceState(null, '', expectedPath);
         }
       }
@@ -615,7 +619,7 @@ export default function App() {
             }
           }
         } else {
-          setPublicPath(['/pricing', '/guide', '/contact', '/security', '/terms', '/privacy'].includes(path) ? path : '/');
+          setPublicPath(['/pricing', '/guide', '/contact', '/security', '/terms', '/privacy', '/features', '/faq', '/login', '/signup'].includes(path) ? path : '/');
         }
       };
       window.addEventListener('popstate', handlePopState);

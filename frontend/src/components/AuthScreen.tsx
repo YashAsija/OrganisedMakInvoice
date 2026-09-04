@@ -83,8 +83,14 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
         }
 
         if (errCode === 'otp_expired' || displayMsg.toLowerCase().includes('expired') || displayMsg.toLowerCase().includes('invalid')) {
-          displayMsg = 'The password reset link is invalid or has expired. Please enter your email below to request a new link.';
-          setAuthMode('forgot-password');
+          const isRecoveryAttempt = searchStr.includes('type=recovery') || hashStr.includes('type=recovery') || window.location.pathname.includes('reset-password');
+          if (isRecoveryAttempt) {
+            displayMsg = 'The password reset link is invalid or has expired. Please enter your email below to request a new link.';
+            setAuthMode('forgot-password');
+          } else {
+            displayMsg = 'This email verification link is invalid, has expired, or was already used. Please try logging in or create a new account.';
+            setAuthMode('login');
+          }
         }
 
         setFormErrors({ email: displayMsg });
@@ -97,7 +103,68 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
         return;
       }
 
-      // 2. Check for Valid Recovery Parameters
+      // 2. Check for Token / OTP in Link and verify automatically with Supabase
+      const searchParams = new URLSearchParams(searchStr);
+      const hashParams = new URLSearchParams(hashStr.replace(/^#/, '?'));
+      const token = searchParams.get('token') || hashParams.get('token');
+      const tokenHash = searchParams.get('token_hash') || hashParams.get('token_hash');
+      const email = searchParams.get('email') || hashParams.get('email');
+      const type = (searchParams.get('type') || hashParams.get('type') || 'signup') as any;
+
+      if ((tokenHash || (token && email)) && type === 'signup') {
+        setIsLoading(true);
+        (async () => {
+          try {
+            let verifyRes;
+            if (tokenHash) {
+              verifyRes = await supabase.auth.verifyOtp({
+                token_hash: tokenHash,
+                type: 'signup'
+              });
+            } else if (token && email) {
+              verifyRes = await supabase.auth.verifyOtp({
+                email: decodeURIComponent(email),
+                token: token,
+                type: 'signup'
+              });
+            }
+            if (verifyRes?.error) {
+              throw verifyRes.error;
+            }
+            // Always sign out temporary session so user logs in cleanly with password
+            await supabase.auth.signOut();
+            setSuccessMsg('Email verified successfully! You can now log into your MakInvoices account.');
+            setAuthMode('login');
+            if (email) {
+              setFormData(prev => ({ ...prev, email: decodeURIComponent(email) }));
+            }
+          } catch (err: any) {
+            console.warn('[Verify Token Error]', err);
+            setFormErrors({ email: err.message || 'Verification link is invalid or has expired.' });
+            setAuthMode('login');
+          } finally {
+            setIsLoading(false);
+            if (window.history.replaceState) {
+              window.history.replaceState(null, '', '/login');
+            }
+          }
+        })();
+        return;
+      }
+
+      // 2b. Check for Email Verification Success flags
+      const isVerified = searchStr.includes('verified=true') ||
+                         searchStr.includes('type=signup') ||
+                         hashStr.includes('type=signup');
+      if (isVerified) {
+        setSuccessMsg('Email verified successfully! You can now log into your MakInvoices account.');
+        setAuthMode('login');
+        if (window.history.replaceState) {
+          window.history.replaceState(null, '', '/login');
+        }
+      }
+
+      // 3. Check for Valid Recovery Parameters
       const isRecovery = hashStr.includes('type=recovery') ||
                          searchStr.includes('type=recovery') ||
                          window.location.pathname.includes('reset-password');
@@ -289,13 +356,15 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
     try {
       if (authMode === 'signup') {
 
-        if (!isSupabaseConfigured) {
-          throw new Error("Supabase is not configured. Service unavailable.");
-        }
+        const redirectUrl = typeof window !== 'undefined' 
+          ? `${window.location.origin}/login?verified=true`
+          : undefined;
+
         const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
+            emailRedirectTo: redirectUrl,
             data: {
               full_name: formData.name,
               phone: formData.phone,
@@ -306,7 +375,14 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
 
         if (error) throw error;
 
-        if (data.user && !data.session) {
+        // When email confirmation is enabled in Supabase, data.session is null or data.user.identities is present.
+        // Even if session is returned (e.g. if email confirmation wasn't strictly blocking yet), sign out immediately
+        // so the user MUST click the email verification link to verify before logging in.
+        if (data.session) {
+          await supabase.auth.signOut();
+        }
+
+        if (data.user) {
           // Immediately upsert Starter subscription on signup
           try {
             const lockKey = `upgrade_lock_${data.user.id}`;
@@ -341,71 +417,9 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
             console.warn('[Signup Subscription Warning]', subErr);
           }
 
-          setSuccessMsg("Account created! Please check your inbox to verify your email address.");
+          setSuccessMsg("Verification link sent! Please check your email inbox to verify your account before logging in.");
           setIsLoading(false);
-        } else if (data.user) {
-          const initProf: BusinessProfile = {
-            uid: data.user.id,
-            name: formData.companyName,
-            email: formData.email,
-            phone: formData.phone,
-            ownerName: formData.name,
-            address: '',
-            taxId: '',
-            currency: 'INR',
-            defaultTaxRate: 18,
-            updatedAt: new Date().toISOString()
-          };
-          await supabase.from('users').upsert(initProf);
-
-          // Immediately upsert Starter subscription on signup
-          try {
-            const lockKey = `upgrade_lock_${data.user.id}`;
-            const lockTime = typeof window !== 'undefined' ? localStorage.getItem(lockKey) : null;
-            if (lockTime && Date.now() - parseInt(lockTime) < 10000) {
-              console.warn('[Signup] Skipping Free plan write — upgrade lock active for user:', data.user.id);
-            } else {
-              const { data: currentSub } = await supabase
-                .from('subscriptions')
-                .select('plan_type, status')
-                .eq('user_id', data.user.id)
-                .maybeSingle();
-
-              if (currentSub && (currentSub.status === 'active' || currentSub.status === 'trialing')) {
-                console.warn('[Signup] Blocked Free plan overwrite — user has active/trialing subscription:', currentSub.plan_type, currentSub.status);
-              } else {
-                console.log('[Signup] Creating Free starter subscription for new user');
-                await supabase.from('subscriptions').upsert({
-                  user_id: data.user.id,
-                  plan_name: 'Free',
-                  plan_type: 'free',
-                  status: 'active',
-                  expires_at: null,
-                  renews_at: null,
-                  user_email: formData.email || null,
-                  user_phone: formData.phone || null,
-                  updated_at: new Date().toISOString(),
-                }, { onConflict: 'user_id' });
-              }
-            }
-          } catch (subErr) {
-            console.warn('[Signup Subscription Warning]', subErr);
-          }
-
-          const activeUserIdentifier = data.user.email || data.user.phone || formData.email || formData.phone || '';
-          if (activeUserIdentifier) {
-            localStorage.setItem(`invoice_maker_biz_profile_${encodeURIComponent(activeUserIdentifier)}`, JSON.stringify(initProf));
-          }
-          localStorage.removeItem('invoice_maker_biz_profile');
-          setSuccessMsg('Welcome aboard! Redirecting...');
-          setTimeout(() => {
-            if (onNavigate) {
-              onNavigate('/invoices');
-            } else if (typeof window !== 'undefined') {
-              window.history.pushState(null, '', '/invoices');
-              window.dispatchEvent(new Event('popstate'));
-            }
-          }, 800);
+          setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
         }
       } else if (authMode === 'forgot-password') {
         if (!isSupabaseConfigured) {
