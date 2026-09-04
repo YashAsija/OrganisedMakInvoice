@@ -653,18 +653,38 @@ async def get_users(
                 except Exception as ex:
                     logger.error(f"Supabase Auth admin fallback error: {ex}")
 
-            # Normalize & map admin notes safely
+            # Fetch active subscriptions for listed users
+            uids = [u.get("uid") for u in data if isinstance(u, dict) and u.get("uid")]
+            sub_map = {}
+            if uids:
+                try:
+                    uid_filter = ",".join(uids)
+                    res_subs = await client.get(
+                        f"{base_url}/rest/v1/subscriptions?user_id=in.({uid_filter})",
+                        headers=headers
+                    )
+                    if res_subs.status_code == 200:
+                        for s in res_subs.json():
+                            sub_uid = s.get("user_id")
+                            if sub_uid and sub_uid not in sub_map:
+                                sub_map[sub_uid] = s
+                except Exception as sub_ex:
+                    logger.warning(f"Failed fetching subscriptions for users: {sub_ex}")
+
+            # Normalize & map admin notes and subscription safely
             for u in data:
                 if isinstance(u, dict):
                     u.pop("pin_hash", None)
                     u["created_at"] = u.get("created_at") or u.get("updatedAt")
                     u["updated_at"] = u.get("updatedAt") or u.get("created_at")
                     uid = u.get("uid")
-                    if uid and not u.get("admin_notes"):
-                        try:
-                            u["admin_notes"] = await admin_db.get_user_admin_notes(uid)
-                        except Exception:
-                            u["admin_notes"] = ""
+                    if uid:
+                        u["subscription"] = sub_map.get(uid) or None
+                        if not u.get("admin_notes"):
+                            try:
+                                u["admin_notes"] = await admin_db.get_user_admin_notes(uid)
+                            except Exception:
+                                u["admin_notes"] = ""
                     
         return {
             "users": data if isinstance(data, list) else [],
@@ -781,6 +801,26 @@ async def get_user_details(user_id: str, payload: dict = Depends(verify_admin_to
         except Exception as e:
             logger.error(f"Failed to fetch expenses for user {user_id}: {str(e)}")
 
+        # Get subscription and usage
+        user_subscription = None
+        user_usage = None
+        try:
+            res_sub = await client.get(
+                f"{base_url}/rest/v1/subscriptions?user_id=eq.{user_id}&order=updated_at.desc&limit=1",
+                headers=headers
+            )
+            if res_sub.status_code == 200 and res_sub.json():
+                user_subscription = res_sub.json()[0]
+
+            res_usage = await client.get(
+                f"{base_url}/rest/v1/subscription_usage?user_id=eq.{user_id}&order=period_start.desc&limit=1",
+                headers=headers
+            )
+            if res_usage.status_code == 200 and res_usage.json():
+                user_usage = res_usage.json()[0]
+        except Exception as sub_err:
+            logger.warning(f"Failed fetching subscription details for {user_id}: {sub_err}")
+
         # Compute profile completeness (non-PII fields only)
         completeness_fields = [
             settings.get("displayName") or user.get("name"),
@@ -801,6 +841,8 @@ async def get_user_details(user_id: str, payload: dict = Depends(verify_admin_to
         
     return {
         "user": user,
+        "subscription": user_subscription,
+        "usage": user_usage,
         "company_settings": settings,
         "invoice_stats": {
             "total_created": invoices_count,

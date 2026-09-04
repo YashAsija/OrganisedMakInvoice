@@ -22,8 +22,38 @@ import {
   ShieldCheck,
   CheckCircle2,
   XCircle,
-  Trash2
+  Trash2,
+  CreditCard,
+  Zap,
+  Sparkles,
+  Clock
 } from "lucide-react";
+
+export interface UserSubscriptionInfo {
+  id?: string;
+  user_id?: string;
+  plan_name?: string;
+  plan_type?: string;
+  status?: string;
+  gateway?: string;
+  current_period_end?: string;
+  subscription_expires_at?: string;
+  expires_at?: string;
+  renews_at?: string;
+  trial_started_at?: string;
+  trial_used_plans?: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface UserUsageInfo {
+  id?: string;
+  user_id?: string;
+  period_start?: string;
+  period_end?: string;
+  documents_used?: number;
+  reports_used?: number;
+}
 
 interface UserRecord {
   uid: string;
@@ -36,10 +66,13 @@ interface UserRecord {
   provider?: string;
   email_verified?: boolean;
   phone?: string;
+  subscription?: UserSubscriptionInfo | null;
 }
 
 interface UserDetails {
   user: UserRecord;
+  subscription?: UserSubscriptionInfo | null;
+  usage?: UserUsageInfo | null;
   company_settings: any;
   invoice_stats: {
     total_created: number;
@@ -178,7 +211,76 @@ export default function UsersAdminPage() {
     return `${diffDays} days`;
   };
 
-  const verifiedCount = users.filter(u => u.email_verified).length;
+  const activeSubscriptionsCount = users.filter(u => {
+    const sub = u.subscription;
+    if (!sub) return false;
+    const plan = (sub.plan_type || sub.plan_name || '').toLowerCase();
+    return plan && plan !== 'free' && plan !== 'starter';
+  }).length;
+
+  const renderSubscriptionBadge = (sub?: UserSubscriptionInfo | null) => {
+    if (!sub) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-800 text-slate-400 border border-slate-700">
+          Starter Free
+        </span>
+      );
+    }
+
+    const planType = (sub.plan_type || sub.plan_name || 'free').toLowerCase();
+    const isTrial = sub.status === 'trialing' || !!sub.trial_started_at;
+    const isExpired = sub.status === 'expired';
+    const isCancelled = sub.status === 'cancelled';
+
+    if (isExpired) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+          <XCircle className="w-3 h-3" /> Expired ({planType})
+        </span>
+      );
+    }
+
+    if (isCancelled) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+          Cancelled ({planType})
+        </span>
+      );
+    }
+
+    if (planType === 'basic') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
+          <Zap className="w-3 h-3 text-sky-400" />
+          {isTrial ? 'Basic (Trial)' : 'Basic Active'}
+        </span>
+      );
+    }
+
+    if (planType === 'professional' || planType === 'pro') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+          <Sparkles className="w-3 h-3 text-purple-400" />
+          {isTrial ? 'Pro (Trial)' : 'Pro Active'}
+        </span>
+      );
+    }
+
+    if (planType === 'enterprise') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+          <Award className="w-3 h-3 text-amber-400" />
+          Enterprise Active
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+        Starter Free
+      </span>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -226,21 +328,21 @@ export default function UsersAdminPage() {
 
         <div className="bg-slate-900/60 border border-slate-800 p-4.5 rounded-2xl backdrop-blur-md flex items-center gap-4">
           <div className="p-3 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-xl">
-            <Calendar className="h-6 w-6" />
+            <CreditCard className="h-6 w-6" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Current Page</div>
-            <div className="text-2xl font-bold text-white mt-0.5">{page} <span className="text-xs text-slate-400 font-normal">/ {totalPages}</span></div>
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Paid & Trial Subs</div>
+            <div className="text-2xl font-bold text-white mt-0.5">{activeSubscriptionsCount} <span className="text-xs text-slate-400 font-normal">/ {users.length}</span></div>
           </div>
         </div>
 
         <div className="bg-slate-900/60 border border-slate-800 p-4.5 rounded-2xl backdrop-blur-md flex items-center gap-4">
           <div className="p-3 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl">
-            <Award className="h-6 w-6" />
+            <Calendar className="h-6 w-6" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Directory Limit</div>
-            <div className="text-2xl font-bold text-white mt-0.5">{limit} <span className="text-xs text-slate-400 font-normal">per page</span></div>
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Current Page</div>
+            <div className="text-2xl font-bold text-white mt-0.5">{page} <span className="text-xs text-slate-400 font-normal">/ {totalPages}</span></div>
           </div>
         </div>
       </div>
@@ -321,6 +423,7 @@ export default function UsersAdminPage() {
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">User ID</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Signup Date</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Verification</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Subscription</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Admin Flags</th>
                   <th className="px-6 py-4 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Action</th>
                 </tr>
@@ -353,6 +456,9 @@ export default function UsersAdminPage() {
                           <XCircle className="h-3 w-3" /> Unverified
                         </span>
                       )}
+                    </td>
+                    <td className="px-6 py-4 text-xs">
+                      {renderSubscriptionBadge(u.subscription)}
                     </td>
                     <td className="px-6 py-4 max-w-[200px]">
                       <div className="truncate text-xs text-slate-400 italic">
@@ -438,6 +544,65 @@ export default function UsersAdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Main section details */}
                   <div className="md:col-span-2 space-y-6">
+                    {/* Active Subscription & Plan Details */}
+                    <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-5 space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                        <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-indigo-400" /> Active Subscription & Billing
+                        </h4>
+                        <div>
+                          {renderSubscriptionBadge(details.subscription || details.user.subscription)}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Plan Tier</div>
+                          <div className="text-white mt-0.5 font-bold capitalize">
+                            {(details.subscription?.plan_name || details.subscription?.plan_type || details.user.subscription?.plan_type || 'Starter Free')}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Status</div>
+                          <div className="text-emerald-400 mt-0.5 font-semibold capitalize flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            {details.subscription?.status || details.user.subscription?.status || 'Active (Free)'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Period / Renews At</div>
+                          <div className="text-slate-200 mt-0.5 font-medium flex items-center gap-1 text-xs">
+                            <Clock className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                            {details.subscription?.expires_at || details.subscription?.current_period_end || details.subscription?.renews_at
+                              ? new Date(details.subscription.expires_at || details.subscription.current_period_end || details.subscription.renews_at || '').toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' })
+                              : "Free forever (Never expires)"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Trial Status</div>
+                          <div className="text-slate-200 mt-0.5 font-medium text-xs">
+                            {details.subscription?.trial_started_at
+                              ? `Trial activated (${new Date(details.subscription.trial_started_at).toLocaleDateString()})`
+                              : "No active trial claim"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Usage summary if available */}
+                      {details.usage && (
+                        <div className="pt-2 border-t border-slate-800/80 grid grid-cols-2 gap-3 text-xs">
+                          <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                            <span className="text-slate-400 font-bold block">Current Period Docs</span>
+                            <span className="text-white font-black text-sm">{details.usage.documents_used ?? 0}</span>
+                          </div>
+                          <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                            <span className="text-slate-400 font-bold block">Current Period Reports</span>
+                            <span className="text-white font-black text-sm">{details.usage.reports_used ?? 0}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Profile Completeness Tracker */}
                     <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-5 space-y-3">
                       <div className="flex justify-between items-center text-sm font-semibold">
