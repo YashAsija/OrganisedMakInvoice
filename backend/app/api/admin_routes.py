@@ -181,7 +181,46 @@ async def get_stats(payload: dict = Depends(verify_admin_token)):
                 except Exception:
                     pass
         
-        # 2. Tickets total, open, closed
+        # 2. Subscriptions total, paid active, trials, and plan breakdown
+        subscriptions_summary = {
+            "total_active_paid": 0,
+            "total_active_trial": 0,
+            "total_subscriptions": 0,
+            "breakdown": {"free": 0, "basic_paid": 0, "basic_trial": 0, "pro_paid": 0, "pro_trial": 0, "enterprise_paid": 0}
+        }
+        try:
+            res_subs = await client.get(f"{base_url}/rest/v1/subscriptions?select=plan_type,plan_name,status,trial_started_at", headers=headers)
+            if res_subs.status_code == 200:
+                subs_list = res_subs.json()
+                subscriptions_summary["total_subscriptions"] = len(subs_list)
+                for s in subs_list:
+                    plan = (s.get("plan_type") or s.get("plan_name") or "free").lower()
+                    status = (s.get("status") or "active").lower()
+                    is_trial = status == "trialing" or bool(s.get("trial_started_at"))
+                    
+                    if status in ("active", "trialing"):
+                        if is_trial:
+                            subscriptions_summary["total_active_trial"] += 1
+                            if "basic" in plan:
+                                subscriptions_summary["breakdown"]["basic_trial"] += 1
+                            elif "pro" in plan:
+                                subscriptions_summary["breakdown"]["pro_trial"] += 1
+                        else:
+                            if "basic" in plan:
+                                subscriptions_summary["total_active_paid"] += 1
+                                subscriptions_summary["breakdown"]["basic_paid"] += 1
+                            elif "pro" in plan:
+                                subscriptions_summary["total_active_paid"] += 1
+                                subscriptions_summary["breakdown"]["pro_paid"] += 1
+                            elif "enterprise" in plan:
+                                subscriptions_summary["total_active_paid"] += 1
+                                subscriptions_summary["breakdown"]["enterprise_paid"] += 1
+                            else:
+                                subscriptions_summary["breakdown"]["free"] += 1
+        except Exception as sub_ex:
+            logger.warning(f"Failed fetching subscriptions summary for stats: {sub_ex}")
+
+        # 3. Tickets total, open, closed
         use_supabase = await admin_db.check_table_exists("tickets")
         tickets_data = await admin_db.get_tickets_for_stats()
         
@@ -204,6 +243,7 @@ async def get_stats(payload: dict = Depends(verify_admin_token)):
         "open_tickets": open_tickets,
         "status_breakdown": status_breakdown,
         "new_signups_week": new_signups_week,
+        "subscriptions": subscriptions_summary,
         "db_mode": "supabase" if use_supabase else "sqlite",
         "db_connected": True
     }
@@ -227,6 +267,20 @@ async def get_analytics(payload: dict = Depends(verify_admin_token)):
             "new_last_week": 0,
             "verified_email": 0,
             "providers": {},
+        },
+        "subscriptions": {
+            "total": 0,
+            "paid_active": 0,
+            "trial_active": 0,
+            "free_starter": 0,
+            "plans": {
+                "Starter Free": 0,
+                "Basic Trial": 0,
+                "Basic Paid": 0,
+                "Pro Trial": 0,
+                "Pro Paid": 0,
+                "Enterprise Paid": 0
+            }
         },
         "invoices": {
             "total": 0,
@@ -284,6 +338,41 @@ async def get_analytics(payload: dict = Depends(verify_admin_token)):
                     analytics["users"]["providers"][provider] = analytics["users"]["providers"].get(provider, 0) + 1
         except Exception as e:
             logger.error(f"Analytics: failed to fetch auth users: {e}")
+
+        # --- Subscriptions stats ---
+        try:
+            res_subs = await client.get(
+                f"{base_url}/rest/v1/subscriptions?select=plan_type,plan_name,status,trial_started_at",
+                headers=headers
+            )
+            if res_subs.status_code == 200:
+                subs_list = res_subs.json()
+                analytics["subscriptions"]["total"] = len(subs_list)
+                
+                for s in subs_list:
+                    plan = (s.get("plan_type") or s.get("plan_name") or "free").lower()
+                    status = (s.get("status") or "active").lower()
+                    is_trial = status == "trialing" or bool(s.get("trial_started_at"))
+
+                    if is_trial:
+                        analytics["subscriptions"]["trial_active"] += 1
+                        if "basic" in plan:
+                            analytics["subscriptions"]["plans"]["Basic Trial"] += 1
+                        elif "pro" in plan:
+                            analytics["subscriptions"]["plans"]["Pro Trial"] += 1
+                    elif status == "active" and plan not in ("free", "starter"):
+                        analytics["subscriptions"]["paid_active"] += 1
+                        if "basic" in plan:
+                            analytics["subscriptions"]["plans"]["Basic Paid"] += 1
+                        elif "pro" in plan:
+                            analytics["subscriptions"]["plans"]["Pro Paid"] += 1
+                        elif "enterprise" in plan:
+                            analytics["subscriptions"]["plans"]["Enterprise Paid"] += 1
+                    else:
+                        analytics["subscriptions"]["free_starter"] += 1
+                        analytics["subscriptions"]["plans"]["Starter Free"] += 1
+        except Exception as e:
+            logger.error(f"Analytics: failed to fetch subscriptions: {e}")
 
         # --- Invoice stats ---
         try:
