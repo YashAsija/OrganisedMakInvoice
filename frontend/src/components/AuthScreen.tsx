@@ -32,13 +32,24 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot-password' | 'reset-password'>(defaultMode);
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone' | 'google'>('email');
   
-  const [formData, setFormData] = useState({
-    name: '',
-    companyName: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: ''
+  const [formData, setFormData] = useState(() => {
+    let initialEmail = '';
+    if (typeof window !== 'undefined') {
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, '?'));
+        const em = searchParams.get('email') || hashParams.get('email');
+        if (em) initialEmail = decodeURIComponent(em);
+      } catch (e) {}
+    }
+    return {
+      name: '',
+      companyName: '',
+      email: initialEmail,
+      phone: '',
+      password: '',
+      confirmPassword: ''
+    };
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>(() => {
