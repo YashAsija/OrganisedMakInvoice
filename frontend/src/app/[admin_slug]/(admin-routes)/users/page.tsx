@@ -261,7 +261,8 @@ export default function UsersAdminPage() {
     const sub = u.subscription;
     if (!sub) return false;
     const plan = (sub.plan_type || sub.plan_name || '').toLowerCase();
-    return plan && plan !== 'free' && plan !== 'starter';
+    const status = (sub.status || '').toLowerCase();
+    return plan && plan !== 'free' && plan !== 'starter' && (status === 'active' || status === 'trialing');
   }).length;
 
   const renderSubscriptionBadge = (sub?: UserSubscriptionInfo | null) => {
@@ -274,9 +275,11 @@ export default function UsersAdminPage() {
     }
 
     const planType = (sub.plan_type || sub.plan_name || 'free').toLowerCase();
-    const isTrial = sub.status === 'trialing' || !!sub.trial_started_at;
-    const isExpired = sub.status === 'expired';
-    const isCancelled = sub.status === 'cancelled';
+    const subStatus = (sub.status || 'active').toLowerCase();
+    const isExpired = subStatus === 'expired';
+    const isCancelled = subStatus === 'cancelled';
+    // STRICT TRIAL CHECK: Only consider trial if status is explicitly 'trialing' or starts with 'trial'
+    const isTrial = subStatus === 'trialing' || subStatus.includes('trial');
 
     if (isExpired) {
       return (
@@ -295,19 +298,35 @@ export default function UsersAdminPage() {
     }
 
     if (planType === 'basic') {
+      if (isTrial) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
+            <Clock className="w-3 h-3 text-sky-400" />
+            Basic (Trial)
+          </span>
+        );
+      }
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
-          <Zap className="w-3 h-3 text-sky-400" />
-          {isTrial ? 'Basic (Trial)' : 'Basic Active'}
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+          <Zap className="w-3 h-3 text-emerald-400" />
+          Basic (Paid Active)
         </span>
       );
     }
 
     if (planType === 'professional' || planType === 'pro') {
+      if (isTrial) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+            <Clock className="w-3 h-3 text-purple-400" />
+            Pro (Trial)
+          </span>
+        );
+      }
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-300 border border-purple-500/40 shadow-sm">
           <Sparkles className="w-3 h-3 text-purple-400" />
-          {isTrial ? 'Pro (Trial)' : 'Pro Active'}
+          Pro (Paid Active)
         </span>
       );
     }
@@ -316,7 +335,7 @@ export default function UsersAdminPage() {
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
           <Award className="w-3 h-3 text-amber-400" />
-          Enterprise Active
+          Enterprise (Paid Active)
         </span>
       );
     }
