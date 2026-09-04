@@ -141,7 +141,30 @@ export default function UsersAdminPage() {
         throw new Error(errData.detail || "Could not retrieve users list");
       }
       const data = await res.json();
-      setUsers(Array.isArray(data.users) ? data.users : []);
+      const rawUsers: UserRecord[] = Array.isArray(data.users) ? data.users : [];
+
+      // Query live subscriptions from Supabase directly via admin endpoint
+      try {
+        const uids = rawUsers.map(u => u.uid).filter(Boolean);
+        const emails = rawUsers.map(u => u.email).filter(Boolean);
+        const subRes = await fetch(`/api/admin-subscriptions?uids=${encodeURIComponent(uids.join(','))}&emails=${encodeURIComponent(emails.join(','))}`);
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          const byUid = subData.byUserId || {};
+          const byEmail = subData.byUserEmail || {};
+
+          for (const u of rawUsers) {
+            const sub = byUid[u.uid] || (u.email ? byEmail[u.email.toLowerCase()] : null);
+            if (sub) {
+              u.subscription = sub;
+            }
+          }
+        }
+      } catch (subFetchErr) {
+        console.warn('[UsersAdmin] Live subscription sync note:', subFetchErr);
+      }
+
+      setUsers(rawUsers);
       setTotal(typeof data.total === "number" ? data.total : 0);
     } catch (err: any) {
       setError(err.message || "An error occurred fetching users");
@@ -168,9 +191,30 @@ export default function UsersAdminPage() {
 
     try {
       const res = await fetch(`/api/admin/users/${user.uid}`);
+      let userDetailsData: UserDetails | null = null;
       if (res.ok) {
-        const data = await res.json();
-        setDetails(data);
+        userDetailsData = await res.json();
+      }
+
+      // Live subscription sync for active user
+      try {
+        const subRes = await fetch(`/api/admin-subscriptions?uids=${encodeURIComponent(user.uid)}&emails=${encodeURIComponent(user.email || '')}`);
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          const liveSub = subData.byUserId?.[user.uid] || (user.email ? subData.byUserEmail?.[user.email.toLowerCase()] : null);
+          if (liveSub) {
+            if (userDetailsData) {
+              userDetailsData.subscription = liveSub;
+            }
+            user.subscription = liveSub;
+          }
+        }
+      } catch (subErr) {
+        console.warn('[UserDetails] Live sub fetch error:', subErr);
+      }
+
+      if (userDetailsData) {
+        setDetails(userDetailsData);
       }
     } catch (err) {
       console.error("Failed to load user details:", err);
