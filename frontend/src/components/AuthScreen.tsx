@@ -343,7 +343,6 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
       if (authMode === 'signup') {
         if (!formData.name.trim()) return setFormErrors({ email: 'Please fill out Your Name.' });
         if (!formData.companyName.trim()) return setFormErrors({ email: 'Please fill out Your Company Name.' });
-        if (!formData.phone.trim()) return setFormErrors({ email: 'Please fill out your Phone Number.' });
         if (!formData.email.trim()) return setFormErrors({ email: 'Please fill out your Email Address.' });
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) return setFormErrors({ email: 'Please enter a valid Email Address.' });
         if (!formData.password.trim()) return setFormErrors({ email: 'Please enter a Password.' });
@@ -378,7 +377,7 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
             emailRedirectTo: redirectUrl,
             data: {
               full_name: formData.name,
-              phone: formData.phone,
+              phone: formData.phone || '',
               company_name: formData.companyName
             }
           }
@@ -860,10 +859,6 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
                     <div>
                       <label className="auth-label">Company Name</label>
                       <input className="auth-input" type="text" required placeholder="e.g. Acme Tech Solutions" value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} />
-                    </div>
-                    <div>
-                      <label className="auth-label">Phone Number</label>
-                      <input className="auth-input" type="tel" required placeholder="e.g. +1 555 000 0000" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
                     </div>
                   </>
                 )}
