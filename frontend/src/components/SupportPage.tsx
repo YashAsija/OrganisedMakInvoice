@@ -28,8 +28,8 @@ const faqs = [
     important: true
   },
   {
-    q: 'How do I add GST/tax to invoices?',
-    a: 'You can set a default tax rate in your company profile (Settings → Company Info → Default Tax Rate). Alternatively, per-line item tax rates can be set when creating invoices using HSN codes from the HSN Registry.',
+    q: 'How do I track and settle payments across sales and purchases?',
+    a: 'Navigate to Financial Hub → Payments in the sidebar. You can monitor Total Collected, Total Paid Out, and Pending Balances. Click "Settle" on any unpaid or partially paid transaction to log settlements via UPI, Bank Transfer, Cash, Cheque, or Card with UTR numbers.',
     important: true
   },
   {
@@ -41,6 +41,36 @@ const faqs = [
     q: 'What is MakInvoices AI and how can it assist me?',
     a: 'MakInvoices AI is your built-in live assistant available in the Chat section. It has full context of the application and can answer questions about invoice creation, settings, registries, templates, and walk you through app features in multiple languages.',
     important: true
+  },
+  {
+    q: 'How do I export payment data and accounting reports?',
+    a: 'In the Payments section, click "Export Data" to download payment history in Excel (.xlsx) or CSV format filtered by custom date ranges (From Date / To Date) and payment type. You can also export full ledger reports and GST tax summaries from Financial Hub → Accounting Report.',
+    important: false
+  },
+  {
+    q: 'What is the Master Database and how does it speed up billing?',
+    a: 'The Master Registry includes pre-saved Client Databases, Vendor Books, Material Catalogs (with SKUs and GST slabs), Transport Carriers, and HSN/SAC Tax Codes. When creating invoices or bills, searchable comboboxes auto-fill all item prices, tax rates, and client addresses instantly.',
+    important: false
+  },
+  {
+    q: 'What subscription plans are available and what are their limits?',
+    a: 'MakInvoices offers 4 tiers: Free/Starter (10 documents/mo, 1 report/mo), Basic (₹199/mo, 60 documents/mo, 5 reports/mo), Professional (₹299/mo, 140 documents/mo, 15 reports/mo, 24/7 AI Assistant & Smart Billing), and Enterprise (₹599/mo, Unlimited documents & reports, priority support). Save ~17% with annual billing.',
+    important: false
+  },
+  {
+    q: 'How does the 1-month free trial work?',
+    a: 'You can test the Basic or Professional plan free for 1 full month without entering a credit card upfront. Click "Start 1-Month Free Trial" on the Subscription page to instantly unlock plan features.',
+    important: false
+  },
+  {
+    q: 'What payment methods are supported for subscriptions?',
+    a: 'We support all major payment options via Razorpay for domestic/INR payments (UPI, Google Pay, PhonePe, Debit/Credit Cards, Netbanking) and Paddle for international payments (Credit Cards, PayPal, Multi-currency).',
+    important: false
+  },
+  {
+    q: 'How do document creation and report export quotas reset?',
+    a: 'Usage quotas track your monthly generated invoices, purchase bills, and exported reports in real time. Limits automatically reset at the start of each monthly or annual billing cycle.',
+    important: false
   },
   {
     q: 'What is the difference between Billed Vendors and the Vendor Database?',
@@ -482,7 +512,7 @@ export default function SupportPage({ onChatClick, onNavigateTab, subscriptionTi
         faq.q.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
         faq.a.toLowerCase().includes(searchQuery.toLowerCase().trim())
       )
-    : faqs.slice(0, 5);
+    : faqs.slice(0, 6);
 
   const handleTicketSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1176,7 +1206,7 @@ export default function SupportPage({ onChatClick, onNavigateTab, subscriptionTi
               <div className="flex items-center justify-between">
                 <h2 className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-widest">Frequently Asked Questions</h2>
                 <span className="text-[9.5px] font-bold text-[#64748b] dark:text-zinc-300 bg-[#f4f9ff] dark:bg-[#0b1329] px-2 py-0.5 rounded-full border border-[#e2e8f0]/60 dark:border-[#223269]">
-                  {searchQuery.trim() ? `${filteredFaqs.length} results` : 'Main 5 FAQs'}
+                  {searchQuery.trim() ? `${filteredFaqs.length} results` : 'Main 6 FAQs'}
                 </span>
               </div>
               <div className="relative mt-3">
@@ -1201,7 +1231,7 @@ export default function SupportPage({ onChatClick, onNavigateTab, subscriptionTi
             </div>
           </div>
 
-          <div className="px-4 pb-4 space-y-1.5 overflow-y-auto">
+          <div className="px-4 pb-4 space-y-1.5 max-h-[355px] overflow-y-auto pr-1.5">
             {filteredFaqs.length === 0 ? (
               <div className="py-8 text-center text-[11px] text-[#64748b]/60 dark:text-zinc-300">
                 <HelpCircle className="w-8 h-8 mx-auto mb-2 opacity-30" />
