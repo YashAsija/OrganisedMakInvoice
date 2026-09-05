@@ -477,16 +477,12 @@ export default function SupportPage({ onChatClick, onNavigateTab, subscriptionTi
     return false;
   });
 
-  const filteredFaqs = faqs.filter(faq => {
-    const isMatched = searchQuery.trim().length >= 2 && (
-      faq.q.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      faq.a.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    if (searchQuery.trim().length < 2) {
-      return faq.important;
-    }
-    return isMatched;
-  });
+  const filteredFaqs = searchQuery.trim().length > 0
+    ? faqs.filter(faq =>
+        faq.q.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+        faq.a.toLowerCase().includes(searchQuery.toLowerCase().trim())
+      )
+    : faqs.slice(0, 5);
 
   const handleTicketSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -680,8 +676,16 @@ export default function SupportPage({ onChatClick, onNavigateTab, subscriptionTi
                       {s.step}
                     </span>
                     <div className="hidden md:block min-w-0">
-                      <span className="block truncate font-black text-[10.5px] uppercase tracking-wider">{s.title.split(' ')[0]}</span>
-                      <span className="hidden md:block text-[9px] text-[#64748b] dark:text-zinc-300 font-medium truncate mt-0.5">{s.badge}</span>
+                      <span className={`block truncate font-black text-[10.5px] uppercase tracking-wider ${
+                        isActive ? '!text-white text-white font-black' : 'text-[#0f172a] dark:text-white'
+                      }`}>
+                        {s.title.split(' ')[0]}
+                      </span>
+                      <span className={`hidden md:block text-[9.5px] font-bold truncate mt-0.5 ${
+                        isActive ? '!text-white text-white/95' : 'text-slate-600 dark:text-slate-300'
+                      }`}>
+                        {s.badge}
+                      </span>
                     </div>
                   </button>
                   {idx < stepsData.length - 1 && (
@@ -1169,16 +1173,30 @@ export default function SupportPage({ onChatClick, onNavigateTab, subscriptionTi
           <div className="relative overflow-hidden">
             <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#bae6fd] via-[#0284c7] to-[#2563eb]" />
             <div className="p-4 pb-2">
-              <h2 className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-widest">Frequently Asked Questions</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-widest">Frequently Asked Questions</h2>
+                <span className="text-[9.5px] font-bold text-[#64748b] dark:text-zinc-300 bg-[#f4f9ff] dark:bg-[#0b1329] px-2 py-0.5 rounded-full border border-[#e2e8f0]/60 dark:border-[#223269]">
+                  {searchQuery.trim() ? `${filteredFaqs.length} results` : 'Main 5 FAQs'}
+                </span>
+              </div>
               <div className="relative mt-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#64748b]/60" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search questions…"
-                  className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-[#e2e8f0] dark:border-[#223269] bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-colors"
+                  placeholder="Search all questions & topics…"
+                  className="w-full pl-8 pr-8 py-2 text-xs rounded-xl border border-[#e2e8f0] dark:border-[#223269] bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-colors"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#64748b] hover:text-[#0f172a] dark:hover:text-white px-1 font-black cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             </div>
           </div>
