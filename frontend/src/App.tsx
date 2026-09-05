@@ -120,6 +120,7 @@ const tabToPath: Record<string, string> = {
   'support-chat': '/support-chat',
   subscription: '/subscription',
   expenses: '/expenses',
+  payments: '/payments',
 };
 
 const pathToTab: Record<string, string> = Object.entries(tabToPath).reduce(
@@ -240,6 +241,12 @@ export default function App() {
       }
       if (path.startsWith('/purchases')) {
         return 'purchases';
+      }
+      if (path.startsWith('/payments')) {
+        return 'payments';
+      }
+      if (path.startsWith('/expenses')) {
+        return 'expenses';
       }
       if (path.startsWith('/invoices')) {
         return 'invoices';

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Plus,
   Search,
@@ -504,9 +505,16 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({ currencySymbol = 'â‚
       />
 
       {/* DELETE CONFIRMATION DIALOG */}
-      {deletingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4">
+      {deletingId && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[999999] flex items-center justify-center bg-slate-950/75 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999 }}
+          onClick={() => setDeletingId(null)}
+        >
+          <div
+            className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
               <div className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-5 h-5" />
@@ -541,7 +549,8 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({ currencySymbol = 'â‚
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

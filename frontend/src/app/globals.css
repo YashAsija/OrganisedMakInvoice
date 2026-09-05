@@ -219,10 +219,49 @@ button:active, [role="button"]:active {
   animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Global keyboard accessibility */
-*:focus-visible {
-  outline: 2px solid var(--color-sky-500, #0ea5e9);
-  outline-offset: 2px;
+/* Global dropdown select & option legibility */
+select {
+  color: #0f172a;
+}
+.dark select {
+  color: #f8fafc;
+}
+
+select option {
+  background-color: #ffffff;
+  color: #0f172a;
+  padding: 8px;
+}
+
+.dark select option {
+  background-color: #0f172a;
+  color: #f8fafc;
+  padding: 8px;
+}
+
+/* Global input & date-picker text legibility across all browsers and themes */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea {
+  color: #0f172a;
+}
+
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark textarea {
+  color: #f8fafc;
+}
+
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  color-scheme: light;
+  color: #0f172a !important;
+}
+
+.dark input[type="date"],
+.dark input[type="datetime-local"],
+.dark input[type="time"] {
+  color-scheme: dark;
+  color: #f8fafc !important;
 }
 
 @variant dark (.dark &);

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { getFinancialYearShort, getNextInvoiceNumber } from './InvoiceModal';
 import { useExpenses } from '../hooks/useExpenses';
 import { ExpensesPage } from './ExpensesPage';
+import { usePayments } from '../hooks/usePayments';
+import { PaymentsPage } from './PaymentsPage';
 import { supabase } from '../lib/supabase';
 import { useSubscription } from '../hooks/useSubscription';
 import {
@@ -30,6 +32,8 @@ import {
   Download,
 
   Upload,
+
+  CreditCard,
 
   Search, 
   ArrowUpDown,
@@ -375,6 +379,13 @@ export default function Dashboard({
 
   const { confirm } = useConfirm();
   const { expenses: supabaseExpenses, stats: expenseStats } = useExpenses();
+  const { stats: paymentStats } = usePayments({
+    invoices,
+    expenses,
+    onUpdateInvoice,
+    onSaveExpense,
+    userEmail
+  });
   const { subscription, isOnTrial, refetch: refetchSubscription, trackDocumentUsage, trackReportUsage, showWelcomeTrialModal, dismissWelcomeTrialModal } = useSubscription();
 
   const effectiveTier: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise' = useMemo(() => {
@@ -2438,6 +2449,27 @@ export default function Dashboard({
               </div>
               <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'expenses' ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800'}`}>
                 {expenseStats.count}
+              </span>
+            </button>
+
+            {/* Payments Sidebar Nav Item (Directly below Expenses) */}
+            <button
+              onClick={() => {
+                handleTabClick('payments');
+                if (typeof window !== 'undefined') {
+                  window.history.pushState(null, '', '/payments');
+                }
+              }}
+              className={navItemClass('payments')}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'payments', 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400')}>
+                  <CreditCard className="w-3.5 h-3.5" />
+                </div>
+                <span>Payments</span>
+              </div>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'payments' ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'}`}>
+                {paymentStats.totalPending > 0 ? `${paymentStats.salesPendingCount + paymentStats.purchasesPendingCount} DUE` : `${paymentStats.salesCount + paymentStats.purchasesCount}`}
               </span>
             </button>
 
@@ -15815,6 +15847,24 @@ export default function Dashboard({
         {activeTab === 'expenses' && (
 
           <ExpensesPage currencySymbol={currencySymbol} />
+
+        )}
+
+
+
+        {/* ------------------ TAB: PAYMENTS & SETTLEMENTS PAGE ------------------ */}
+
+        {activeTab === 'payments' && (
+
+          <PaymentsPage
+            invoices={invoices}
+            expenses={expenses}
+            profile={profile}
+            onUpdateInvoice={onUpdateInvoice}
+            onSaveExpense={onSaveExpense}
+            currencySymbol={currencySymbol}
+            userEmail={userEmail}
+          />
 
         )}
 
