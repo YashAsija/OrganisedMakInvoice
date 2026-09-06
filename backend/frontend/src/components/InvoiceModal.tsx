@@ -14,7 +14,7 @@ import { emitNotification } from '../lib/notifications';
 import { SmartBillingBox } from './SmartBillingBox';
 import { getDocumentTypeDefaults } from '../lib/docTypeDefaults';
 import { getLocalizationConfig } from '../lib/localizationEngine';
-import { buildClientDetails, persistBilledParty } from '../lib/documentUtils';
+import { buildClientDetails, buildTransportDetails, persistBilledParty } from '../lib/documentUtils';
 import { formatStateWithCode, getStateCode, findMatchingStateIso, getStateNameFromGstCode } from '../lib/stateUtils';
 
 
@@ -47,7 +47,7 @@ export const getFinancialYearShort = (dateInput?: string | Date): string => {
   return `${y1}-${y2}`;
 };
 
-export const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesList: Invoice[], docType: string = 'invoice', docDate?: string) => {
+export const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesList: Invoice[], docType: string = 'invoice', docDate?: string, separatorInput?: string) => {
   const defaultPrefixes: Record<string, string> = {
     invoice: 'INV',
     proforma: 'PRO',
@@ -61,11 +61,12 @@ export const getNextInvoiceNumber = (prefixInput: string, startingInput: any, in
   };
   const prefix = prefixInput ? String(prefixInput).trim() : (defaultPrefixes[docType] || 'INV');
   const starting = startingInput !== undefined && startingInput !== null && String(startingInput).trim() !== '' ? String(startingInput).trim() : '1';
+  const sep = separatorInput !== undefined && separatorInput !== null && String(separatorInput).trim() !== '' ? String(separatorInput).trim() : '-';
 
   const fy = getFinancialYearShort(docDate);
-  const formatPrefix = `${prefix}-${fy}-`; // e.g. "INV-26-27-"
+  const formatPrefix = `${prefix}${sep}${fy}${sep}`; // e.g. "INV-26-27-" or "INV/26-27/"
   const currentYear = new Date().getFullYear();
-  const oldFormatPrefix = `${prefix}-${currentYear}-`; // e.g. "INV-2026-"
+  const oldFormatPrefix = `${prefix}${sep}${currentYear}${sep}`; // e.g. "INV-2026-"
 
   // Extract digits from starting input suffix
   const match = starting.match(/^(.*?)(\d+)$/);
@@ -94,6 +95,18 @@ export const getNextInvoiceNumber = (prefixInput: string, startingInput: any, in
           const num = parseInt(suffix, 10);
           if (num > maxNum) {
             maxNum = num;
+          }
+        }
+      } else {
+        // Also check default hyphenated prefix if custom separator is used (e.g. migrating from '-' to '/')
+        const defaultFormatPrefix = `${prefix}-${fy}-`;
+        if (invNum.startsWith(defaultFormatPrefix)) {
+          const suffix = invNum.substring(defaultFormatPrefix.length);
+          if (/^\d+$/.test(suffix)) {
+            const num = parseInt(suffix, 10);
+            if (num > maxNum) {
+              maxNum = num;
+            }
           }
         }
       }
@@ -324,6 +337,39 @@ export default function InvoiceModal({
     setRegistryClients(Array.from(map.values()));
   }, [profile, clients, invoices]);
 
+  // Master Registry Transport Database loader (Exclusively loads from Transport Database)
+  const [registryTransports, setRegistryTransports] = useState<any[]>([]);
+
+  const loadRegistryTransports = useCallback(() => {
+    const suffix = profile?.email ? `_${encodeURIComponent(profile.email)}` : '';
+    const rawTransports = localStorage.getItem('makbills_masters_transports' + suffix) || localStorage.getItem('makbills_masters_transports') || '[]';
+    let transportList: any[] = [];
+    try { transportList = JSON.parse(rawTransports); } catch { transportList = []; }
+
+    const map = new Map<string, any>();
+    const normalizeTransKey = (item: any) => {
+      const v = String(item.vehicleNo || '').trim().toLowerCase();
+      const n = String(item.name || item.transportName || '').trim().toLowerCase();
+      const e = String(item.ewayBillNo || item.eWayBillNo || '').trim().toLowerCase();
+      const g = String(item.grRrNo || '').trim().toLowerCase();
+      if (v) return `veh_${v}`;
+      if (e) return `eway_${e}`;
+      if (g) return `gr_${g}`;
+      if (n) return `name_${n}`;
+      return item.id ? `id_${item.id}` : '';
+    };
+
+    (Array.isArray(transportList) ? transportList : []).forEach(t => {
+      if (!t) return;
+      const key = normalizeTransKey(t);
+      if (key && !map.has(key)) {
+        map.set(key, t);
+      }
+    });
+
+    setRegistryTransports(Array.from(map.values()));
+  }, [profile]);
+
   const prevIsOpenRef = useRef(false);
   useEffect(() => {
     if (isOpen) {
@@ -331,22 +377,26 @@ export default function InvoiceModal({
         setSavedInvoiceForPreview(null);
       }
       loadRegistryClients();
+      loadRegistryTransports();
     } else {
       setSavedInvoiceForPreview(null);
     }
     prevIsOpenRef.current = isOpen;
-  }, [isOpen, loadRegistryClients]);
+  }, [isOpen, loadRegistryClients, loadRegistryTransports]);
 
-  // Keep registry fresh when other parts of the app save new clients or vendors
+  // Keep registry fresh when other parts of the app save new clients, vendors, or transports
   useEffect(() => {
     const handleSync = () => loadRegistryClients();
+    const handleTransSync = () => loadRegistryTransports();
     window.addEventListener('makbills_sync_vendors', handleSync);
     window.addEventListener('makbills_sync_actual_vendors', handleSync);
+    window.addEventListener('makbills_sync_transports', handleTransSync);
     return () => {
       window.removeEventListener('makbills_sync_vendors', handleSync);
       window.removeEventListener('makbills_sync_actual_vendors', handleSync);
+      window.removeEventListener('makbills_sync_transports', handleTransSync);
     };
-  }, [loadRegistryClients]);
+  }, [loadRegistryClients, loadRegistryTransports]);
 
 
   // Client details
@@ -791,7 +841,7 @@ export default function InvoiceModal({
       
       if (isDraft && numberIsTaken) {
         const config = getDocTypeConfig(type);
-        const nextAvailableNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, type);
+        const nextAvailableNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, type, undefined, config.separator);
         setInvoiceNumber(nextAvailableNumber);
       } else {
         setInvoiceNumber(invoice.invoiceNumber);
@@ -882,7 +932,7 @@ export default function InvoiceModal({
       const dateStr = now.toISOString().split('T')[0];
       const dueStr = new Date(now.setDate(now.getDate() + 14)).toISOString().split('T')[0];
       const initialConfig = getDocTypeConfig('invoice');
-      const defaultNumber = getNextInvoiceNumber(initialConfig.prefix, initialConfig.startingNumber, invoices, 'invoice');
+      const defaultNumber = getNextInvoiceNumber(initialConfig.prefix, initialConfig.startingNumber, invoices, 'invoice', undefined, initialConfig.separator);
 
       const initialDefaults = getDocumentTypeDefaults('invoice', profile);
       setInvoiceNumber(defaultNumber);
@@ -990,10 +1040,11 @@ export default function InvoiceModal({
     setActiveProfile(profile);
   }, [profile]);
 
-  // Helper function to resolve document prefix and starting number by document type
+  // Helper function to resolve document prefix, starting number and separator by document type
   const getDocTypeConfig = useCallback((type: string) => {
     let pFix = activeProfile.invoicePrefix || profile.invoicePrefix || 'INV';
     let sNum = activeProfile.startingInvoiceNumber || profile.startingInvoiceNumber || '1';
+    let sep = activeProfile.documentSeparator || profile.documentSeparator || '-';
 
     if (type === 'proforma') {
       pFix = activeProfile.proformaPrefix || profile.proformaPrefix || 'PI';
@@ -1015,14 +1066,14 @@ export default function InvoiceModal({
       sNum = activeProfile.startingPurchaseOrderNumber || profile.startingPurchaseOrderNumber || '1';
     }
 
-    return { prefix: pFix, startingNumber: sNum };
+    return { prefix: pFix, startingNumber: sNum, separator: sep };
   }, [activeProfile, profile]);
 
   // Sync default invoice number for new invoices when starting settings load or document type changes
   useEffect(() => {
     if (isOpen && !invoice) {
       const config = getDocTypeConfig(invoiceType);
-      const defaultNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, invoiceType);
+      const defaultNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, invoiceType, undefined, config.separator);
       setInvoiceNumber(defaultNumber);
     }
   }, [isOpen, invoice, invoiceType, invoices, getDocTypeConfig]);
@@ -1074,6 +1125,12 @@ export default function InvoiceModal({
                 country: settings.country || prev.country,
                 currencySymbol: settings.currency_symbol || prev.currencySymbol,
                 stateCode: settings.state_code || prev.stateCode,
+                bankName: settings.bank_name || prev.bankName,
+                accountNumber: settings.account_number || prev.accountNumber,
+                ifsc: settings.ifsc || prev.ifsc,
+                upiId: settings.upi_id || prev.upiId,
+                qrPreference: settings.qr_preference || extraConfig.qrPreference || prev.qrPreference || 'upi',
+                documentSeparator: settings.document_separator || extraConfig.documentSeparator || profile.documentSeparator || prev.documentSeparator || '-',
                 startingInvoiceNumber: settings.starting_invoice_number || profile.startingInvoiceNumber || prev.startingInvoiceNumber,
                 invoicePrefix: settings.invoice_prefix || profile.invoicePrefix || prev.invoicePrefix,
                 proformaPrefix: settings.proforma_prefix || profile.proformaPrefix || prev.proformaPrefix,
@@ -1111,7 +1168,11 @@ export default function InvoiceModal({
   const [shipClientSearchQuery, setShipClientSearchQuery] = useState('');
   const shipClientDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close client dropdowns when clicking outside
+  const [isTransportDropdownOpen, setIsTransportDropdownOpen] = useState(false);
+  const [transportSearchQuery, setTransportSearchQuery] = useState('');
+  const transportDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close client and transport dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (clientDropdownRef.current && !clientDropdownRef.current.contains(e.target as Node)) {
@@ -1119,6 +1180,9 @@ export default function InvoiceModal({
       }
       if (shipClientDropdownRef.current && !shipClientDropdownRef.current.contains(e.target as Node)) {
         setIsShipClientDropdownOpen(false);
+      }
+      if (transportDropdownRef.current && !transportDropdownRef.current.contains(e.target as Node)) {
+        setIsTransportDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -1128,24 +1192,24 @@ export default function InvoiceModal({
   // Filter master database directory dynamically
   const filteredClients = useMemo(() => {
     const sorted = [...registryClients].sort((a, b) => {
-      const compA = ((a as any).companyName || (a as any).company || '').toLowerCase();
-      const compB = ((b as any).companyName || (b as any).company || '').toLowerCase();
+      const compA = String((a as any).companyName || (a as any).company || '').toLowerCase();
+      const compB = String((b as any).companyName || (b as any).company || '').toLowerCase();
       if (compA && compB && compA !== compB) return compA.localeCompare(compB);
       if (compA && !compB) return -1;
       if (!compA && compB) return 1;
-      return (a.name || '').localeCompare(b.name || '');
+      return String(a.name || '').localeCompare(String(b.name || ''));
     });
 
     if (!clientSearchQuery.trim()) return sorted;
     const q = clientSearchQuery.toLowerCase();
     return sorted.filter(c => {
-      const comp = ((c as any).companyName || (c as any).company || '').toLowerCase();
-      const name = (c.name || '').toLowerCase();
-      const email = (c.email || '').toLowerCase();
-      const phone = (c.phone || '').toLowerCase();
-      const gstin = ((c as any).gstin || (c as any).taxId || '').toLowerCase();
-      const pan = ((c as any).pan || '').toLowerCase();
-      const pType = ((c as any).partyType || '').toLowerCase();
+      const comp = String((c as any).companyName || (c as any).company || '').toLowerCase();
+      const name = String(c.name || '').toLowerCase();
+      const email = String(c.email || '').toLowerCase();
+      const phone = String(c.phone || '').toLowerCase();
+      const gstin = String((c as any).gstin || (c as any).taxId || '').toLowerCase();
+      const pan = String((c as any).pan || '').toLowerCase();
+      const pType = String((c as any).partyType || '').toLowerCase();
       return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q) || pan.includes(q) || pType.includes(q);
     });
   }, [clientSearchQuery, registryClients]);
@@ -1154,25 +1218,42 @@ export default function InvoiceModal({
   const filteredShipClients = useMemo(() => {
     if (!filteredClients || filteredClients.length === 0) return [];
     const sorted = [...filteredClients].sort((a, b) => {
-      const compA = ((a as any).companyName || (a as any).company || '').toLowerCase();
-      const compB = ((b as any).companyName || (b as any).company || '').toLowerCase();
+      const compA = String((a as any).companyName || (a as any).company || '').toLowerCase();
+      const compB = String((b as any).companyName || (b as any).company || '').toLowerCase();
       if (compA && compB && compA !== compB) return compA.localeCompare(compB);
       if (compA && !compB) return -1;
       if (!compA && compB) return 1;
-      return (a.name || '').localeCompare(b.name || '');
+      return String(a.name || '').localeCompare(String(b.name || ''));
     });
 
     if (!shipClientSearchQuery.trim()) return sorted;
     const q = shipClientSearchQuery.toLowerCase();
     return sorted.filter(c => {
-      const comp = ((c as any).companyName || (c as any).company || '').toLowerCase();
-      const name = (c.name || '').toLowerCase();
-      const email = (c.email || '').toLowerCase();
-      const phone = (c.phone || '').toLowerCase();
-      const gstin = ((c as any).gstin || '').toLowerCase();
+      const comp = String((c as any).companyName || (c as any).company || '').toLowerCase();
+      const name = String(c.name || '').toLowerCase();
+      const email = String(c.email || '').toLowerCase();
+      const phone = String(c.phone || '').toLowerCase();
+      const gstin = String((c as any).gstin || '').toLowerCase();
       return comp.includes(q) || name.includes(q) || email.includes(q) || phone.includes(q) || gstin.includes(q);
     });
   }, [filteredClients, shipClientSearchQuery]);
+
+  // Filter Transport Database records dynamically
+  const filteredTransports = useMemo(() => {
+    const list = [...registryTransports];
+    if (!transportSearchQuery.trim()) return list;
+    const q = transportSearchQuery.toLowerCase();
+    return list.filter(t => {
+      const v = String(t.vehicleNo || '').toLowerCase();
+      const n = String(t.name || t.transportName || '').toLowerCase();
+      const p = String(t.phone || t.driverMobile || '').toLowerCase();
+      const s = String(t.station || '').toLowerCase();
+      const e = String(t.ewayBillNo || t.eWayBillNo || '').toLowerCase();
+      const g = String(t.grRrNo || '').toLowerCase();
+      const m = String(t.marka || '').toLowerCase();
+      return v.includes(q) || n.includes(q) || p.includes(q) || s.includes(q) || e.includes(q) || g.includes(q) || m.includes(q);
+    });
+  }, [registryTransports, transportSearchQuery]);
 
   // --- MATERIAL CATALOG DROPDOWN STATE & LOGIC ---
   const [isCatalogDropdownOpen, setIsCatalogDropdownOpen] = useState(false);
@@ -1719,10 +1800,12 @@ export default function InvoiceModal({
     });
   }, []);
 
-  // Reset draftId when the modal opens for a brand-new invoice
+  // Reset draftId when the modal opens for a brand-new invoice or when editing an existing one
   useEffect(() => {
-    if (isOpen && (!invoice || (invoice.id || '').trim() === '')) {
-      draftIdRef.current = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
+    if (isOpen && (!invoice || (invoice.id || '').trim() === '' || (invoice as any).isNewDocument || invoice.status === 'draft')) {
+      if (!draftIdRef.current || !draftIdRef.current.startsWith('inv_draft_')) {
+        draftIdRef.current = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
+      }
       isSavedSuccessfullyRef.current = false;
     } else if (isOpen && invoice) {
       draftIdRef.current = invoice.id;
@@ -1733,41 +1816,46 @@ export default function InvoiceModal({
   // Resume draft banner state
   const [resumableDraft, setResumableDraft] = useState<{ id: string; clientName: string; updatedAt: string } | null>(null);
   const [resumeBannerDismissed, setResumeBannerDismissed] = useState(false);
+  const discardedDraftIdsRef = useRef<Set<string>>(new Set());
 
-  // On modal open for a NEW invoice — check for any unsaved draft to offer resuming.
+  // On modal open for a NEW invoice — check for any unsaved draft to offer resuming ONLY if a page reload occurred.
   useEffect(() => {
-    if (!isOpen || invoice || isSavedSuccessfullyRef.current || savedInvoiceForPreview) return; // only for unsaved new invoices
-    setResumeBannerDismissed(false);
+    const isNewDoc = !invoice || (invoice.id || '').trim() === '' || (invoice as any).isNewDocument || invoice.status === 'draft';
+    if (!isOpen || !isNewDoc || isSavedSuccessfullyRef.current || savedInvoiceForPreview) {
+      setResumableDraft(null);
+      return;
+    }
 
-    const userEmail = localStorage.getItem('makbills_custom_email');
-    const suffix = userEmail ? `_${encodeURIComponent(userEmail)}` : '';
-    const storageKey = `invoice_maker_invoices${suffix}`;
     try {
       const pendingDraftId = localStorage.getItem('makbills_pending_resume_draft');
-      if (!pendingDraftId || !pendingDraftId.startsWith('inv_draft_')) {
-        localStorage.removeItem('makbills_pending_resume_draft');
+      // STRICT: ONLY show resume banner if this draft was specifically saved by a page reload/unload event
+      if (!pendingDraftId || discardedDraftIdsRef.current.has(pendingDraftId)) {
         setResumableDraft(null);
         return;
       }
 
-      // Check if this pendingDraftId belongs to an already saved billed document
-      const isAlreadyBilledDoc = (invoices || []).some(i => i.id === pendingDraftId && i.status !== 'draft');
-      if (isAlreadyBilledDoc || isSavedSuccessfullyRef.current) {
-        localStorage.removeItem('makbills_pending_resume_draft');
-        setResumableDraft(null);
-        return;
-      }
-
-      const raw = localStorage.getItem(storageKey);
+      const userEmail = localStorage.getItem('makbills_custom_email');
+      const suffix = userEmail ? `_${encodeURIComponent(userEmail)}` : '';
+      const storageKey = `invoice_maker_invoices${suffix}`;
+      const raw = localStorage.getItem(storageKey) || localStorage.getItem('invoice_maker_invoices');
       if (!raw) {
         setResumableDraft(null);
         return;
       }
       const all = JSON.parse(raw) as any[];
 
-      const found = all.find(i => i.id === pendingDraftId && i.status === 'draft');
+      const found = all.find(i => i && i.id === pendingDraftId && i.status === 'draft');
+
       if (found) {
-        const hasRealName = found.clientName && found.clientName.trim() !== '' && !found.clientName.startsWith('Guest-') && found.clientName !== 'Quote / Estimate';
+        // Check if this found draft belongs to an already saved billed document
+        const isAlreadyBilledDoc = (invoices || []).some(i => i && i.id === found.id && i.status !== 'draft');
+        if (isAlreadyBilledDoc) {
+          try { localStorage.removeItem('makbills_pending_resume_draft'); } catch {}
+          setResumableDraft(null);
+          return;
+        }
+
+        const hasRealName = found.clientName && String(found.clientName).trim() !== '' && !String(found.clientName).startsWith('Guest-') && found.clientName !== 'Quote / Estimate';
         const hasRealItems = Array.isArray(found.items) && found.items.length > 0;
         if (hasRealName || hasRealItems) {
           setResumableDraft({
@@ -1874,7 +1962,7 @@ export default function InvoiceModal({
             'selectedCustomTemplateId', 'qrCodeTriggerUrl', 'companyState', 'companyCountry',
             'customTaxCols', 'taxMode', 'customTaxName', 'customTaxPercentage', 'customTaxType',
             'additionalTaxes', 'placeOfSupply', 'grRrNo', 'transport', 'vehicleNo', 'driverMobile',
-            'station', 'ewayBillNo', 'shippedToName', 'shippedToPhone', 'shippedToEmail', 
+            'station', 'ewayBillNo', 'marka', 'shippedToName', 'shippedToPhone', 'shippedToEmail', 
             'shippedToPan', 'shippedToState', 'shippedToCountry', 'shippedToGstin', 
             'shippedToAddress', 'embeddedTemplate', 'isDeleted', 'deletedAt', 'deliveryNote',
             'invoiceDate', 'isBin', 'freightCharges', 'packagingCharges', 'otherCharges', 
@@ -2244,7 +2332,7 @@ export default function InvoiceModal({
 
     const suffix = activeProfile?.email ? `_${encodeURIComponent(activeProfile.email)}` : '';
 
-    // ─── Persist billed-to details to master registry + Supabase clients table ────
+    // ─── Persist billed-to details + transport section to master registries ────
     const billedDetails = buildClientDetails({
       clientName: currentName,
       clientCompanyName,
@@ -2256,8 +2344,24 @@ export default function InvoiceModal({
       clientGstin,
       clientPan,
     });
+
+    const isTransportSectionVisible = activeTemplate.sections?.transport?.visible !== false;
+    const hasTransportDetails = hasTransport || isTransportSectionVisible;
+    const transportDetails = hasTransportDetails ? buildTransportDetails({
+      vehicleNo,
+      driverMobile,
+      phone: driverMobile,
+      ewayBillNo,
+      transport,
+      transportName: transport,
+      name: transport,
+      station,
+      grRrNo,
+      marka
+    }) : null;
+
     // Fire-and-forget — do NOT await so save dialog is not blocked
-    persistBilledParty(billedDetails, invoiceType, userId || null, suffix).catch(
+    persistBilledParty(billedDetails, invoiceType, userId || null, suffix, transportDetails).catch(
       (err) => console.warn('[InvoiceModal] persistBilledParty error (non-fatal):', err)
     );
 
@@ -2311,7 +2415,7 @@ export default function InvoiceModal({
     let finalInvoiceNumber = invoiceNumber;
     if (!finalInvoiceNumber || status === 'draft' || (invoice && invoice.status === 'draft')) {
       const config = getDocTypeConfig(invoiceType);
-      finalInvoiceNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, invoiceType);
+      finalInvoiceNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, invoiceType, undefined, config.separator);
     }
 
     // For new invoices (drafted locally), replace the inv_draft_ ID with a real UUID
@@ -2543,7 +2647,7 @@ export default function InvoiceModal({
       >
 
         {/* ─── Resume Draft Banner ─────────────────────────────────────────── */}
-        {resumableDraft && !resumeBannerDismissed && !invoice && (() => {
+        {resumableDraft && !resumeBannerDismissed && (!invoice || (invoice.id || '').trim() === '' || (invoice as any).isNewDocument || invoice.status === 'draft') && (() => {
           const timeAgo = (() => {
             const ms = Date.now() - new Date(resumableDraft.updatedAt).getTime();
             const mins = Math.floor(ms / 60000);
@@ -2586,6 +2690,9 @@ export default function InvoiceModal({
                       // Reuse the draft's id so future saves update the same record
                       draftIdRef.current = d.id;
                       // Repopulate form
+                      if (d.invoiceNumber) setInvoiceNumber(d.invoiceNumber);
+                      if (d.date) setDate(d.date);
+                      if (d.dueDate) setDueDate(d.dueDate);
                       setClientName(d.clientName || '');
                       setClientEmail(d.clientEmail || '');
                       setClientPhone(d.clientPhone || '');
@@ -2607,6 +2714,7 @@ export default function InvoiceModal({
                       setDriverMobile(d.driverMobile || '');
                       setStation(d.station || '');
                       setEwayBillNo(d.ewayBillNo || '');
+                      if (d.marka) setMarka(d.marka);
                       setClientCompanyName(d.clientCompanyName || d.clientCompany || '');
                       setShippedToCompanyName(d.shippedToCompanyName || d.shippedToCompany || '');
                       setShippedToName(d.shippedToName || '');
@@ -2619,6 +2727,18 @@ export default function InvoiceModal({
                       setShippedToCountry(d.shippedToCountry || '');
                       setClientState(d.clientState || '');
                       setClientCountry(d.clientCountry || 'India');
+                      if (d.companyState) setCompanyState(d.companyState);
+                      if (d.companyCountry) setCompanyCountry(d.companyCountry);
+                      if (d.taxMode) setTaxMode(d.taxMode);
+                      if (d.customTaxName) setCustomTaxName(d.customTaxName);
+                      if (d.customTaxPercentage !== undefined) setCustomTaxPercentage(d.customTaxPercentage);
+                      if (d.customTaxType) setCustomTaxType(d.customTaxType);
+                      if (d.additionalTaxes) setAdditionalTaxes(d.additionalTaxes);
+                      if (d.customTaxCols) setCustomTaxCols(d.customTaxCols);
+                      if (d.freightCharges !== undefined) setFreightCharges(d.freightCharges);
+                      if (d.isFreightAdded !== undefined) setIsFreightAdded(d.isFreightAdded);
+                      if (d.selectedTemplateStyle) setSelectedTemplateStyle(d.selectedTemplateStyle);
+                      if (d.qrCodeTriggerUrl) setQrCodeTriggerUrl(d.qrCodeTriggerUrl);
                       if (d.hasTransport !== undefined) setHasTransport(d.hasTransport);
                       try {
                         localStorage.removeItem('makbills_pending_resume_draft');
@@ -2636,25 +2756,35 @@ export default function InvoiceModal({
                   type="button"
                   onClick={async () => {
                     const draftIdToDiscard = resumableDraft?.id;
+                    if (draftIdToDiscard) {
+                      discardedDraftIdsRef.current.add(draftIdToDiscard);
+                    }
                     try {
-                      const storageKey = getStorageKey();
-                      const raw = localStorage.getItem(storageKey);
-                      if (raw && draftIdToDiscard) {
-                        const all = JSON.parse(raw) as any[];
-                        // ONLY remove draft records, preserve any real non-draft documents
-                        localStorage.setItem(storageKey, JSON.stringify(all.filter((i: any) => i.id !== draftIdToDiscard || i.status !== 'draft')));
-                      }
+                      localStorage.removeItem('makbills_pending_resume_draft');
+                    } catch { /* ignore */ }
+                    try {
+                      const userEmail = localStorage.getItem('makbills_custom_email');
+                      const suffix = userEmail ? `_${encodeURIComponent(userEmail)}` : '';
+                      const keys = [`invoice_maker_invoices${suffix}`, 'invoice_maker_invoices'];
+                      keys.forEach(storageKey => {
+                        const raw = localStorage.getItem(storageKey);
+                        if (raw && draftIdToDiscard) {
+                          const all = JSON.parse(raw) as any[];
+                          localStorage.setItem(
+                            storageKey,
+                            JSON.stringify(all.filter((i: any) => i && (i.id !== draftIdToDiscard || i.status !== 'draft')))
+                          );
+                        }
+                      });
                     } catch { /* ignore */ }
                     // SAFETY CHECK: ONLY delete from Supabase if ID starts with 'inv_draft_'!
-                    // NEVER delete real billed documents!
                     if (draftIdToDiscard && draftIdToDiscard.startsWith('inv_draft_')) {
                       try {
                         await supabase.from('invoices').delete().eq('id', draftIdToDiscard);
                       } catch { /* ignore */ }
                     }
-                    try {
-                      localStorage.removeItem('makbills_pending_resume_draft');
-                    } catch { /* ignore */ }
+                    // Generate a new draft ID so current session starts completely fresh
+                    draftIdRef.current = `inv_draft_${Math.random().toString(36).substr(2, 9)}`;
                     setResumableDraft(null);
                     setResumeBannerDismissed(true);
                   }}
@@ -2711,7 +2841,7 @@ export default function InvoiceModal({
                     if (currentWip) {
                       const hasName = currentWip.clientName && currentWip.clientName.trim() !== '' && !currentWip.clientName.startsWith('Guest-') && currentWip.clientName !== 'Quote / Estimate';
                       const hasItems = Array.isArray(currentWip.items) && currentWip.items.length > 0;
-                      if (!isSavedSuccessfullyRef.current && !savedInvoiceForPreview && currentWip && (!invoice || (invoice as any).status === 'draft') && draftIdRef.current.startsWith('inv_draft_')) {
+                      if (!isSavedSuccessfullyRef.current && !savedInvoiceForPreview && currentWip && (!invoice || (invoice as any).status === 'draft') && draftIdRef.current.startsWith('inv_draft_') && (hasName || hasItems)) {
                         const draftToSave = {
                           ...currentWip,
                           id: draftIdRef.current,
@@ -2719,7 +2849,6 @@ export default function InvoiceModal({
                           updatedAt: new Date().toISOString()
                         };
                         saveDraftToLocalStorage(draftToSave);
-                        localStorage.setItem('makbills_pending_resume_draft', draftToSave.id);
                       }
                     }
                     setInvoiceType(newType);
@@ -2774,9 +2903,6 @@ export default function InvoiceModal({
                               updatedAt: new Date().toISOString()
                             };
                             saveDraftToLocalStorage(draftToSave);
-                            if (!resumeBannerDismissed) {
-                              localStorage.setItem('makbills_pending_resume_draft', draftToSave.id);
-                            }
                           }
                         }
                         setInvoiceType(newType);
@@ -3539,25 +3665,135 @@ export default function InvoiceModal({
                       </div>
 
                       {hasTransport && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {activeTemplate.config.transport?.fields?.includes('transportName') && (
-                            <input type="text" value={transport} onChange={e => setTransport(e.target.value)} placeholder="Transport" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                        <div className="space-y-3">
+                          {(filteredTransports.length > 0 || registryTransports.length > 0) && (
+                            <div className="bg-sky-50/30 dark:bg-slate-950 p-2.5 rounded-2xl border border-sky-100/20 dark:border-slate-800/65">
+                              <label htmlFor="select-pre-transport" className="block text-[10px] font-bold uppercase tracking-wider text-[#0284c7] dark:text-[#38bdf8] mb-1">Populate from Transport Database:</label>
+                              <div className="relative" ref={transportDropdownRef}>
+                                <div className="relative flex items-center">
+                                  <input
+                                    id="select-pre-transport"
+                                    type="text"
+                                    value={transportSearchQuery}
+                                    onChange={(e) => {
+                                      setTransportSearchQuery(e.target.value);
+                                      setIsTransportDropdownOpen(true);
+                                    }}
+                                    onFocus={() => setIsTransportDropdownOpen(true)}
+                                    placeholder="-- Select or type to search from Transport Database --"
+                                    className="w-full pl-3 pr-16 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 dark:text-white text-xs font-medium focus:ring-1 focus:ring-sky-500 shadow-xs"
+                                  />
+                                  <div className="absolute right-1.5 flex items-center gap-1">
+                                    {transportSearchQuery && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setTransportSearchQuery('');
+                                          setIsTransportDropdownOpen(false);
+                                        }}
+                                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                                        title="Clear transport filter"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => setIsTransportDropdownOpen(!isTransportDropdownOpen)}
+                                      title="Toggle transport list"
+                                      className="p-1 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 cursor-pointer"
+                                    >
+                                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isTransportDropdownOpen ? 'rotate-180 text-sky-500' : ''}`} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Transport Dropdown Menu */}
+                                {isTransportDropdownOpen && filteredTransports.length > 0 && (
+                                  <div className="absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 border border-sky-200 dark:border-slate-700 rounded-xl shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800">
+                                    <div className="px-3 py-1 bg-sky-50/90 dark:bg-slate-800/90 flex items-center justify-between sticky top-0 backdrop-blur-xs z-10">
+                                      <span className="text-[10px] font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider">
+                                        Transport Database Directory ({filteredTransports.length})
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setIsTransportDropdownOpen(false)}
+                                        className="text-[9px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                                      >
+                                        Close
+                                      </button>
+                                    </div>
+                                    {filteredTransports.map((t) => {
+                                      const tName = t.name || t.transportName || '';
+                                      const vNo = t.vehicleNo || '';
+                                      const displayName = vNo && tName ? `${vNo} - ${tName}` : (vNo || tName || 'Transport Record');
+                                      return (
+                                        <button
+                                          key={t.id || `${vNo}_${tName}_${Math.random()}`}
+                                          type="button"
+                                          onClick={() => {
+                                            if (t.name || t.transportName) setTransport(t.name || t.transportName);
+                                            if (t.vehicleNo) setVehicleNo(t.vehicleNo);
+                                            if (t.phone || t.driverMobile) setDriverMobile(t.phone || t.driverMobile);
+                                            if (t.station) setStation(t.station);
+                                            if (t.ewayBillNo || t.eWayBillNo) setEwayBillNo(t.ewayBillNo || t.eWayBillNo);
+                                            if (t.grRrNo) setGrRrNo(t.grRrNo);
+                                            if (t.marka) setMarka(t.marka);
+                                            setTransportSearchQuery(displayName);
+                                            setIsTransportDropdownOpen(false);
+                                          }}
+                                          className="w-full px-3 py-2 text-left hover:bg-sky-50 dark:hover:bg-slate-800/90 transition-colors flex items-center justify-between gap-2 group cursor-pointer"
+                                        >
+                                          <div className="min-w-0 flex-1">
+                                            <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400">
+                                              {displayName}
+                                            </div>
+                                            {(t.station || t.phone || t.driverMobile || t.marka) && (
+                                              <div className="text-[10px] text-slate-400 truncate flex items-center gap-1.5 flex-wrap">
+                                                {[
+                                                  t.station ? `Station: ${t.station}` : '',
+                                                  (t.phone || t.driverMobile) ? `Mobile: ${t.phone || t.driverMobile}` : '',
+                                                  t.marka ? `Marka: ${t.marka}` : '',
+                                                  (t.ewayBillNo || t.eWayBillNo) ? `E-Way: ${t.ewayBillNo || t.eWayBillNo}` : '',
+                                                  t.grRrNo ? `GR/RR: ${t.grRrNo}` : ''
+                                                ].filter(Boolean).join(' • ')}
+                                              </div>
+                                            )}
+                                          </div>
+                                          {t.vehicleNo && (
+                                            <span className="px-1.5 py-0.5 text-[9px] font-mono bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 rounded border border-sky-200 dark:border-sky-800 shrink-0">
+                                              {t.vehicleNo}
+                                            </span>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           )}
-                          {activeTemplate.config.transport?.fields?.includes('vehicleNo') && (
-                            <input type="text" value={vehicleNo} onChange={e => setVehicleNo(e.target.value)} placeholder="Vehicle No." className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
-                          )}
-                          {activeTemplate.config.transport?.fields?.includes('driverMobile') && (
-                            <input type="text" value={driverMobile} onChange={e => setDriverMobile(e.target.value)} placeholder="Driver Mobile" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
-                          )}
-                          {activeTemplate.config.transport?.fields?.includes('station') && (
-                            <input type="text" value={station} onChange={e => setStation(e.target.value)} placeholder="Station" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
-                          )}
-                          {activeTemplate.config.transport?.fields?.some(f => f.toLowerCase() === 'ewaybillno') && (
-                            <input type="text" value={ewayBillNo} onChange={e => setEwayBillNo(e.target.value)} placeholder="E-Way Bill No." className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
-                          )}
-                          {activeTemplate.config.transport?.fields?.includes('marka') && (
-                            <input type="text" value={marka} onChange={e => setMarka(e.target.value)} placeholder="Marka" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
-                          )}
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {activeTemplate.config.transport?.fields?.includes('transportName') && (
+                              <input type="text" value={transport} onChange={e => setTransport(e.target.value)} placeholder="Transport" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                            )}
+                            {activeTemplate.config.transport?.fields?.includes('vehicleNo') && (
+                              <input type="text" value={vehicleNo} onChange={e => setVehicleNo(e.target.value)} placeholder="Vehicle No." className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                            )}
+                            {activeTemplate.config.transport?.fields?.includes('driverMobile') && (
+                              <input type="text" value={driverMobile} onChange={e => setDriverMobile(e.target.value)} placeholder="Driver Mobile" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                            )}
+                            {activeTemplate.config.transport?.fields?.includes('station') && (
+                              <input type="text" value={station} onChange={e => setStation(e.target.value)} placeholder="Station" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                            )}
+                            {activeTemplate.config.transport?.fields?.some(f => f.toLowerCase() === 'ewaybillno') && (
+                              <input type="text" value={ewayBillNo} onChange={e => setEwayBillNo(e.target.value)} placeholder="E-Way Bill No." className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                            )}
+                            {activeTemplate.config.transport?.fields?.includes('marka') && (
+                              <input type="text" value={marka} onChange={e => setMarka(e.target.value)} placeholder="Marka" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900 dark:text-white text-[13px] text-slate-800 font-medium focus:outline-none" />
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>

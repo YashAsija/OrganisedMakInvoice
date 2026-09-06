@@ -152,18 +152,53 @@ async def get_me(payload: dict = Depends(verify_admin_token)):
 
 @router.get("/stats")
 async def get_stats(payload: dict = Depends(verify_admin_token)):
-    """Fetch quick overview metrics for dashboard."""
+    """Fetch quick overview metrics for dashboard with parallelized concurrent requests."""
     import datetime
+    import asyncio
     from app.services import admin_db
     base_url, headers = _supabase_admin_client()
     
     async with httpx.AsyncClient(timeout=10.0) as client:
-        # 1. Total users — query from Supabase Auth admin API to get all users and signup dates
-        res_auth_users = await client.get(
-            f"{base_url}/auth/v1/admin/users?per_page=1000",
-            headers=headers
+        # Define tasks for concurrent execution
+        async def fetch_users_task():
+            try:
+                res = await client.get(f"{base_url}/auth/v1/admin/users?per_page=1000", headers=headers)
+                if res.status_code == 200:
+                    return res.json().get("users", [])
+            except Exception as e:
+                logger.warning(f"Error fetching auth users for stats: {e}")
+            return []
+
+        async def fetch_subs_task():
+            try:
+                res = await client.get(f"{base_url}/rest/v1/subscriptions?select=plan_type,plan_name,status,trial_started_at", headers=headers)
+                if res.status_code == 200:
+                    return res.json()
+            except Exception as e:
+                logger.warning(f"Error fetching subs for stats: {e}")
+            return []
+
+        async def fetch_tickets_task():
+            try:
+                return await admin_db.get_tickets_for_stats()
+            except Exception as e:
+                logger.warning(f"Error fetching tickets for stats: {e}")
+            return []
+
+        async def check_db_task():
+            try:
+                return await admin_db.check_table_exists("tickets")
+            except Exception:
+                return False
+
+        # Execute all 4 queries concurrently in parallel
+        auth_users, subs_list, tickets_data, use_supabase = await asyncio.gather(
+            fetch_users_task(),
+            fetch_subs_task(),
+            fetch_tickets_task(),
+            check_db_task()
         )
-        auth_users = res_auth_users.json().get("users", []) if res_auth_users.status_code == 200 else []
+
         users_count = len(auth_users)
         
         # New signups in the past 7 days
@@ -174,62 +209,50 @@ async def get_stats(payload: dict = Depends(verify_admin_token)):
             created_raw = u.get("created_at")
             if created_raw:
                 try:
-                    # Supabase returns ISO 8601 with timezone offset
                     created_dt = datetime.datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
                     if created_dt >= one_week_ago_dt:
                         new_signups_week += 1
                 except Exception:
                     pass
         
-        # 2. Subscriptions total, paid active, trials, and plan breakdown
+        # Subscriptions total, paid active, trials, and plan breakdown
         subscriptions_summary = {
             "total_active_paid": 0,
             "total_active_trial": 0,
-            "total_subscriptions": 0,
+            "total_subscriptions": len(subs_list),
             "breakdown": {"free": 0, "basic_paid": 0, "basic_trial": 0, "pro_paid": 0, "pro_trial": 0, "enterprise_paid": 0}
         }
-        try:
-            res_subs = await client.get(f"{base_url}/rest/v1/subscriptions?select=plan_type,plan_name,status,trial_started_at", headers=headers)
-            if res_subs.status_code == 200:
-                subs_list = res_subs.json()
-                subscriptions_summary["total_subscriptions"] = len(subs_list)
-                for s in subs_list:
-                    plan = (s.get("plan_type") or s.get("plan_name") or "free").lower()
-                    status = (s.get("status") or "active").lower()
-                    is_trial = status == "trialing" or bool(s.get("trial_started_at"))
-                    
-                    if status in ("active", "trialing"):
-                        if is_trial:
-                            subscriptions_summary["total_active_trial"] += 1
-                            if "basic" in plan:
-                                subscriptions_summary["breakdown"]["basic_trial"] += 1
-                            elif "pro" in plan:
-                                subscriptions_summary["breakdown"]["pro_trial"] += 1
-                        else:
-                            if "basic" in plan:
-                                subscriptions_summary["total_active_paid"] += 1
-                                subscriptions_summary["breakdown"]["basic_paid"] += 1
-                            elif "pro" in plan:
-                                subscriptions_summary["total_active_paid"] += 1
-                                subscriptions_summary["breakdown"]["pro_paid"] += 1
-                            elif "enterprise" in plan:
-                                subscriptions_summary["total_active_paid"] += 1
-                                subscriptions_summary["breakdown"]["enterprise_paid"] += 1
-                            else:
-                                subscriptions_summary["breakdown"]["free"] += 1
-        except Exception as sub_ex:
-            logger.warning(f"Failed fetching subscriptions summary for stats: {sub_ex}")
+        for s in subs_list:
+            plan = (s.get("plan_type") or s.get("plan_name") or "free").lower()
+            status = (s.get("status") or "active").lower()
+            is_trial = status == "trialing" or bool(s.get("trial_started_at"))
+            
+            if status in ("active", "trialing"):
+                if is_trial:
+                    subscriptions_summary["total_active_trial"] += 1
+                    if "basic" in plan:
+                        subscriptions_summary["breakdown"]["basic_trial"] += 1
+                    elif "pro" in plan:
+                        subscriptions_summary["breakdown"]["pro_trial"] += 1
+                else:
+                    if "basic" in plan:
+                        subscriptions_summary["total_active_paid"] += 1
+                        subscriptions_summary["breakdown"]["basic_paid"] += 1
+                    elif "pro" in plan:
+                        subscriptions_summary["total_active_paid"] += 1
+                        subscriptions_summary["breakdown"]["pro_paid"] += 1
+                    elif "enterprise" in plan:
+                        subscriptions_summary["total_active_paid"] += 1
+                        subscriptions_summary["breakdown"]["enterprise_paid"] += 1
+                    else:
+                        subscriptions_summary["breakdown"]["free"] += 1
 
-        # 3. Tickets total, open, closed
-        use_supabase = await admin_db.check_table_exists("tickets")
-        tickets_data = await admin_db.get_tickets_for_stats()
-        
+        # Tickets stats
         total_tickets = len(tickets_data)
         open_tickets = sum(1 for t in tickets_data if t.get("status") in ("Open", "In Progress"))
         resolved_tickets = sum(1 for t in tickets_data if t.get("status") == "Resolved")
         closed_tickets = sum(1 for t in tickets_data if t.get("status") == "Closed")
         
-        # Simple breakdown by status
         status_breakdown = {
             "Open": sum(1 for t in tickets_data if t.get("status") == "Open"),
             "In Progress": sum(1 for t in tickets_data if t.get("status") == "In Progress"),
@@ -304,109 +327,116 @@ async def get_analytics(payload: dict = Depends(verify_admin_token)):
     week_start = now_dt - datetime.timedelta(days=7)
     last_week_start = now_dt - datetime.timedelta(days=14)
 
-    auth_users = []
+    import asyncio
     async with httpx.AsyncClient(timeout=15.0) as client:
-        # --- Users from Supabase Auth ---
-        try:
-            res_auth = await client.get(
-                f"{base_url}/auth/v1/admin/users?per_page=1000",
-                headers=headers
-            )
-            if res_auth.status_code == 200:
-                auth_users = res_auth.json().get("users", [])
-                analytics["users"]["total"] = len(auth_users)
+        # Define concurrent sub-tasks
+        async def fetch_auth_users_task():
+            try:
+                res = await client.get(f"{base_url}/auth/v1/admin/users?per_page=1000", headers=headers)
+                if res.status_code == 200:
+                    return res.json().get("users", [])
+            except Exception as e:
+                logger.error(f"Analytics: failed to fetch auth users: {e}")
+            return []
 
-                for u in auth_users:
-                    created_raw = u.get("created_at", "")
-                    try:
-                        created_dt = datetime.datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
-                        if created_dt >= today_start:
-                            analytics["users"]["new_today"] += 1
-                        if created_dt >= week_start:
-                            analytics["users"]["new_this_week"] += 1
-                        elif created_dt >= last_week_start:
-                            analytics["users"]["new_last_week"] += 1
-                    except Exception:
-                        pass
+        async def fetch_subs_task():
+            try:
+                res = await client.get(f"{base_url}/rest/v1/subscriptions?select=plan_type,plan_name,status,trial_started_at", headers=headers)
+                if res.status_code == 200:
+                    return res.json()
+            except Exception as e:
+                logger.error(f"Analytics: failed to fetch subscriptions: {e}")
+            return []
 
-                    # Email verification
-                    if u.get("email_confirmed_at") or u.get("user_metadata", {}).get("email_verified"):
-                        analytics["users"]["verified_email"] += 1
+        async def fetch_invoices_task():
+            try:
+                res = await client.get(f"{base_url}/rest/v1/invoices?select=userId,recurringSettings", headers=headers)
+                if res.status_code == 200:
+                    return res.json()
+            except Exception as e:
+                logger.error(f"Analytics: failed to fetch invoices: {e}")
+            return []
 
-                    # Provider breakdown
-                    provider = u.get("app_metadata", {}).get("provider", "email")
-                    analytics["users"]["providers"][provider] = analytics["users"]["providers"].get(provider, 0) + 1
-        except Exception as e:
-            logger.error(f"Analytics: failed to fetch auth users: {e}")
+        async def fetch_tickets_task():
+            try:
+                return await admin_db.get_tickets_for_stats()
+            except Exception as e:
+                logger.error(f"Analytics: failed to fetch ticket data: {e}")
+            return []
 
-        # --- Subscriptions stats ---
-        try:
-            res_subs = await client.get(
-                f"{base_url}/rest/v1/subscriptions?select=plan_type,plan_name,status,trial_started_at",
-                headers=headers
-            )
-            if res_subs.status_code == 200:
-                subs_list = res_subs.json()
-                analytics["subscriptions"]["total"] = len(subs_list)
-                
-                for s in subs_list:
-                    plan = (s.get("plan_type") or s.get("plan_name") or "free").lower()
-                    status = (s.get("status") or "active").lower()
-                    is_trial = status == "trialing" or bool(s.get("trial_started_at"))
+        # Run all 4 queries simultaneously in parallel
+        auth_users, subs_list, invoices, tickets_data = await asyncio.gather(
+            fetch_auth_users_task(),
+            fetch_subs_task(),
+            fetch_invoices_task(),
+            fetch_tickets_task()
+        )
 
-                    if is_trial:
-                        analytics["subscriptions"]["trial_active"] += 1
-                        if "basic" in plan:
-                            analytics["subscriptions"]["plans"]["Basic Trial"] += 1
-                        elif "pro" in plan:
-                            analytics["subscriptions"]["plans"]["Pro Trial"] += 1
-                    elif status == "active" and plan not in ("free", "starter"):
-                        analytics["subscriptions"]["paid_active"] += 1
-                        if "basic" in plan:
-                            analytics["subscriptions"]["plans"]["Basic Paid"] += 1
-                        elif "pro" in plan:
-                            analytics["subscriptions"]["plans"]["Pro Paid"] += 1
-                        elif "enterprise" in plan:
-                            analytics["subscriptions"]["plans"]["Enterprise Paid"] += 1
-                    else:
-                        analytics["subscriptions"]["free_starter"] += 1
-                        analytics["subscriptions"]["plans"]["Starter Free"] += 1
-        except Exception as e:
-            logger.error(f"Analytics: failed to fetch subscriptions: {e}")
+        # Process Users
+        analytics["users"]["total"] = len(auth_users)
+        for u in auth_users:
+            created_raw = u.get("created_at", "")
+            try:
+                created_dt = datetime.datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
+                if created_dt >= today_start:
+                    analytics["users"]["new_today"] += 1
+                if created_dt >= week_start:
+                    analytics["users"]["new_this_week"] += 1
+                elif created_dt >= last_week_start:
+                    analytics["users"]["new_last_week"] += 1
+            except Exception:
+                pass
 
-        # --- Invoice stats ---
-        try:
-            res_inv = await client.get(
-                f"{base_url}/rest/v1/invoices?select=userId,recurringSettings",
-                headers=headers
-            )
-            if res_inv.status_code == 200:
-                invoices = res_inv.json()
-                analytics["invoices"]["total"] = len(invoices)
-                
-                auth_user_ids = {u["id"] for u in auth_users} if auth_users else set()
-                active_users = set()
-                recurring_count = 0
-                for inv in invoices:
-                    uid = inv.get("userId") or inv.get("user_id") or ""
-                    if uid and (not auth_user_ids or uid in auth_user_ids):
-                        active_users.add(uid)
-                    rec_settings = inv.get("recurringSettings") or {}
-                    if isinstance(rec_settings, dict) and rec_settings.get("isRecurring"):
-                        recurring_count += 1
-                analytics["invoices"]["users_with_invoices"] = len(active_users)
-                analytics["invoices"]["users_without_invoices"] = max(
-                    0, analytics["users"]["total"] - len(active_users)
-                )
-                analytics["invoices"]["recurring"] = recurring_count
+            if u.get("email_confirmed_at") or u.get("user_metadata", {}).get("email_verified"):
+                analytics["users"]["verified_email"] += 1
+
+            provider = u.get("app_metadata", {}).get("provider", "email")
+            analytics["users"]["providers"][provider] = analytics["users"]["providers"].get(provider, 0) + 1
+
+        # Process Subscriptions
+        analytics["subscriptions"]["total"] = len(subs_list)
+        for s in subs_list:
+            plan = (s.get("plan_type") or s.get("plan_name") or "free").lower()
+            status = (s.get("status") or "active").lower()
+            is_trial = status == "trialing" or bool(s.get("trial_started_at"))
+
+            if is_trial:
+                analytics["subscriptions"]["trial_active"] += 1
+                if "basic" in plan:
+                    analytics["subscriptions"]["plans"]["Basic Trial"] += 1
+                elif "pro" in plan:
+                    analytics["subscriptions"]["plans"]["Pro Trial"] += 1
+            elif status == "active" and plan not in ("free", "starter"):
+                analytics["subscriptions"]["paid_active"] += 1
+                if "basic" in plan:
+                    analytics["subscriptions"]["plans"]["Basic Paid"] += 1
+                elif "pro" in plan:
+                    analytics["subscriptions"]["plans"]["Pro Paid"] += 1
+                elif "enterprise" in plan:
+                    analytics["subscriptions"]["plans"]["Enterprise Paid"] += 1
             else:
-                logger.error(f"Analytics: invoices endpoint returned {res_inv.status_code}: {res_inv.text}")
-        except Exception as e:
-            logger.error(f"Analytics: failed to fetch invoices: {e}")
+                analytics["subscriptions"]["free_starter"] += 1
+                analytics["subscriptions"]["plans"]["Starter Free"] += 1
 
-    # --- Ticket stats ---
-    try:
-        tickets_data = await admin_db.get_tickets_for_stats()
+        # Process Invoices
+        analytics["invoices"]["total"] = len(invoices)
+        auth_user_ids = {u["id"] for u in auth_users} if auth_users else set()
+        active_users = set()
+        recurring_count = 0
+        for inv in invoices:
+            uid = inv.get("userId") or inv.get("user_id") or ""
+            if uid and (not auth_user_ids or uid in auth_user_ids):
+                active_users.add(uid)
+            rec_settings = inv.get("recurringSettings") or {}
+            if isinstance(rec_settings, dict) and rec_settings.get("isRecurring"):
+                recurring_count += 1
+        analytics["invoices"]["users_with_invoices"] = len(active_users)
+        analytics["invoices"]["users_without_invoices"] = max(
+            0, analytics["users"]["total"] - len(active_users)
+        )
+        analytics["invoices"]["recurring"] = recurring_count
+
+        # Process Tickets
         analytics["tickets"]["total"] = len(tickets_data)
         for t in tickets_data:
             status = t.get("status", "Open")
@@ -423,8 +453,6 @@ async def get_analytics(payload: dict = Depends(verify_admin_token)):
             analytics["tickets"]["categories"][cat] = analytics["tickets"]["categories"].get(cat, 0) + 1
             pri = t.get("priority", "Medium")
             analytics["tickets"]["priorities"][pri] = analytics["tickets"]["priorities"].get(pri, 0) + 1
-    except Exception as e:
-        logger.error(f"Analytics: failed to fetch ticket data: {e}")
 
     return analytics
 

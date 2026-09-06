@@ -28,8 +28,8 @@ const faqs = [
     important: true
   },
   {
-    q: 'How do I add GST/tax to invoices?',
-    a: 'You can set a default tax rate in your company profile (Settings → Company Info → Default Tax Rate). Alternatively, per-line item tax rates can be set when creating invoices using HSN codes from the HSN Registry.',
+    q: 'How do I track and settle payments across sales and purchases?',
+    a: 'Navigate to Financial Hub → Payments in the sidebar. You can monitor Total Collected, Total Paid Out, and Pending Balances. Click "Settle" on any unpaid or partially paid transaction to log settlements via UPI, Bank Transfer, Cash, Cheque, or Card with UTR numbers.',
     important: true
   },
   {
@@ -41,6 +41,36 @@ const faqs = [
     q: 'What is MakInvoices AI and how can it assist me?',
     a: 'MakInvoices AI is your built-in live assistant available in the Chat section. It has full context of the application and can answer questions about invoice creation, settings, registries, templates, and walk you through app features in multiple languages.',
     important: true
+  },
+  {
+    q: 'How do I export payment data and accounting reports?',
+    a: 'In the Payments section, click "Export Data" to download payment history in Excel (.xlsx) or CSV format filtered by custom date ranges (From Date / To Date) and payment type. You can also export full ledger reports and GST tax summaries from Financial Hub → Accounting Report.',
+    important: false
+  },
+  {
+    q: 'What is the Master Database and how does it speed up billing?',
+    a: 'The Master Registry includes pre-saved Client Databases, Vendor Books, Material Catalogs (with SKUs and GST slabs), Transport Carriers, and HSN/SAC Tax Codes. When creating invoices or bills, searchable comboboxes auto-fill all item prices, tax rates, and client addresses instantly.',
+    important: false
+  },
+  {
+    q: 'What subscription plans are available and what are their limits?',
+    a: 'MakInvoices offers 4 tiers: Free/Starter (10 documents/mo, 1 report/mo), Basic (₹199/mo, 60 documents/mo, 5 reports/mo), Professional (₹299/mo, 140 documents/mo, 15 reports/mo, 24/7 AI Assistant & Smart Billing), and Enterprise (₹599/mo, Unlimited documents & reports, priority support). Save ~17% with annual billing.',
+    important: false
+  },
+  {
+    q: 'How does the 1-month free trial work?',
+    a: 'You can test the Basic or Professional plan free for 1 full month without entering a credit card upfront. Click "Start 1-Month Free Trial" on the Subscription page to instantly unlock plan features.',
+    important: false
+  },
+  {
+    q: 'What payment methods are supported for subscriptions?',
+    a: 'We support all major payment options via Razorpay for domestic/INR payments (UPI, Google Pay, PhonePe, Debit/Credit Cards, Netbanking) and Paddle for international payments (Credit Cards, PayPal, Multi-currency).',
+    important: false
+  },
+  {
+    q: 'How do document creation and report export quotas reset?',
+    a: 'Usage quotas track your monthly generated invoices, purchase bills, and exported reports in real time. Limits automatically reset at the start of each monthly or annual billing cycle.',
+    important: false
   },
   {
     q: 'What is the difference between Billed Vendors and the Vendor Database?',
@@ -477,16 +507,12 @@ export default function SupportPage({ onChatClick, onNavigateTab, subscriptionTi
     return false;
   });
 
-  const filteredFaqs = faqs.filter(faq => {
-    const isMatched = searchQuery.trim().length >= 2 && (
-      faq.q.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      faq.a.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    if (searchQuery.trim().length < 2) {
-      return faq.important;
-    }
-    return isMatched;
-  });
+  const filteredFaqs = searchQuery.trim().length > 0
+    ? faqs.filter(faq =>
+        faq.q.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+        faq.a.toLowerCase().includes(searchQuery.toLowerCase().trim())
+      )
+    : faqs.slice(0, 6);
 
   const handleTicketSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -680,8 +706,16 @@ export default function SupportPage({ onChatClick, onNavigateTab, subscriptionTi
                       {s.step}
                     </span>
                     <div className="hidden md:block min-w-0">
-                      <span className="block truncate font-black text-[10.5px] uppercase tracking-wider">{s.title.split(' ')[0]}</span>
-                      <span className="hidden md:block text-[9px] text-[#64748b] dark:text-zinc-300 font-medium truncate mt-0.5">{s.badge}</span>
+                      <span className={`block truncate font-black text-[10.5px] uppercase tracking-wider ${
+                        isActive ? '!text-white text-white font-black' : 'text-[#0f172a] dark:text-white'
+                      }`}>
+                        {s.title.split(' ')[0]}
+                      </span>
+                      <span className={`hidden md:block text-[9.5px] font-bold truncate mt-0.5 ${
+                        isActive ? '!text-white text-white/95' : 'text-slate-600 dark:text-slate-300'
+                      }`}>
+                        {s.badge}
+                      </span>
                     </div>
                   </button>
                   {idx < stepsData.length - 1 && (
@@ -1169,21 +1203,35 @@ export default function SupportPage({ onChatClick, onNavigateTab, subscriptionTi
           <div className="relative overflow-hidden">
             <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#bae6fd] via-[#0284c7] to-[#2563eb]" />
             <div className="p-4 pb-2">
-              <h2 className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-widest">Frequently Asked Questions</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-[10px] font-black text-[#0f172a] dark:text-white uppercase tracking-widest">Frequently Asked Questions</h2>
+                <span className="text-[9.5px] font-bold text-[#64748b] dark:text-zinc-300 bg-[#f4f9ff] dark:bg-[#0b1329] px-2 py-0.5 rounded-full border border-[#e2e8f0]/60 dark:border-[#223269]">
+                  {searchQuery.trim() ? `${filteredFaqs.length} results` : 'Main 6 FAQs'}
+                </span>
+              </div>
               <div className="relative mt-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#64748b]/60" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search questions…"
-                  className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-[#e2e8f0] dark:border-[#223269] bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-colors"
+                  placeholder="Search all questions & topics…"
+                  className="w-full pl-8 pr-8 py-2 text-xs rounded-xl border border-[#e2e8f0] dark:border-[#223269] bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-white placeholder-[#64748b]/40 focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-colors"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#64748b] hover:text-[#0f172a] dark:hover:text-white px-1 font-black cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="px-4 pb-4 space-y-1.5 overflow-y-auto">
+          <div className="px-4 pb-4 space-y-1.5 max-h-[355px] overflow-y-auto pr-1.5">
             {filteredFaqs.length === 0 ? (
               <div className="py-8 text-center text-[11px] text-[#64748b]/60 dark:text-zinc-300">
                 <HelpCircle className="w-8 h-8 mx-auto mb-2 opacity-30" />

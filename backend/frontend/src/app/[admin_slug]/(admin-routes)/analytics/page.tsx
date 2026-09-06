@@ -16,6 +16,10 @@ import {
   UserCheck,
   Activity,
   Zap,
+  CreditCard,
+  Sparkles,
+  ShieldCheck,
+  Crown
 } from "lucide-react";
 
 interface AnalyticsData {
@@ -26,6 +30,13 @@ interface AnalyticsData {
     new_last_week: number;
     verified_email: number;
     providers: Record<string, number>;
+  };
+  subscriptions?: {
+    total: number;
+    paid_active: number;
+    trial_active: number;
+    free_starter: number;
+    plans: Record<string, number>;
   };
   invoices: {
     total: number;
@@ -181,6 +192,31 @@ export default function AnalyticsPage() {
       ? Math.round((data.invoices.users_with_invoices / data.users.total) * 100)
       : 0;
 
+  const subsData = data.subscriptions || {
+    total: 0,
+    paid_active: 0,
+    trial_active: 0,
+    free_starter: 0,
+    plans: {
+      "Starter Free": 0,
+      "Basic Trial": 0,
+      "Basic Paid": 0,
+      "Pro Trial": 0,
+      "Pro Paid": 0,
+      "Enterprise Paid": 0
+    }
+  };
+
+  const paidRate =
+    data.users.total > 0
+      ? Math.round((subsData.paid_active / data.users.total) * 100)
+      : 0;
+
+  const trialRate =
+    data.users.total > 0
+      ? Math.round((subsData.trial_active / data.users.total) * 100)
+      : 0;
+
   const weekGrowthPct =
     data.users.new_last_week > 0
       ? Math.round(
@@ -240,6 +276,16 @@ export default function AnalyticsPage() {
     "text-amber-400",
   ];
 
+  const planList = [
+    { name: "Pro Paid", count: subsData.plans["Pro Paid"] || 0, color: "bg-emerald-500", text: "text-emerald-400", badge: "Paid", badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+    { name: "Pro Trial", count: subsData.plans["Pro Trial"] || 0, color: "bg-purple-500", text: "text-purple-400", badge: "Trial", badgeColor: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
+    { name: "Basic Paid", count: subsData.plans["Basic Paid"] || 0, color: "bg-emerald-500", text: "text-emerald-400", badge: "Paid", badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+    { name: "Basic Trial", count: subsData.plans["Basic Trial"] || 0, color: "bg-sky-500", text: "text-sky-400", badge: "Trial", badgeColor: "bg-sky-500/10 text-sky-400 border-sky-500/20" },
+    { name: "Enterprise Paid", count: subsData.plans["Enterprise Paid"] || 0, color: "bg-indigo-500", text: "text-indigo-400", badge: "Paid", badgeColor: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" },
+    { name: "Starter Free", count: subsData.plans["Starter Free"] || 0, color: "bg-slate-500", text: "text-slate-400", badge: "Free", badgeColor: "bg-slate-800 text-slate-400 border-slate-700" },
+  ];
+  const maxPlanCount = Math.max(...planList.map(p => p.count), 1);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -250,7 +296,7 @@ export default function AnalyticsPage() {
             Platform Analytics
           </h1>
           <p className="text-slate-400 mt-1">
-            Aggregated platform metrics — no individual user data exposed.
+            Aggregated platform telemetry and subscription conversion metrics.
             {lastRefreshed && (
               <span className="ml-2 text-slate-500 text-xs">
                 Last updated {lastRefreshed.toLocaleTimeString()}
@@ -281,7 +327,143 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* ROW 1: User Growth KPIs */}
+      {/* ROW 1: Subscriptions & Monetization Overview */}
+      <section>
+        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+          <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> Subscriptions & Monetization
+        </h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              label: "Paid Subscribers",
+              value: subsData.paid_active,
+              icon: CreditCard,
+              color: "text-emerald-400",
+              bg: "bg-emerald-500/10 border-emerald-500/20",
+              badge: <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">{paidRate}% of users</span>,
+              sub: "Active paid accounts"
+            },
+            {
+              label: "Active Trials",
+              value: subsData.trial_active,
+              icon: Sparkles,
+              color: "text-purple-400",
+              bg: "bg-purple-500/10 border-purple-500/20",
+              badge: <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">{trialRate}% in trial</span>,
+              sub: "14-day free trials"
+            },
+            {
+              label: "Free Starter Users",
+              value: subsData.free_starter,
+              icon: Users,
+              color: "text-slate-400",
+              bg: "bg-slate-800/40 border-slate-700/60",
+              badge: null,
+              sub: "Community / unassigned"
+            },
+            {
+              label: "Total Subscriptions",
+              value: subsData.total,
+              icon: Crown,
+              color: "text-indigo-400",
+              bg: "bg-indigo-500/10 border-indigo-500/20",
+              badge: null,
+              sub: "Total tracked in DB"
+            },
+          ].map((card) => {
+            const Icon = card.icon;
+            return (
+              <div
+                key={card.label}
+                className={`p-5 rounded-2xl border bg-slate-900/40 backdrop-blur-md flex flex-col justify-between gap-3 hover:translate-y-[-2px] transition-all ${card.bg}`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="p-2.5 rounded-xl bg-slate-950/50 border border-slate-800/60">
+                    <Icon className={`h-5 w-5 ${card.color}`} />
+                  </div>
+                  {card.badge}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-400">
+                    {card.label}
+                  </p>
+                  <p className="text-3xl font-extrabold text-white mt-1">
+                    {card.value.toLocaleString()}
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{card.sub}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ROW 2: Subscription Visual Telemetry (Conversion Ring + Plan Tier Breakdown) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Paid Conversion Ratio */}
+        <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/20 backdrop-blur-md flex flex-col items-center justify-center gap-4">
+          <h3 className="text-sm font-semibold text-white self-start flex items-center gap-2">
+            <Zap className="h-4 w-4 text-emerald-400" /> Paid Conversion Rate
+          </h3>
+          <div className="relative flex items-center justify-center">
+            <CircleProgress pct={paidRate} color="#10b981" size={100} />
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-2xl font-extrabold text-white">
+                {paidRate}%
+              </span>
+            </div>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-slate-400">
+              <span className="text-emerald-400 font-bold">
+                {subsData.paid_active.toLocaleString()}
+              </span>{" "}
+              of {data.users.total.toLocaleString()} total users upgraded to paid
+            </p>
+            <p className="text-[10px] text-purple-400 mt-1 font-medium">
+              +{subsData.trial_active} active trials pending conversion
+            </p>
+          </div>
+        </div>
+
+        {/* Subscription Tier Breakdown */}
+        <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/20 backdrop-blur-md lg:col-span-2 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-indigo-400" /> Subscription Tier Distribution
+            </h3>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400">
+              {subsData.total} Total Subscriptions
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {planList.map((plan) => {
+              const pct = Math.round((plan.count / maxPlanCount) * 100);
+              return (
+                <div key={plan.name} className="p-3 rounded-xl bg-slate-950/40 border border-slate-800/60 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-medium">
+                    <div className="flex items-center gap-1.5">
+                      <span className={plan.text}>{plan.name}</span>
+                      <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase border ${plan.badgeColor}`}>
+                        {plan.badge}
+                      </span>
+                    </div>
+                    <span className="text-slate-400 font-bold">{plan.count}</span>
+                  </div>
+                  <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800/40">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${plan.color}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* ROW 3: User Growth KPIs */}
       <section>
         <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
           <Users className="h-3.5 w-3.5" /> User Growth
@@ -347,7 +529,7 @@ export default function AnalyticsPage() {
         </div>
       </section>
 
-      {/* ROW 2: Verification + Engagement Rings + Provider Breakdown */}
+      {/* ROW 4: Verification + Engagement Rings + Provider Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Email Verification Ring */}
         <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/20 backdrop-blur-md flex flex-col items-center justify-center gap-4">
@@ -441,7 +623,7 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* ROW 3: Invoice Stats */}
+      {/* ROW 5: Invoice Platform Stats */}
       <section>
         <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
           <FileText className="h-3.5 w-3.5" /> Invoice Platform Stats
@@ -505,7 +687,7 @@ export default function AnalyticsPage() {
         </div>
       </section>
 
-      {/* ROW 4: Ticket Category + Priority Breakdown */}
+      {/* ROW 6: Ticket Category + Priority Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Ticket Categories */}
         <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/20 backdrop-blur-md space-y-4">
@@ -612,3 +794,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+

@@ -32,13 +32,24 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot-password' | 'reset-password'>(defaultMode);
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone' | 'google'>('email');
   
-  const [formData, setFormData] = useState({
-    name: '',
-    companyName: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: ''
+  const [formData, setFormData] = useState(() => {
+    let initialEmail = '';
+    if (typeof window !== 'undefined') {
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, '?'));
+        const em = searchParams.get('email') || hashParams.get('email');
+        if (em) initialEmail = decodeURIComponent(em);
+      } catch (e) {}
+    }
+    return {
+      name: '',
+      companyName: '',
+      email: initialEmail,
+      phone: '',
+      password: '',
+      confirmPassword: ''
+    };
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>(() => {
@@ -83,8 +94,14 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
         }
 
         if (errCode === 'otp_expired' || displayMsg.toLowerCase().includes('expired') || displayMsg.toLowerCase().includes('invalid')) {
-          displayMsg = 'The password reset link is invalid or has expired. Please enter your email below to request a new link.';
-          setAuthMode('forgot-password');
+          const isRecoveryAttempt = searchStr.includes('type=recovery') || hashStr.includes('type=recovery') || window.location.pathname.includes('reset-password');
+          if (isRecoveryAttempt) {
+            displayMsg = 'The password reset link is invalid or has expired. Please enter your email below to request a new link.';
+            setAuthMode('forgot-password');
+          } else {
+            displayMsg = 'This email verification link is invalid, has expired, or was already used. Please try logging in or create a new account.';
+            setAuthMode('login');
+          }
         }
 
         setFormErrors({ email: displayMsg });
@@ -97,7 +114,68 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
         return;
       }
 
-      // 2. Check for Valid Recovery Parameters
+      // 2. Check for Token / OTP in Link and verify automatically with Supabase
+      const searchParams = new URLSearchParams(searchStr);
+      const hashParams = new URLSearchParams(hashStr.replace(/^#/, '?'));
+      const token = searchParams.get('token') || hashParams.get('token');
+      const tokenHash = searchParams.get('token_hash') || hashParams.get('token_hash');
+      const email = searchParams.get('email') || hashParams.get('email');
+      const type = (searchParams.get('type') || hashParams.get('type') || 'signup') as any;
+
+      if ((tokenHash || (token && email)) && type === 'signup') {
+        setIsLoading(true);
+        (async () => {
+          try {
+            let verifyRes;
+            if (tokenHash) {
+              verifyRes = await supabase.auth.verifyOtp({
+                token_hash: tokenHash,
+                type: 'signup'
+              });
+            } else if (token && email) {
+              verifyRes = await supabase.auth.verifyOtp({
+                email: decodeURIComponent(email),
+                token: token,
+                type: 'signup'
+              });
+            }
+            if (verifyRes?.error) {
+              throw verifyRes.error;
+            }
+            // Always sign out temporary session so user logs in cleanly with password
+            await supabase.auth.signOut();
+            setSuccessMsg('Email verified successfully! You can now log into your MakInvoices account.');
+            setAuthMode('login');
+            if (email) {
+              setFormData(prev => ({ ...prev, email: decodeURIComponent(email) }));
+            }
+          } catch (err: any) {
+            console.warn('[Verify Token Error]', err);
+            setFormErrors({ email: err.message || 'Verification link is invalid or has expired.' });
+            setAuthMode('login');
+          } finally {
+            setIsLoading(false);
+            if (window.history.replaceState) {
+              window.history.replaceState(null, '', '/login');
+            }
+          }
+        })();
+        return;
+      }
+
+      // 2b. Check for Email Verification Success flags
+      const isVerified = searchStr.includes('verified=true') ||
+                         searchStr.includes('type=signup') ||
+                         hashStr.includes('type=signup');
+      if (isVerified) {
+        setSuccessMsg('Email verified successfully! You can now log into your MakInvoices account.');
+        setAuthMode('login');
+        if (window.history.replaceState) {
+          window.history.replaceState(null, '', '/login');
+        }
+      }
+
+      // 3. Check for Valid Recovery Parameters
       const isRecovery = hashStr.includes('type=recovery') ||
                          searchStr.includes('type=recovery') ||
                          window.location.pathname.includes('reset-password');
@@ -265,7 +343,6 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
       if (authMode === 'signup') {
         if (!formData.name.trim()) return setFormErrors({ email: 'Please fill out Your Name.' });
         if (!formData.companyName.trim()) return setFormErrors({ email: 'Please fill out Your Company Name.' });
-        if (!formData.phone.trim()) return setFormErrors({ email: 'Please fill out your Phone Number.' });
         if (!formData.email.trim()) return setFormErrors({ email: 'Please fill out your Email Address.' });
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) return setFormErrors({ email: 'Please enter a valid Email Address.' });
         if (!formData.password.trim()) return setFormErrors({ email: 'Please enter a Password.' });
@@ -289,16 +366,18 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
     try {
       if (authMode === 'signup') {
 
-        if (!isSupabaseConfigured) {
-          throw new Error("Supabase is not configured. Service unavailable.");
-        }
+        const redirectUrl = typeof window !== 'undefined' 
+          ? `${window.location.origin}/login?verified=true`
+          : undefined;
+
         const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
+            emailRedirectTo: redirectUrl,
             data: {
               full_name: formData.name,
-              phone: formData.phone,
+              phone: formData.phone || '',
               company_name: formData.companyName
             }
           }
@@ -306,7 +385,14 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
 
         if (error) throw error;
 
-        if (data.user && !data.session) {
+        // When email confirmation is enabled in Supabase, data.session is null or data.user.identities is present.
+        // Even if session is returned (e.g. if email confirmation wasn't strictly blocking yet), sign out immediately
+        // so the user MUST click the email verification link to verify before logging in.
+        if (data.session) {
+          await supabase.auth.signOut();
+        }
+
+        if (data.user) {
           // Immediately upsert Starter subscription on signup
           try {
             const lockKey = `upgrade_lock_${data.user.id}`;
@@ -341,71 +427,9 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
             console.warn('[Signup Subscription Warning]', subErr);
           }
 
-          setSuccessMsg("Account created! Please check your inbox to verify your email address.");
+          setSuccessMsg("Verification link sent! Please check your email inbox to verify your account before logging in.");
           setIsLoading(false);
-        } else if (data.user) {
-          const initProf: BusinessProfile = {
-            uid: data.user.id,
-            name: formData.companyName,
-            email: formData.email,
-            phone: formData.phone,
-            ownerName: formData.name,
-            address: '',
-            taxId: '',
-            currency: 'INR',
-            defaultTaxRate: 18,
-            updatedAt: new Date().toISOString()
-          };
-          await supabase.from('users').upsert(initProf);
-
-          // Immediately upsert Starter subscription on signup
-          try {
-            const lockKey = `upgrade_lock_${data.user.id}`;
-            const lockTime = typeof window !== 'undefined' ? localStorage.getItem(lockKey) : null;
-            if (lockTime && Date.now() - parseInt(lockTime) < 10000) {
-              console.warn('[Signup] Skipping Free plan write — upgrade lock active for user:', data.user.id);
-            } else {
-              const { data: currentSub } = await supabase
-                .from('subscriptions')
-                .select('plan_type, status')
-                .eq('user_id', data.user.id)
-                .maybeSingle();
-
-              if (currentSub && (currentSub.status === 'active' || currentSub.status === 'trialing')) {
-                console.warn('[Signup] Blocked Free plan overwrite — user has active/trialing subscription:', currentSub.plan_type, currentSub.status);
-              } else {
-                console.log('[Signup] Creating Free starter subscription for new user');
-                await supabase.from('subscriptions').upsert({
-                  user_id: data.user.id,
-                  plan_name: 'Free',
-                  plan_type: 'free',
-                  status: 'active',
-                  expires_at: null,
-                  renews_at: null,
-                  user_email: formData.email || null,
-                  user_phone: formData.phone || null,
-                  updated_at: new Date().toISOString(),
-                }, { onConflict: 'user_id' });
-              }
-            }
-          } catch (subErr) {
-            console.warn('[Signup Subscription Warning]', subErr);
-          }
-
-          const activeUserIdentifier = data.user.email || data.user.phone || formData.email || formData.phone || '';
-          if (activeUserIdentifier) {
-            localStorage.setItem(`invoice_maker_biz_profile_${encodeURIComponent(activeUserIdentifier)}`, JSON.stringify(initProf));
-          }
-          localStorage.removeItem('invoice_maker_biz_profile');
-          setSuccessMsg('Welcome aboard! Redirecting...');
-          setTimeout(() => {
-            if (onNavigate) {
-              onNavigate('/invoices');
-            } else if (typeof window !== 'undefined') {
-              window.history.pushState(null, '', '/invoices');
-              window.dispatchEvent(new Event('popstate'));
-            }
-          }, 800);
+          setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
         }
       } else if (authMode === 'forgot-password') {
         if (!isSupabaseConfigured) {
@@ -727,13 +751,33 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 }}>
                 {[
                   { key: 'email', icon: <Mail style={{ width: 14, height: 14 }} />, label: 'Email' },
-                  { key: 'phone', icon: <Phone style={{ width: 14, height: 14 }} />, label: 'Phone' },
+                  { key: 'phone', icon: <Phone style={{ width: 14, height: 14 }} />, label: 'Phone', badge: 'Soon' },
                   { key: 'google', icon: <LogIn style={{ width: 14, height: 14 }} />, label: 'Google' }
                 ].map(m => (
                   <button key={m.key} type="button"
                     onClick={() => { setLoginMethod(m.key as any); setOtpSent(false); setFormErrors({}); setSuccessMsg(''); }}
                     className={`auth-method-btn ${loginMethod === m.key ? 'active' : 'inactive'}`}
+                    style={{ position: 'relative' }}
                   >
+                    {m.badge && (
+                      <span style={{
+                        position: 'absolute',
+                        top: -6,
+                        right: -3,
+                        background: '#f59e0b',
+                        color: '#000000',
+                        fontSize: '0.52rem',
+                        fontWeight: 800,
+                        padding: '1px 5px',
+                        borderRadius: 99,
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        boxShadow: '0 2px 6px rgba(245,158,11,0.3)',
+                        lineHeight: 1.2
+                      }}>
+                        Soon
+                      </span>
+                    )}
                     {m.icon}
                     {m.label}
                   </button>
@@ -835,10 +879,6 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
                     <div>
                       <label className="auth-label">Company Name</label>
                       <input className="auth-input" type="text" required placeholder="e.g. Acme Tech Solutions" value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} />
-                    </div>
-                    <div>
-                      <label className="auth-label">Phone Number</label>
-                      <input className="auth-input" type="tel" required placeholder="e.g. +1 555 000 0000" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
                     </div>
                   </>
                 )}
@@ -1003,86 +1043,87 @@ export default function AuthScreen({ defaultMode = 'login', initialError, onPass
               </form>
 
             ) : (
-              /* ===== PHONE / OTP METHOD ===== */
-              otpSent ? (
-                <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div>
-                    <label className="auth-label">Verification Code (OTP)</label>
-                    <input className="auth-input" type="text" required placeholder="e.g. 123456" value={otpValue} onChange={e => setOtpValue(e.target.value)} />
+              /* ===== PHONE / OTP METHOD (COMING SOON) ===== */
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '16px 8px', gap: 16 }}>
+                <div style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 14,
+                  background: theme === 'dark' ? 'rgba(245,158,11,0.12)' : '#fef3c7',
+                  border: `1.5px solid ${theme === 'dark' ? 'rgba(245,158,11,0.3)' : '#fde68a'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#f59e0b'
+                }}>
+                  <Phone style={{ width: 24, height: 24 }} />
+                </div>
+
+                <div>
+                  <div style={{
+                    display: 'inline-block',
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: '0.65rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: '#d97706',
+                    background: theme === 'dark' ? 'rgba(245,158,11,0.15)' : '#fef3c7',
+                    border: '1px solid rgba(245,158,11,0.3)',
+                    padding: '3px 10px',
+                    borderRadius: 99,
+                    marginBottom: 10
+                  }}>
+                    Coming Soon
                   </div>
-                  <button type="submit" disabled={isLoading} className="auth-btn-primary">
-                    {isLoading ? <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} /> : <><KeyRound style={{ width: 15, height: 15 }} />Verify & Proceed</>}
+                  <h3 style={{
+                    fontFamily: "'Fraunces', serif",
+                    fontSize: '1.2rem',
+                    fontWeight: 600,
+                    color: theme === 'dark' ? '#f8fafc' : '#0f172a',
+                    marginBottom: 6
+                  }}>
+                    Phone Authentication
+                  </h3>
+                  <p style={{ fontSize: '0.82rem', color: theme === 'dark' ? '#94a3b8' : '#64748b', lineHeight: 1.5, maxWidth: 320, margin: '0 auto' }}>
+                    SMS & phone verification is currently in development. Please use <strong>Email</strong> or <strong>Google</strong> to {authMode === 'signup' ? 'create your account' : 'log into your workspace'}.
+                  </p>
+                </div>
+
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => { setLoginMethod('email'); setFormErrors({}); }}
+                    className="auth-btn-primary"
+                  >
+                    <Mail style={{ width: 15, height: 15 }} />
+                    Continue with Email
                   </button>
-                </form>
-              ) : (
-                <form onSubmit={handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {authMode === 'signup' && (
-                    <>
-                      <div><label className="auth-label">Your Name</label><input className="auth-input" type="text" required placeholder="e.g. John Doe" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
-                      <div><label className="auth-label">Company Name</label><input className="auth-input" type="text" required placeholder="e.g. Acme Tech Solutions" value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} /></div>
-                    </>
-                  )}
-                  <div>
-                    <label className="auth-label">Phone Number</label>
-                    <input className="auth-input" type="tel" required placeholder="e.g. +1 555 000 0000" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-                  </div>
-                  {authMode === 'signup' && (
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 2, marginBottom: 2 }}>
-                      <input
-                        type="checkbox"
-                        id="accept-terms-checkbox-phone"
-                        checked={acceptedTerms}
-                        onChange={(e) => {
-                          setAcceptedTerms(e.target.checked);
-                          if (e.target.checked) {
-                            setFormErrors(prev => {
-                              const copy = { ...prev };
-                              delete copy.terms;
-                              delete copy.email;
-                              delete copy.phone;
-                              return copy;
-                            });
-                          }
-                        }}
-                        style={{
-                          marginTop: 3,
-                          width: 16,
-                          height: 16,
-                          accentColor: theme === 'dark' ? '#38bdf8' : '#0284c7',
-                          cursor: 'pointer',
-                          flexShrink: 0,
-                          borderRadius: 4
-                        }}
-                      />
-                      <label htmlFor="accept-terms-checkbox-phone" style={{ fontSize: '0.78rem', color: theme === 'dark' ? '#94a3b8' : '#475569', lineHeight: 1.45, cursor: 'pointer', userSelect: 'none' }}>
-                        I agree to the{' '}
-                        <a
-                          href="/terms"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          style={{ color: theme === 'dark' ? '#38bdf8' : '#0284c7', fontWeight: 600, textDecoration: 'underline' }}
-                        >
-                          Terms & Conditions
-                        </a>{' '}
-                        and{' '}
-                        <a
-                          href="/privacy"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          style={{ color: theme === 'dark' ? '#38bdf8' : '#0284c7', fontWeight: 600, textDecoration: 'underline' }}
-                        >
-                          Privacy Policy
-                        </a>
-                      </label>
-                    </div>
-                  )}
-                  <button type="submit" disabled={isLoading} className="auth-btn-primary">
-                    {isLoading ? <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} /> : <><Phone style={{ width: 15, height: 15 }} />Send Verification Code</>}
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    style={{
+                      width: '100%',
+                      padding: '11px 18px',
+                      background: theme === 'dark' ? '#111a36' : '#ffffff',
+                      border: `1.5px solid ${theme === 'dark' ? '#223269' : '#bae6fd'}`,
+                      borderRadius: 10,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      fontFamily: "'IBM Plex Sans', sans-serif",
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      color: theme === 'dark' ? '#f8fafc' : '#0f172a'
+                    }}
+                  >
+                    <LogIn style={{ width: 14, height: 14 }} />
+                    Continue with Google
                   </button>
-                </form>
-              )
+                </div>
+              </div>
             )}
           </div>
 

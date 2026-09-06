@@ -20,6 +20,7 @@ import { numberToWords } from '../../lib/numberToWords';
 import { EditableField } from '../EditableField';
 import { Country, State } from 'country-state-city';
 import { ensureAllColumns } from '../../lib/templatePresets';
+import { formatStateWithCode, getStateCode, cleanStateName } from '../../lib/stateUtils';
 
 const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, options = [], placeholder = '', list = '' }: any) => {
   const ref = React.useRef<HTMLSpanElement>(null);
@@ -54,7 +55,13 @@ const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, option
   };
 
   if (type === 'select') {
-    const selectedLabel = options.find((opt: any) => opt.value === value)?.label || placeholder || value || '';
+    const matchedOpt = options.find((opt: any) => 
+      opt.value === value || 
+      opt.label === value || 
+      (cleanStateName(opt.value) && cleanStateName(opt.value) === cleanStateName(value))
+    );
+    const selectedLabel = matchedOpt?.label || (value ? formatStateWithCode(value) : placeholder || '');
+    const selectVal = matchedOpt ? matchedOpt.value : (value || '');
 
     return (
       <div className="relative inline-block max-w-[180px] bg-slate-50 outline-dashed outline-1 outline-sky-300/80 hover:bg-slate-200/50 hover:outline-sky-400 focus-within:bg-white focus-within:outline-solid focus-within:outline-2 focus-within:outline-sky-500 rounded px-1 cursor-pointer transition-all print:outline-none print:bg-transparent print:border-none">
@@ -62,7 +69,7 @@ const InlineEditable = ({ value, onSave, type = 'text', isNumber = false, option
           {selectedLabel}
         </span>
         <select
-          value={value || ''}
+          value={selectVal}
           onChange={(e) => onSave(e.target.value)}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
         >
@@ -243,10 +250,14 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   }, [businessProfile]);
 
   const renderSelectInteractive = (value: string, fieldKey: string, options: any[], placeholder = '') => {
-    if (isInteractive && onUpdateField) {
-      return <InlineEditable value={value} onSave={(v: any) => onUpdateField(fieldKey, v)} type="select" options={options} placeholder={placeholder} />;
+    let formattedVal = value;
+    if ((fieldKey === 'clientState' || fieldKey === 'shippedToState') && value) {
+      formattedVal = formatStateWithCode(value);
     }
-    return value;
+    if (isInteractive && onUpdateField) {
+      return <InlineEditable value={formattedVal} onSave={(v: any) => onUpdateField(fieldKey, v)} type="select" options={options} placeholder={placeholder} />;
+    }
+    return formattedVal;
   };
 
   const renderInteractive = (value: string | number, fieldKey: string, type: 'text' | 'textarea' = 'text', placeholder = '') => {
@@ -877,11 +888,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                     {config.client.fields.includes('address') && (
                       isVertical ? <>
                         <div className={`flex items-center ${isClientCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isClientCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Country</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(clientCountry, 'clientCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</span></div>
-                        <div className={`flex items-center ${isClientCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isClientCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>State</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(clientState, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</span></div>
+                        <div className={`flex items-center ${isClientCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isClientCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>State</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(clientState, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode || '').map(s => ({ label: `${s.name}${getStateCode(s.name) ? ` (${getStateCode(s.name)})` : ''}`, value: s.name })), 'Select State')}</span></div>
                         <div className={`flex items-start ${isClientCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isClientCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Address</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(clientAddr, 'clientAddress', 'textarea', 'Address')}</span></div>
                       </> : <>
                         <div className={`flex items-center ${isClientCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Country:</span>}<span className="text-gray-900 font-bold">{renderSelectInteractive(clientCountry, 'clientCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</span></div>
-                        <div className={`flex items-center ${isClientCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">State:</span>}<span className="text-gray-900 font-bold">{renderSelectInteractive(clientState, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</span></div>
+                        <div className={`flex items-center ${isClientCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">State:</span>}<span className="text-gray-900 font-bold">{renderSelectInteractive(clientState, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountry)?.isoCode || '').map(s => ({ label: `${s.name}${getStateCode(s.name) ? ` (${getStateCode(s.name)})` : ''}`, value: s.name })), 'Select State')}</span></div>
                         <div className={`flex items-center ${isClientCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Address:</span>}<span className="text-gray-900 font-bold">{renderInteractive(clientAddr, 'clientAddress', 'textarea', 'Address')}</span></div>
                       </>
                     )}
@@ -917,7 +928,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 )}
                 {config.client.fields.includes('address') && <>
                   <div style={{ fontSize: isClientCompact ? '10px' : '12px', margin: isClientCompact ? '0px' : '2px 0' }}>{showLabels && <strong>Country: </strong>}{renderSelectInteractive(clientCountryNM, 'clientCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</div>
-                  <div style={{ fontSize: isClientCompact ? '10px' : '12px', margin: isClientCompact ? '0px' : '2px 0' }}>{showLabels && <strong>State: </strong>}{renderSelectInteractive(clientStateNM, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountryNM)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</div>
+                  <div style={{ fontSize: isClientCompact ? '10px' : '12px', margin: isClientCompact ? '0px' : '2px 0' }}>{showLabels && <strong>State: </strong>}{renderSelectInteractive(clientStateNM, 'clientState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === clientCountryNM)?.isoCode || '').map(s => ({ label: `${s.name}${getStateCode(s.name) ? ` (${getStateCode(s.name)})` : ''}`, value: s.name })), 'Select State')}</div>
                   <p style={{ fontSize: isClientCompact ? '10px' : '12px', margin: isClientCompact ? '0px' : '2px 0', whiteSpace: 'pre-wrap' }}>{renderInteractive(clientAddr, 'clientAddress', 'textarea', 'Address')}</p>
                 </>}
                 {config.client.fields.includes('gstin') && (clientGst || isInteractive) && <p style={{ fontSize: isClientCompact ? '10px' : '12px', margin: isClientCompact ? '0px' : '2px 0' }}>{showLabels && <strong>GSTIN: </strong>}{renderInteractive(clientGst, 'clientGstin', 'text', 'GSTIN')}</p>}
@@ -948,8 +959,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               return (
                 <div key="shipTo" style={{ ...getSectionStyle('shipTo'), paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', marginBottom: '0px', marginTop: amigoIndex === 2 ? '-1px' : '5px' }}>
                   <div className={`border border-gray-300 px-2.5 py-1 h-full flex ${isVertical ? 'flex-col gap-y-0.5' : 'flex-wrap items-center gap-x-6 gap-y-1'}`} style={{ borderRadius: getBorderRadius() }}>
-                    <div className={`flex justify-between items-center ${isVertical ? 'mb-1' : 'w-full mb-0'}`}>
-                      <h3 className={`font-bold ${isShipCompact ? 'text-[9.5px] mb-0.5' : 'text-[11px]'} text-gray-800 uppercase whitespace-nowrap`}>{isPurchase ? 'SHIP FROM' : 'SHIPPED TO'}</h3>
+                    <div className={`flex justify-between items-center ${isVertical ? `${isShipCompact ? 'mb-0.5' : 'mb-1'}` : 'w-full mb-0'}`}>
+                      <h3 className={`font-bold ${isShipCompact ? 'text-[9.5px]' : 'text-[11px]'} text-gray-800 uppercase whitespace-nowrap`}>{isPurchase ? 'SHIP FROM' : 'SHIPPED TO'}</h3>
                       {isInteractive && onCopyBillingToShipping && (
                         <button
                           type="button"
@@ -993,11 +1004,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                       {config.shipping.fields.includes('address') && (
                         isVertical ? <>
                           <div className={`flex items-center ${isShipCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isShipCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Country</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(shipCountry, 'shippedToCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</span></div>
-                          <div className={`flex items-center ${isShipCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isShipCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>State</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</span></div>
+                          <div className={`flex items-center ${isShipCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isShipCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>State</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: `${s.name}${getStateCode(s.name) ? ` (${getStateCode(s.name)})` : ''}`, value: s.name })), 'Select State')}</span></div>
                           <div className={`flex items-start ${isShipCompact ? 'text-[9.5px]' : 'text-[11px]'} mb-0.5`}>{showLabels && <><span className={`${isShipCompact ? 'w-24' : 'w-28'} font-medium text-gray-700 shrink-0`}>Address</span><span className="mr-2">:</span></>}<span className="flex-1 text-gray-900 font-medium">{renderInteractive(shipAddr, 'shippedToAddress', 'textarea', 'Address')}</span></div>
                         </> : <>
                           <div className={`flex items-center ${isShipCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Country:</span>}<span className="text-gray-900 font-bold">{renderSelectInteractive(shipCountry, 'shippedToCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</span></div>
-                          <div className={`flex items-center ${isShipCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">State:</span>}<span className="text-gray-900 font-bold">{renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</span></div>
+                          <div className={`flex items-center ${isShipCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">State:</span>}<span className="text-gray-900 font-bold">{renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: `${s.name}${getStateCode(s.name) ? ` (${getStateCode(s.name)})` : ''}`, value: s.name })), 'Select State')}</span></div>
                           <div className={`flex items-center ${isShipCompact ? 'text-[9px]' : 'text-[10px]'}`}>{showLabels && <span className="text-gray-500 font-medium mr-1">Address:</span>}<span className="text-gray-900 font-bold">{renderInteractive(shipAddr, 'shippedToAddress', 'textarea', 'Address')}</span></div>
                         </>
                       )}
@@ -1040,7 +1051,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   )}
                   {config.shipping.fields.includes('address') && <>
                     <div style={{ fontSize: isShipCompact ? '10px' : '12px', margin: isShipCompact ? '0px' : '2px 0' }}>{showLabels && <strong>Country: </strong>}{renderSelectInteractive(shipCountry, 'shippedToCountry', Country.getAllCountries().map(c => ({ label: c.name, value: c.name })), 'Select Country')}</div>
-                    <div style={{ fontSize: isShipCompact ? '10px' : '12px', margin: isShipCompact ? '0px' : '2px 0' }}>{showLabels && <strong>State: </strong>}{renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: s.name, value: s.name })), 'Select State')}</div>
+                    <div style={{ fontSize: isShipCompact ? '10px' : '12px', margin: isShipCompact ? '0px' : '2px 0' }}>{showLabels && <strong>State: </strong>}{renderSelectInteractive(shipState, 'shippedToState', State.getStatesOfCountry(Country.getAllCountries().find(c => c.name === shipCountry)?.isoCode || '').map(s => ({ label: `${s.name}${getStateCode(s.name) ? ` (${getStateCode(s.name)})` : ''}`, value: s.name })), 'Select State')}</div>
                     <p style={{ fontSize: isShipCompact ? '10px' : '12px', margin: isShipCompact ? '0px' : '2px 0', whiteSpace: 'pre-wrap' }}>{renderInteractive(shipAddr, 'shippedToAddress', 'textarea', 'Address')}</p>
                   </>}
                   {config.shipping.fields.includes('gstin') && <p style={{ fontSize: isShipCompact ? '10px' : '12px', margin: isShipCompact ? '0px' : '2px 0' }}>{showLabels && <strong>GSTIN: </strong>}{renderInteractive(shipGst, 'shippedToGstin', 'text', 'GSTIN')}</p>}
@@ -1462,8 +1473,16 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                               }}
                               title={isInteractive ? 'Click to toggle discount mode (Percent %, Flat Amount, Off)' : ''}
                             >
-                              Discount {isDiscPercent ? (isInteractive ? `(${renderInteractive(discVal, 'discountValue', 'text', '0')}%)` : `(${discVal}%)`) : isDiscFlat ? '(Flat)' : '(Off)'}
+                              Discount {isDiscFlat ? '(Flat)' : isDiscNone ? '(Off)' : ''}
                             </span>
+                            {isDiscPercent && (
+                              <span
+                                className="inline-flex items-center gap-0.5"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                ({isInteractive ? renderInteractive(discVal, 'discountValue', 'text', '0') : discVal}%)
+                              </span>
+                            )}
                           </div>
                           {(calcDiscTotal > 0 || discVal > 0 || isInteractive) && (
                             <div className="flex items-center">
@@ -1578,8 +1597,16 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         }}
                         title={isInteractive ? 'Click to toggle discount mode (Percent %, Flat Amount, Off)' : ''}
                       >
-                        Discount {isDiscPercent ? (isInteractive ? `(${renderInteractive(discVal, 'discountValue', 'text', '0')}%)` : `(${discVal}%)`) : isDiscFlat ? '(Flat)' : '(Off)'}
+                        Discount {isDiscFlat ? '(Flat)' : isDiscNone ? '(Off)' : ''}
                       </span>
+                      {isDiscPercent && (
+                        <span
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          ({isInteractive ? renderInteractive(discVal, 'discountValue', 'text', '0') : discVal}%)
+                        </span>
+                      )}
                     </div>
                     {(calcDiscTotal > 0 || discVal > 0 || isInteractive) && (
                       <div style={{ display: 'flex', alignItems: 'center' }}>

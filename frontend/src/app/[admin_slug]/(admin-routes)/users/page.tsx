@@ -86,13 +86,34 @@ interface UserDetails {
 }
 
 export default function UsersAdminPage() {
-  const [users, setUsers] = useState<UserRecord[]>([]);
-  const [total, setTotal] = useState(0);
+  const [users, setUsers] = useState<UserRecord[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("makinvoices_admin_users_cache");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return [];
+  });
+  const [total, setTotal] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("makinvoices_admin_users_total");
+        if (cached) return parseInt(cached, 10) || 0;
+      } catch (e) {}
+    }
+    return 0;
+  });
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return !sessionStorage.getItem("makinvoices_admin_users_cache");
+    }
+    return true;
+  });
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
@@ -104,10 +125,10 @@ export default function UsersAdminPage() {
       });
       if (!res.ok) throw new Error("Could not sync users");
       const data = await res.json();
-      alert(`Sync completed successfully!\nSynced: ${data.synced} accounts.\nTotal Database Users: ${data.total}`);
+      showToast("Sync Completed", `Synced: ${data.synced} accounts. Total Database Users: ${data.total}`, "success");
       fetchUsers();
     } catch (err: any) {
-      alert(err.message || "Failed to sync users");
+      showToast("Sync Failed", err.message || "Failed to sync users", "error");
     } finally {
       setSyncing(false);
     }
@@ -119,6 +140,20 @@ export default function UsersAdminPage() {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [adminNotes, setAdminNotes] = useState("");
   const [notesSaving, setNotesSaving] = useState(false);
+
+  // Custom UI Delete Modal & Toast State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+  const [deleteUserLoading, setDeleteUserLoading] = useState(false);
+  const [deleteUserError, setDeleteUserError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error' | 'info'; title: string; desc: string } | null>(null);
+
+  const showToast = (title: string, desc: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToastMessage({ title, desc, type });
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4500);
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -165,7 +200,15 @@ export default function UsersAdminPage() {
       }
 
       setUsers(rawUsers);
-      setTotal(typeof data.total === "number" ? data.total : 0);
+      const totalCount = typeof data.total === "number" ? data.total : 0;
+      setTotal(totalCount);
+
+      if (page === 1 && !search.trim() && typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("makinvoices_admin_users_cache", JSON.stringify(rawUsers));
+          sessionStorage.setItem("makinvoices_admin_users_total", String(totalCount));
+        } catch (e) {}
+      }
     } catch (err: any) {
       setError(err.message || "An error occurred fetching users");
     } finally {
@@ -234,13 +277,13 @@ export default function UsersAdminPage() {
       });
       if (res.ok) {
         setUsers(users.map(u => u.uid === activeUser.uid ? { ...u, admin_notes: adminNotes } : u));
-        alert("Admin notes saved successfully.");
+        showToast("Success", "Admin notes saved successfully.", "success");
       } else {
-        alert("Failed to save admin notes.");
+        showToast("Error", "Failed to save admin notes.", "error");
       }
     } catch (err) {
       console.error("Error saving notes:", err);
-      alert("Failed to save notes.");
+      showToast("Error", "Failed to save notes.", "error");
     } finally {
       setNotesSaving(false);
     }
@@ -894,30 +937,16 @@ export default function UsersAdminPage() {
                     {/* Danger Zone */}
                     <div className="bg-rose-950/10 border border-rose-500/20 p-4 rounded-xl space-y-3">
                       <h4 className="text-xs font-extrabold text-rose-400 uppercase tracking-wide">Danger Zone</h4>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        Permanently purge this user account, including all invoices, drafts, clients, expenses, and security profiles.
+                      </p>
                       <button
-                        onClick={async () => {
-                          const confirmEmail = prompt(`WARNING: Deleting this account is permanent. This will delete all client profiles, preset items, expenses, and invoices. To confirm, type the user's email address "${activeUser.email}":`);
-                          if (!confirmEmail) return;
-                          if (confirmEmail.trim().toLowerCase() !== activeUser.email.toLowerCase()) {
-                            alert("Confirmation email did not match. Action aborted.");
-                            return;
-                          }
-                          try {
-                            const res = await fetch(`/api/admin/users/${activeUser.uid}`, { method: "DELETE" });
-                            if (res.ok) {
-                              alert("User account successfully deleted.");
-                              setActiveUser(null);
-                              fetchUsers();
-                            } else {
-                              const errData = await res.json();
-                              alert(errData.detail || "Failed to delete user account.");
-                            }
-                          } catch (err) {
-                            console.error(err);
-                            alert("An error occurred trying to delete user.");
-                          }
+                        onClick={() => {
+                          setDeleteConfirmInput("");
+                          setDeleteUserError(null);
+                          setIsDeleteModalOpen(true);
                         }}
-                        className="w-full py-2 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                        className="w-full py-2.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm"
                       >
                         <Trash2 className="h-3.5 w-3.5" /> Delete User Account
                       </button>
@@ -927,6 +956,135 @@ export default function UsersAdminPage() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Custom Responsive Delete User Account Confirmation Modal */}
+      {isDeleteModalOpen && activeUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md rounded-2xl border border-rose-500/30 bg-slate-900 p-6 sm:p-7 shadow-2xl shadow-rose-950/50 text-white space-y-5 animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-white">Delete User Account</h3>
+                <p className="text-xs text-slate-400">
+                  This action is <span className="font-semibold text-rose-400">permanent and irreversible</span>. All invoices, clients, expenses, and company presets will be deleted immediately.
+                </p>
+              </div>
+            </div>
+
+            {/* Verification prompt instruction */}
+            <div className="rounded-xl border border-rose-500/20 bg-rose-950/20 p-3.5 text-xs text-rose-300 space-y-1">
+              <div className="font-semibold text-rose-200">Type email to verify deletion:</div>
+              <div className="font-mono bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-rose-500/30 text-white font-bold select-all break-all">
+                {activeUser.email}
+              </div>
+            </div>
+
+            {/* Input field */}
+            <div className="space-y-2">
+              <input
+                type="text"
+                autoFocus
+                value={deleteConfirmInput}
+                onChange={(e) => {
+                  setDeleteConfirmInput(e.target.value);
+                  setDeleteUserError(null);
+                }}
+                placeholder={activeUser.email}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder-slate-600 focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/30 font-medium"
+              />
+              {deleteUserError && (
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-400">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  <span>{deleteUserError}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setDeleteConfirmInput("");
+                  setDeleteUserError(null);
+                }}
+                disabled={deleteUserLoading}
+                className="w-full sm:w-1/2 py-2.5 px-4 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer text-center"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteUserLoading || deleteConfirmInput.trim().toLowerCase() !== activeUser.email.toLowerCase()}
+                onClick={async () => {
+                  if (deleteConfirmInput.trim().toLowerCase() !== activeUser.email.toLowerCase()) {
+                    setDeleteUserError("Confirmation email does not match.");
+                    return;
+                  }
+                  setDeleteUserLoading(true);
+                  setDeleteUserError(null);
+                  try {
+                    const res = await fetch(`/api/admin/users/${activeUser.uid}`, { method: "DELETE" });
+                    if (res.ok) {
+                      showToast("Account Deleted", `User ${activeUser.email} was permanently deleted.`, "success");
+                      setIsDeleteModalOpen(false);
+                      setActiveUser(null);
+                      fetchUsers();
+                    } else {
+                      const errData = await res.json().catch(() => ({}));
+                      setDeleteUserError(errData.detail || "Failed to delete user account.");
+                    }
+                  } catch (err: any) {
+                    setDeleteUserError(err.message || "An unexpected error occurred.");
+                  } finally {
+                    setDeleteUserLoading(false);
+                  }
+                }}
+                className="w-full sm:w-1/2 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 active:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition-all shadow-lg shadow-rose-600/30 cursor-pointer flex items-center justify-center gap-2"
+              >
+                {deleteUserLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-white" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    <span>Confirm Delete</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Modern Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-start gap-3 rounded-2xl border border-slate-700 bg-slate-900/95 p-4 shadow-2xl backdrop-blur-xl text-white max-w-sm animate-in slide-in-from-bottom-5 duration-200">
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+            toastMessage.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+            toastMessage.type === 'error' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+            'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+          }`}>
+            {toastMessage.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
+          </div>
+          <div className="space-y-0.5 pr-2">
+            <h5 className="text-sm font-bold text-white">{toastMessage.title}</h5>
+            <p className="text-xs text-slate-400 leading-relaxed">{toastMessage.desc}</p>
+          </div>
+          <button
+            onClick={() => setToastMessage(null)}
+            className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+          >
+            <XCircle className="h-4 w-4" />
+          </button>
         </div>
       )}
     </div>

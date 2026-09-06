@@ -473,13 +473,7 @@ export default function App() {
     updatedAt: new Date().toISOString()
   });
 
-  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise'>(() => {
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('makbills_subscription_tier');
-      return (cached as 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise') || 'free';
-    }
-    return 'free';
-  });
+  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise' | null>(null);
 
   useEffect(() => {
     const handleSubChange = (e: any) => {
@@ -568,12 +562,12 @@ export default function App() {
           }
         }
         if (path !== expectedPath) {
-          window.history.pushState(null, '', expectedPath);
+          window.history.replaceState(null, '', expectedPath);
         }
       } else {
         const expectedPath = publicPath;
         if (path !== expectedPath) {
-          window.history.pushState(null, '', expectedPath);
+          window.history.replaceState(null, '', expectedPath);
         }
       }
     }
@@ -768,8 +762,8 @@ export default function App() {
 
 
   // --- LOCAL CACHING LOAD MECHANISM (OFFLINE CAPABILITIES) ---
-  const loadLocalData = (emailParam?: string | null) => {
-    if (isCloudLoadedRef.current) {
+  const loadLocalData = (emailParam?: string | null, force: boolean = false) => {
+    if (!force && isCloudLoadedRef.current) {
       console.log('[loadLocalData] Skipping offline sync because cloud data is already loaded and active.');
       return;
     }
@@ -956,6 +950,10 @@ export default function App() {
           const suffix = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
           const uid = currentUser.id;
 
+          // Reset cloud flag and load user data immediately so Sales Ledger & all records appear in 0ms without page refresh!
+          isCloudLoadedRef.current = false;
+          loadLocalData(activeEmail, true);
+
           // 1. Fetch Cloud Profile (users table) + company_settings for full details
           try {
             const { data: cloudProf } = await supabase
@@ -1100,48 +1098,46 @@ export default function App() {
           // 1b. Fetch Cloud Subscription (Single Source of Truth across devices)
           const syncCloudSubscriptionTier = async () => {
             try {
-              let fetchedTier: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise' = 'free';
+              const currentUid = uid || (typeof window !== 'undefined' ? localStorage.getItem('makbills_active_uid') : null);
+              const currentEmail = activeEmail || (typeof window !== 'undefined' ? localStorage.getItem('makbills_active_email') : null);
+
+              const cachedTier = (localStorage.getItem('makbills_subscription_tier') || localStorage.getItem('makbills_last_active_paid_tier') || 'free') as 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise';
+              const expiresIso = localStorage.getItem('makbills_sub_expires_iso');
+              const isCachedNotExpired = !expiresIso || new Date(expiresIso) > new Date();
+
+              let fetchedTier: 'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise' = (isCachedNotExpired && cachedTier !== 'free') ? cachedTier : 'free';
               
               let subData = null;
-              // 1. Try querying subscriptions table by user_id
-              const { data: subById } = await supabase
-                .from('subscriptions')
-                .select('*')
-                .eq('user_id', uid)
-                .order('updated_at', { ascending: false })
-                .limit(1);
+              if (currentUid || currentEmail) {
+                let query = supabase.from('subscriptions').select('*');
+                if (currentUid && currentEmail) {
+                  query = query.or(`user_id.eq.${currentUid},user_email.eq.${currentEmail}`);
+                } else if (currentUid) {
+                  query = query.eq('user_id', currentUid);
+                } else {
+                  query = query.eq('user_email', currentEmail);
+                }
+                const { data: fetchedSubs } = await query.order('updated_at', { ascending: false }).limit(1);
+                if (fetchedSubs && fetchedSubs.length > 0) {
+                  subData = fetchedSubs;
+                }
 
-              if (subById && subById.length > 0) {
-                subData = subById;
-              } else if (activeEmail) {
-                // 1b. Try querying subscriptions table by user_email
-                const { data: subByEmail } = await supabase
-                  .from('subscriptions')
-                  .select('*')
-                  .eq('user_email', activeEmail)
-                  .order('updated_at', { ascending: false })
-                  .limit(1);
-                subData = subByEmail;
-              }
-
-              // 1c. If no subscription record exists at all for this user ID, insert default Starter/Free row
-              if (!subData || subData.length === 0) {
-                try {
-                  const defaultPayload = {
-                    user_id: uid,
-                    plan_name: 'Free',
-                    plan_type: 'free',
-                    status: 'active',
-                    expires_at: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
-                    renews_at: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
-                    user_email: activeEmail || null,
-                    user_phone: currentUser?.phone || null,
-                    updated_at: new Date().toISOString(),
-                  };
-                  await supabase.from('subscriptions').upsert(defaultPayload, { onConflict: 'user_id' });
-                  subData = [defaultPayload];
-                } catch (starterErr) {
-                  console.warn('[Cloud Sync] Starter subscription auto-create warning:', starterErr);
+                // If client query was blocked by RLS or returned null, use server API fallback
+                if (!subData) {
+                  try {
+                    const params = new URLSearchParams();
+                    if (currentUid) params.set('userId', currentUid);
+                    if (currentEmail) params.set('userEmail', currentEmail);
+                    const apiRes = await fetch(`/api/payments/save-subscription?${params.toString()}`);
+                    if (apiRes.ok) {
+                      const json = await apiRes.json();
+                      if (json.subscription) {
+                        subData = [json.subscription];
+                      }
+                    }
+                  } catch (apiErr) {
+                    console.warn('[SyncCloudTier] Server API fallback note:', apiErr);
+                  }
                 }
               }
 
@@ -1163,9 +1159,23 @@ export default function App() {
                     localStorage.setItem('makbills_sub_expires_iso', new Date(expDate).toISOString());
                   }
                   localStorage.setItem('makbills_last_active_paid_tier', fetchedTier);
-                } else {
+                } else if (sub.status === 'expired' || (expDate && new Date(expDate) <= now)) {
                   fetchedTier = 'free';
                   localStorage.removeItem('makbills_last_active_paid_tier');
+                }
+              } else if (currentUid) {
+                // If cloud query returned empty during auth initialization, preserve unexpired local trial if present
+                const localSubRaw = localStorage.getItem(`makbills_sub_${currentUid}`);
+                if (localSubRaw) {
+                  try {
+                    const parsed = JSON.parse(localSubRaw);
+                    if (parsed && parsed.status === 'trialing' && parsed.expires_at && new Date(parsed.expires_at) > new Date()) {
+                      const rawKey = (parsed.plan_type || parsed.plan_name || '').toLowerCase();
+                      if (rawKey.includes('pro')) fetchedTier = 'pro';
+                      else if (rawKey.includes('basic')) fetchedTier = 'basic';
+                      else if (rawKey.includes('ent')) fetchedTier = 'unlimited';
+                    }
+                  } catch (e) {}
                 }
               }
 
@@ -1681,7 +1691,7 @@ export default function App() {
         if (session?.user?.id) {
           triggerBackgroundSync();
           if (typeof window !== 'undefined' && window.location.search.includes('code=')) {
-            const cleanUrl = window.location.pathname === '/' ? '/dashboard' : window.location.pathname;
+            const cleanUrl = (window.location.pathname === '/' || window.location.pathname === '/dashboard') ? '/invoices' : window.location.pathname;
             window.history.replaceState(null, '', cleanUrl);
           }
         }
@@ -2218,6 +2228,7 @@ export default function App() {
       localStorage.removeItem('invoice_maker_presets');
       localStorage.removeItem('invoice_maker_clients');
       localStorage.removeItem('invoice_maker_expenses');
+      localStorage.removeItem('makbills_notifications');
 
       setUser(null);
       setUserEmail(null);
@@ -2416,9 +2427,15 @@ export default function App() {
   // 3. Save / Update Invoice
   const handleSaveInvoice = async (invoice: Invoice) => {
     // Document Quota Guard for newly created / published documents
-    const isExistingDoc = invoices.some(inv => inv.id === invoice.id);
-    const isEditingExistingNonDraft = isExistingDoc && invoices.find(inv => inv.id === invoice.id)?.status !== 'draft';
-    const isPublishingNewDoc = invoice.status !== 'draft' && !isEditingExistingNonDraft;
+    const existingInState = invoices.find(inv => inv.id === invoice.id);
+    const isNewDocumentCreation = Boolean(
+      (invoice as any).isNewDocument ||
+      !existingInState ||
+      existingInState.status === 'draft' ||
+      (existingInState as any).isTempDraft ||
+      (existingInState as any).isNewDocument
+    );
+    const isPublishingNewDoc = invoice.status !== 'draft' && isNewDocumentCreation;
 
     if (isPublishingNewDoc) {
       const { start, end } = getCurrentBillingCycleWindow();
@@ -2437,69 +2454,337 @@ export default function App() {
         return !isNaN(dTime) && dTime >= effectiveStartTime && dTime < endTime;
       }).length;
 
-      const limits = getTierLimits(subscriptionTier);
+      const limits = getTierLimits(subscriptionTier || 'free');
       if (monthlyDocCount >= limits.documentsPerMonth) {
-        const errorMsg = `Subscription period document creation limit reached (${limits.documentsPerMonth} docs/period on ${subscriptionTier.toUpperCase()} plan). Upgrade your plan to create more documents.`;
+        const errorMsg = `Subscription period document creation limit reached (${limits.documentsPerMonth} docs/period on ${(subscriptionTier || 'free').toUpperCase()} plan). Upgrade your plan to create more documents.`;
         showToast('Quota Exceeded 🔒', errorMsg, 'error');
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
         }
         throw new Error(errorMsg);
       }
+
+      // CENTRAL DOCUMENT USAGE INCREMENT: Increment documents_used in subscription_usage table in Supabase
+      try {
+        const activeUid = await resolveSessionUid();
+        const effectiveUid = activeUid || user?.id || (typeof window !== 'undefined' ? localStorage.getItem('makbills_user_id') : null);
+        if (effectiveUid && effectiveUid !== 'local_user') {
+          const nowIso = new Date().toISOString();
+          supabase
+            .from('subscription_usage')
+            .select('id, documents_used')
+            .eq('user_id', effectiveUid)
+            .lte('period_start', nowIso)
+            .gte('period_end', nowIso)
+            .order('period_start', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+            .then(({ data: usageRow }) => {
+              if (usageRow) {
+                supabase.from('subscription_usage').update({
+                  documents_used: (usageRow.documents_used ?? 0) + 1,
+                  updated_at: new Date().toISOString(),
+                }).eq('id', usageRow.id).then(({ error: uErr }) => {
+                  if (!uErr) {
+                    console.log('[handleSaveInvoice] Incremented documents_used in DB for user:', effectiveUid);
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('mak_subscription_change'));
+                    }
+                  }
+                });
+              } else {
+                const now = new Date();
+                const pEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+                supabase.from('subscription_usage').insert({
+                  user_id: effectiveUid,
+                  period_start: now.toISOString(),
+                  period_end: pEnd.toISOString(),
+                  documents_used: 1,
+                  reports_used: 0,
+                }).then(() => {
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('mak_subscription_change'));
+                  }
+                });
+              }
+            });
+        }
+      } catch (incErr) {
+        console.warn('[handleSaveInvoice] Usage increment warning:', incErr);
+      }
     }
 
     const clientsToUpsert: ClientProfile[] = [];
     let updatedClients = [...clients];
 
-    const processClientDetails = (name?: string, email?: string, phone?: string, address?: string) => {
-      if (!name || name.trim() === '') return;
-      const n = name.trim();
-      const e = (email || '').trim();
-      const p = (phone || '').trim();
-      const a = (address || '').trim();
+    const processClientDetails = (invoice: Invoice) => {
 
-      // Check if EXACT match exists in updatedClients
-      const isClientExact = updatedClients.some((c) => 
-        (c.name.trim().toLowerCase() === n.toLowerCase() || c.companyName?.trim().toLowerCase() === n.toLowerCase()) &&
-        (c.email || '').trim() === e &&
-        (c.phone || '').trim() === p &&
-        (c.address || '').trim() === a
-      );
-      if (isClientExact) return;
+      const n = (invoice.clientName || '').trim();
+      const companyName = (invoice.clientCompanyName || invoice.clientCompany || '').trim();
+      const e = (invoice.clientEmail || '').trim();
+      const p = (invoice.clientPhone || '').trim();
+      const a = (invoice.clientAddress || '').trim();
+      const country = (invoice.clientCountry || 'India').trim();
+      const state = (invoice.clientState || '').trim();
+      const gstin = (invoice.clientGstin || '').trim();
+      const pan = (invoice.clientPan || '').trim();
 
-      // Create new independent client record
-      const clientToSave: ClientProfile = {
-        id: crypto.randomUUID(),
-        userId: user?.id || '',
-        name: n,
-        companyName: n,
-        address: a,
-        email: e,
-        phone: p,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      clientsToUpsert.push(clientToSave);
-      updatedClients = [clientToSave, ...updatedClients];
+      if (!n && !companyName && !e && !gstin) return; // need at least one identifier
+
+      // Upsert matching priority: gstin → email → companyName → name
+      const existingIdx = updatedClients.findIndex((c) => {
+        if (gstin && c.gstin && c.gstin.toLowerCase() === gstin.toLowerCase()) return true;
+        if (e && c.email && c.email.toLowerCase() === e.toLowerCase()) return true;
+        if (companyName && c.companyName && c.companyName.toLowerCase() === companyName.toLowerCase()) return true;
+        if (n && c.name && c.name.toLowerCase() === n.toLowerCase()) return true;
+        return false;
+      });
+
+      const now = new Date().toISOString();
+
+      if (existingIdx > -1) {
+        // UPDATE — merge non-empty values over existing record
+        const existing = updatedClients[existingIdx];
+        const merged: ClientProfile = {
+          ...existing,
+          name: n || existing.name,
+          companyName: companyName || existing.companyName,
+          email: e || existing.email,
+          phone: p || existing.phone,
+          address: a || existing.address,
+          country: country || existing.country,
+          state: state || existing.state,
+          gstin: gstin || existing.gstin,
+          taxId: gstin || existing.taxId,
+          pan: pan || existing.pan,
+          updatedAt: now,
+          _pendingSync: true,
+        };
+        updatedClients[existingIdx] = merged;
+        if (!clientsToUpsert.some(c => c.id === merged.id)) {
+          clientsToUpsert.push(merged);
+        }
+        console.log('[App.tsx] processClientDetails: UPDATED client:', merged.name);
+      } else {
+        // INSERT new record
+        const clientToSave: ClientProfile = {
+          id: crypto.randomUUID(),
+          userId: user?.id || '',
+          name: n || companyName,
+          companyName: companyName || n,
+          address: a,
+          email: e,
+          phone: p,
+          country: country,
+          state: state,
+          gstin: gstin,
+          taxId: gstin,
+          pan: pan,
+          createdAt: now,
+          updatedAt: now,
+          _pendingSync: true,
+        };
+        clientsToUpsert.push(clientToSave);
+        updatedClients = [clientToSave, ...updatedClients];
+        console.log('[App.tsx] processClientDetails: INSERTED client:', clientToSave.name);
+      }
     };
 
-    // 1. Process Bill To
-    processClientDetails(invoice.clientName, invoice.clientEmail, invoice.clientPhone, invoice.clientAddress);
+    // Process Vendor details for Purchase Ledger documents
+    const processVendorDetails = async (invoiceObj: Invoice) => {
+      try {
+        const suffixKey = typeof window !== 'undefined' ? (localStorage.getItem('makbills_company_suffix') || '') : '';
+        const cachedRaw = typeof window !== 'undefined' ? (localStorage.getItem(`makbills_masters_actual_vendors${suffixKey}`) || localStorage.getItem('makbills_masters_actual_vendors')) : null;
+        let existingVendors: any[] = cachedRaw ? JSON.parse(cachedRaw) : [];
 
-    // 2. Process Ship To
-    processClientDetails(invoice.shippedToName, invoice.shippedToEmail, invoice.shippedToPhone, invoice.shippedToAddress);
+        const vendorsToUpsert: any[] = [];
+
+        const upsertOneVendor = (
+          nameVal?: string,
+          companyVal?: string,
+          emailVal?: string,
+          phoneVal?: string,
+          addressVal?: string,
+          gstinVal?: string,
+          panVal?: string,
+          stateVal?: string,
+          countryVal?: string
+        ) => {
+          const n = (nameVal || '').trim();
+          const companyName = (companyVal || '').trim();
+          const e = (emailVal || '').trim();
+          const p = (phoneVal || '').trim();
+          const a = (addressVal || '').trim();
+          const gstin = (gstinVal || '').trim();
+          const pan = (panVal || '').trim();
+          const state = (stateVal || '').trim();
+          const country = (countryVal || 'India').trim();
+
+          if (!n && !companyName && !e && !gstin) return; // Need at least one identifier
+
+          const pClean = p.replace(/\D/g, '');
+
+          // Cross-match identifiers to prevent duplicate vendor creation
+          const existingIdx = existingVendors.findIndex((v) => {
+            if (gstin && v.gstin && v.gstin.toLowerCase() === gstin.toLowerCase()) return true;
+            if (pan && v.pan && v.pan.toLowerCase() === pan.toLowerCase()) return true;
+            if (e && v.email && v.email.toLowerCase() === e.toLowerCase()) return true;
+            if (pClean && v.phone && v.phone.replace(/\D/g, '') === pClean && pClean.length >= 7) return true;
+            if (companyName && v.company && companyName.toLowerCase() === v.company.toLowerCase()) return true;
+            if (companyName && v.name && companyName.toLowerCase() === v.name.toLowerCase()) return true;
+            if (n && v.name && n.toLowerCase() === v.name.toLowerCase()) return true;
+            if (n && v.company && n.toLowerCase() === v.company.toLowerCase()) return true;
+            return false;
+          });
+
+          if (existingIdx > -1) {
+            const existing = existingVendors[existingIdx];
+            const merged = {
+              ...existing,
+              name: n || existing.name || companyName,
+              company: companyName || existing.company || n,
+              email: e || existing.email,
+              phone: p || existing.phone,
+              address: a || existing.address,
+              gstin: gstin || existing.gstin,
+              pan: pan || existing.pan,
+              state: state || existing.state,
+              country: country || existing.country,
+              category: existing.category || 'Vendor',
+            };
+            existingVendors[existingIdx] = merged;
+            if (!vendorsToUpsert.some(v => v.id === merged.id)) {
+              vendorsToUpsert.push(merged);
+            }
+            console.log('[App.tsx] processVendorDetails: UPDATED vendor:', merged.name);
+          } else {
+            const newVendor = {
+              id: `av_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+              name: n || companyName,
+              company: companyName || n,
+              email: e,
+              phone: p,
+              address: a,
+              gstin: gstin,
+              pan: pan,
+              state: state,
+              country: country,
+              category: 'Vendor',
+            };
+            existingVendors = [newVendor, ...existingVendors];
+            vendorsToUpsert.push(newVendor);
+            console.log('[App.tsx] processVendorDetails: INSERTED vendor:', newVendor.name);
+          }
+        };
+
+        // 1. Process Billed Vendor details
+        upsertOneVendor(
+          invoiceObj.clientName,
+          invoiceObj.clientCompanyName || invoiceObj.clientCompany,
+          invoiceObj.clientEmail,
+          invoiceObj.clientPhone,
+          invoiceObj.clientAddress,
+          invoiceObj.clientGstin,
+          invoiceObj.clientPan,
+          invoiceObj.clientState,
+          invoiceObj.clientCountry
+        );
+
+        // 2. Check if Shipped Vendor is distinct before processing to prevent duplicate entries
+        const shippedName = (invoiceObj.shippedToName || '').trim();
+        const shippedComp = (invoiceObj.shippedToCompanyName || invoiceObj.shippedToCompany || '').trim();
+        const shippedGst = (invoiceObj.shippedToGstin || '').trim();
+
+        if (shippedName || shippedComp || shippedGst) {
+          const billedName = (invoiceObj.clientName || '').trim();
+          const billedComp = (invoiceObj.clientCompanyName || invoiceObj.clientCompany || '').trim();
+          const billedGst = (invoiceObj.clientGstin || '').trim();
+          const billedEmail = (invoiceObj.clientEmail || '').trim();
+
+          const isSameAsBilled = Boolean(
+            (shippedGst && billedGst && shippedGst.toLowerCase() === billedGst.toLowerCase()) ||
+            (shippedName && (shippedName.toLowerCase() === billedName.toLowerCase() || shippedName.toLowerCase() === billedComp.toLowerCase())) ||
+            (shippedComp && (shippedComp.toLowerCase() === billedName.toLowerCase() || shippedComp.toLowerCase() === billedComp.toLowerCase())) ||
+            (invoiceObj.shippedToEmail && billedEmail && invoiceObj.shippedToEmail.trim().toLowerCase() === billedEmail.toLowerCase())
+          );
+
+          if (!isSameAsBilled) {
+            upsertOneVendor(
+              invoiceObj.shippedToName,
+              invoiceObj.shippedToCompanyName || invoiceObj.shippedToCompany,
+              invoiceObj.shippedToEmail,
+              invoiceObj.shippedToPhone,
+              invoiceObj.shippedToAddress,
+              invoiceObj.shippedToGstin,
+              invoiceObj.shippedToPan,
+              invoiceObj.shippedToState,
+              invoiceObj.shippedToCountry
+            );
+          }
+        }
+
+        if (vendorsToUpsert.length > 0 && typeof window !== 'undefined') {
+          localStorage.setItem(`makbills_masters_actual_vendors${suffixKey}`, JSON.stringify(existingVendors));
+          if (suffix) {
+            localStorage.setItem(`makbills_masters_actual_vendors${suffix}`, JSON.stringify(existingVendors));
+          }
+          localStorage.setItem('makbills_masters_actual_vendors', JSON.stringify(existingVendors));
+          window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
+
+          const activeUid = await resolveSessionUid();
+          const effectiveUid = activeUid || user?.id || localStorage.getItem('makbills_user_id');
+          if (effectiveUid && effectiveUid !== 'local_user') {
+            try {
+              const vendorsWithUser = vendorsToUpsert.map(v => ({ ...v, user_id: effectiveUid }));
+              await supabase.from('actual_vendors').upsert(vendorsWithUser, { onConflict: 'id' });
+            } catch (vErr) {
+              console.warn('[handleSaveInvoice] Supabase vendor sync warning:', vErr);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[handleSaveInvoice] Vendor processing exception:', err);
+      }
+    };
+
+    // Process Bill To / Vendor — pass full invoice so all fields are available
+    const rawDocType = (invoice.invoiceType || '').toLowerCase().trim();
+    const isPurchaseInvoice = ['purchases', 'purchase', 'purchase_order', 'purchase_bill', 'vendor_bill', 'purchase_debit_note', 'purchase_debit'].includes(rawDocType) || rawDocType.startsWith('purchase');
+    if (isPurchaseInvoice) {
+      // Purchase docs: save to actual_vendors (billed vendors & shipped vendors)
+      await processVendorDetails(invoice);
+    } else {
+      // Sales docs: save to clients (billed clients)
+      processClientDetails(invoice);
+    }
 
     // Commit all client state updates and sync to database at once
     if (clientsToUpsert.length > 0) {
-      setClients(updatedClients);
+      setClients(updatedClients.filter(c => !c._pendingDelete));
       localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(updatedClients));
 
       if (user) {
         try {
-          const clientsWithUser = clientsToUpsert.map(c => ({ ...c, userId: user.id }));
-          await supabase.from('clients').upsert(clientsWithUser);
+          const clientsWithUser = clientsToUpsert.map(c => ({
+            ...c,
+            userId: user.id,
+            _pendingSync: undefined,
+            _pendingDelete: undefined,
+          }));
+          const { error: syncErr } = await supabase.from('clients').upsert(clientsWithUser, { onConflict: 'id' });
+          if (syncErr) {
+            console.error('[App.tsx] Failed to sync client profiles to Supabase:', syncErr);
+          } else {
+            console.log('[App.tsx] ✅ Client profiles synced to Supabase:', clientsWithUser.length, 'record(s)');
+            // Clear _pendingSync flag on success
+            const cleared = updatedClients.map(c =>
+              clientsToUpsert.some(u => u.id === c.id) ? { ...c, _pendingSync: undefined } : c
+            );
+            setClients(cleared.filter(c => !c._pendingDelete));
+            localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(cleared));
+          }
         } catch (err) {
-          console.error('Failed to sync client profiles:', err);
+          console.error('[App.tsx] Exception syncing client profiles:', err);
         }
       }
     }
@@ -2519,64 +2804,55 @@ export default function App() {
     }
 
     const activeUid = await resolveSessionUid();
+    const effectiveUid = activeUid || user?.id || (typeof window !== 'undefined' ? localStorage.getItem('makbills_user_id') : null) || 'local_user';
 
-    if (!activeUid) {
-      const err = new Error('You must be signed in to save invoices.');
-      showToast('Authentication Error', err.message, 'error');
-      throw err;
-    }
+    const dataToSync = sanitizeInvoiceForSync({ ...invoice, userId: effectiveUid }, effectiveUid);
 
-    const dataToSync = sanitizeInvoiceForSync({ ...invoice, userId: activeUid }, activeUid);
-    try {
-      const { error: upsertError } = await supabase.from('invoices').upsert(dataToSync);
-      if (upsertError) {
-        console.error('[handleSaveInvoice] Supabase upsert failed:', upsertError);
-        showToast('Save Failed', `Cloud save failed: ${upsertError.message || 'Database error'}`, 'error');
-        throw upsertError;
-      }
+    if (activeUid) {
+      try {
+        const { error: upsertError } = await supabase.from('invoices').upsert(dataToSync);
+        if (upsertError) {
+          console.warn('[handleSaveInvoice] Supabase upsert warning:', upsertError);
+        } else {
+          // Success path: fetch latest data from Supabase database
+          const { data: latestData, error: fetchErr } = await supabase
+            .from('invoices')
+            .select('*')
+            .eq('userId', activeUid)
+            .order('date', { ascending: false });
 
-      // Success path: fetch latest data and update state
-      const { data: latestData, error: fetchErr } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('userId', activeUid)
-        .order('date', { ascending: false });
-
-      if (fetchErr) {
-        console.error('[handleSaveInvoice] Error fetching updated invoices:', fetchErr);
-      } else if (latestData) {
-        const parsed = (latestData as Invoice[]).map(inv => {
-          if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
-            try {
-              const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
-              inv.embeddedTemplate = embeddedTemplate;
-              inv.selectedCustomTemplateId = embeddedTemplate?.id;
-              for (const key of Object.keys(embeddedTemplate)) {
-                if ((inv as any)[key] === undefined) {
-                  (inv as any)[key] = embeddedTemplate[key];
-                }
+          if (!fetchErr && latestData && latestData.length > 0) {
+            const parsed = (latestData as Invoice[]).map(inv => {
+              if (inv.selectedTemplateStyle && inv.selectedTemplateStyle.startsWith('{')) {
+                try {
+                  const embeddedTemplate = JSON.parse(inv.selectedTemplateStyle);
+                  inv.embeddedTemplate = embeddedTemplate;
+                  inv.selectedCustomTemplateId = embeddedTemplate?.id;
+                  for (const key of Object.keys(embeddedTemplate)) {
+                    if ((inv as any)[key] === undefined) {
+                      (inv as any)[key] = embeddedTemplate[key];
+                    }
+                  }
+                } catch (e) {}
               }
-            } catch (e) {}
+              return inv;
+            });
+
+            setInvoices(parsed);
+            localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsed));
+            localStorage.setItem('invoice_maker_invoices', JSON.stringify(parsed));
           }
-          return inv;
-        });
-
-        setInvoices(parsed);
-        localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(parsed));
-        localStorage.setItem('invoice_maker_invoices', JSON.stringify(parsed));
+        }
+      } catch (cloudErr: any) {
+        console.warn('[handleSaveInvoice] Cloud sync non-blocking exception:', cloudErr);
       }
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('invoice_updated', { detail: invoice }));
-      }
-
-      showToast('Saved Successfully', `${invoice.invoiceNumber || 'Document'} saved to cloud.`, 'success');
-    } catch (error: any) {
-      if (error?.message && !error?.message?.includes('Supabase upsert failed')) {
-        showToast('Save Error', error.message || 'Failed to save document to cloud.', 'error');
-      }
-      throw error;
     }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('invoice_updated', { detail: invoice }));
+    }
+
+    showToast('Saved Successfully', `${invoice.invoiceNumber || 'Document'} saved to ledger.`, 'success');
   };
 
   // 4. Delete Invoice
@@ -3139,6 +3415,40 @@ export default function App() {
     setExpenses(updated);
     localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(updated));
 
+    // Save vendor to Billed Vendors Directory (actualVendors) if vendor string exists
+    if (expense.vendor && expense.vendor.trim()) {
+      try {
+        const vName = expense.vendor.trim();
+        const suffixKey = typeof window !== 'undefined' ? (localStorage.getItem('makbills_company_suffix') || '') : '';
+        const cachedRaw = typeof window !== 'undefined' ? (localStorage.getItem(`makbills_masters_actual_vendors${suffixKey}`) || localStorage.getItem('makbills_masters_actual_vendors')) : null;
+        let existingVendors: any[] = cachedRaw ? JSON.parse(cachedRaw) : [];
+        const existsVendor = existingVendors.some(v => (v.name || '').toLowerCase() === vName.toLowerCase() || (v.company || '').toLowerCase() === vName.toLowerCase());
+        if (!existsVendor) {
+          const newVendor = {
+            id: `av_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            name: vName,
+            company: vName,
+            email: '',
+            phone: '',
+            address: '',
+            gstin: '',
+            pan: '',
+            state: '',
+            country: 'India',
+            category: expense.category || 'Vendor',
+          };
+          existingVendors = [newVendor, ...existingVendors];
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(`makbills_masters_actual_vendors${suffixKey}`, JSON.stringify(existingVendors));
+            localStorage.setItem('makbills_masters_actual_vendors', JSON.stringify(existingVendors));
+            window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
+          }
+        }
+      } catch (eErr) {
+        console.warn('[handleSaveExpense] Vendor save warning:', eErr);
+      }
+    }
+
     const activeUid = await resolveSessionUid();
     if (activeUid) {
       const expenseWithUser = { ...expense, userId: activeUid };
@@ -3543,7 +3853,7 @@ export default function App() {
         onDeleteExpense={handleDeleteExpense}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        subscriptionTier={subscriptionTier}
+        subscriptionTier={subscriptionTier || 'free'}
       />
 
       {/* Sub-modals Settings View selectors */}
@@ -3556,7 +3866,7 @@ export default function App() {
           setIsOnboarding(false);
         }}
         onSave={handleSaveProfile}
-        subscriptionTier={subscriptionTier}
+        subscriptionTier={subscriptionTier || 'free'}
       />
 
       <InvoiceModal
@@ -3572,7 +3882,7 @@ export default function App() {
         onClose={() => setIsInvoiceEditorOpen(false)}
         onSave={handleSaveInvoice}
         userId={user?.id || null}
-        subscriptionTier={subscriptionTier}
+        subscriptionTier={subscriptionTier || 'free'}
       />
 
       {/* PIN Setup Modal */}

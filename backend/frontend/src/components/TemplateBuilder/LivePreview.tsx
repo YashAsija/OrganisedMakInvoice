@@ -304,12 +304,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
   const baseStyle: React.CSSProperties = {
     width: isPrintMode ? '100%' : width,
-    height: (isPrintMode || forceFullHeight) ? minHeight : 'auto',
+    height: 'auto',
     minHeight: (isPrintMode || forceFullHeight) ? minHeight : 'auto',
     paddingTop: layout.compact ? '15px' : (layout.margins === 'Compact' ? '10px' : '20px'),
     paddingLeft: getPadding(),
     paddingRight: getPadding(),
-    paddingBottom: '15px',
+    paddingBottom: '25px',
     border: '1px solid #e2e8f0',
     backgroundColor: '#ffffff',
     fontFamily: styleConfig.fontFamily,
@@ -523,7 +523,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   ) => {
     const activeItems = currentItems || items;
     return (
-      <div className="invoice-live-preview relative flex flex-col h-full w-full paper-sheet-light live-preview-container no-privacy-blur" data-privacy-exempt="true" style={{ flex: 1 }}>
+      <div className="invoice-live-preview relative flex flex-col h-full w-full paper-sheet-light live-preview-container no-privacy-blur" data-privacy-exempt="true" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100%', height: '100%' }}>
       {/* Cancelled Document Top Banner */}
       {((invoiceData?.status || '').toLowerCase() === 'cancelled' || (invoiceData as any)?.cancelled) && (
         <div 
@@ -1741,11 +1741,70 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           }
 
            if (section.id === 'payment') {
+            const explicitPref = (businessProfile as any)?.qrPreference || (invoiceData as any)?.qrPreference;
             const upiIdVal = businessProfile?.upiId || (invoiceData as any)?.upiId || '';
             const upiPayeeName = businessProfile?.name || '';
             const upiAmount = grandTotal || 0;
-            const upiUri = upiIdVal ? `upi://pay?pa=${upiIdVal}&pn=${encodeURIComponent(upiPayeeName)}&am=${upiAmount}&cu=INR` : '';
-            const qrCodeUrl = upiUri ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUri)}` : '';
+
+            const bankNameVal = businessProfile?.bankName || (invoiceData as any)?.bankName || '';
+            const accNumVal = businessProfile?.accountNumber || (invoiceData as any)?.accountNumber || '';
+            const ifscVal = businessProfile?.ifsc || (invoiceData as any)?.ifsc || '';
+
+            const cleanAcc = accNumVal.replace(/[^0-9a-zA-Z]/g, '');
+            const cleanIfsc = ifscVal.toUpperCase().replace(/[^0-9a-zA-Z]/g, '');
+            const cleanUpi = upiIdVal.trim();
+
+            const hasBank = !!(cleanAcc && cleanIfsc);
+            const hasUpi = !!cleanUpi;
+
+            // Determine effective mode:
+            // 1. If explicit pref is 'bank' -> try bank first, fallback to UPI if bank missing
+            // 2. If explicit pref is 'upi' -> try UPI first, fallback to bank if UPI missing
+            // 3. If no explicit pref -> prefer UPI if present, otherwise bank
+            let effectiveMode: 'bank' | 'upi' = 'upi';
+            if (explicitPref === 'bank') {
+              effectiveMode = hasBank ? 'bank' : (hasUpi ? 'upi' : 'bank');
+            } else if (explicitPref === 'upi') {
+              effectiveMode = hasUpi ? 'upi' : (hasBank ? 'bank' : 'upi');
+            } else {
+              effectiveMode = hasUpi ? 'upi' : (hasBank ? 'bank' : 'upi');
+            }
+
+            // Generate payload depending on effective mode
+            let qrDataString = '';
+            let qrLabel = 'QR Code';
+            let qrMissingLabel = 'No Details';
+
+            if (effectiveMode === 'bank' && hasBank) {
+              qrLabel = 'Bank QR Code';
+              // Official NPCI Standard VPA format for Bank Account + IFSC
+              const bankVpa = `${cleanAcc}@${cleanIfsc}.ifsc.npci`;
+              const params = new URLSearchParams({
+                pa: bankVpa,
+                pn: upiPayeeName || 'Business Payment',
+                cu: 'INR'
+              });
+              if (upiAmount > 0) {
+                params.append('am', Number(upiAmount).toFixed(2));
+              }
+              qrDataString = `upi://pay?${params.toString()}`;
+            } else if (effectiveMode === 'upi' && hasUpi) {
+              qrLabel = 'UPI QR Code';
+              const params = new URLSearchParams({
+                pa: cleanUpi,
+                pn: upiPayeeName || 'Business Payment',
+                cu: 'INR'
+              });
+              if (upiAmount > 0) {
+                params.append('am', Number(upiAmount).toFixed(2));
+              }
+              qrDataString = `upi://pay?${params.toString()}`;
+            } else {
+              qrLabel = effectiveMode === 'bank' ? 'Bank QR Code' : 'UPI QR Code';
+              qrMissingLabel = effectiveMode === 'bank' ? 'No Bank A/C' : 'No UPI ID';
+            }
+
+            const qrCodeUrl = qrDataString ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrDataString)}` : '';
 
             const getBankDetailsText = () => {
               const parts = [];
@@ -1768,15 +1827,17 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
             const isPaymentAfterTax = (sections.payment?.order ?? 0) > (sections.taxEngine?.order ?? 0);
 
+            const isQrEnabled = config.payment?.generateQrCode !== false;
+
             if (layout.type === 'Modal Classic') {
               const align = getSectionAlignment('payment');
-              const qrBlock = config.payment.generateQrCode && (
+              const qrBlock = isQrEnabled && (
                 qrCodeUrl ? (
                   <div className="no-privacy-blur qr-code-container" data-privacy-exempt="true" style={{ flexShrink: 0 }}>
-                    <img src={qrCodeUrl} alt="UPI QR Code" data-privacy-exempt="true" className="no-privacy-blur" style={{ width: 60, height: 60, display: 'block', border: '1px solid #e2e8f0', padding: '1px', backgroundColor: '#fff', filter: 'none', WebkitFilter: 'none' }} crossOrigin="anonymous" />
+                    <img src={qrCodeUrl} alt={qrLabel} data-privacy-exempt="true" className="no-privacy-blur" style={{ width: 60, height: 60, display: 'block', border: '1px solid #e2e8f0', padding: '1px', backgroundColor: '#fff', filter: 'none', WebkitFilter: 'none' }} crossOrigin="anonymous" />
                   </div>
                 ) : (
-                  <div className="no-privacy-blur qr-code-container" data-privacy-exempt="true" style={{ width: 60, height: 60, backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#64748b', textAlign: 'center', flexShrink: 0 }}>No UPI ID</div>
+                  <div className="no-privacy-blur qr-code-container" data-privacy-exempt="true" style={{ width: 60, height: 60, backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#64748b', textAlign: 'center', flexShrink: 0 }}>{qrMissingLabel}</div>
                 )
               );
 
@@ -1808,13 +1869,13 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             const payAlign = getFooterAlignment('payment');
             const payJustify = payAlign === 'left' ? 'flex-start' : payAlign === 'center' ? 'center' : 'flex-end';
             
-            const qrBlockLarge = config.payment.generateQrCode && (
+            const qrBlockLarge = isQrEnabled && (
               qrCodeUrl ? (
                 <div className="no-privacy-blur qr-code-container" data-privacy-exempt="true" style={{ flexShrink: 0 }}>
-                  <img src={qrCodeUrl} alt="UPI QR Code" data-privacy-exempt="true" className="no-privacy-blur" style={{ width: '80px', height: '80px', display: 'block', border: '1px solid #e2e8f0', padding: '2px', backgroundColor: '#fff', filter: 'none', WebkitFilter: 'none' }} crossOrigin="anonymous" />
+                  <img src={qrCodeUrl} alt={qrLabel} data-privacy-exempt="true" className="no-privacy-blur" style={{ width: '80px', height: '80px', display: 'block', border: '1px solid #e2e8f0', padding: '2px', backgroundColor: '#fff', filter: 'none', WebkitFilter: 'none' }} crossOrigin="anonymous" />
                 </div>
               ) : (
-                <div className="no-privacy-blur qr-code-container" data-privacy-exempt="true" style={{ width: '80px', height: '80px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#64748b', textAlign: 'center', flexShrink: 0 }}>No UPI ID</div>
+                <div className="no-privacy-blur qr-code-container" data-privacy-exempt="true" style={{ width: '80px', height: '80px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#64748b', textAlign: 'center', flexShrink: 0 }}>{qrMissingLabel}</div>
               )
             );
 
@@ -2091,24 +2152,35 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
         })
       )}
       
-      {isInteractive && clients && clients.length > 0 && (
-        <>
-          <datalist id="billed-to-clients">
-            {clients.map((c) => (
-              <option key={`bill-${c.id}`} value={c.name}>
-                {c.companyName && c.companyName !== c.name ? `${c.companyName}` : ''}
-              </option>
-            ))}
-          </datalist>
-          <datalist id="shipped-to-clients">
-            {clients.map((c) => (
-              <option key={`ship-${c.id}`} value={c.name}>
-                {c.companyName && c.companyName !== c.name ? `${c.companyName}` : ''}
-              </option>
-            ))}
-          </datalist>
-        </>
-      )}
+      {isInteractive && clients && clients.length > 0 && (() => {
+        // Deduplicate clients by unique ID or clean name so duplicate database records never create identical React keys or duplicate option values
+        const seenIds = new Set<string>();
+        const uniqueClients = clients.filter((c, idx) => {
+          const keyIdentifier = c.id || c.name || `idx-${idx}`;
+          if (seenIds.has(keyIdentifier)) return false;
+          seenIds.add(keyIdentifier);
+          return true;
+        });
+
+        return (
+          <>
+            <datalist id="billed-to-clients">
+              {uniqueClients.map((c, idx) => (
+                <option key={`bill-${c.id || idx}-${c.name || idx}`} value={c.name}>
+                  {c.companyName && c.companyName !== c.name ? `${c.companyName}` : ''}
+                </option>
+              ))}
+            </datalist>
+            <datalist id="shipped-to-clients">
+              {uniqueClients.map((c, idx) => (
+                <option key={`ship-${c.id || idx}-${c.name || idx}`} value={c.name}>
+                  {c.companyName && c.companyName !== c.name ? `${c.companyName}` : ''}
+                </option>
+              ))}
+            </datalist>
+          </>
+        );
+      })()}
     </div>
   );
 };

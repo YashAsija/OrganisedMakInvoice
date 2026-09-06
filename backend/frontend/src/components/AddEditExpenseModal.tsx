@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Save, AlertCircle } from 'lucide-react';
 import { Expense } from '../types';
 
@@ -119,16 +120,23 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+  const modalMarkup = (
+    <div
+      className="fixed inset-0 z-[999999] flex items-end sm:items-center justify-center bg-slate-950/75 backdrop-blur-xs p-0 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-150"
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999 }}
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-[#111a36] border-t sm:border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="p-5 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex items-center justify-between bg-[#f4f9ff]/50 dark:bg-[#0b1329]/40">
+        <div className="p-4 sm:p-5 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex items-center justify-between bg-[#f4f9ff]/50 dark:bg-[#0b1329]/40 shrink-0">
           <div>
-            <h2 className="text-base font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
+            <h2 className="text-sm sm:text-base font-black text-[#0f172a] dark:text-white uppercase tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
               {initialData ? 'Edit Expense Record' : 'Record New Expense'}
             </h2>
-            <p className="text-[10px] text-[#64748b] dark:text-zinc-400 mt-0.5">
+            <p className="text-[10px] sm:text-xs text-[#64748b] dark:text-zinc-400 mt-0.5">
               Enter operational costs and vendor payment details
             </p>
           </div>
@@ -141,7 +149,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1 text-xs custom-scrollbar">
           {formError && (
             <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 rounded-xl text-rose-700 dark:text-rose-300 flex items-center gap-2 text-[11px]">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -149,7 +157,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
             {/* Expense Date */}
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400 mb-1">
@@ -184,7 +192,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
             {/* Vendor Name */}
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400 mb-1">
@@ -218,7 +226,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-3.5">
             {/* Payment Mode */}
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400 mb-1">
@@ -282,18 +290,18 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="pt-3 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 flex items-center justify-end gap-2.5">
+          <div className="pt-3 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 flex flex-row items-center justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-[#f8fafc] dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-[#64748b] dark:text-zinc-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              className="flex-1 sm:flex-initial px-4 py-2.5 bg-[#f8fafc] dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-[#64748b] dark:text-zinc-300 rounded-xl text-xs font-bold transition-colors cursor-pointer text-center"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 bg-[#0284c7] dark:bg-[#38bdf8] text-white dark:text-[#0b1329] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+              className="flex-1 sm:flex-initial px-5 py-2.5 bg-[#0284c7] dark:bg-[#38bdf8] text-white dark:text-[#0b1329] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
             >
               <Save className="w-3.5 h-3.5" />
               <span>{isSubmitting ? 'Saving...' : initialData ? 'Update Expense' : 'Save Expense'}</span>
@@ -303,4 +311,10 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
       </div>
     </div>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modalMarkup, document.body);
+  }
+
+  return modalMarkup;
 };

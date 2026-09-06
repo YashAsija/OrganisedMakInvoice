@@ -115,15 +115,28 @@ function CircleProgress({
 }
 
 export default function AnalyticsPage() {
-  const [data, setData] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<AnalyticsData | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("makinvoices_admin_analytics_cache");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return !sessionStorage.getItem("makinvoices_admin_analytics_cache");
+    }
+    return true;
+  });
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
   const fetchAnalytics = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+    else if (!data) setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/admin/analytics");
@@ -136,13 +149,18 @@ export default function AnalyticsPage() {
       const json = await res.json();
       setData(json);
       setLastRefreshed(new Date());
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("makinvoices_admin_analytics_cache", JSON.stringify(json));
+        } catch (e) {}
+      }
     } catch (err: any) {
       setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [data]);
 
   useEffect(() => {
     fetchAnalytics();

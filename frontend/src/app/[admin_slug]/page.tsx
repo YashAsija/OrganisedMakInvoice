@@ -7,7 +7,10 @@ import adminConfig from "../../../admin_config.json";
 import dynamic from "next/dynamic";
 import { ConfirmProvider } from "../../components/ConfirmContext";
 
-const App = dynamic(() => import("../../App"), { ssr: false });
+// Lazy load main app only if slug doesn't match
+const App = dynamic(() => import("../../App"), {
+  ssr: false,
+});
 
 export default function AdminLoginPage() {
   const router = useRouter();

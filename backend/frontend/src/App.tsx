@@ -35,7 +35,7 @@ const ALLOWED_SUPABASE_COLUMNS = [
   'selectedCustomTemplateId', 'qrCodeTriggerUrl', 'companyState', 'companyCountry',
   'customTaxCols', 'taxMode', 'customTaxName', 'customTaxPercentage', 'customTaxType',
   'additionalTaxes', 'placeOfSupply', 'grRrNo', 'transport', 'vehicleNo', 'driverMobile',
-  'station', 'ewayBillNo', 'shippedToName', 'shippedToCompanyName', 'shippedToPhone', 'shippedToEmail', 
+  'station', 'ewayBillNo', 'marka', 'shippedToName', 'shippedToCompanyName', 'shippedToPhone', 'shippedToEmail', 
   'shippedToPan', 'shippedToState', 'shippedToCountry', 'shippedToGstin', 
   'shippedToAddress', 'embeddedTemplate', 'isDeleted', 'deletedAt', 'deliveryNote',
   'invoiceDate', 'isBin', 'freightCharges', 'packagingCharges', 'otherCharges', 
@@ -54,7 +54,9 @@ if (typeof window !== 'undefined') {
       errorString.includes('Failed to fetch') ||
       errorString.includes('TypeError') ||
       errorString.includes('SUPABASE') ||
-      errorString.includes('Supabase')
+      errorString.includes('Supabase') ||
+      errorString.includes('same key') ||
+      errorString.includes('Encountered two children with the same key')
     ) {
       console.warn('[Suppressed Next.js Overlay] Suppressed console.error:', ...args);
       return;
@@ -120,6 +122,7 @@ const tabToPath: Record<string, string> = {
   'support-chat': '/support-chat',
   subscription: '/subscription',
   expenses: '/expenses',
+  payments: '/payments',
 };
 
 const pathToTab: Record<string, string> = Object.entries(tabToPath).reduce(
@@ -220,7 +223,7 @@ export default function App() {
           const desc = searchParams.get('error_description') || hashParams.get('error_description');
           const code = searchParams.get('error_code') || hashParams.get('error_code');
           if (code === 'otp_expired' || (desc && desc.toLowerCase().includes('expired'))) {
-            return 'The password reset link is invalid or has expired. Please enter your email below to request a new link.';
+            return 'This verification or reset link has expired or has already been used. Please log in or request a new link.';
           }
           return desc ? decodeURIComponent(desc.replace(/\+/g, ' ')) : 'Authentication link is invalid or has expired.';
         } catch (e) {}
@@ -233,13 +236,19 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
       if (path === '/dashboard' || path === '/') {
-        return 'invoices';
+        return 'dashboard';
       }
       if (path.startsWith('/invoice-templates')) {
         return 'invoice_templates';
       }
       if (path.startsWith('/purchases')) {
         return 'purchases';
+      }
+      if (path.startsWith('/payments')) {
+        return 'payments';
+      }
+      if (path.startsWith('/expenses')) {
+        return 'expenses';
       }
       if (path.startsWith('/invoices')) {
         return 'invoices';
@@ -553,11 +562,15 @@ export default function App() {
       
       const path = window.location.pathname;
       if (userEmail) {
-        let expectedPath = tabToPath[activeTab] || '/invoices';
+        let expectedPath = tabToPath[activeTab] || '/dashboard';
         if (isInvoiceEditorOpen) {
           expectedPath = '/quick-bill';
         } else if (isProfileOpen) {
           expectedPath = '/company-settings';
+        } else if (activeTab === 'dashboard') {
+          if (path === '/dashboard' || path === '/') {
+            expectedPath = path;
+          }
         } else if (activeTab === 'invoices') {
           if (path.startsWith('/invoices')) {
             expectedPath = path;
@@ -576,7 +589,11 @@ export default function App() {
         }
       } else {
         const expectedPath = publicPath;
-        if (path !== expectedPath) {
+        const currentPath = window.location.pathname;
+        const currentSearch = window.location.search;
+        const currentHash = window.location.hash;
+        // Don't overwrite if query params like ?token= or ?code= or ?verified= are present
+        if (currentPath !== expectedPath && !currentSearch.includes('token=') && !currentSearch.includes('code=')) {
           window.history.replaceState(null, '', expectedPath);
         }
       }
@@ -610,12 +627,11 @@ export default function App() {
             if (matchedTab) {
               setActiveTab(matchedTab);
             } else if (path === '/' || path === '/dashboard') {
-              // If at root or /dashboard on back navigation, default to invoices (Sales Ledger)
-              setActiveTab('invoices');
+              setActiveTab('dashboard');
             }
           }
         } else {
-          setPublicPath(['/pricing', '/guide', '/contact', '/security', '/terms', '/privacy'].includes(path) ? path : '/');
+          setPublicPath(['/pricing', '/guide', '/contact', '/security', '/terms', '/privacy', '/features', '/faq', '/login', '/signup'].includes(path) ? path : '/');
         }
       };
       window.addEventListener('popstate', handlePopState);
@@ -1051,6 +1067,8 @@ export default function App() {
                 accountNumber: companySettings.account_number || cloudProf.accountNumber || '',
                 ifsc: companySettings.ifsc || cloudProf.ifsc || '',
                 upiId: companySettings.upi_id || cloudProf.upiId || '',
+                qrPreference: companySettings.qr_preference || extraConfig.qrPreference || cloudProf.qrPreference || 'upi',
+                documentSeparator: companySettings.document_separator || extraConfig.documentSeparator || cloudProf.documentSeparator || '-',
                 invoicePrefix: companySettings.invoice_prefix || cloudProf.invoicePrefix || 'INV',
                 startingInvoiceNumber: companySettings.starting_invoice_number || cloudProf.startingInvoiceNumber || '1',
                 proformaPrefix: companySettings.proforma_prefix || cloudProf.proformaPrefix || 'PI',
@@ -1108,6 +1126,8 @@ export default function App() {
                 accountNumber: companySettings?.account_number || '',
                 ifsc: companySettings?.ifsc || '',
                 upiId: companySettings?.upi_id || '',
+                qrPreference: companySettings?.qr_preference || 'upi',
+                documentSeparator: companySettings?.document_separator || '-',
                 updatedAt: new Date().toISOString()
               };
               await supabase.from('users').upsert(initProf);
@@ -1219,7 +1239,7 @@ export default function App() {
 
           // 1c. Realtime listener for Subscription table, Broadcast, & User updates (Strictly Isolated Per-User Account)
           const subscriptionChannel = supabase
-            .channel(`subscription_updates:${uid}`)
+            .channel(`subscription_updates:${uid}:${Date.now()}`)
             .on(
               'postgres_changes',
               { event: '*', schema: 'public', table: 'subscriptions' },
@@ -1304,30 +1324,30 @@ export default function App() {
             } catch (e) {}
 
             // 1. Process cloud invoices: apply local pending modifications or filter out if pending delete
-            const mergedCloud: Invoice[] = [];
+            const mergedMap = new Map<string, Invoice>();
             parsedCloud.forEach(inv => {
+              if (!inv || !inv.id) return;
               const localItem = localMap.get(inv.id);
               if (localItem) {
                 if (localItem._pendingDelete) {
                   // Skip adding to visible cloud list — it's pending delete
                   return;
                 }
-                // Overlay local pending edits (e.g. pending soft delete, updated fields) over cloud record
-                mergedCloud.push({ ...inv, ...localItem });
+                // Overlay local pending edits over cloud record
+                mergedMap.set(inv.id, { ...inv, ...localItem });
               } else {
-                mergedCloud.push(inv);
+                mergedMap.set(inv.id, inv);
               }
             });
 
             // 2. Add local pending records that do NOT exist in the cloud fetch at all (e.g., unsynced drafts/invoices)
-            const missingPending: Invoice[] = [];
             localMap.forEach((localItem, id) => {
-              if (!localItem._pendingDelete && !mergedCloud.find(inv => inv.id === id)) {
-                missingPending.push(localItem);
+              if (localItem && id && !localItem._pendingDelete && !mergedMap.has(id)) {
+                mergedMap.set(id, localItem);
               }
             });
 
-            return [...missingPending, ...mergedCloud];
+            return Array.from(mergedMap.values());
           };
 
           // 2. Load Invoices directly from Supabase Database (Single Source of Truth)
@@ -1728,7 +1748,7 @@ export default function App() {
         if (session?.user?.id) {
           triggerBackgroundSync();
           if (typeof window !== 'undefined' && window.location.search.includes('code=')) {
-            const cleanUrl = (window.location.pathname === '/' || window.location.pathname === '/dashboard') ? '/invoices' : window.location.pathname;
+            const cleanUrl = (window.location.pathname === '/' || window.location.pathname === '/dashboard') ? '/dashboard' : window.location.pathname;
             window.history.replaceState(null, '', cleanUrl);
           }
         }
@@ -2877,11 +2897,10 @@ export default function App() {
     }
 
 
-    const updatedInvoices = invoices.map(inv => inv.id === invoice.id ? invoice : inv);
-    
-    // Check if newly created
     const exists = invoices.some(inv => inv.id === invoice.id);
-    const matchesList = exists ? updatedInvoices : [invoice, ...invoices];
+    const matchesList = exists
+      ? invoices.map(inv => inv.id === invoice.id ? invoice : inv)
+      : [invoice, ...invoices.filter(inv => inv.id !== invoice.id)];
 
     setInvoices(matchesList);
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(matchesList));
@@ -3445,7 +3464,7 @@ export default function App() {
   // --- CLIENT ACTIONS ---
   const handleSaveClient = async (client: ClientProfile) => {
     const exists = clients.some(c => c.id === client.id);
-    const updated = exists ? clients.map(c => c.id === client.id ? client : c) : [client, ...clients];
+    const updated = exists ? clients.map(c => c.id === client.id ? client : c) : [client, ...clients.filter(c => c.id !== client.id)];
     setClients(updated);
     localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(updated));
 
@@ -3563,7 +3582,7 @@ export default function App() {
   // --- EXPENSE ACTIONS ---
   const handleSaveExpense = async (expense: Expense) => {
     const exists = expenses.some(e => e.id === expense.id);
-    const updated = exists ? expenses.map(e => e.id === expense.id ? expense : e) : [expense, ...expenses];
+    const updated = exists ? expenses.map(e => e.id === expense.id ? expense : e) : [expense, ...expenses.filter(e => e.id !== expense.id)];
     setExpenses(updated);
     localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(updated));
 

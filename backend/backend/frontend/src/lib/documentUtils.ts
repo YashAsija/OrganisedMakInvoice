@@ -11,6 +11,14 @@
  */
 
 import { supabase } from './supabase';
+import {
+  pushMasterRegistriesToCloud,
+  getLocalMasterRegistry,
+  unmarkRegistryKeyDeleted,
+  isPartyMatch,
+  mergePartyRecords,
+  deduplicatePartyList,
+} from './masterRegistrySync';
 
 // ─── Document Type Classification ────────────────────────────────────────────
 
@@ -22,13 +30,24 @@ export const SALES_DOC_TYPES = new Set([
   'debit_note',
   'estimate',
   'quote',
+  'quotation',
+  'delivery_challan',
+  'delivery_note',
+  'receipt',
+  'sales_order',
+  'pos',
+  'bill',
 ]);
 
 /** Internal InvoiceModal invoiceType values that represent purchase transactions */
 export const PURCHASE_DOC_TYPES = new Set([
   'purchases',
+  'purchase',
   'purchase_order',
+  'purchase_bill',
   'purchase_debit_note',
+  'purchase_debit',
+  'vendor_bill',
 ]);
 
 export const isSalesDocument = (docType: string): boolean =>
@@ -102,9 +121,8 @@ export const upsertMasterRegistry = (
     : 'makbills_sync_vendors';
 
   const hasIdentifier =
-    details.client_name || details.company_name || details.email || details.gstin;
+    details.client_name || details.company_name || details.email || details.gstin || details.mobile;
   if (!hasIdentifier) {
-    console.log('[documentUtils] upsertMasterRegistry: no identifier — skipping');
     return;
   }
 
@@ -115,54 +133,43 @@ export const upsertMasterRegistry = (
     registry = [];
   }
 
-  // Match priority: gstin → email → company_name → client_name
-  const nameLower = (details.client_name || details.company_name || '').toLowerCase();
-  const existingIdx = registry.findIndex((r: any) => {
-    if (details.gstin && r.gstin && r.gstin.toLowerCase() === details.gstin.toLowerCase()) return true;
-    if (details.email && r.email && r.email.toLowerCase() === details.email.toLowerCase()) return true;
-    if (details.company_name && r.company_name && r.company_name.toLowerCase() === details.company_name.toLowerCase()) return true;
-    if (details.company_name && r.company && r.company.toLowerCase() === details.company_name.toLowerCase()) return true;
-    if (details.company_name && r.companyName && r.companyName.toLowerCase() === details.company_name.toLowerCase()) return true;
-    if (nameLower && r.name && r.name.toLowerCase() === nameLower) return true;
-    return false;
-  });
+  const gstinVal = details.gstin || '';
+  const panVal = details.pan || (gstinVal.length === 15 ? gstinVal.substring(2, 12) : '');
+  const nameVal = details.client_name || details.company_name || 'Unknown';
+  const compVal = details.company_name || details.client_name || '';
 
-  const record = {
-    name: details.client_name || details.company_name || 'Unknown',
-    companyName: details.company_name || details.client_name || '',
-    company: details.company_name || details.client_name || '',
-    company_name: details.company_name || null,
+  const incomingRecord = {
+    name: nameVal,
+    company: compVal,
+    companyName: compVal,
+    company_name: compVal,
     email: details.email || '',
     phone: details.mobile || '',
     mobile: details.mobile || '',
     address: details.address || '',
     country: details.country || 'India',
     state: details.state || '',
-    taxId: details.gstin || '',
-    gstin: details.gstin || '',
-    pan: details.pan || '',
+    taxId: gstinVal,
+    gstin: gstinVal,
+    pan: panVal,
     category: isPurchase ? 'Auto-Added from Purchase' : 'Auto-Added from Invoice',
+    partyType: isPurchase ? 'Vendor' : 'Client',
     updatedAt: new Date().toISOString(),
   };
 
+  const existingIdx = registry.findIndex(r => isPartyMatch(r, incomingRecord));
+
   if (existingIdx > -1) {
-    // Merge — only overwrite non-empty values
-    const existing = registry[existingIdx];
-    registry[existingIdx] = {
-      ...existing,
-      ...Object.fromEntries(
-        Object.entries(record).filter(([, v]) => v !== '' && v !== null && v !== undefined)
-      ),
-    };
-    console.log(`[documentUtils] upsertMasterRegistry: UPDATED existing record in ${registryKey}`, details);
+    registry[existingIdx] = mergePartyRecords(registry[existingIdx], incomingRecord);
   } else {
     registry.push({
-      id: `mat_${Math.random().toString(36).substr(2, 9)}`,
-      ...record,
+      id: `${isPurchase ? 'av' : 'cl'}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      ...incomingRecord,
       createdAt: new Date().toISOString(),
     });
-    console.log(`[documentUtils] upsertMasterRegistry: INSERTED new record in ${registryKey}`, details);
   }
+
+  registry = deduplicatePartyList(registry);
 
   localStorage.setItem(registryKey, JSON.stringify(registry));
   window.dispatchEvent(new CustomEvent(syncEvent));
@@ -264,6 +271,7 @@ export const upsertSupabaseClient = async (
  *
  * 1. Always writes to localStorage master registry (offline-first)
  * 2. For sales documents: also upserts to Supabase `clients` table
+ * 3. Syncs updated master database with Supabase cloud across all devices
  *
  * @param details  - Extracted client/vendor details from the document
  * @param docType  - The invoiceType string from InvoiceModal (e.g. 'invoice', 'purchases')
@@ -276,11 +284,31 @@ export const persistBilledParty = async (
   userId: string | null | undefined,
   suffix: string,
 ): Promise<void> => {
+  // 0. Clear any prior deleted tombstones for this party
+  unmarkRegistryKeyDeleted(details, suffix);
+
   // 1. Always save to localStorage master registry
   upsertMasterRegistry(details, docType, suffix);
 
   // 2. For sales documents, also sync to Supabase clients table
   if (isSalesDocument(docType) && userId) {
     await upsertSupabaseClient(details, userId);
+  }
+
+  // 3. Sync updated master database with Supabase cloud across all devices
+  if (userId) {
+    try {
+      const isSales = isSalesDocument(docType);
+      const key = isSales ? 'makbills_masters_vendors' : 'makbills_masters_actual_vendors';
+      const updatedList = getLocalMasterRegistry(key, suffix);
+      const transportList = getLocalMasterRegistry('makbills_masters_transports', suffix);
+
+      await pushMasterRegistriesToCloud(userId, suffix, {
+        [isSales ? 'vendors' : 'actualVendors']: updatedList,
+        transports: transportList,
+      });
+    } catch (err) {
+      console.warn('[documentUtils] Failed to sync master party to cloud:', err);
+    }
   }
 };

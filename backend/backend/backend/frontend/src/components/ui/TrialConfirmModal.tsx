@@ -24,13 +24,13 @@ export function TrialConfirmModal({ planType, isOpen, onClose, onConfirmSuccess 
 
   const features = planType === 'professional'
     ? [
-        '500 Documents & 100 Reports / Month',
+        '140 Documents & 15 Reports / Month',
         'AI Smart Billing & Natural Text Prompts',
         'Sales Ledger & Purchase Ledger Sync',
         'Watermark Removal & High-DPI PDF Export',
       ]
     : [
-        '100 Documents & 20 Reports / Month',
+        '60 Documents & 5 Reports / Month',
         'Custom Invoice Templates & Branding',
         'Sales Ledger & Purchase Ledger Access',
         'Watermark Removal',

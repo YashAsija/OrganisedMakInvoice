@@ -41,11 +41,25 @@ export async function GET(req: NextRequest) {
     });
 
     // 1. Fetch the invoice (bypasses RLS with service role; or uses public-read policy with anon key)
-    const { data: invoice, error: invoiceError } = await client
+    let { data: invoice, error: invoiceError } = await client
       .from('invoices')
       .select('*')
       .eq('id', id)
       .maybeSingle();
+
+    if (!invoice && !invoiceError) {
+      const { data: invByNumber, error: numberError } = await client
+        .from('invoices')
+        .select('*')
+        .eq('invoiceNumber', id)
+        .maybeSingle();
+
+      if (invByNumber) {
+        invoice = invByNumber;
+      } else if (numberError) {
+        invoiceError = numberError;
+      }
+    }
 
     if (invoiceError) {
       console.error('[invoice-preview] Supabase select error:', invoiceError);
@@ -53,7 +67,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (!invoice) {
-      console.error(`[invoice-preview] Invoice not found for id=${id}. Using key type: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'service_role' : 'anon'}`);
+      console.error(`[invoice-preview] Invoice not found for id/number=${id}. Using key type: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'service_role' : 'anon'}`);
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
 
@@ -122,6 +136,7 @@ export async function GET(req: NextRequest) {
             accountNumber: companySettings.account_number || baseProf.accountNumber || '',
             ifsc: companySettings.ifsc || baseProf.ifsc || '',
             upiId: companySettings.upi_id || baseProf.upiId || '',
+            qrPreference: companySettings.qr_preference || 'upi',
             invoicePrefix: companySettings.invoice_prefix || baseProf.invoicePrefix || 'INV',
             startingInvoiceNumber: companySettings.starting_invoice_number || baseProf.startingInvoiceNumber || '1',
             defaultNotes: companySettings.default_notes || baseProf.defaultNotes || '',

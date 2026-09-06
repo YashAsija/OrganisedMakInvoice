@@ -100,9 +100,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         const rKey = ((activeSub as any).plan_type || (activeSub as any).plan_name || (activeSub as any).plan_key || '').toLowerCase();
         const resolvedTier = rKey.includes('pro') ? 'pro' : rKey.includes('basic') ? 'basic' : rKey.includes('ent') ? 'unlimited' : 'free';
         if (typeof window !== 'undefined') {
-          localStorage.setItem('makbills_subscription_tier', resolvedTier);
-          localStorage.setItem('makbills_last_active_paid_tier', resolvedTier);
-          window.dispatchEvent(new CustomEvent('mak_subscription_change', { detail: resolvedTier }));
+          const currentCached = localStorage.getItem('makbills_subscription_tier');
+          if (currentCached !== resolvedTier) {
+            localStorage.setItem('makbills_subscription_tier', resolvedTier);
+            localStorage.setItem('makbills_last_active_paid_tier', resolvedTier);
+            window.dispatchEvent(new CustomEvent('mak_subscription_change', { detail: resolvedTier }));
+          }
         }
       }
 

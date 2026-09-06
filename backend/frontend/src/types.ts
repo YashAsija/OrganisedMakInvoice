@@ -157,6 +157,8 @@ export interface Expense {
   userId?: string;
   date?: string;
   createdAt?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
   _pendingSync?: boolean;
   _pendingDelete?: boolean;
 }
@@ -198,8 +200,10 @@ export interface BusinessProfile {
   accountNumber?: string;
   ifsc?: string;
   upiId?: string;
+  qrPreference?: 'upi' | 'bank';
 
   // Billing & Preset Rules Tab
+  documentSeparator?: string;
   invoicePrefix?: string;
   startingInvoiceNumber?: string;
   proformaPrefix?: string;
@@ -319,4 +323,45 @@ export interface MasterSubCategory { id: string; category?: string; name?: strin
 export interface MasterMapping { id: string; item?: string; glAccount?: string; taxRate?: number; [key: string]: any; }
 export interface MasterPackingUnit { id: string; name?: string; [key: string]: any; }
 export interface MasterMeasurementUnit { id: string; name?: string; code?: string; [key: string]: any; }
+
+export type PaymentCategory = 'sales' | 'purchases';
+export type PaymentStatus = 'pending' | 'partially_paid' | 'paid' | 'overdue';
+export type PaymentMethod = 'cash' | 'upi' | 'bank_transfer' | 'cheque' | 'card' | 'other';
+
+export interface PaymentRecord {
+  id: string;
+  userId?: string;
+  documentId: string;
+  documentNumber: string;
+  documentType: 'invoice' | 'proforma' | 'credit_note' | 'quote' | 'purchases' | 'purchase_order' | 'purchase_debit_note' | 'expense';
+  category: PaymentCategory;
+  companyName: string;
+  partyName: string;
+  partyEmail?: string;
+  partyPhone?: string;
+  partyGstin?: string;
+  totalAmount: number;
+  paidAmount: number;
+  dueAmount: number;
+  status: PaymentStatus;
+  date: string;
+  dueDate?: string;
+  paymentDate?: string;
+  paymentMethod?: PaymentMethod | string;
+  referenceNumber?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  _pendingSync?: boolean;
+}
+
+export interface PaymentSettlementPayload {
+  paymentId: string;
+  documentId: string;
+  settleAmount: number;
+  paymentDate: string;
+  paymentMethod: PaymentMethod | string;
+  referenceNumber?: string;
+  notes?: string;
+}
 

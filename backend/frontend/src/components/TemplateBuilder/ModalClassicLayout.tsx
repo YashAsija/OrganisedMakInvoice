@@ -311,22 +311,82 @@ export const ModalClassicLayout: React.FC<LivePreviewProps> = ({ template, isPri
           {sections.payment?.visible !== false && (
             <div>
               <div className="font-bold text-gray-800 text-[10px] mb-1">Banking Information</div>
-              <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap">
-                {(() => {
-                  const parts = [];
-                  if (businessProfile?.bankName) parts.push(`Bank Name: ${businessProfile.bankName}`);
-                  if (businessProfile?.accountNumber) parts.push(`Account No.: ${businessProfile.accountNumber}`);
-                  if (businessProfile?.ifsc) parts.push(`IFSC Code: ${businessProfile.ifsc}`);
-                  if (businessProfile?.upiId) parts.push(`UPI ID: ${businessProfile.upiId}`);
-                  
-                  if (parts.length > 0) {
-                    if (config.payment.customNote) {
-                      return `${parts.join('\n')}\nNote: ${config.payment.customNote}`;
+              <div className="flex items-center gap-3">
+                <div className="text-gray-600 text-[10px] leading-relaxed whitespace-pre-wrap flex-1">
+                  {(() => {
+                    const parts = [];
+                    if (businessProfile?.bankName) parts.push(`Bank Name: ${businessProfile.bankName}`);
+                    if (businessProfile?.accountNumber) parts.push(`Account No.: ${businessProfile.accountNumber}`);
+                    if (businessProfile?.ifsc) parts.push(`IFSC Code: ${businessProfile.ifsc}`);
+                    if (businessProfile?.upiId) parts.push(`UPI ID: ${businessProfile.upiId}`);
+                    
+                    if (parts.length > 0) {
+                      if (config.payment.customNote) {
+                        return `${parts.join('\n')}\nNote: ${config.payment.customNote}`;
+                      }
+                      return parts.join('\n');
                     }
-                    return parts.join('\n');
+                    
+                    return config.payment.customNote || "Bank Name: Axis\nAccount No.: 098654345678\nIFSC Code: UTIB00056\nUPI ID: 9876543@upi";
+                  })()}
+                </div>
+
+                {/* QR Code in Modal Classic Layout */}
+                {config.payment?.generateQrCode !== false && (() => {
+                  const explicitPref = (businessProfile as any)?.qrPreference || (invoiceData as any)?.qrPreference;
+                  const upiIdVal = businessProfile?.upiId || (invoiceData as any)?.upiId || '';
+                  const upiPayeeName = businessProfile?.name || '';
+                  const upiAmount = grandTotal || 0;
+                  const accNumVal = businessProfile?.accountNumber || (invoiceData as any)?.accountNumber || '';
+                  const ifscVal = businessProfile?.ifsc || (invoiceData as any)?.ifsc || '';
+
+                  const cleanAcc = accNumVal.replace(/[^0-9a-zA-Z]/g, '');
+                  const cleanIfsc = ifscVal.toUpperCase().replace(/[^0-9a-zA-Z]/g, '');
+                  const cleanUpi = upiIdVal.trim();
+
+                  const hasBank = !!(cleanAcc && cleanIfsc);
+                  const hasUpi = !!cleanUpi;
+
+                  let effectiveMode: 'bank' | 'upi' = 'upi';
+                  if (explicitPref === 'bank') {
+                    effectiveMode = hasBank ? 'bank' : (hasUpi ? 'upi' : 'bank');
+                  } else if (explicitPref === 'upi') {
+                    effectiveMode = hasUpi ? 'upi' : (hasBank ? 'bank' : 'upi');
+                  } else {
+                    effectiveMode = hasUpi ? 'upi' : (hasBank ? 'bank' : 'upi');
                   }
-                  
-                  return config.payment.customNote || "Bank Name: Axis\nAccount No.: 098654345678\nIFSC Code: UTIB00056\nUPI ID: 9876543@upi";
+
+                  let qrData = '';
+                  let qrLabel = 'UPI QR';
+                  let qrMissing = 'No Details';
+
+                  if (effectiveMode === 'bank' && hasBank) {
+                    qrLabel = 'Bank QR';
+                    const bankVpa = `${cleanAcc}@${cleanIfsc}.ifsc.npci`;
+                    const params = new URLSearchParams({ pa: bankVpa, pn: upiPayeeName || 'Business Payment', cu: 'INR' });
+                    if (upiAmount > 0) params.append('am', Number(upiAmount).toFixed(2));
+                    qrData = `upi://pay?${params.toString()}`;
+                  } else if (effectiveMode === 'upi' && hasUpi) {
+                    qrLabel = 'UPI QR';
+                    const params = new URLSearchParams({ pa: cleanUpi, pn: upiPayeeName || 'Business Payment', cu: 'INR' });
+                    if (upiAmount > 0) params.append('am', Number(upiAmount).toFixed(2));
+                    qrData = `upi://pay?${params.toString()}`;
+                  } else {
+                    qrLabel = effectiveMode === 'bank' ? 'Bank QR' : 'UPI QR';
+                    qrMissing = effectiveMode === 'bank' ? 'No Bank A/C' : 'No UPI ID';
+                  }
+
+                  const qrUrl = qrData ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}` : '';
+
+                  return qrUrl ? (
+                    <div className="shrink-0 border border-gray-200 p-1 bg-white rounded-sm">
+                      <img src={qrUrl} alt={qrLabel} style={{ width: 60, height: 60, display: 'block' }} crossOrigin="anonymous" />
+                    </div>
+                  ) : (
+                    <div style={{ width: 60, height: 60, backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#64748b', textAlign: 'center' }} className="shrink-0 border border-gray-200">
+                      {qrMissing}
+                    </div>
+                  );
                 })()}
               </div>
             </div>

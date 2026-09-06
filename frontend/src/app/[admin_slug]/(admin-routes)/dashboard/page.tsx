@@ -44,8 +44,21 @@ interface StatsData {
 }
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<StatsData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<StatsData | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("makinvoices_admin_stats_cache");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return !sessionStorage.getItem("makinvoices_admin_stats_cache");
+    }
+    return true;
+  });
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -64,6 +77,11 @@ export default function AdminDashboardPage() {
       if (!res.ok) throw new Error("Failed to fetch dashboard statistics");
       const data = await res.json();
       setStats(data);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("makinvoices_admin_stats_cache", JSON.stringify(data));
+        } catch (e) {}
+      }
     } catch (err: any) {
       setError(err.message || "An error occurred");
     } finally {
