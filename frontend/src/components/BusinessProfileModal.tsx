@@ -5,6 +5,7 @@ import { Country, State } from 'country-state-city';
 import { supabase } from '../lib/supabase';
 import { emitNotification } from '../lib/notifications';
 import { useSubscription, getExpiryLabel } from '../context/SubscriptionContext';
+import { getFinancialYearShort } from './InvoiceModal';
 
 interface BusinessProfileModalProps {
   profile: BusinessProfile;
@@ -2944,7 +2945,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                     Document Number Separator
                   </div>
                   <div className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]">
-                    Sample: {invoicePrefix || 'INV'}{documentSeparator || '-'}{'26'}{documentSeparator || '-'}{'27'}{documentSeparator || '-'}{String(startingInvoiceNumber || '1').padStart(4, '0')}
+                    Sample: {invoicePrefix || 'INV'}{documentSeparator || '-'}{getFinancialYearShort()}{documentSeparator || '-'}{String(startingInvoiceNumber || '1').padStart(4, '0')}
                   </div>
                 </div>
                 <div className="p-6 space-y-4">

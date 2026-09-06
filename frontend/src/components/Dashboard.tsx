@@ -1030,10 +1030,14 @@ export default function Dashboard({
     window.addEventListener('makbills_registry_deleted', handleRev);
     window.addEventListener('makbills_sync_vendors', handleRev);
     window.addEventListener('makbills_sync_actual_vendors', handleRev);
+    window.addEventListener('mak_manual_payment_added', handleRev);
+    window.addEventListener('mak_manual_payment_deleted', handleRev);
     return () => {
       window.removeEventListener('makbills_registry_deleted', handleRev);
       window.removeEventListener('makbills_sync_vendors', handleRev);
       window.removeEventListener('makbills_sync_actual_vendors', handleRev);
+      window.removeEventListener('mak_manual_payment_added', handleRev);
+      window.removeEventListener('mak_manual_payment_deleted', handleRev);
     };
   }, []);  // Master databases initialized strictly from user-scoped storage (defaults to empty array)
   const [vendors, setVendors] = useState<MasterVendor[]>(() => {
@@ -1194,6 +1198,48 @@ export default function Dashboard({
 
       addOrMerge(invoicePartyObj);
     });
+
+    // 5. Incorporate parties created in Payment Settlements
+    if (typeof window !== 'undefined') {
+      try {
+        const rawManuals = localStorage.getItem(`makbills_manual_payments${suffix}`) || 
+                           localStorage.getItem('makbills_manual_payments') || 
+                           localStorage.getItem(`invoice_maker_manual_payments${suffix}`) || 
+                           localStorage.getItem('invoice_maker_manual_payments') || '[]';
+        const parsedManuals = JSON.parse(rawManuals);
+        (Array.isArray(parsedManuals) ? parsedManuals : []).forEach((m: any) => {
+          const compName = (m.companyName || '').trim();
+          const partyName = (m.partyName || compName || '').trim();
+          const gstinVal = (m.partyGstin || '').toUpperCase();
+          const email = m.partyEmail || '';
+          const phone = m.partyPhone || '';
+
+          if (!compName && !partyName && !gstinVal && !phone) return;
+
+          const isPurchase = m.category === 'purchases' || m.entryType === 'debit';
+          const pObj = {
+            name: partyName || compName,
+            company: compName,
+            companyName: compName,
+            gstin: gstinVal,
+            taxId: gstinVal,
+            email,
+            phone,
+            mobile: phone,
+            address: '',
+            state: '',
+            country: 'India',
+            pan: gstinVal.length === 15 ? gstinVal.substring(2, 12) : '',
+            partyType: isPurchase ? 'Vendor' : 'Client',
+            category: 'Added from Payment Settlement',
+            documentCount: 1,
+            totalBilled: m.totalAmount || 0,
+          };
+
+          addOrMerge(pObj);
+        });
+      } catch (_) {}
+    }
 
     return list.sort((a, b) => {
       const compA = (a.company || a.name || '').toLowerCase();
@@ -15982,6 +16028,9 @@ export default function Dashboard({
             invoices={invoices}
             expenses={expenses}
             profile={profile}
+            clients={clients}
+            vendors={vendors}
+            masterList={masterDatabaseList}
             onUpdateInvoice={onUpdateInvoice}
             onSaveExpense={onSaveExpense}
             currencySymbol={currencySymbol}
@@ -16755,64 +16804,31 @@ export default function Dashboard({
         {/* ------------------ TAB: SUPPORT ------------------ */}
 
         {activeTab === 'support' && (
-
-          <SupportPage onChatClick={() => setActiveTab('support-chat')} onNavigateTab={(tab) => setActiveTab(tab as any)} subscriptionTier={subscriptionTier} />
-
+          <SupportPage onChatClick={() => setActiveTab('support-chat')} onNavigateTab={(tab) => setActiveTab(tab as any)} subscriptionTier={effectiveTier} />
         )}
 
         {/* ------------------ TAB: SUPPORT CHAT ------------------ */}
 
-        {activeTab === 'support-chat' && (
-          (subscriptionTier === 'free' || subscriptionTier === 'basic') ? (
-            (() => {
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('mak_navigate_tab', { detail: 'subscription' }));
-              }
-              return (
-                <div className="p-8 text-center bg-white dark:bg-[#111a36] rounded-2xl border border-amber-200 dark:border-amber-900/50">
-                  <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
-                    MakInvoices AI Live Chat Support is available exclusively on Professional and Enterprise plans. Redirecting to Subscription Page... 🔒
-                  </span>
-                </div>
-              );
-            })()
-          ) : (
-            <SupportChatPage 
-
-              userEmail={userEmail} 
-
-              onBack={() => setActiveTab('support')} 
-
-              onEscalate={(sub, desc) => {
-
-                setActiveTab('support');
-
-              }} 
-
-            />
-          )
+        {(activeTab === 'support-chat' || activeTab === 'makinvoices_ai') && (
+          <SupportChatPage 
+            userEmail={userEmail} 
+            onBack={() => setActiveTab('support')} 
+            onEscalate={(sub, desc) => {
+              setActiveTab('support');
+            }} 
+          />
         )}
-
-
 
         {/* ------------------ TAB: SUBSCRIPTION ------------------ */}
 
         {activeTab === 'subscription' && (
-
           <SubscriptionPage
-
             theme={theme}
-
             profile={profile}
-
             invoices={invoices}
-
-            subscriptionTier={subscriptionTier}
-
+            subscriptionTier={effectiveTier}
             onUpgrade={handleUpgrade}
-
           />
-
         )}
 
 

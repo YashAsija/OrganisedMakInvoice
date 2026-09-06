@@ -35,18 +35,24 @@ import {
   FileCode,
   Check,
   X,
-  File
+  File,
+  PlusCircle,
+  Plus
 } from 'lucide-react';
 import XLSX from 'xlsx-js-style';
 import { jsPDF } from 'jspdf';
 import { PaymentRecord, PaymentSettlementPayload, PaymentStatus, PaymentCategory, PaymentMethod, BusinessProfile } from '../types';
 import { usePayments } from '../hooks/usePayments';
 import { SettlePaymentModal } from './SettlePaymentModal';
+import { AddPaymentRecordModal } from './AddPaymentRecordModal';
 
 interface PaymentsPageProps {
   invoices: any[];
   expenses?: any[];
   profile?: BusinessProfile;
+  clients?: any[];
+  vendors?: any[];
+  masterList?: any[];
   onUpdateInvoice?: (invoice: any) => void;
   onSaveExpense?: (expense: any) => void;
   currencySymbol?: string;
@@ -75,12 +81,15 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
   invoices,
   expenses = [],
   profile,
+  clients = [],
+  vendors = [],
+  masterList = [],
   onUpdateInvoice,
   onSaveExpense,
   currencySymbol = '₹',
   userEmail
 }) => {
-  const { payments, stats, settlePayment } = usePayments({
+  const { payments, stats, settlePayment, addManualPaymentRecord, deleteManualPaymentRecord } = usePayments({
     invoices,
     expenses,
     onUpdateInvoice,
@@ -103,9 +112,10 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'party' | 'due' | 'docNumber'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Settlement Modal State
+  // Settlement & Record Modal State
   const [settlingPayment, setSettlingPayment] = useState<PaymentRecord | null>(null);
   const [isSettleModalOpen, setIsSettleModalOpen] = useState<boolean>(false);
+  const [isAddRecordModalOpen, setIsAddRecordModalOpen] = useState<boolean>(false);
 
   // Pagination State - Transactions Table (Right: exactly 15 entries)
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -1367,12 +1377,21 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
           </button>
         </div>
 
-        {/* Export Options Button beside Tabs */}
-        <div className="order-1 sm:order-2 flex items-center gap-2 shrink-0">
+        {/* Actions Button Group beside Tabs (Add Record & Export) */}
+        <div className="order-1 sm:order-2 flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+          <button
+            onClick={() => setIsAddRecordModalOpen(true)}
+            title="Add Payment & Settlement Record (Credit/Debit/Past Settlement)"
+            className="flex-1 sm:flex-none h-10 px-4 rounded-xl bg-white dark:bg-[#111a36] hover:bg-sky-50 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs hover:shadow-sm active:scale-98 transition-all cursor-pointer group shrink-0"
+          >
+            <PlusCircle className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8] group-hover:rotate-90 transition-transform duration-200" />
+            <span>Add Record</span>
+          </button>
+
           <button
             onClick={handleOpenExportModal}
             title="Export Payment Records (Excel, PDF, CSV, JSON)"
-            className="w-full sm:w-auto h-10 px-4.5 rounded-xl bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm hover:shadow-md hover:shadow-[#0284c7]/25 active:scale-98 transition-all cursor-pointer group shrink-0"
+            className="flex-1 sm:flex-none h-10 px-4.5 rounded-xl bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm hover:shadow-md hover:shadow-[#0284c7]/25 active:scale-98 transition-all cursor-pointer group shrink-0"
           >
             <Download className="w-3.5 h-3.5 text-white/90 group-hover:-translate-y-0.5 transition-transform duration-200" />
             <span>Export Report</span>
@@ -1878,12 +1897,30 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
                       >
                         {/* Document info */}
                         <td className="px-3 py-1.5 align-middle">
-                          <span className="font-mono font-black text-[11px] text-[#0f172a] dark:text-white block truncate" title={p.documentNumber}>
-                            {p.documentNumber}
-                          </span>
-                          <span className="text-[9px] uppercase font-bold text-[#64748b] dark:text-zinc-400 block truncate">
-                            {p.documentType.replace('_', ' ')}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-black text-[11px] text-[#0f172a] dark:text-white block truncate" title={p.documentNumber}>
+                              {p.documentNumber}
+                            </span>
+                            {p.isOldRecord && (
+                              <span className="text-[8px] px-1.5 py-0.2 rounded-full font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">
+                                Old Record
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[9px] uppercase font-bold text-[#64748b] dark:text-zinc-400 block truncate">
+                              {p.isManualRecord ? 'Manual Settle' : p.documentType.replace('_', ' ')}
+                            </span>
+                            {p.entryType && (
+                              <span className={`text-[8px] px-1 py-0.2 rounded font-black uppercase ${
+                                p.entryType === 'credit'
+                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                  : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                              }`}>
+                                {p.entryType === 'credit' ? '+CR' : '-DR'}
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Company Main & Party Secondary */}
@@ -2584,6 +2621,21 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
         </div>,
         document.body
       )}
+
+      {/* ADD PAYMENT & SETTLEMENT RECORD MODAL */}
+      <AddPaymentRecordModal
+        isOpen={isAddRecordModalOpen}
+        onClose={() => setIsAddRecordModalOpen(false)}
+        onSave={async (rec) => {
+          await addManualPaymentRecord(rec);
+        }}
+        currencySymbol={currencySymbol}
+        initialCategory={activeCategory}
+        masterClients={clients}
+        masterVendors={vendors}
+        masterDatabaseList={masterList}
+        invoices={invoices}
+      />
     </div>
   );
 };

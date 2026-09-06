@@ -81,55 +81,108 @@ interface SupportChatPageProps {
 }
 
 export default function SupportChatPage({ userEmail, onBack, onEscalate }: SupportChatPageProps) {
-  const [language, setLanguage] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [language, setLanguage] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mak_ai_chat_lang');
+      if (saved && LANGUAGES.some(l => l.id === saved)) return saved;
+    }
+    return 'en';
+  });
+  const [sessionId, setSessionId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mak_ai_chat_session');
+      if (saved) return saved;
+      const newId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      try { localStorage.setItem('mak_ai_chat_session', newId); } catch (_) {}
+      return newId;
+    }
+    return `session_${Date.now()}`;
+  });
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('mak_ai_chat_messages');
+        if (saved) return JSON.parse(saved);
+      } catch (_) {}
+    }
+    return [];
+  });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isSelectingLanguage, setIsSelectingLanguage] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load session or initialize
+  // Sync to local storage whenever messages or language change
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('mak_ai_chat_messages', JSON.stringify(messages));
+      } catch (_) {}
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && language) {
+      try {
+        localStorage.setItem('mak_ai_chat_lang', language);
+      } catch (_) {}
+    }
+  }, [language]);
+
+  // Load session or background sync history without blocking the UI
+  useEffect(() => {
+    let isMounted = true;
     const initChat = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        const userId = user?.id || null;
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id || null;
 
         if (userId) {
           const res = await fetch(`/api/chat/history?userId=${userId}`);
-          const data = await res.json();
-          if (data.sessionId) {
-            setSessionId(data.sessionId);
-            setLanguage(data.language);
-            setMessages(data.messages);
-            setIsInitializing(false);
-            return;
+          if (res.ok) {
+            const data = await res.json();
+            if (isMounted && data.sessionId) {
+              setSessionId(data.sessionId);
+              if (data.language && LANGUAGES.some(l => l.id === data.language)) {
+                setLanguage(data.language);
+              }
+              if (Array.isArray(data.messages) && data.messages.length > 0) {
+                setMessages(data.messages);
+              }
+            }
           }
         }
-        setIsInitializing(false);
       } catch (err) {
-        console.error("Failed to load chat history", err);
-        setIsInitializing(false);
+        console.warn("Background chat sync skipped", err);
       }
     };
     initChat();
+    return () => { isMounted = false; };
   }, []);
 
   const handleStartSession = async (lang: string) => {
     setLanguage(lang);
+    setIsSelectingLanguage(false);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('mak_ai_chat_lang', lang);
+      } catch (_) {}
+    }
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const res = await fetch('/api/chat/history', {
+      const { data: { session } } = await supabase.auth.getSession();
+      fetch('/api/chat/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id, language: lang })
-      });
-      const data = await res.json();
-      if (data.sessionId) setSessionId(data.sessionId);
+        body: JSON.stringify({ userId: session?.user?.id, language: lang })
+      }).then(r => r.json()).then(data => {
+        if (data.sessionId) {
+          setSessionId(data.sessionId);
+          try { localStorage.setItem('mak_ai_chat_session', data.sessionId); } catch (_) {}
+        }
+      }).catch(() => {});
     } catch (err) {
-      console.error("Error starting session", err);
+      console.warn("Error registering session language", err);
     }
   };
 
@@ -152,11 +205,11 @@ export default function SupportChatPage({ userEmail, onBack, onEscalate }: Suppo
     setIsLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/chat/message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, sessionId, userId: user?.id, language })
+        body: JSON.stringify({ message: text, sessionId, userId: session?.user?.id, language })
       });
       const data = await res.json();
       
@@ -172,61 +225,106 @@ export default function SupportChatPage({ userEmail, onBack, onEscalate }: Suppo
     }
   };
 
+  const [isEscalating, setIsEscalating] = useState(false);
+
   const handleEscalate = async () => {
+    if (isEscalating) return;
+    setIsEscalating(true);
     try {
-      const transcript = messages.map(m => `${m.role}: ${m.content}`).join('\n\n');
-      const subject = `Chat Escalation${userEmail ? ` – ${userEmail}` : ''}`;
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      const email = user?.email || userEmail || 'support-user@makinvoices.com';
+      const name = user?.user_metadata?.full_name || email.split('@')[0] || 'User';
+      
+      const transcript = messages.length > 0
+        ? messages.map(m => `${m.role === 'user' ? 'User' : 'MakInvoices AI'}: ${m.content}`).join('\n\n')
+        : 'User requested direct escalation from Live Chat Support.';
+      
+      const subject = `Live Chat Escalation – ${name} (${email})`;
+      
       const res = await fetch('/api/tickets', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+        },
         body: JSON.stringify({
+          name,
+          email,
           category: 'technical',
           priority: 'high',
           subject,
           message: `This ticket was escalated from a live chat session.\n\n--- Chat Transcript ---\n\n${transcript}`,
+          user_id: user?.id || null
         }),
       });
+      
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData?.detail || 'Escalation failed');
+        let errorMsg = 'Escalation failed';
+        if (typeof errData?.detail === 'string') {
+          errorMsg = errData.detail;
+        } else if (Array.isArray(errData?.detail)) {
+          errorMsg = errData.detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ');
+        }
+        throw new Error(errorMsg);
       }
+      
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mak_notification', {
+          detail: {
+            title: 'Escalated to Human Support 🎧',
+            message: 'Your live chat transcript has been forwarded to our support team as a high-priority ticket.',
+            type: 'success'
+          }
+        }));
+      }
+      
       onEscalate(subject, "Escalated from Live Chat. See ticket for full transcript.");
-    } catch (err) {
-      console.error("Escalation failed", err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Escalation failed';
+      console.warn("Escalation failed:", msg);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mak_notification', {
+          detail: {
+            title: 'Escalation Notice',
+            message: msg,
+            type: 'error'
+          }
+        }));
+      }
+    } finally {
+      setIsEscalating(false);
     }
   };
 
-  if (isInitializing) {
+  // --- Optional Language Modal / View ---
+  if (isSelectingLanguage) {
     return (
-      <div className="flex items-center justify-center h-96 w-full">
-        <Loader2 className="w-8 h-8 animate-spin text-[#0284c7]" />
-      </div>
-    );
-  }
-
-  // --- Step 1: Language Selection ---
-  if (!language) {
-    return (
-      <div className="space-y-6 animate-in fade-in duration-200 w-full max-w-2xl mx-auto mt-4">
+      <div className="animate-in fade-in duration-150 w-full max-w-2xl mx-auto mt-4">
         <div>
-          <button onClick={onBack} className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#64748b] hover:text-[#0f172a] mb-4 transition-colors">
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Support
+          <button onClick={() => setIsSelectingLanguage(false)} className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#64748b] hover:text-[#0f172a] mb-4 transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Chat
           </button>
-          <h1 className="text-base font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Live Chat Support</h1>
-          <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">Please choose your preferred language to begin</p>
+          <h1 className="text-base font-black text-[#0f172a] dark:text-white uppercase tracking-tight">Select Chat Language</h1>
+          <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">Choose your preferred language for MakInvoices AI assistance</p>
         </div>
 
-        <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xs p-6 space-y-4">
+        <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl shadow-xs p-6 space-y-4 mt-3">
           <label className="block text-[9.5px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">Select Language</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {LANGUAGES.map(lang => (
               <button
                 key={lang.id}
                 onClick={() => handleStartSession(lang.id)}
-                className="py-3 px-4 rounded-xl text-xs font-bold border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0284c7] dark:text-[#38bdf8] hover:border-[#0284c7]/50 hover:bg-[#e0f2fe]/50 transition-all text-left flex justify-between items-center group cursor-pointer"
+                className={`py-3 px-4 rounded-xl text-xs font-bold border transition-all text-left flex justify-between items-center group cursor-pointer ${
+                  language === lang.id
+                    ? 'border-[#0284c7] bg-[#0284c7] text-white shadow-sm'
+                    : 'border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0284c7] dark:text-[#38bdf8] hover:border-[#0284c7]/50 hover:bg-[#e0f2fe]/50'
+                }`}
               >
                 {lang.label}
-                <ArrowLeft className="w-4 h-4 rotate-180 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ArrowLeft className={`w-4 h-4 rotate-180 transition-opacity ${language === lang.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
               </button>
             ))}
           </div>
@@ -262,16 +360,22 @@ export default function SupportChatPage({ userEmail, onBack, onEscalate }: Suppo
         </div>
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => setLanguage(null)} 
+            onClick={() => setIsSelectingLanguage(true)} 
             className="hidden sm:flex px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/50 dark:border-[#223269]/50 text-[#0284c7] dark:text-[#38bdf8] hover:border-[#0284c7]/40 cursor-pointer"
           >
             Change Language
           </button>
           <button 
             onClick={handleEscalate}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-[#0284c7] text-white hover:bg-[#0369a1] transition-colors cursor-pointer"
+            disabled={isEscalating}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-[#0284c7] text-white hover:bg-[#0369a1] disabled:opacity-60 transition-colors cursor-pointer"
           >
-            <AlertTriangle className="w-3 h-3" /> <span className="hidden sm:inline">Talk to Human</span>
+            {isEscalating ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <AlertTriangle className="w-3 h-3" />
+            )}
+            <span className="hidden sm:inline">{isEscalating ? 'Escalating...' : 'Talk to Human'}</span>
           </button>
         </div>
       </div>

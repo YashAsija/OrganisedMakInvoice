@@ -55,7 +55,10 @@ if (typeof window !== 'undefined') {
       errorString.includes('SUPABASE') ||
       errorString.includes('Supabase') ||
       errorString.includes('same key') ||
-      errorString.includes('Encountered two children with the same key')
+      errorString.includes('Encountered two children with the same key') ||
+      errorString.includes('Cannot update a component') ||
+      errorString.includes('Expected static flag was missing') ||
+      errorString.includes('Internal React error')
     ) {
       console.warn('[Suppressed Next.js Overlay] Suppressed console.error:', ...args);
       return;
@@ -743,9 +746,11 @@ export default function App() {
       const handleNavigateTab = (e: Event) => {
         const detail = (e as CustomEvent).detail;
         if (detail) {
-          setIsInvoiceEditorOpen(false);
-          setIsProfileOpen(false);
-          setActiveTab(detail);
+          setTimeout(() => {
+            setIsInvoiceEditorOpen(false);
+            setIsProfileOpen(false);
+            setActiveTab(detail);
+          }, 0);
         }
       };
       window.addEventListener('mak_navigate_tab', handleNavigateTab);

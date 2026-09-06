@@ -333,7 +333,7 @@ export interface PaymentRecord {
   userId?: string;
   documentId: string;
   documentNumber: string;
-  documentType: 'invoice' | 'proforma' | 'credit_note' | 'quote' | 'purchases' | 'purchase_order' | 'purchase_debit_note' | 'expense';
+  documentType: 'invoice' | 'proforma' | 'credit_note' | 'quote' | 'purchases' | 'purchase_order' | 'purchase_debit_note' | 'expense' | 'manual_record';
   category: PaymentCategory;
   companyName: string;
   partyName: string;
@@ -353,6 +353,10 @@ export interface PaymentRecord {
   createdAt: string;
   updatedAt: string;
   _pendingSync?: boolean;
+  entryType?: 'credit' | 'debit';
+  isManualRecord?: boolean;
+  isOldRecord?: boolean;
+  paymentMonth?: string;
 }
 
 export interface PaymentSettlementPayload {
