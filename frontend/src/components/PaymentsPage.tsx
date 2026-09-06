@@ -37,7 +37,8 @@ import {
   X,
   File,
   PlusCircle,
-  Plus
+  Plus,
+  History
 } from 'lucide-react';
 import XLSX from 'xlsx-js-style';
 import { jsPDF } from 'jspdf';
@@ -116,6 +117,44 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
   const [settlingPayment, setSettlingPayment] = useState<PaymentRecord | null>(null);
   const [isSettleModalOpen, setIsSettleModalOpen] = useState<boolean>(false);
   const [isAddRecordModalOpen, setIsAddRecordModalOpen] = useState<boolean>(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState<boolean>(false);
+
+  // History Search/Filter State
+  const [historySearch, setHistorySearch] = useState<string>('');
+  const [historyCategory, setHistoryCategory] = useState<'all' | 'sales' | 'purchases'>('all');
+  const [historyPage, setHistoryPage] = useState<number>(1);
+  const historyPerPage = 15;
+
+  // Settled payments for history (paid or partially_paid with a paymentDate)
+  const settledHistoryRecords = useMemo(() => {
+    return payments
+      .filter((p) => {
+        const isSettled = p.status === 'paid' || (p.status === 'partially_paid' && p.paidAmount > 0);
+        if (!isSettled) return false;
+        if (historyCategory !== 'all' && p.category !== historyCategory) return false;
+        if (historySearch.trim()) {
+          const q = historySearch.toLowerCase().trim();
+          return (
+            (p.companyName || '').toLowerCase().includes(q) ||
+            (p.partyName || '').toLowerCase().includes(q) ||
+            (p.documentNumber || '').toLowerCase().includes(q) ||
+            (p.referenceNumber || '').toLowerCase().includes(q)
+          );
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const da = new Date(a.paymentDate || a.date || '').getTime();
+        const db = new Date(b.paymentDate || b.date || '').getTime();
+        return db - da;
+      });
+  }, [payments, historySearch, historyCategory]);
+
+  const historyTotalPages = Math.ceil(settledHistoryRecords.length / historyPerPage) || 1;
+  const paginatedHistory = useMemo(() => {
+    const start = (historyPage - 1) * historyPerPage;
+    return settledHistoryRecords.slice(start, start + historyPerPage);
+  }, [settledHistoryRecords, historyPage]);
 
   // Pagination State - Transactions Table (Right: exactly 15 entries)
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -1377,8 +1416,23 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
           </button>
         </div>
 
-        {/* Actions Button Group beside Tabs (Add Record & Export) */}
-        <div className="order-1 sm:order-2 flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+        {/* Actions Button Group beside Tabs (History, Add Record & Export) */}
+        <div className="order-1 sm:order-2 flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+          {/* History Button */}
+          <button
+            onClick={() => {
+              setHistorySearch('');
+              setHistoryCategory('all');
+              setHistoryPage(1);
+              setIsHistoryModalOpen(true);
+            }}
+            title="View Payment Settlement History"
+            className="flex-none h-10 px-3.5 rounded-xl bg-white dark:bg-[#111a36] hover:bg-violet-50 dark:hover:bg-[#1a1b36] text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-800/50 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-xs hover:shadow-sm active:scale-98 transition-all cursor-pointer group shrink-0"
+          >
+            <History className="w-3.5 h-3.5 group-hover:-rotate-12 transition-transform duration-200" />
+            <span className="hidden sm:inline">History</span>
+          </button>
+
           <button
             onClick={() => setIsAddRecordModalOpen(true)}
             title="Add Payment & Settlement Record (Credit/Debit/Past Settlement)"
@@ -2636,6 +2690,209 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
         masterDatabaseList={masterList}
         invoices={invoices}
       />
+
+      {/* PAYMENT SETTLEMENT HISTORY MODAL */}
+      {isHistoryModalOpen && typeof window !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6"
+          style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setIsHistoryModalOpen(false); }}
+        >
+          <div className="bg-white dark:bg-[#111a36] rounded-2xl shadow-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
+                  <History className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-wide">Payment Settlement History</h2>
+                  <p className="text-[10.5px] text-[#64748b] dark:text-zinc-400 font-medium mt-0.5">
+                    {settledHistoryRecords.length} settlement{settledHistoryRecords.length !== 1 ? 's' : ''} recorded
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsHistoryModalOpen(false)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#64748b] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Filter Bar */}
+            <div className="px-4 py-3 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 shrink-0 flex flex-col sm:flex-row gap-2">
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
+                <input
+                  type="text"
+                  placeholder="Search company, doc #, reference..."
+                  value={historySearch}
+                  onChange={(e) => { setHistorySearch(e.target.value); setHistoryPage(1); }}
+                  className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-[#bae6fd]/60 dark:border-[#223269]/60 bg-[#f8fafc] dark:bg-[#0b1329]/60 text-[#0f172a] dark:text-white placeholder:text-[#94a3b8] focus:outline-none focus:ring-1 focus:ring-[#0284c7]/40"
+                />
+              </div>
+              {/* Category filter */}
+              <div className="flex items-center gap-1 p-1 bg-[#f1f5f9] dark:bg-[#0b1329]/80 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40 shrink-0">
+                {(['all', 'sales', 'purchases'] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => { setHistoryCategory(cat); setHistoryPage(1); }}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                      historyCategory === cat
+                        ? 'bg-white dark:bg-[#1e293b] text-[#0284c7] dark:text-[#38bdf8] shadow-sm border border-[#bae6fd]/60 dark:border-[#223269]/60'
+                        : 'text-[#64748b] dark:text-zinc-400 hover:text-[#0f172a] dark:hover:text-white'
+                    }`}
+                  >
+                    {cat === 'all' ? 'All' : cat === 'sales' ? 'Sales' : 'Purchase'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              {paginatedHistory.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center">
+                    <History className="w-6 h-6 text-violet-400" />
+                  </div>
+                  <p className="text-xs font-bold text-[#64748b] dark:text-zinc-400">
+                    {historySearch.trim() || historyCategory !== 'all' ? 'No settlements match your filter.' : 'No settlements recorded yet.'}
+                  </p>
+                  <p className="text-[10px] text-[#94a3b8] dark:text-zinc-500">
+                    Settlements appear here once a payment is marked as paid or partially paid.
+                  </p>
+                </div>
+              ) : (
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-[#f8fafc] dark:bg-[#0b1329] border-b border-[#bae6fd]/40 dark:border-[#223269]/40 z-10">
+                    <tr>
+                      <th className="text-left px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">#</th>
+                      <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Date</th>
+                      <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Company / Party</th>
+                      <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Doc #</th>
+                      <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Type</th>
+                      <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Method</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Settled</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#bae6fd]/20 dark:divide-[#223269]/30">
+                    {paginatedHistory.map((record, idx) => {
+                      const settlementDate = record.paymentDate || record.date || '';
+                      const formattedDate = settlementDate
+                        ? (() => {
+                            try {
+                              return new Date(settlementDate).toLocaleDateString('en-IN', {
+                                day: '2-digit', month: 'short', year: 'numeric'
+                              });
+                            } catch { return settlementDate; }
+                          })()
+                        : '—';
+                      const isSales = record.category === 'sales';
+                      const methodLabels: Record<string, string> = {
+                        upi: 'UPI', bank_transfer: 'Bank', cash: 'Cash',
+                        cheque: 'Cheque', card: 'Card', other: 'Other'
+                      };
+                      const methodLabel = methodLabels[record.paymentMethod || ''] || (record.paymentMethod || '—');
+                      const globalIdx = (historyPage - 1) * historyPerPage + idx + 1;
+
+                      return (
+                        <tr
+                          key={record.id}
+                          className="hover:bg-[#f8fafc] dark:hover:bg-[#0b1329]/60 transition-colors"
+                        >
+                          <td className="px-4 py-2.5 text-[10.5px] font-mono text-[#94a3b8] dark:text-zinc-500 w-8">{globalIdx}</td>
+                          <td className="px-3 py-2.5 whitespace-nowrap">
+                            <span className="text-[11px] font-bold text-[#0f172a] dark:text-white font-mono">{formattedDate}</span>
+                          </td>
+                          <td className="px-3 py-2.5 max-w-[180px]">
+                            <span className="text-[11px] font-bold text-[#0f172a] dark:text-white block truncate" title={record.companyName}>
+                              {record.companyName || record.partyName || '—'}
+                            </span>
+                            {record.partyName && record.partyName !== record.companyName && (
+                              <span className="text-[9.5px] text-[#64748b] dark:text-zinc-400 block truncate">{record.partyName}</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 whitespace-nowrap">
+                            <span className="text-[10.5px] font-mono text-[#0284c7] dark:text-[#38bdf8]">{record.documentNumber || '—'}</span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
+                              isSales
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/50'
+                                : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/50'
+                            }`}>
+                              {isSales ? 'Sales' : 'Purchase'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className="text-[10.5px] font-medium text-[#64748b] dark:text-zinc-400">{methodLabel}</span>
+                          </td>
+                          <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                            <span className={`text-[11.5px] font-black font-mono ${
+                              isSales ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'
+                            }`}>
+                              {isSales ? '+' : '-'}{currencySymbol}{formatAmount(record.paidAmount)}
+                            </span>
+                            {record.status === 'partially_paid' && (
+                              <span className="text-[8.5px] text-amber-500 dark:text-amber-400 font-bold block text-right">Partial</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Footer: Summary + Pagination */}
+            <div className="px-4 py-3 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f8fafc]/80 dark:bg-[#0b1329]/60 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-2">
+              {/* Summary row */}
+              <div className="flex items-center gap-4 text-[10.5px] font-medium text-[#64748b] dark:text-zinc-400">
+                <span>
+                  Total Settled In:{' '}
+                  <span className="font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                    {currencySymbol}{formatAmount(settledHistoryRecords.filter(r => r.category === 'sales').reduce((a, r) => a + r.paidAmount, 0))}
+                  </span>
+                </span>
+                <span className="text-[#bae6fd] dark:text-[#223269]">/</span>
+                <span>
+                  Total Settled Out:{' '}
+                  <span className="font-black text-blue-600 dark:text-blue-400 font-mono">
+                    {currencySymbol}{formatAmount(settledHistoryRecords.filter(r => r.category === 'purchases').reduce((a, r) => a + r.paidAmount, 0))}
+                  </span>
+                </span>
+              </div>
+              {/* Pagination */}
+              {historyTotalPages > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                    disabled={historyPage === 1}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center border border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#64748b] dark:text-zinc-400 disabled:opacity-30 hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f] transition-colors cursor-pointer disabled:cursor-default"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="text-[10.5px] font-bold text-[#64748b] dark:text-zinc-400 px-1">
+                    {historyPage} / {historyTotalPages}
+                  </span>
+                  <button
+                    onClick={() => setHistoryPage(p => Math.min(historyTotalPages, p + 1))}
+                    disabled={historyPage === historyTotalPages}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center border border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#64748b] dark:text-zinc-400 disabled:opacity-30 hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f] transition-colors cursor-pointer disabled:cursor-default"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };
