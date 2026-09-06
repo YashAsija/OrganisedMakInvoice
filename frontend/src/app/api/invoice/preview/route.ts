@@ -109,6 +109,17 @@ export async function GET(req: NextRequest) {
 
         if (cloudProf || companySettings) {
           const baseProf = cloudProf || {};
+          let extraSettings: any = {};
+          if (companySettings?.custom_templates) {
+            try {
+              extraSettings = typeof companySettings.custom_templates === 'string'
+                ? JSON.parse(companySettings.custom_templates)
+                : companySettings.custom_templates;
+            } catch (e) {
+              console.warn('[invoice-preview] Failed to parse custom_templates:', e);
+            }
+          }
+
           profile = companySettings ? {
             ...baseProf,
             uid: userId,
@@ -123,6 +134,10 @@ export async function GET(req: NextRequest) {
             pan: companySettings.pan || baseProf.pan || '',
             logoUrl: companySettings.logo_url || baseProf.logoUrl || '',
             signature: companySettings.signature_url || baseProf.signature || '',
+            signatureSize: extraSettings.signatureSize !== undefined ? extraSettings.signatureSize : (baseProf.signatureSize || 150),
+            signatureMode: companySettings.signature_type || extraSettings.signatureMode || baseProf.signatureMode || 'draw',
+            signatureText: extraSettings.signatureText || baseProf.signatureText || '',
+            signatureFont: extraSettings.signatureFont || baseProf.signatureFont || '',
             country: companySettings.country || baseProf.country || '',
             state: companySettings.state || baseProf.state || '',
             stateCode: companySettings.state_code || baseProf.stateCode || '',

@@ -12,6 +12,17 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   compress: true,
   poweredByHeader: false,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      'country-state-city',
+      '@supabase/supabase-js',
+      'xlsx'
+    ],
+  },
   async headers() {
     return [
       ...(process.env.NODE_ENV === 'production' ? [

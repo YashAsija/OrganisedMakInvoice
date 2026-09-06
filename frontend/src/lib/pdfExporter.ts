@@ -815,12 +815,12 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
     }
 
     const chunks: any[][] = [];
-    const availablePageHeight = pageHeight - footerHeight - 20; // 20px bottom padding
+    const availablePageHeight = pageHeight - footerHeight - 35; // 35px safety buffer for bottom padding and margins
     const page1Budget = availablePageHeight - tableTop - tableHeaderHeight;
     const subsequentPageBudget = page1Budget;
 
     const totalRowsHeight = rowHeights.reduce((a, b) => a + b, 0);
-    const singlePageBudget = page1Budget - totalsHeight;
+    const singlePageBudget = page1Budget - totalsHeight - 15; // 15px extra comfort buffer for totals and gap
 
     // Check if everything fits on a single page
     if (totalRowsHeight <= singlePageBudget || N === 0) {
@@ -921,7 +921,8 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
       Object.defineProperty(CSSStyleSheet.prototype, 'cssRules', originalCssRules);
     }
 
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pdfFormat = activeTemplate.layout.pageSize === 'Letter' ? 'letter' : 'a4';
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: pdfFormat });
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
 

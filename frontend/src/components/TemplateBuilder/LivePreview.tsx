@@ -257,10 +257,10 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     if (isInteractive && onUpdateField) {
       return <InlineEditable value={formattedVal} onSave={(v: any) => onUpdateField(fieldKey, v)} type="select" options={options} placeholder={placeholder} />;
     }
-    return formattedVal;
+    return formattedVal ? formattedVal : 'N/A';
   };
 
-  const renderInteractive = (value: string | number, fieldKey: string, type: 'text' | 'textarea' = 'text', placeholder = '') => {
+  const renderInteractive = (value: string | number | undefined | null, fieldKey: string, type: 'text' | 'textarea' = 'text', placeholder = '') => {
     if (isInteractive && onUpdateField) {
       if (fieldKey === 'clientName') {
         return <InlineEditable value={value} onSave={(v: any) => onUpdateField(fieldKey, v)} type="client-select" list="billed-to-clients" placeholder={placeholder} />;
@@ -270,10 +270,13 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
       }
       return <InlineEditable value={value} onSave={(v: any) => onUpdateField(fieldKey, v)} type={type} placeholder={placeholder} />;
     }
+    if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
+      return 'N/A';
+    }
     return value;
   };
 
-  const renderItemInteractive = (itemId: string, value: string | number, fieldKey: string, type: 'text' | 'textarea' | 'number' = 'text', placeholder = '') => {
+  const renderItemInteractive = (itemId: string, value: string | number | undefined | null, fieldKey: string, type: 'text' | 'textarea' | 'number' = 'text', placeholder = '') => {
     if (isInteractive && onUpdateItemField) {
       return <InlineEditable value={value} onSave={(v: any) => {
         if (fieldKey === 'taxPercentage_cgst' || fieldKey === 'taxPercentage_sgst') {
@@ -282,6 +285,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           onUpdateItemField(itemId, fieldKey, v);
         }
       }} type={type} isNumber={type === 'number'} placeholder={placeholder} />;
+    }
+    if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
+      return 'N/A';
     }
     return value;
   };
@@ -1987,9 +1993,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
       </div>
 
       {true && (
-        <div id="pinned-footer-container" style={{ marginTop: 'auto', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '15px', zIndex: 1 }}>
+        <div id="pinned-footer-container" style={{ marginTop: 'auto', paddingTop: isPrintMode ? '10px' : '20px', display: 'flex', flexDirection: 'column', gap: isPrintMode ? '8px' : '15px', zIndex: 1, boxSizing: 'border-box' }}>
           {/* Row for Terms and Signature */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '40px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '30px' }}>
             {/* Left Column: Terms */}
             <div style={{ flex: 1 }}>
               {sections.terms?.visible !== false && (config.terms.showNotes !== false || config.terms.showTerms !== false) && (
@@ -1997,7 +2003,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   {config.terms.showNotes !== false && (
                     <>
                       <div className="font-bold text-gray-800 text-[10px] uppercase mb-1">NOTES</div>
-                      <div className="text-gray-600 text-[10px] leading-relaxed mb-4">{renderInteractive(invoiceData?.notes || config.terms.notesText || 'Thank you for your business!', 'notes', 'textarea')}</div>
+                      <div className="text-gray-600 text-[10px] leading-relaxed mb-3">{renderInteractive(invoiceData?.notes || config.terms.notesText || 'Thank you for your business!', 'notes', 'textarea')}</div>
                     </>
                   )}
                   {config.terms.showTerms !== false && (
@@ -2013,14 +2019,14 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
             {/* Right Column: Signature */}
             <div style={{ width: '220px', textAlign: 'right' }}>
               {sections.signature?.visible !== false && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
-                  {config.signature.showStamp && <div style={{ width: 60, height: 60, borderRadius: '50%', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#94a3b8' }}>STAMP</div>}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                  {config.signature.showStamp && <div style={{ width: 55, height: 55, borderRadius: '50%', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#94a3b8' }}>STAMP</div>}
                   {config.signature.showSignature && (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                       {activeSignature ? (
-                        <img src={activeSignature} alt="Signature" style={{ width: `${businessProfile?.signatureSize || 220}px`, height: 'auto', maxHeight: `${Math.round((businessProfile?.signatureSize || 220) * 0.4)}px`, objectFit: 'contain', marginBottom: '4px' }} crossOrigin="anonymous" />
+                        <img src={activeSignature} alt="Signature" style={{ width: `${businessProfile?.signatureSize || 220}px`, height: 'auto', maxHeight: `${Math.round((businessProfile?.signatureSize || 220) * 0.4)}px`, objectFit: 'contain', marginBottom: '2px' }} crossOrigin="anonymous" />
                       ) : (
-                        <div style={{ width: `${businessProfile?.signatureSize || 220}px`, height: config.signature.height, borderBottom: '1px solid #cbd5e1', marginBottom: '10px' }}></div>
+                        <div style={{ width: `${businessProfile?.signatureSize || 220}px`, height: config.signature.height, borderBottom: '1px solid #cbd5e1', marginBottom: '6px' }}></div>
                       )}
                       <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>{config.signature.signatoryName || compName}</p>
                       <p style={{ fontSize: '10px', color: '#64748b', margin: 0 }}>{config.signature.designation || 'Authorized Signatory'}</p>
@@ -2039,8 +2045,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
           {/* Footer Row */}
           {sections.footer?.visible !== false && (
-            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '15px', textAlign: 'center' }}>
-              {config.footer.message && <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0' }}>{config.footer.message}</p>}
+            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: isPrintMode ? '8px' : '15px', textAlign: 'center' }}>
+              {config.footer.message && <p style={{ fontSize: '11px', color: '#64748b', margin: '1px 0' }}>{config.footer.message}</p>}
                 {(() => {
                   const contactParts = [];
                   if (config.footer.showWebsite !== false && compWebsite && compWebsite.trim() !== '') {
@@ -2052,10 +2058,10 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   }
                   const footerLine = contactParts.filter(Boolean).join(' | ');
                   return footerLine ? (
-                    <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0' }}>{footerLine}</p>
+                    <p style={{ fontSize: '11px', color: '#64748b', margin: '1px 0' }}>{footerLine}</p>
                   ) : null;
                 })()}
-              {config.footer.showPageNumbers && <p style={{ fontSize: '10px', color: '#94a3b8', margin: '8px 0 0 0' }}>Page {pageIdx + 1} of {totalPages}</p>}
+              {config.footer.showPageNumbers && <p style={{ fontSize: '10px', color: '#94a3b8', margin: '4px 0 0 0' }}>Page {pageIdx + 1} of {totalPages}</p>}
             </div>
           )}
         </div>
@@ -2116,7 +2122,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
               className={isPrintMode ? "invoice-pdf-page bg-white relative flex flex-col" : "invoice-live-preview relative flex flex-col"}
               style={isPrintMode ? {
                 width: layout.pageSize === 'A4' ? '794px' : '816px',
+                height: layout.pageSize === 'A4' ? '1123px' : '1056px',
                 minHeight: layout.pageSize === 'A4' ? '1123px' : '1056px',
+                maxHeight: layout.pageSize === 'A4' ? '1123px' : '1056px',
                 paddingTop: '20px',
                 paddingLeft: '40px',
                 paddingRight: '40px',
@@ -2125,7 +2133,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 fontFamily: styleConfig.fontFamily || 'Inter',
                 color: '#333',
                 backgroundColor: '#ffffff',
-                position: 'relative'
+                position: 'relative',
+                overflow: 'hidden'
               } : { ...baseStyle, position: 'relative' }}
             >
               {/* Copy Label Indicator in top-right corner of the page */}
