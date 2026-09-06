@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import AuthScreen from './components/AuthScreen';
 import { PinSetupModal } from './components/PinSetupModal';
 import type { User } from '@supabase/supabase-js';
 import { supabase, handleSupabaseError, OperationType, isSupabaseConfigured } from './lib/supabase';
@@ -81,19 +80,29 @@ if (typeof window !== 'undefined') {
 }
 
 // Sub-components
-import BiometricVerification from './components/BiometricVerification';
+import { Suspense, lazy } from 'react';
+import dynamic from 'next/dynamic';
 import { useConfirm } from './components/ConfirmContext';
-import Dashboard from './components/Dashboard';
-import BusinessProfileModal from './components/BusinessProfileModal';
-import InvoiceModal from './components/InvoiceModal';
 import Homepage from './components/Homepage';
-import PricingPage from './components/PricingPage';
-import GuidePage from './components/GuidePage';
-import ContactPage from './components/ContactPage';
-import SecurityPage from './components/SecurityPage';
-import TermsPage from './components/TermsPage';
-import PrivacyPage from './components/PrivacyPage';
-import AboutPage from './components/AboutPage';
+import AuthScreen from './components/AuthScreen';
+
+// Code-split heavy workspace components so Homepage loads in milliseconds
+const Dashboard = dynamic(() => import('./components/Dashboard'), {
+  loading: () => <MakLoader variant="full-screen" label="Loading Dashboard..." />,
+  ssr: false,
+});
+const BusinessProfileModal = dynamic(() => import('./components/BusinessProfileModal'), { ssr: false });
+const InvoiceModal = dynamic(() => import('./components/InvoiceModal'), { ssr: false });
+const BiometricVerification = dynamic(() => import('./components/BiometricVerification'), { ssr: false });
+
+// Dynamic code-splitting for secondary public pages
+const PricingPage = dynamic(() => import('./components/PricingPage'), { ssr: false });
+const GuidePage = dynamic(() => import('./components/GuidePage'), { ssr: false });
+const ContactPage = dynamic(() => import('./components/ContactPage'), { ssr: false });
+const SecurityPage = dynamic(() => import('./components/SecurityPage'), { ssr: false });
+const TermsPage = dynamic(() => import('./components/TermsPage'), { ssr: false });
+const PrivacyPage = dynamic(() => import('./components/PrivacyPage'), { ssr: false });
+const AboutPage = dynamic(() => import('./components/AboutPage'), { ssr: false });
 // Path to Sidebar Tab Mapping Definitions
 const tabToPath: Record<string, string> = {
   dashboard: '/dashboard',
@@ -164,7 +173,7 @@ export default function App() {
 
   // Security Lock state
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>(() => getSecuritySettings());
-  const [isUnlocked, setIsUnlocked] = useState<boolean | null>(null);
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => !getSecuritySettings().isPinLockEnabled);
 
   useEffect(() => {
     const checkPinStatus = async () => {
@@ -200,7 +209,18 @@ export default function App() {
 
   // User details
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const hasCachedEmail = !!localStorage.getItem('makbills_custom_email');
+      const hasSbToken = Object.keys(localStorage).some(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+      const hasUrlParams = window.location.search.includes('code=') ||
+                           window.location.hash.includes('access_token=') ||
+                           window.location.hash.includes('type=recovery');
+      // If user is guest and not resolving an auth redirect, don't block the UI
+      return hasCachedEmail || hasSbToken || hasUrlParams;
+    }
+    return false;
+  });
   const [userEmail, setUserEmail] = useState<string | null>(() => {
     return localStorage.getItem('makbills_custom_email') || null;
   });
