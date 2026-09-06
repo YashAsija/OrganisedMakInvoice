@@ -30,7 +30,24 @@ interface SettingsPageProps {
   onLogout: () => void;
 }
 
-type SettingsSection = 'notifications' | 'security' | 'backup' | 'account';
+type SettingsSection = 'notifications' | 'security' | 'backup' | 'billing' | 'account';
+
+// ─── Billing Preferences (localStorage) ───────────────────────────────────────
+const BILLING_PREFS_KEY = 'mak_billing_prefs';
+interface BillingPrefs { enableRoundOff: boolean; }
+const loadBillingPrefs = (): BillingPrefs => {
+  if (typeof window === 'undefined') return { enableRoundOff: false };
+  try {
+    const raw = localStorage.getItem(BILLING_PREFS_KEY);
+    if (raw) return { enableRoundOff: false, ...JSON.parse(raw) };
+  } catch {}
+  return { enableRoundOff: false };
+};
+const saveBillingPrefs = (prefs: BillingPrefs) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(BILLING_PREFS_KEY, JSON.stringify(prefs));
+  window.dispatchEvent(new CustomEvent('mak_billing_prefs_changed', { detail: prefs }));
+};
 
 const Row = ({ label, description, control }: { label: string; description?: string; control: React.ReactNode }) => (
   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4 border-b border-[#bae6fd]/20 dark:border-[#223269]/30 last:border-0">
@@ -209,6 +226,25 @@ export default function SettingsPage({
   onLogout
 }: SettingsPageProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>('notifications');
+
+  // ─── Billing Preferences state ───────────────────────────────────────────────
+  const [billingPrefs, setBillingPrefs] = useState<BillingPrefs>(loadBillingPrefs);
+
+  const handleToggleBillingPref = (key: keyof BillingPrefs) => {
+    // Compute next value from current state directly — do NOT put side-effects
+    // inside the setState functional updater, as React StrictMode calls it twice
+    // which would fire the notification and localStorage write twice.
+    const next = { ...billingPrefs, [key]: !billingPrefs[key] };
+    saveBillingPrefs(next);   // writes localStorage + dispatches custom event (once)
+    setBillingPrefs(next);    // plain value update — never double-fires
+    emitNotification(
+      'Billing Preference Updated',
+      next[key]
+        ? `${key === 'enableRoundOff' ? 'Round Off' : key} has been enabled.`
+        : `${key === 'enableRoundOff' ? 'Round Off' : key} has been disabled.`,
+      'success'
+    );
+  };
 
   // Persistent Notification Settings: Applied vs Draft States
   const [appliedNotif, setAppliedNotif] = useState(loadSavedNotifPreferences);
@@ -811,6 +847,7 @@ export default function SettingsPage({
     { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
     { id: 'security', label: 'Security', icon: <Shield className="w-4 h-4" /> },
     { id: 'backup', label: 'Data Backup', icon: <Database className="w-4 h-4" /> },
+    { id: 'billing', label: 'Billing & Invoicing', icon: <FileText className="w-4 h-4" /> },
     { id: 'account', label: 'Account', icon: <LogOut className="w-4 h-4" /> },
   ];
 
@@ -1862,6 +1899,59 @@ export default function SettingsPage({
                 )}
               </div>
             )}
+
+
+
+            {/* -------------------- BILLING & INVOICING -------------------- */}
+            {activeSection === 'billing' && (
+              <div className="space-y-5">
+                {/* Section Header */}
+                <div>
+                  <h2 className="text-xs font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-widest mb-1.5" style={{ fontFamily: "'Fraunces', serif" }}>Billing &amp; Invoicing</h2>
+                  <p className="text-[10.5px] text-[#64748b]/80 dark:text-zinc-400 leading-relaxed">Configure document generation rules that apply globally to all invoices, quotes, and purchase documents.</p>
+                </div>
+
+                {/* Round Off Card */}
+                <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden">
+                  <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/60 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-5 py-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">Total Amount Round Off</span>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    <Row
+                      label="Enable Round Off on Grand Total"
+                      description="When enabled, the Grand Total of every document is rounded to the nearest whole number (e.g. ₹1,248.60 → ₹1,249). The round-off difference (+/−) is shown as a separate line in the tax engine and on the invoice. Sub Total is never affected."
+                      control={
+                        <Toggle
+                          checked={billingPrefs.enableRoundOff}
+                          onChange={() => handleToggleBillingPref('enableRoundOff')}
+                        />
+                      }
+                    />
+
+                    {billingPrefs.enableRoundOff && (
+                      <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800/40 flex items-start gap-3">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <div className="space-y-0.5">
+                          <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">Round Off is Active</p>
+                          <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/70 leading-relaxed">
+                            All newly created or edited documents will have their Grand Total rounded to the nearest whole number. The round-off adjustment line will appear in the Tax Engine summary on each document.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="p-3.5 bg-[#f8fafc] dark:bg-[#0b1329]/40 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40 text-[10px] text-[#64748b] dark:text-zinc-400 leading-relaxed space-y-1">
+                      <p className="font-bold text-[#0f172a] dark:text-zinc-200 text-[10.5px]">How it works</p>
+                      <p>• <strong>Sub Total</strong> — unchanged, always exact.</p>
+                      <p>• <strong>Tax Accruals</strong> — unchanged, calculated on actual values.</p>
+                      <p>• <strong>Round Off line</strong> — shows the small +/− adjustment needed to reach a whole number.</p>
+                      <p>• <strong>Grand Total</strong> — rounded to nearest whole number when this is ON.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
 
 
 

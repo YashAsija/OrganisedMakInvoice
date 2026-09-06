@@ -51,6 +51,7 @@ export interface Invoice {
   isFreightAdded?: boolean;
   taxTotal: number;
   grandTotal: number;
+  roundOff?: number;    // Round-off adjustment amount (may be negative, 0, or positive)
   status: InvoiceStatus;
   items: InvoiceItem[];
   createdAt: string;
@@ -230,6 +231,7 @@ export interface BusinessProfile {
   customTaxPercentage?: number;
   customTaxCols?: string[];
   additionalTaxes?: { id: string, name: string, rate: number }[];
+  enableRoundOff?: boolean; // Enable rounding of grand total to nearest rupee
 }
 
 export interface PresetItem {
@@ -368,4 +370,15 @@ export interface PaymentSettlementPayload {
   referenceNumber?: string;
   notes?: string;
 }
+
+export interface PaymentUpdatePayload {
+  paymentId?: string;
+  documentId: string;
+  paidAmount: number;
+  paymentDate?: string;
+  paymentMethod?: PaymentMethod | string;
+  referenceNumber?: string;
+  notes?: string;
+}
+
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { X, Check, Trash2, Upload, CreditCard, ShieldCheck, Sparkles, Building2, Landmark, Sliders, Award, FileSpreadsheet, KeyRound, ArrowLeft, ArrowRight, Plus, AlertCircle, Lock, Banknote, SlidersHorizontal, Hash, FileText, HelpCircle, RefreshCw, ChevronDown, QrCode, Building } from 'lucide-react';
 import { BusinessProfile } from '../types';
 import { Country, State } from 'country-state-city';
@@ -202,6 +202,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const [customTaxPercentage, setCustomTaxPercentage] = useState<number>(() => isOnboarding ? 0 : (profile.customTaxPercentage !== undefined ? profile.customTaxPercentage : 18));
   const [customTaxCols, setCustomTaxCols] = useState<string[]>(() => isOnboarding ? [] : (profile.customTaxCols || ['Tax']));
   const [additionalTaxes, setAdditionalTaxes] = useState<{ id: string; name: string; rate: number }[]>(() => isOnboarding ? [] : (profile.additionalTaxes || []));
+  const [enableRoundOff, setEnableRoundOff] = useState<boolean>(() => isOnboarding ? false : (profile.enableRoundOff || false));
 
   // Logo Crop/Adjust States
   const [logoToCrop, setLogoToCrop] = useState<string | null>(null);
@@ -582,6 +583,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
             setCustomTaxPercentage(profile.customTaxPercentage !== undefined ? profile.customTaxPercentage : 18);
             setCustomTaxCols(profile.customTaxCols || ['Tax']);
             setAdditionalTaxes(profile.additionalTaxes || []);
+            setEnableRoundOff(profile.enableRoundOff || false);
           }
           return;
         }
@@ -1610,6 +1612,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           customTaxPercentage,
           customTaxCols,
           additionalTaxes,
+          enableRoundOff,
           updatedAt: new Date().toISOString()
         };
         onSave(updatedProfile);
@@ -3541,6 +3544,9 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
                   )}
                 </div>
               </div>
+
+              {/* Round Off setting has moved to App Settings → Billing & Invoicing */}
+
             </div>
           )}
 

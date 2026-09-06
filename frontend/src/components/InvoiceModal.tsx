@@ -160,6 +160,23 @@ export default function InvoiceModal({
   // Advanced features and billing options
   const [invoiceType, setInvoiceType] = useState<'invoice' | 'proforma' | 'debit_note' | 'credit_note' | 'estimate' | 'quote' | 'purchases' | 'purchase_order' | 'purchase_debit_note'>('invoice');
 
+  // Billing preferences from App Settings (localStorage) — updated live via custom event
+  const [billingPrefsLS, setBillingPrefsLS] = useState<{ enableRoundOff: boolean }>(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('mak_billing_prefs') : null;
+      return raw ? { enableRoundOff: false, ...JSON.parse(raw) } : { enableRoundOff: false };
+    } catch { return { enableRoundOff: false }; }
+  });
+
+  useEffect(() => {
+    const handleBillingChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail) setBillingPrefsLS(detail);
+    };
+    window.addEventListener('mak_billing_prefs_changed', handleBillingChange);
+    return () => window.removeEventListener('mak_billing_prefs_changed', handleBillingChange);
+  }, []);
+
   // Master Registry Combined Master Database loader (unifies Client DB, Vendor DB, Supabase Clients & Billed Parties)
   const [registryClients, setRegistryClients] = useState<any[]>([]);
 
@@ -1583,7 +1600,16 @@ export default function InvoiceModal({
   const freightTax = hasTaxColActive ? freightCharges * (freightTaxRate / 100) : 0;
 
   const roundedTaxTotal = parseFloat((calculatedTaxTotal + freightTax).toFixed(2));
-  const calculatedGrandTotal = parseFloat(Math.max(0, (finalDiscountedSubtotal + roundedTaxTotal + freightCharges)).toFixed(2));
+  const rawGrandTotal = parseFloat(Math.max(0, (finalDiscountedSubtotal + roundedTaxTotal + freightCharges)).toFixed(2));
+
+  // Round Off: reads from App Settings localStorage (overrides profile.enableRoundOff)
+  const isRoundOffEnabled = !!(billingPrefsLS.enableRoundOff || profile?.enableRoundOff);
+  const calculatedRoundOff = isRoundOffEnabled
+    ? parseFloat((Math.round(rawGrandTotal) - rawGrandTotal).toFixed(2))
+    : 0;
+  const calculatedGrandTotal = isRoundOffEnabled
+    ? parseFloat(Math.round(rawGrandTotal).toFixed(2))
+    : rawGrandTotal;
 
 
   const buildTempInvoice = (silent = false): Invoice | null => {
@@ -1631,6 +1657,7 @@ export default function InvoiceModal({
       freightCharges: Number.isFinite(Number(freightCharges)) ? Number(freightCharges) : 0,
       taxTotal: Number.isFinite(roundedTaxTotal) ? roundedTaxTotal : 0,
       grandTotal: Number.isFinite(calculatedGrandTotal) ? calculatedGrandTotal : 0,
+      roundOff: isRoundOffEnabled ? calculatedRoundOff : undefined,
       status,
       items,
       createdAt: invoice ? invoice.createdAt : new Date().toISOString(),
@@ -2460,6 +2487,7 @@ export default function InvoiceModal({
       isFreightAdded,
       taxTotal: roundedTaxTotal,
       grandTotal: calculatedGrandTotal,
+      roundOff: isRoundOffEnabled ? calculatedRoundOff : undefined,
       status: (status === 'draft' || !status) ? 'pending' : status,
       paidDate: status === 'paid' ? (invoice?.paidDate || new Date().toISOString().split('T')[0]) : undefined,
       items,
@@ -4482,6 +4510,13 @@ export default function InvoiceModal({
                         <span>Calculated Tax Accruals</span>
                         <span>{currencySymbol}{roundedTaxTotal.toFixed(2)}</span>
                       </div>
+
+                      {isRoundOffEnabled && (
+                        <div className={`flex justify-between text-[11px] ${calculatedRoundOff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
+                          <span>Round Off {calculatedRoundOff >= 0 ? '(+)' : '(-)'}</span>
+                          <span>{calculatedRoundOff >= 0 ? '+' : ''}{currencySymbol}{Math.abs(calculatedRoundOff).toFixed(2)}</span>
+                        </div>
+                      )}
 
                       <div className="border-t border-slate-200 dark:border-slate-800 pt-2 flex justify-between font-medium text-slate-805 text-sm">
                         <span>Grand Total Invoice Bill</span>

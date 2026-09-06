@@ -618,10 +618,144 @@ export function usePayments({
     setRefreshTrigger(prev => prev + 1);
   }, [invoices, expenses, onUpdateInvoice, onSaveExpense, getSettlementsMap, getManualPayments, suffix]);
 
+  // Update / Adjust Existing Settlement for a Document
+  const updateSettlement = useCallback(async (payload: import('../types').PaymentUpdatePayload) => {
+    const { documentId, paidAmount, paymentDate, paymentMethod, referenceNumber, notes } = payload;
+    const nowIso = new Date().toISOString();
+    const today = nowIso.split('T')[0];
+
+    // 1. Check if it's a manual record
+    const currentManuals = getManualPayments();
+    const manualMatch = currentManuals.find(m => m.id === documentId || m.documentId === documentId);
+    if (manualMatch) {
+      const total = Number(manualMatch.totalAmount) || 0;
+      const targetPaid = Math.max(0, Number(paidAmount) || 0);
+      const due = Math.max(0, Number((total - targetPaid).toFixed(2)));
+      let status: PaymentStatus = due <= 0 && total > 0 ? 'paid' : (targetPaid > 0 ? 'partially_paid' : 'pending');
+
+      const updatedManuals = currentManuals.map(m => {
+        if (m.id === documentId || m.documentId === documentId) {
+          return {
+            ...m,
+            paidAmount: targetPaid,
+            dueAmount: due,
+            status,
+            paymentDate: targetPaid > 0 ? (paymentDate || m.paymentDate) : undefined,
+            paymentMethod: paymentMethod || m.paymentMethod,
+            referenceNumber: referenceNumber !== undefined ? referenceNumber : m.referenceNumber,
+            notes: notes !== undefined ? notes : m.notes,
+            updatedAt: nowIso
+          };
+        }
+        return m;
+      });
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`${MANUAL_PAYMENTS_STORAGE_KEY}${suffix}`, JSON.stringify(updatedManuals));
+        localStorage.setItem(MANUAL_PAYMENTS_STORAGE_KEY, JSON.stringify(updatedManuals));
+        window.dispatchEvent(new CustomEvent('mak_manual_payment_added', { detail: { documentId } }));
+      }
+    }
+
+    // 2. Save settlement meta to localStorage
+    const currentSettlements = getSettlementsMap();
+    const targetPaid = Math.max(0, Number(paidAmount) || 0);
+
+    if (targetPaid <= 0) {
+      delete currentSettlements[documentId];
+    } else {
+      const existingSettlement = currentSettlements[documentId] || {};
+      currentSettlements[documentId] = {
+        ...existingSettlement,
+        paidAmount: targetPaid,
+        paymentDate: paymentDate || existingSettlement.paymentDate || today,
+        paymentMethod: paymentMethod || existingSettlement.paymentMethod || 'cash',
+        referenceNumber: referenceNumber !== undefined ? referenceNumber : existingSettlement.referenceNumber,
+        notes: notes !== undefined ? notes : existingSettlement.notes,
+        updatedAt: nowIso
+      };
+    }
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`${SETTLEMENTS_STORAGE_KEY}${suffix}`, JSON.stringify(currentSettlements));
+      localStorage.setItem(SETTLEMENTS_STORAGE_KEY, JSON.stringify(currentSettlements));
+
+      // Push settlements and manual payments to Supabase Cloud
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (session?.user?.id) {
+          const cloudPayload: any = {
+            settlements: currentSettlements
+          };
+          if (manualMatch) {
+            const currentLatestManuals = getManualPayments();
+            cloudPayload.manualPayments = currentLatestManuals;
+          }
+          await pushMasterRegistriesToCloud(session.user.id, suffix, cloudPayload);
+        }
+      }).catch(() => {});
+    }
+
+    // 3. If it's an Invoice / Purchase document
+    const invoiceMatch = invoices.find(inv => inv.id === documentId);
+    if (invoiceMatch && onUpdateInvoice) {
+      const totalAmount = Number(invoiceMatch.grandTotal) || 0;
+      const targetPaidClamped = Math.max(0, Math.min(totalAmount, targetPaid));
+      const remainingDue = Math.max(0, Number((totalAmount - targetPaidClamped).toFixed(2)));
+
+      let nextStatus: InvoiceStatus = 'pending';
+      if (remainingDue <= 0 && totalAmount > 0) {
+        nextStatus = 'paid';
+      } else if (targetPaidClamped > 0) {
+        nextStatus = 'partially_paid';
+      } else {
+        nextStatus = 'pending';
+      }
+
+      const updatedInvoice: Invoice = {
+        ...invoiceMatch,
+        paidAmount: targetPaidClamped,
+        paidDate: targetPaidClamped > 0 ? (paymentDate || invoiceMatch.paidDate || today) : undefined,
+        status: nextStatus,
+        updatedAt: nowIso
+      };
+
+      onUpdateInvoice(updatedInvoice);
+    }
+
+    // 4. If it's an Expense
+    const expenseMatch = expenses.find(exp => exp.id === documentId);
+    if (expenseMatch && onSaveExpense) {
+      const updatedExpense: Expense = {
+        ...expenseMatch,
+        status: targetPaid > 0 ? 'paid' : 'pending',
+        payment_mode: (paymentMethod as any) || expenseMatch.payment_mode,
+        reference_number: referenceNumber !== undefined ? referenceNumber : expenseMatch.reference_number,
+        updated_at: nowIso
+      };
+      onSaveExpense(updatedExpense);
+    }
+
+    // Dispatch global event for instant reactivity
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('mak_payment_settled', { detail: payload }));
+    }
+    setRefreshTrigger(prev => prev + 1);
+  }, [invoices, expenses, onUpdateInvoice, onSaveExpense, getSettlementsMap, getManualPayments, suffix]);
+
+  // Reset / Undo Settlement for a Document
+  const undoSettlement = useCallback(async (documentId: string) => {
+    await updateSettlement({
+      documentId,
+      paidAmount: 0
+    });
+  }, [updateSettlement]);
+
   return {
     payments,
     stats,
     settlePayment,
+    updateSettlement,
+    undoSettlement,
     addManualPaymentRecord,
     deleteManualPaymentRecord,
     salesPayments: payments.filter(p => p.category === 'sales'),

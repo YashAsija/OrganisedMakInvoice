@@ -38,7 +38,8 @@ import {
   File,
   PlusCircle,
   Plus,
-  History
+  History,
+  Edit2
 } from 'lucide-react';
 import XLSX from 'xlsx-js-style';
 import { jsPDF } from 'jspdf';
@@ -46,6 +47,7 @@ import { PaymentRecord, PaymentSettlementPayload, PaymentStatus, PaymentCategory
 import { usePayments } from '../hooks/usePayments';
 import { SettlePaymentModal } from './SettlePaymentModal';
 import { AddPaymentRecordModal } from './AddPaymentRecordModal';
+import { EditSettlementModal } from './EditSettlementModal';
 
 interface PaymentsPageProps {
   invoices: any[];
@@ -90,7 +92,7 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
   currencySymbol = '₹',
   userEmail
 }) => {
-  const { payments, stats, settlePayment, addManualPaymentRecord, deleteManualPaymentRecord } = usePayments({
+  const { payments, stats, settlePayment, updateSettlement, undoSettlement, addManualPaymentRecord, deleteManualPaymentRecord } = usePayments({
     invoices,
     expenses,
     onUpdateInvoice,
@@ -118,6 +120,8 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
   const [isSettleModalOpen, setIsSettleModalOpen] = useState<boolean>(false);
   const [isAddRecordModalOpen, setIsAddRecordModalOpen] = useState<boolean>(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState<boolean>(false);
+  const [editingSettlementPayment, setEditingSettlementPayment] = useState<PaymentRecord | null>(null);
+  const [isEditSettlementModalOpen, setIsEditSettlementModalOpen] = useState<boolean>(false);
 
   // History Search/Filter State
   const [historySearch, setHistorySearch] = useState<string>('');
@@ -670,8 +674,8 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
       // 1. EXCEL (.xlsx) COMPANY-WISE DEBTORS & CREDITORS LEDGER WITH CLEAN BORDERED TABLE
       const headers: string[] = ['#'];
       if (cols.companyName) headers.push('Company Name');
-      if (cols.partyContact) headers.push('Contact Person');
-      if (cols.phone) headers.push('Phone Number');
+      if (cols.partyContact) headers.push('Customer Name');
+      if (cols.phone) headers.push('Phone No.');
       if (cols.email) headers.push('Email Address');
       if (cols.accountType) headers.push('Type');
       if (cols.debit) headers.push('Debit (To Receive / Customer Due)');
@@ -959,8 +963,8 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
       // 3. CSV (.csv) COMPANY-WISE OUTSTANDING STATEMENT (DYNAMIC COLUMNS)
       const headers: string[] = ['#'];
       if (cols.companyName) headers.push('Company Name');
-      if (cols.partyContact) headers.push('Contact Person');
-      if (cols.phone) headers.push('Phone Number');
+      if (cols.partyContact) headers.push('Customer Name');
+      if (cols.phone) headers.push('Phone No.');
       if (cols.email) headers.push('Email');
       if (cols.accountType) headers.push('Type');
       if (cols.debit) headers.push('Debit (To Receive)');
@@ -1091,7 +1095,7 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
       const summaryTotalsTxt = `Debit: ${currStr} ${fmt(totDebtorDue)}  |  Credit: ${currStr} ${fmt(totCreditorDue)}  |  Net: ${netPosition >= 0 ? '+' : '-'}${currStr} ${fmt(Math.abs(netPosition))}`;
       doc.text(summaryTotalsTxt, margin + 3, 40);
 
-      // Dynamic Table columns based on selectedExportColumns (Exact 8 fields for A4 Portrait 190mm)
+      // Dynamic Table columns based on selectedExportColumns (Exact fields for A4 Portrait 190mm)
       interface PdfColDef {
         key: string;
         label: string;
@@ -1104,116 +1108,153 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
         {
           key: 'index',
           label: '#',
-          weight: 6,
-          align: 'left',
-          getValue: (_, idx) => ({ text: String(idx + 1), fontSize: 9.5, color: [100, 116, 139] })
+          weight: 8,
+          align: 'center',
+          getValue: (_, idx) => ({ text: String(idx + 1), fontSize: 8.0, color: [100, 116, 139] })
         },
         ...(cols.companyName ? [{
           key: 'companyName',
           label: 'Company Name',
-          weight: 60, // Much more weight allocated so full company name easily fits
+          weight: 34,
           align: 'left' as const,
           getValue: (item: typeof exportCompanyRecords[0]) => {
-            return { text: item.companyName || '-', isBold: true, fontSize: 9.5, color: [15, 23, 42] as [number, number, number] };
+            return { text: item.companyName || '-', isBold: true, fontSize: 8.0, color: [15, 23, 42] as [number, number, number] };
           }
         }] : []),
         ...(cols.partyContact ? [{
           key: 'partyContact',
-          label: 'Contact Person',
-          weight: 24,
+          label: 'Customer Name',
+          weight: 26,
           align: 'left' as const,
           getValue: (item: typeof exportCompanyRecords[0]) => {
-            return { text: item.partyName || '-', fontSize: 9.0, color: [71, 85, 105] as [number, number, number] };
+            return { text: item.partyName || '-', fontSize: 8.0, color: [71, 85, 105] as [number, number, number] };
           }
         }] : []),
         ...(cols.phone ? [{
           key: 'phone',
-          label: 'Phone Number',
+          label: 'Phone No.',
           weight: 22,
           align: 'left' as const,
           getValue: (item: typeof exportCompanyRecords[0]) => {
-            return { text: item.phone || '-', fontSize: 9.0, color: [71, 85, 105] as [number, number, number] };
+            return { text: item.phone || '-', fontSize: 8.0, color: [71, 85, 105] as [number, number, number] };
           }
         }] : []),
         ...(cols.email ? [{
           key: 'email',
           label: 'Email',
-          weight: 26,
+          weight: 28,
           align: 'left' as const,
           getValue: (item: typeof exportCompanyRecords[0]) => {
-            return { text: item.email || '-', fontSize: 8.5, color: [71, 85, 105] as [number, number, number] };
+            return { text: item.email || '-', fontSize: 8.0, color: [71, 85, 105] as [number, number, number] };
           }
         }] : []),
         ...(cols.accountType ? [{
           key: 'accountType',
           label: 'Type',
-          weight: 14, // Compact to fit "Debtor" / "Creditor" / "Dual" snugly without wasting space
-          align: 'left' as const,
+          weight: 18,
+          align: 'center' as const,
           getValue: (item: typeof exportCompanyRecords[0]) => {
             if (item.accountType === 'Debtor (Customer)') {
-              return { text: 'Debtor', isBold: true, fontSize: 9.5, color: [16, 185, 129] as [number, number, number] };
+              return { text: 'Debtor', isBold: true, fontSize: 8.0, color: [16, 185, 129] as [number, number, number] };
             }
             if (item.accountType === 'Creditor (Vendor)') {
-              return { text: 'Creditor', isBold: true, fontSize: 9.5, color: [37, 99, 235] as [number, number, number] };
+              return { text: 'Creditor', isBold: true, fontSize: 8.0, color: [37, 99, 235] as [number, number, number] };
             }
-            return { text: 'Dual', isBold: true, fontSize: 9.5, color: [147, 51, 234] as [number, number, number] };
+            return { text: 'Dual', isBold: true, fontSize: 8.0, color: [147, 51, 234] as [number, number, number] };
           }
         }] : []),
         ...(cols.debit ? [{
           key: 'debit',
           label: 'Debit (+)',
-          weight: 24,
+          weight: 20,
           align: 'right' as const,
           getValue: (item: typeof exportCompanyRecords[0]) => {
             if (item.salesOutstanding > 0) {
-              return { text: `+${fmt(item.salesOutstanding)}`, isBold: true, fontSize: 10.5, color: [16, 185, 129] as [number, number, number] };
+              return { text: `+${fmt(item.salesOutstanding)}`, isBold: true, fontSize: 8.0, color: [16, 185, 129] as [number, number, number] };
             }
-            return { text: '-', fontSize: 9.5, color: [148, 163, 184] as [number, number, number] };
+            return { text: '-', fontSize: 8.0, color: [148, 163, 184] as [number, number, number] };
           }
         }] : []),
         ...(cols.credit ? [{
           key: 'credit',
           label: 'Credit (-)',
-          weight: 24,
+          weight: 20,
           align: 'right' as const,
           getValue: (item: typeof exportCompanyRecords[0]) => {
             if (item.purchasesOutstanding > 0) {
-              return { text: `-${fmt(item.purchasesOutstanding)}`, isBold: true, fontSize: 10.5, color: [225, 29, 72] as [number, number, number] };
+              return { text: `-${fmt(item.purchasesOutstanding)}`, isBold: true, fontSize: 8.0, color: [225, 29, 72] as [number, number, number] };
             }
-            return { text: '-', fontSize: 9.5, color: [148, 163, 184] as [number, number, number] };
+            return { text: '-', fontSize: 8.0, color: [148, 163, 184] as [number, number, number] };
           }
         }] : []),
         ...(cols.invoiceCounts ? [{
           key: 'invoiceCounts',
           label: 'Invoices',
-          weight: 18,
+          weight: 14,
           align: 'center' as const,
           getValue: (item: typeof exportCompanyRecords[0]) => ({
             text: `${item.totalDocuments} (${item.pendingDocuments}P/${item.overdueDocuments}O)`,
-            fontSize: 9.0,
+            fontSize: 7.5,
             color: [71, 85, 105] as [number, number, number]
           })
         }] : [])
       ];
+
+      // Helper function to auto-scale font size and truncate with ellipsis if necessary to prevent cell overflow
+      const getFittedText = (
+        rawText: string | number,
+        maxWidth: number,
+        initialSize: number = 8.0,
+        minSize: number = 5.5,
+        isBold: boolean = false
+      ) => {
+        const text = String(rawText ?? '');
+        if (!text) return { text: '', fontSize: initialSize };
+        doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+        doc.setFontSize(initialSize);
+        let w = doc.getTextWidth(text);
+        if (w <= maxWidth) return { text, fontSize: initialSize };
+
+        // Proportional font size reduction down to minSize
+        const proportionalSize = initialSize * (maxWidth / w);
+        const targetSize = Math.max(minSize, Math.round(proportionalSize * 10) / 10);
+        doc.setFontSize(targetSize);
+        w = doc.getTextWidth(text);
+        if (w <= maxWidth) return { text, fontSize: targetSize };
+
+        // If still exceeds maxWidth at minSize, truncate with ellipsis
+        doc.setFontSize(minSize);
+        let truncated = text;
+        const ellipsis = '...';
+        while (truncated.length > 1 && doc.getTextWidth(truncated + ellipsis) > maxWidth) {
+          truncated = truncated.slice(0, -1);
+        }
+        return {
+          text: truncated.length > 0 ? `${truncated}${ellipsis}` : text.slice(0, 1),
+          fontSize: minSize
+        };
+      };
 
       // Scale column widths to perfectly match contentWidth (190 mm in Portrait)
       const totalWeight = availableCols.reduce((acc, c) => acc + c.weight, 0);
       let runningX = margin;
       const pdfCols = availableCols.map((c) => {
         const colW = (c.weight / totalWeight) * contentWidth;
+        const pad = 1.2;
         const colObj = {
           ...c,
           width: colW,
           startX: runningX,
-          x: c.align === 'right' ? runningX + colW - 2.0 : c.align === 'center' ? runningX + (colW / 2) : runningX + 2.0
+          x: c.align === 'right' ? runningX + colW - pad : c.align === 'center' ? runningX + (colW / 2) : runningX + pad,
+          maxTextWidth: Math.max(2, colW - (pad * 2))
         };
         runningX += colW;
         return colObj;
       });
 
       let currentY = 49;
-      const headerHeight = 9.0;
-      const rowHeight = 9.0; // Generous height for larger numbers & text
+      const headerHeight = 8.5;
+      const rowHeight = 8.5;
       let tablePageTopY = currentY;
 
       const drawTableHeader = (topY: number) => {
@@ -1233,14 +1274,14 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
           }
         });
 
-        // Header text
+        // Header text - Constant equal 8.0pt bold font size across all column headers
         doc.setTextColor(15, 23, 42); // slate-900
-        doc.setFontSize(9.5); // Enhanced header font size
-        doc.setFont('helvetica', 'bold');
-
-        const textY = topY + 6.0;
+        const textY = topY + 5.5;
         pdfCols.forEach((col) => {
-          doc.text(col.label, col.x, textY, { align: col.align });
+          const fitted = getFittedText(col.label, col.maxTextWidth, 8.0, 7.0, true);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(fitted.fontSize);
+          doc.text(fitted.text, col.x, textY, { align: col.align });
         });
       };
 
@@ -1248,7 +1289,7 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
       currentY += headerHeight;
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9.5);
+      doc.setFontSize(8.0);
 
       exportCompanyRecords.forEach((item, idx) => {
         if (currentY + rowHeight > pageHeight - 16) {
@@ -1272,12 +1313,12 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
           drawTableHeader(currentY);
           currentY += headerHeight;
           doc.setFont('helvetica', 'normal');
-          doc.setFontSize(9.5);
+          doc.setFontSize(8.0);
         }
 
         const rowTopY = currentY;
         const rowBottomY = currentY + rowHeight;
-        const textY = currentY + 5.8; // Centered baseline for 9mm row
+        const textY = currentY + 5.5;
 
         // Alternating row background
         if (idx % 2 === 1) {
@@ -1290,12 +1331,15 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
         doc.setLineWidth(0.2);
         doc.line(margin, rowBottomY, margin + contentWidth, rowBottomY);
 
-        // Row text content
+        // Row text content with auto-fitting to prevent any column bleeding
         pdfCols.forEach((col) => {
           const valObj = col.getValue(item, idx, col.width);
-          let targetFontSize = valObj.fontSize || 9.5;
-          doc.setFont('helvetica', valObj.isBold ? 'bold' : 'normal');
-          doc.setFontSize(targetFontSize);
+          const initialSize = valObj.fontSize || 8.0;
+          const isBold = !!valObj.isBold;
+          const fitted = getFittedText(valObj.text, col.maxTextWidth, initialSize, 5.5, isBold);
+
+          doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+          doc.setFontSize(fitted.fontSize);
 
           if (valObj.color) {
             doc.setTextColor(valObj.color[0], valObj.color[1], valObj.color[2]);
@@ -1303,21 +1347,111 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
             doc.setTextColor(15, 23, 42);
           }
 
-          // Dynamically calculate text width and auto-scale font size if text exceeds cell bounds
-          const maxAllowedWidth = col.width - 4.0;
-          let textWidth = doc.getTextWidth(valObj.text);
-          if (textWidth > maxAllowedWidth && maxAllowedWidth > 5) {
-            const scaledSize = Math.max(7.2, targetFontSize * (maxAllowedWidth / textWidth));
-            doc.setFontSize(scaledSize);
-          }
-
-          doc.text(valObj.text, col.x, textY, { align: col.align });
+          doc.text(fitted.text, col.x, textY, { align: col.align });
         });
 
         currentY += rowHeight;
       });
 
-      // Draw final outer border and vertical dividers on the last page
+      // ── TOTALS ROW ─────────────────────────────────────────────────────────────
+      const totalsRowHeight = 9.5;
+
+      // If not enough space on this page for the totals row, add a new page
+      if (currentY + totalsRowHeight > pageHeight - 18) {
+        // Close current page table
+        const pth = currentY - tablePageTopY;
+        doc.setDrawColor(148, 163, 184);
+        doc.setLineWidth(0.35);
+        doc.rect(margin, tablePageTopY, contentWidth, pth, 'S');
+        pdfCols.forEach((col, cIdx) => {
+          if (cIdx > 0) doc.line(col.startX, tablePageTopY, col.startX, currentY);
+        });
+        doc.addPage();
+        currentY = 16;
+        tablePageTopY = currentY;
+      }
+
+      // Dark navy totals background
+      doc.setFillColor(15, 23, 42); // slate-900
+      doc.rect(margin, currentY, contentWidth, totalsRowHeight, 'F');
+
+      // Totals row top border (cyan accent)
+      doc.setDrawColor(2, 132, 199); // sky-600
+      doc.setLineWidth(0.5);
+      doc.line(margin, currentY, margin + contentWidth, currentY);
+
+      const totTextY = currentY + 6.2;
+
+      // Find first descriptive column to place the "TOTAL" label
+      const firstTextColKey = (pdfCols.find(c => ['companyName', 'partyContact', 'phone', 'email'].includes(c.key)) || pdfCols[1] || pdfCols[0])?.key;
+
+      pdfCols.forEach((col) => {
+        if (col.key === 'index') {
+          return;
+        }
+
+        if (col.key === firstTextColKey) {
+          const fitted = getFittedText('TOTAL', col.maxTextWidth, 8.5, 7.5, true);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(fitted.fontSize);
+          doc.setTextColor(255, 255, 255);
+          doc.text(fitted.text, col.x, totTextY, { align: col.align });
+          return;
+        }
+
+        if (['companyName', 'partyContact', 'phone', 'email'].includes(col.key)) {
+          // Leave subsequent text columns blank in the totals row
+          return;
+        }
+
+        if (col.key === 'accountType') {
+          const text = `${exportCompanyRecords.length} parties`;
+          const fitted = getFittedText(text, col.maxTextWidth, 8.0, 6.5, true);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(fitted.fontSize);
+          doc.setTextColor(148, 163, 184); // muted slate-400
+          doc.text(fitted.text, col.x, totTextY, { align: col.align });
+          return;
+        }
+
+        if (col.key === 'debit') {
+          const text = `+${fmt(totDebtorDue)}`;
+          const fitted = getFittedText(text, col.maxTextWidth, 8.5, 7.0, true);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(fitted.fontSize);
+          doc.setTextColor(52, 211, 153); // emerald-400
+          doc.text(fitted.text, col.x, totTextY, { align: col.align });
+          return;
+        }
+
+        if (col.key === 'credit') {
+          const text = `-${fmt(totCreditorDue)}`;
+          const fitted = getFittedText(text, col.maxTextWidth, 8.5, 7.0, true);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(fitted.fontSize);
+          doc.setTextColor(251, 113, 133); // rose-400
+          doc.text(fitted.text, col.x, totTextY, { align: col.align });
+          return;
+        }
+
+        if (col.key === 'invoiceCounts') {
+          const totalDocs = exportCompanyRecords.reduce((a, b) => a + b.totalDocuments, 0);
+          const pendDocs  = exportCompanyRecords.reduce((a, b) => a + b.pendingDocuments, 0);
+          const ovDocs    = exportCompanyRecords.reduce((a, b) => a + b.overdueDocuments, 0);
+          const text = `${totalDocs} (${pendDocs}P/${ovDocs}O)`;
+          const fitted = getFittedText(text, col.maxTextWidth, 7.5, 6.0, true);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(fitted.fontSize);
+          doc.setTextColor(186, 230, 253); // sky-200
+          doc.text(fitted.text, col.x, totTextY, { align: col.align });
+          return;
+        }
+      });
+
+      currentY += totalsRowHeight;
+      // ── END TOTALS ROW ────────────────────────────────────────────────────────
+
+
       const lastPageTableHeight = currentY - tablePageTopY;
       doc.setDrawColor(148, 163, 184); // slate-400
       doc.setLineWidth(0.35);
@@ -1363,10 +1497,10 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
         </p>
       </div>
 
-      {/* Category Toggle Tabs & Export CSV Options Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Category Toggle Tabs & Export CSV Options Row — Side by side in one line */}
+      <div className="flex items-center justify-between gap-2 w-full min-w-0">
         {/* Toggle Tabs */}
-        <div className="order-2 sm:order-1 flex items-center gap-1.5 p-1 bg-[#e0f2fe]/50 dark:bg-[#0b1329]/80 rounded-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 w-full sm:w-auto">
+        <div className="flex items-center gap-0.5 sm:gap-1 p-0.5 sm:p-1 bg-[#e0f2fe]/50 dark:bg-[#0b1329]/80 rounded-xl sm:rounded-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 shrink-0">
           <button
             onClick={() => {
               if (activeCategory !== 'sales') {
@@ -1376,15 +1510,17 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
                 setCurrentPage(1);
               }
             }}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 py-2 px-3.5 sm:px-4 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+            className={`flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-3.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
               activeCategory === 'sales'
-                ? 'bg-white dark:bg-[#1e293b] text-[#0284c7] dark:text-[#38bdf8] shadow-md shadow-sky-500/10 border border-[#bae6fd]/80 dark:border-sky-500/30'
+                ? 'bg-white dark:bg-[#1e293b] text-[#0284c7] dark:text-[#38bdf8] shadow-xs sm:shadow-md shadow-sky-500/10 border border-[#bae6fd]/80 dark:border-sky-500/30'
                 : 'text-[#64748b] dark:text-zinc-400 hover:text-[#0f172a] dark:hover:text-white'
             }`}
           >
-            <ArrowDownRight className={`w-3.5 h-3.5 ${activeCategory === 'sales' ? 'text-emerald-500' : ''}`} />
-            <span>Sales Payments</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black ${
+            <ArrowDownRight className={`w-3.5 h-3.5 shrink-0 ${activeCategory === 'sales' ? 'text-emerald-500' : ''}`} />
+            {/* Full label on md+, short on smaller */}
+            <span className="hidden md:inline">Sales Payments</span>
+            <span className="md:hidden">Sales</span>
+            <span className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 rounded-full font-mono font-black leading-4 sm:leading-5 shrink-0 ${
               activeCategory === 'sales' ? 'bg-[#0284c7] text-white' : 'bg-black/5 dark:bg-white/10 text-[#64748b]'
             }`}>
               {stats.salesCount}
@@ -1400,15 +1536,16 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
                 setCurrentPage(1);
               }
             }}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 py-2 px-3.5 sm:px-4 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+            className={`flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-3.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
               activeCategory === 'purchases'
-                ? 'bg-white dark:bg-[#1e293b] text-blue-600 dark:text-blue-400 shadow-md shadow-blue-500/10 border border-blue-200 dark:border-blue-500/30'
+                ? 'bg-white dark:bg-[#1e293b] text-blue-600 dark:text-blue-400 shadow-xs sm:shadow-md shadow-blue-500/10 border border-blue-200 dark:border-blue-500/30'
                 : 'text-[#64748b] dark:text-zinc-400 hover:text-[#0f172a] dark:hover:text-white'
             }`}
           >
-            <ArrowUpRight className={`w-3.5 h-3.5 ${activeCategory === 'purchases' ? 'text-blue-500' : ''}`} />
-            <span>Purchase Payments</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black ${
+            <ArrowUpRight className={`w-3.5 h-3.5 shrink-0 ${activeCategory === 'purchases' ? 'text-blue-500' : ''}`} />
+            <span className="hidden md:inline">Purchase Payments</span>
+            <span className="md:hidden">Purchase</span>
+            <span className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 rounded-full font-mono font-black leading-4 sm:leading-5 shrink-0 ${
               activeCategory === 'purchases' ? 'bg-blue-600 text-white' : 'bg-black/5 dark:bg-white/10 text-[#64748b]'
             }`}>
               {stats.purchasesCount}
@@ -1416,9 +1553,9 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
           </button>
         </div>
 
-        {/* Actions Button Group beside Tabs (History, Add Record & Export) */}
-        <div className="order-1 sm:order-2 flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap w-full sm:w-auto">
-          {/* History Button */}
+        {/* Actions Button Group (History, Add Record & Export) */}
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0 flex-nowrap">
+          {/* History Button - compact / shorter button */}
           <button
             onClick={() => {
               setHistorySearch('');
@@ -1427,28 +1564,30 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
               setIsHistoryModalOpen(true);
             }}
             title="View Payment Settlement History"
-            className="flex-none h-10 px-3.5 rounded-xl bg-white dark:bg-[#111a36] hover:bg-violet-50 dark:hover:bg-[#1a1b36] text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-800/50 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-xs hover:shadow-sm active:scale-98 transition-all cursor-pointer group shrink-0"
+            aria-label="Payment History"
+            className="h-8 sm:h-9 px-2 sm:px-2.5 rounded-xl bg-white dark:bg-[#111a36] hover:bg-violet-50 dark:hover:bg-[#1a1b36] text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-800/50 text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1 shadow-xs hover:shadow-sm active:scale-98 transition-all cursor-pointer group shrink-0 whitespace-nowrap"
           >
-            <History className="w-3.5 h-3.5 group-hover:-rotate-12 transition-transform duration-200" />
-            <span className="hidden sm:inline">History</span>
+            <History className="w-3.5 h-3.5 group-hover:-rotate-12 transition-transform duration-200 shrink-0" />
+            <span className="hidden xl:inline">History</span>
           </button>
 
           <button
             onClick={() => setIsAddRecordModalOpen(true)}
-            title="Add Payment & Settlement Record (Credit/Debit/Past Settlement)"
-            className="flex-1 sm:flex-none h-10 px-4 rounded-xl bg-white dark:bg-[#111a36] hover:bg-sky-50 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs hover:shadow-sm active:scale-98 transition-all cursor-pointer group shrink-0"
+            title="Add Payment & Settlement Record"
+            className="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl bg-white dark:bg-[#111a36] hover:bg-sky-50 dark:hover:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1 sm:gap-1.5 shadow-xs hover:shadow-sm active:scale-98 transition-all cursor-pointer group shrink-0 whitespace-nowrap"
           >
-            <PlusCircle className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8] group-hover:rotate-90 transition-transform duration-200" />
-            <span>Add Record</span>
+            <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0284c7] dark:text-[#38bdf8] group-hover:rotate-90 transition-transform duration-200 shrink-0" />
+            <span className="hidden sm:inline">Add </span>
+            <span>Record</span>
           </button>
 
           <button
             onClick={handleOpenExportModal}
             title="Export Payment Records (Excel, PDF, CSV, JSON)"
-            className="flex-1 sm:flex-none h-10 px-4.5 rounded-xl bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm hover:shadow-md hover:shadow-[#0284c7]/25 active:scale-98 transition-all cursor-pointer group shrink-0"
+            className="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] text-white text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1 sm:gap-1.5 shadow-sm hover:shadow-md hover:shadow-[#0284c7]/25 active:scale-98 transition-all cursor-pointer group shrink-0 whitespace-nowrap"
           >
-            <Download className="w-3.5 h-3.5 text-white/90 group-hover:-translate-y-0.5 transition-transform duration-200" />
-            <span>Export Report</span>
+            <Download className="w-3.5 h-3.5 text-white/90 group-hover:-translate-y-0.5 transition-transform duration-200 shrink-0" />
+            <span>Export</span>
           </button>
         </div>
       </div>
@@ -2436,7 +2575,7 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
                     </span>
                   </button>
 
-                  {/* 2. Contact Person */}
+                  {/* 2. Customer Name */}
                   <button
                     type="button"
                     onClick={() => toggleExportColumn('partyContact')}
@@ -2446,7 +2585,7 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
                         : 'bg-[#f4f9ff]/50 dark:bg-[#0b1329]/50 border-[#bae6fd]/70 dark:border-[#223269]/70 text-slate-600 dark:text-slate-400 opacity-70 hover:opacity-100'
                     }`}
                   >
-                    <span className="text-[11px] truncate font-semibold">Contact Person</span>
+                    <span className="text-[11px] truncate font-semibold">Customer Name</span>
                     <span className={`w-4 h-4 rounded-md flex items-center justify-center text-[10px] shrink-0 ${
                       selectedExportColumns.partyContact ? 'bg-[#0284c7] text-white' : 'border border-[#bae6fd] dark:border-[#223269]'
                     }`}>
@@ -2464,7 +2603,7 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
                         : 'bg-[#f4f9ff]/50 dark:bg-[#0b1329]/50 border-[#bae6fd]/70 dark:border-[#223269]/70 text-slate-600 dark:text-slate-400 opacity-70 hover:opacity-100'
                     }`}
                   >
-                    <span className="text-[11px] truncate font-semibold">Phone Number</span>
+                    <span className="text-[11px] truncate font-semibold">Phone No.</span>
                     <span className={`w-4 h-4 rounded-md flex items-center justify-center text-[10px] shrink-0 ${
                       selectedExportColumns.phone ? 'bg-[#0284c7] text-white' : 'border border-[#bae6fd] dark:border-[#223269]'
                     }`}>
@@ -2691,38 +2830,52 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
         invoices={invoices}
       />
 
-      {/* PAYMENT SETTLEMENT HISTORY MODAL */}
+      {/* EDIT SETTLEMENT MODAL */}
+      <EditSettlementModal
+        isOpen={isEditSettlementModalOpen}
+        onClose={() => {
+          setIsEditSettlementModalOpen(false);
+          setEditingSettlementPayment(null);
+        }}
+        payment={editingSettlementPayment}
+        currencySymbol={currencySymbol}
+        onUpdate={updateSettlement}
+        onUndo={undoSettlement}
+      />
+
+      {/* PAYMENT SETTLEMENT HISTORY MODAL - Fully Responsive */}
       {isHistoryModalOpen && typeof window !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6"
-          style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
+          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center sm:p-4 md:p-6"
+          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
           onClick={(e) => { if (e.target === e.currentTarget) setIsHistoryModalOpen(false); }}
         >
-          <div className="bg-white dark:bg-[#111a36] rounded-2xl shadow-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          {/* Bottom-sheet on mobile, centered card on sm+ */}
+          <div className="bg-white dark:bg-[#111a36] w-full sm:rounded-2xl rounded-t-2xl shadow-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 max-h-[92vh] sm:max-h-[88vh] md:max-h-[85vh] sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl">
+
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 shrink-0">
-              <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
                   <History className="w-4 h-4 text-violet-600 dark:text-violet-400" />
                 </div>
-                <div>
-                  <h2 className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-wide">Payment Settlement History</h2>
-                  <p className="text-[10.5px] text-[#64748b] dark:text-zinc-400 font-medium mt-0.5">
+                <div className="min-w-0">
+                  <h2 className="text-xs sm:text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-wide leading-tight">Payment Settlement History</h2>
+                  <p className="text-[10px] sm:text-[10.5px] text-[#64748b] dark:text-zinc-400 font-medium mt-0.5">
                     {settledHistoryRecords.length} settlement{settledHistoryRecords.length !== 1 ? 's' : ''} recorded
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsHistoryModalOpen(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#64748b] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#64748b] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer shrink-0 ml-2"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Filter Bar */}
-            <div className="px-4 py-3 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 shrink-0 flex flex-col sm:flex-row gap-2">
-              {/* Search */}
+            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 shrink-0 flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
                 <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
                 <input
@@ -2733,13 +2886,12 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
                   className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-[#bae6fd]/60 dark:border-[#223269]/60 bg-[#f8fafc] dark:bg-[#0b1329]/60 text-[#0f172a] dark:text-white placeholder:text-[#94a3b8] focus:outline-none focus:ring-1 focus:ring-[#0284c7]/40"
                 />
               </div>
-              {/* Category filter */}
-              <div className="flex items-center gap-1 p-1 bg-[#f1f5f9] dark:bg-[#0b1329]/80 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40 shrink-0">
+              <div className="flex items-center gap-1 p-1 bg-[#f1f5f9] dark:bg-[#0b1329]/80 rounded-xl border border-[#bae6fd]/40 dark:border-[#223269]/40 self-start sm:self-auto shrink-0">
                 {(['all', 'sales', 'purchases'] as const).map((cat) => (
                   <button
                     key={cat}
                     onClick={() => { setHistoryCategory(cat); setHistoryPage(1); }}
-                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
                       historyCategory === cat
                         ? 'bg-white dark:bg-[#1e293b] text-[#0284c7] dark:text-[#38bdf8] shadow-sm border border-[#bae6fd]/60 dark:border-[#223269]/60'
                         : 'text-[#64748b] dark:text-zinc-400 hover:text-[#0f172a] dark:hover:text-white'
@@ -2751,144 +2903,231 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
               </div>
             </div>
 
-            {/* Table */}
+            {/* Content Area */}
             <div className="flex-1 overflow-y-auto custom-scrollbar">
               {paginatedHistory.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                <div className="flex flex-col items-center justify-center py-16 gap-3 text-center px-4">
                   <div className="w-12 h-12 rounded-2xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center">
                     <History className="w-6 h-6 text-violet-400" />
                   </div>
                   <p className="text-xs font-bold text-[#64748b] dark:text-zinc-400">
                     {historySearch.trim() || historyCategory !== 'all' ? 'No settlements match your filter.' : 'No settlements recorded yet.'}
                   </p>
-                  <p className="text-[10px] text-[#94a3b8] dark:text-zinc-500">
+                  <p className="text-[10px] text-[#94a3b8] dark:text-zinc-500 max-w-xs">
                     Settlements appear here once a payment is marked as paid or partially paid.
                   </p>
                 </div>
               ) : (
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-[#f8fafc] dark:bg-[#0b1329] border-b border-[#bae6fd]/40 dark:border-[#223269]/40 z-10">
-                    <tr>
-                      <th className="text-left px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">#</th>
-                      <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Date</th>
-                      <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Company / Party</th>
-                      <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Doc #</th>
-                      <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Type</th>
-                      <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Method</th>
-                      <th className="text-right px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Settled</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#bae6fd]/20 dark:divide-[#223269]/30">
+                <>
+                  {/* MOBILE card view (< 640px) */}
+                  <div className="sm:hidden divide-y divide-[#bae6fd]/20 dark:divide-[#223269]/30">
                     {paginatedHistory.map((record, idx) => {
                       const settlementDate = record.paymentDate || record.date || '';
-                      const formattedDate = settlementDate
-                        ? (() => {
-                            try {
-                              return new Date(settlementDate).toLocaleDateString('en-IN', {
-                                day: '2-digit', month: 'short', year: 'numeric'
-                              });
-                            } catch { return settlementDate; }
-                          })()
-                        : '—';
+                      const formattedDate = settlementDate ? (() => { try { return new Date(settlementDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return settlementDate; } })() : '—';
                       const isSales = record.category === 'sales';
-                      const methodLabels: Record<string, string> = {
-                        upi: 'UPI', bank_transfer: 'Bank', cash: 'Cash',
-                        cheque: 'Cheque', card: 'Card', other: 'Other'
-                      };
+                      const methodLabels: Record<string, string> = { upi: 'UPI', bank_transfer: 'Bank', cash: 'Cash', cheque: 'Cheque', card: 'Card', other: 'Other' };
                       const methodLabel = methodLabels[record.paymentMethod || ''] || (record.paymentMethod || '—');
                       const globalIdx = (historyPage - 1) * historyPerPage + idx + 1;
-
                       return (
-                        <tr
-                          key={record.id}
-                          className="hover:bg-[#f8fafc] dark:hover:bg-[#0b1329]/60 transition-colors"
-                        >
-                          <td className="px-4 py-2.5 text-[10.5px] font-mono text-[#94a3b8] dark:text-zinc-500 w-8">{globalIdx}</td>
-                          <td className="px-3 py-2.5 whitespace-nowrap">
-                            <span className="text-[11px] font-bold text-[#0f172a] dark:text-white font-mono">{formattedDate}</span>
-                          </td>
-                          <td className="px-3 py-2.5 max-w-[180px]">
-                            <span className="text-[11px] font-bold text-[#0f172a] dark:text-white block truncate" title={record.companyName}>
-                              {record.companyName || record.partyName || '—'}
+                        <div key={record.id} className="px-3 py-3 hover:bg-[#f8fafc] dark:hover:bg-[#0b1329]/60 transition-colors">
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                              <span className="text-[9.5px] font-mono text-[#94a3b8] dark:text-zinc-500 shrink-0">{globalIdx}</span>
+                              <span className="text-[10.5px] font-bold text-[#0f172a] dark:text-white font-mono shrink-0">{formattedDate}</span>
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[8.5px] font-black uppercase border shrink-0 ${isSales ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/50' : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/50'}`}>{isSales ? 'Sales' : 'Purchase'}</span>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className={`text-[12px] font-black font-mono ${isSales ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'}`}>{isSales ? '+' : '-'}{currencySymbol}{formatAmount(record.paidAmount)}</span>
+                              {record.status === 'partially_paid' && <span className="text-[8.5px] text-amber-500 dark:text-amber-400 font-bold block">Partial</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 pl-5 flex-wrap gap-y-0.5 mb-2">
+                            <span className="text-[10.5px] font-bold text-[#0f172a] dark:text-white truncate max-w-[140px]" title={record.companyName}>{record.companyName || record.partyName || '—'}</span>
+                            {record.partyName && record.partyName !== record.companyName && <span className="text-[9px] text-[#64748b] dark:text-zinc-400 truncate max-w-[100px]">{record.partyName}</span>}
+                            <span className="text-[9.5px] font-mono text-[#0284c7] dark:text-[#38bdf8]">{record.documentNumber || '—'}</span>
+                            <span className="text-[9.5px] font-medium text-[#64748b] dark:text-zinc-400">{methodLabel}</span>
+                          </div>
+                          <div className="flex items-center justify-between pl-5 pt-1.5 border-t border-[#bae6fd]/20 dark:border-[#223269]/30">
+                            <span className="text-[9px] text-[#94a3b8] dark:text-zinc-500 truncate max-w-[140px]">
+                              {record.referenceNumber ? `Ref: ${record.referenceNumber}` : 'No ref'}
                             </span>
-                            {record.partyName && record.partyName !== record.companyName && (
-                              <span className="text-[9.5px] text-[#64748b] dark:text-zinc-400 block truncate">{record.partyName}</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2.5 whitespace-nowrap">
-                            <span className="text-[10.5px] font-mono text-[#0284c7] dark:text-[#38bdf8]">{record.documentNumber || '—'}</span>
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
-                              isSales
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/50'
-                                : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/50'
-                            }`}>
-                              {isSales ? 'Sales' : 'Purchase'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <span className="text-[10.5px] font-medium text-[#64748b] dark:text-zinc-400">{methodLabel}</span>
-                          </td>
-                          <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                            <span className={`text-[11.5px] font-black font-mono ${
-                              isSales ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'
-                            }`}>
-                              {isSales ? '+' : '-'}{currencySymbol}{formatAmount(record.paidAmount)}
-                            </span>
-                            {record.status === 'partially_paid' && (
-                              <span className="text-[8.5px] text-amber-500 dark:text-amber-400 font-bold block text-right">Partial</span>
-                            )}
-                          </td>
-                        </tr>
+                            <button
+                              onClick={() => {
+                                setEditingSettlementPayment(record);
+                                setIsEditSettlementModalOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9.5px] font-bold bg-[#e0f2fe]/70 hover:bg-[#bae6fd] dark:bg-[#1e293b] dark:hover:bg-[#334155] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd]/60 dark:border-[#223269]/60 transition-colors cursor-pointer"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                              <span>Edit / Undo</span>
+                            </button>
+                          </div>
+                        </div>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </div>
+
+                  {/* TABLET view (640px–1023px): compact table */}
+                  <div className="hidden sm:block lg:hidden overflow-x-auto">
+                    <table className="w-full text-xs min-w-[540px]">
+                      <thead className="sticky top-0 bg-[#f8fafc] dark:bg-[#0b1329] border-b border-[#bae6fd]/40 dark:border-[#223269]/40 z-10">
+                        <tr>
+                          <th className="text-left px-3 py-2.5 text-[9.5px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400 w-8">#</th>
+                          <th className="text-left px-2 py-2.5 text-[9.5px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Date</th>
+                          <th className="text-left px-2 py-2.5 text-[9.5px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Company / Party</th>
+                          <th className="text-left px-2 py-2.5 text-[9.5px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Doc #</th>
+                          <th className="text-left px-2 py-2.5 text-[9.5px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Type</th>
+                          <th className="text-right px-3 py-2.5 text-[9.5px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Settled</th>
+                          <th className="text-right px-2 py-2.5 text-[9.5px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#bae6fd]/20 dark:divide-[#223269]/30">
+                        {paginatedHistory.map((record, idx) => {
+                          const settlementDate = record.paymentDate || record.date || '';
+                          const formattedDate = settlementDate ? (() => { try { return new Date(settlementDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return settlementDate; } })() : '—';
+                          const isSales = record.category === 'sales';
+                          const globalIdx = (historyPage - 1) * historyPerPage + idx + 1;
+                          return (
+                            <tr key={record.id} className="hover:bg-[#f8fafc] dark:hover:bg-[#0b1329]/60 transition-colors">
+                              <td className="px-3 py-2.5 text-[10px] font-mono text-[#94a3b8] dark:text-zinc-500">{globalIdx}</td>
+                              <td className="px-2 py-2.5 whitespace-nowrap text-[10.5px] font-bold text-[#0f172a] dark:text-white font-mono">{formattedDate}</td>
+                              <td className="px-2 py-2.5 max-w-[150px]">
+                                <span className="text-[10.5px] font-bold text-[#0f172a] dark:text-white block truncate" title={record.companyName}>{record.companyName || record.partyName || '—'}</span>
+                                {record.partyName && record.partyName !== record.companyName && <span className="text-[9px] text-[#64748b] dark:text-zinc-400 block truncate">{record.partyName}</span>}
+                              </td>
+                              <td className="px-2 py-2.5 whitespace-nowrap"><span className="text-[10px] font-mono text-[#0284c7] dark:text-[#38bdf8]">{record.documentNumber || '—'}</span></td>
+                              <td className="px-2 py-2.5">
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[8.5px] font-black uppercase border ${isSales ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/50' : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/50'}`}>{isSales ? 'Sales' : 'Purchase'}</span>
+                              </td>
+                              <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                                <span className={`text-[11px] font-black font-mono ${isSales ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'}`}>{isSales ? '+' : '-'}{currencySymbol}{formatAmount(record.paidAmount)}</span>
+                                {record.status === 'partially_paid' && <span className="text-[8.5px] text-amber-500 dark:text-amber-400 font-bold block text-right">Partial</span>}
+                              </td>
+                              <td className="px-2 py-2.5 text-right whitespace-nowrap">
+                                <button
+                                  onClick={() => {
+                                    setEditingSettlementPayment(record);
+                                    setIsEditSettlementModalOpen(true);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9.5px] font-bold bg-[#e0f2fe]/70 hover:bg-[#bae6fd] dark:bg-[#1e293b] dark:hover:bg-[#334155] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd]/60 dark:border-[#223269]/60 transition-colors cursor-pointer"
+                                  title="Edit / Reset settlement"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                  <span>Edit</span>
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* DESKTOP view (1024px+): full table with all columns */}
+                  <div className="hidden lg:block overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-[#f8fafc] dark:bg-[#0b1329] border-b border-[#bae6fd]/40 dark:border-[#223269]/40 z-10">
+                        <tr>
+                          <th className="text-left px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400 w-10">#</th>
+                          <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Date</th>
+                          <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Company / Party</th>
+                          <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Doc #</th>
+                          <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Type</th>
+                          <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Method</th>
+                          <th className="text-right px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Settled</th>
+                          <th className="text-right px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#bae6fd]/20 dark:divide-[#223269]/30">
+                        {paginatedHistory.map((record, idx) => {
+                          const settlementDate = record.paymentDate || record.date || '';
+                          const formattedDate = settlementDate ? (() => { try { return new Date(settlementDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return settlementDate; } })() : '—';
+                          const isSales = record.category === 'sales';
+                          const methodLabels: Record<string, string> = { upi: 'UPI', bank_transfer: 'Bank', cash: 'Cash', cheque: 'Cheque', card: 'Card', other: 'Other' };
+                          const methodLabel = methodLabels[record.paymentMethod || ''] || (record.paymentMethod || '—');
+                          const globalIdx = (historyPage - 1) * historyPerPage + idx + 1;
+                          return (
+                            <tr key={record.id} className="hover:bg-[#f8fafc] dark:hover:bg-[#0b1329]/60 transition-colors">
+                              <td className="px-4 py-2.5 text-[10.5px] font-mono text-[#94a3b8] dark:text-zinc-500">{globalIdx}</td>
+                              <td className="px-3 py-2.5 whitespace-nowrap"><span className="text-[11px] font-bold text-[#0f172a] dark:text-white font-mono">{formattedDate}</span></td>
+                              <td className="px-3 py-2.5 max-w-[200px]">
+                                <span className="text-[11px] font-bold text-[#0f172a] dark:text-white block truncate" title={record.companyName}>{record.companyName || record.partyName || '—'}</span>
+                                {record.partyName && record.partyName !== record.companyName && <span className="text-[9.5px] text-[#64748b] dark:text-zinc-400 block truncate">{record.partyName}</span>}
+                              </td>
+                              <td className="px-3 py-2.5 whitespace-nowrap"><span className="text-[10.5px] font-mono text-[#0284c7] dark:text-[#38bdf8]">{record.documentNumber || '—'}</span></td>
+                              <td className="px-3 py-2.5">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${isSales ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/50' : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/50'}`}>{isSales ? 'Sales' : 'Purchase'}</span>
+                              </td>
+                              <td className="px-3 py-2.5"><span className="text-[10.5px] font-medium text-[#64748b] dark:text-zinc-400">{methodLabel}</span></td>
+                              <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                                <span className={`text-[11.5px] font-black font-mono ${isSales ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'}`}>{isSales ? '+' : '-'}{currencySymbol}{formatAmount(record.paidAmount)}</span>
+                                {record.status === 'partially_paid' && <span className="text-[8.5px] text-amber-500 dark:text-amber-400 font-bold block text-right">Partial</span>}
+                              </td>
+                              <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                                <button
+                                  onClick={() => {
+                                    setEditingSettlementPayment(record);
+                                    setIsEditSettlementModalOpen(true);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-[#e0f2fe]/70 hover:bg-[#bae6fd] dark:bg-[#1e293b] dark:hover:bg-[#334155] text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd]/60 dark:border-[#223269]/60 transition-colors cursor-pointer"
+                                  title="Edit settlement amount, date, method or undo"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                  <span>Edit / Undo</span>
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
 
             {/* Footer: Summary + Pagination */}
-            <div className="px-4 py-3 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f8fafc]/80 dark:bg-[#0b1329]/60 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-2">
-              {/* Summary row */}
-              <div className="flex items-center gap-4 text-[10.5px] font-medium text-[#64748b] dark:text-zinc-400">
-                <span>
-                  Total Settled In:{' '}
-                  <span className="font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                    {currencySymbol}{formatAmount(settledHistoryRecords.filter(r => r.category === 'sales').reduce((a, r) => a + r.paidAmount, 0))}
+            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 bg-[#f8fafc]/80 dark:bg-[#0b1329]/60 shrink-0">
+              <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] sm:text-[10.5px] font-medium text-[#64748b] dark:text-zinc-400">
+                  <span className="flex items-center gap-1">
+                    <span className="hidden xs:inline">Total Settled In:</span>
+                    <span className="xs:hidden">In:</span>
+                    <span className="font-black text-emerald-600 dark:text-emerald-400 font-mono">{currencySymbol}{formatAmount(settledHistoryRecords.filter(r => r.category === 'sales').reduce((a, r) => a + r.paidAmount, 0))}</span>
                   </span>
-                </span>
-                <span className="text-[#bae6fd] dark:text-[#223269]">/</span>
-                <span>
-                  Total Settled Out:{' '}
-                  <span className="font-black text-blue-600 dark:text-blue-400 font-mono">
-                    {currencySymbol}{formatAmount(settledHistoryRecords.filter(r => r.category === 'purchases').reduce((a, r) => a + r.paidAmount, 0))}
+                  <span className="text-[#bae6fd] dark:text-[#223269]">/</span>
+                  <span className="flex items-center gap-1">
+                    <span className="hidden xs:inline">Total Settled Out:</span>
+                    <span className="xs:hidden">Out:</span>
+                    <span className="font-black text-blue-600 dark:text-blue-400 font-mono">{currencySymbol}{formatAmount(settledHistoryRecords.filter(r => r.category === 'purchases').reduce((a, r) => a + r.paidAmount, 0))}</span>
                   </span>
-                </span>
-              </div>
-              {/* Pagination */}
-              {historyTotalPages > 1 && (
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
-                    disabled={historyPage === 1}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center border border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#64748b] dark:text-zinc-400 disabled:opacity-30 hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f] transition-colors cursor-pointer disabled:cursor-default"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="text-[10.5px] font-bold text-[#64748b] dark:text-zinc-400 px-1">
-                    {historyPage} / {historyTotalPages}
-                  </span>
-                  <button
-                    onClick={() => setHistoryPage(p => Math.min(historyTotalPages, p + 1))}
-                    disabled={historyPage === historyTotalPages}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center border border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#64748b] dark:text-zinc-400 disabled:opacity-30 hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f] transition-colors cursor-pointer disabled:cursor-default"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
                 </div>
-              )}
+                {historyTotalPages > 1 && (
+                  <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                    <button onClick={() => setHistoryPage(p => Math.max(1, p - 1))} disabled={historyPage === 1} className="w-7 h-7 rounded-lg flex items-center justify-center border border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#64748b] dark:text-zinc-400 disabled:opacity-30 hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f] transition-colors cursor-pointer disabled:cursor-default">
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="hidden sm:flex items-center gap-1">
+                      {Array.from({ length: Math.min(historyTotalPages, 5) }, (_, i) => {
+                        let page: number;
+                        if (historyTotalPages <= 5) { page = i + 1; }
+                        else if (historyPage <= 3) { page = i + 1; }
+                        else if (historyPage >= historyTotalPages - 2) { page = historyTotalPages - 4 + i; }
+                        else { page = historyPage - 2 + i; }
+                        return (
+                          <button key={page} onClick={() => setHistoryPage(page)} className={`w-7 h-7 rounded-lg text-[10.5px] font-bold transition-colors cursor-pointer ${historyPage === page ? 'bg-[#0284c7] text-white border border-[#0284c7]' : 'border border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#64748b] dark:text-zinc-400 hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f]'}`}>{page}</button>
+                        );
+                      })}
+                    </div>
+                    <span className="sm:hidden text-[10.5px] font-bold text-[#64748b] dark:text-zinc-400 px-1 min-w-[36px] text-center">{historyPage}/{historyTotalPages}</span>
+                    <button onClick={() => setHistoryPage(p => Math.min(historyTotalPages, p + 1))} disabled={historyPage === historyTotalPages} className="w-7 h-7 rounded-lg flex items-center justify-center border border-[#bae6fd]/60 dark:border-[#223269]/60 text-[#64748b] dark:text-zinc-400 disabled:opacity-30 hover:bg-[#e0f2fe]/50 dark:hover:bg-[#1b264f] transition-colors cursor-pointer disabled:cursor-default">
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
+
           </div>
         </div>,
         document.body

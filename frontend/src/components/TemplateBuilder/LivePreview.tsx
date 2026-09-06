@@ -519,6 +519,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     ? invoiceData.grandTotal
     : Math.max(0, subTotal - (invoiceData?.discountTotal || 0) + (isTaxPresent ? taxAmount : 0) + (invoiceData?.freightCharges || 0));
 
+  // Round-off from invoice data (set by InvoiceModal when enableRoundOff is active)
+  const roundOffAmount: number | undefined = (invoiceData as any)?.roundOff;
+
   const renderInvoiceContent = (
     currentItems?: any[],
     startSrNo: number = 0,
@@ -1531,6 +1534,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         </div>
                       )
                     )}
+                    {roundOffAmount !== undefined && roundOffAmount !== 0 && (
+                      <div className={`flex justify-between text-[11px]`} style={{ color: roundOffAmount >= 0 ? '#059669' : '#e11d48' }}>
+                        <span>Round Off ({roundOffAmount >= 0 ? '+' : '-'})</span>
+                        <span>{roundOffAmount >= 0 ? '+' : ''}{roundOffAmount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-gray-900 font-bold text-[14px] pt-1">
                       <span>TOTAL</span>
                       <span>{currencySymbol} {grandTotal.toFixed(2)}</span>
@@ -1653,6 +1662,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                         </div>
                       )
                     )}
+                    {roundOffAmount !== undefined && roundOffAmount !== 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '10.5px', color: roundOffAmount >= 0 ? '#059669' : '#e11d48' }}>
+                        <span>Round Off ({roundOffAmount >= 0 ? '+' : '-'}):</span>
+                        <span>{currencySymbol} {roundOffAmount >= 0 ? '+' : ''}{roundOffAmount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', paddingTop: '10px', borderTop: '2px solid #e2e8f0', fontSize: '16px', fontWeight: 'bold', color: styleConfig.primaryColor }}><span>Grand Total:</span> <span>{currencySymbol} {grandTotal.toFixed(2)}</span></div>
                   </div>
                 )}
@@ -1660,6 +1675,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                   <div style={{ width: '100%' }}>
                     {freightChargesRow}
                     {discountRow}
+                    {roundOffAmount !== undefined && roundOffAmount !== 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '10.5px', color: roundOffAmount >= 0 ? '#059669' : '#e11d48' }}>
+                        <span>Round Off ({roundOffAmount >= 0 ? '+' : '-'}):</span>
+                        <span>{currencySymbol} {roundOffAmount >= 0 ? '+' : ''}{roundOffAmount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #e2e8f0', fontSize: '14px', fontWeight: 'bold', color: styleConfig.primaryColor }}>
                       <span>Grand Total:</span>
                       <span>{currencySymbol} {grandTotal.toFixed(2)}</span>
