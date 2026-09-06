@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { MasterVendor, MasterHsnCode, MasterGlAccount, MasterCategory, MasterSubCategory, MasterMapping } from '../types';
+import { MasterVendor, MasterHsnCode, MasterGlAccount, MasterCategory, MasterSubCategory, MasterMapping, PaymentRecord } from '../types';
 
 export interface MasterRegistriesPayload {
   vendors?: MasterVendor[];
@@ -11,6 +11,8 @@ export interface MasterRegistriesPayload {
   subCategories?: MasterSubCategory[];
   glAccounts?: MasterGlAccount[];
   mappings?: MasterMapping[];
+  manualPayments?: PaymentRecord[];
+  settlements?: Record<string, any>;
 }
 
 /**
@@ -388,6 +390,18 @@ export const pushMasterRegistriesToCloud = async (
     if (payload.subCategories !== undefined) setLocalMasterRegistry('makbills_masters_subcategories', suffix, payload.subCategories);
     if (payload.glAccounts !== undefined) setLocalMasterRegistry('makbills_masters_gl', suffix, payload.glAccounts);
     if (payload.mappings !== undefined) setLocalMasterRegistry('makbills_masters_mappings', suffix, payload.mappings);
+    if (payload.manualPayments !== undefined) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`makbills_manual_payments${suffix}`, JSON.stringify(payload.manualPayments));
+        localStorage.setItem('makbills_manual_payments', JSON.stringify(payload.manualPayments));
+      }
+    }
+    if (payload.settlements !== undefined) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`makbills_payments_settlements${suffix}`, JSON.stringify(payload.settlements));
+        localStorage.setItem('makbills_payments_settlements', JSON.stringify(payload.settlements));
+      }
+    }
 
     // 2. Fetch existing company_settings row
     const { data: companySettings } = await supabase
@@ -562,6 +576,21 @@ export const pullMasterRegistriesFromCloud = async (
     setLocalMasterRegistry('makbills_masters_gl', suffix, mergedGlAccounts);
     setLocalMasterRegistry('makbills_masters_mappings', suffix, mergedMappings);
 
+    // Sync Manual Payments & Settlements across devices
+    let mergedManualPayments = Array.isArray(remoteMasterData.manualPayments) ? remoteMasterData.manualPayments : undefined;
+    if (mergedManualPayments !== undefined && typeof window !== 'undefined') {
+      localStorage.setItem(`makbills_manual_payments${suffix}`, JSON.stringify(mergedManualPayments));
+      localStorage.setItem('makbills_manual_payments', JSON.stringify(mergedManualPayments));
+      window.dispatchEvent(new CustomEvent('mak_manual_payment_added'));
+    }
+
+    let mergedSettlements = (remoteMasterData.settlements && typeof remoteMasterData.settlements === 'object') ? remoteMasterData.settlements : undefined;
+    if (mergedSettlements !== undefined && typeof window !== 'undefined') {
+      localStorage.setItem(`makbills_payments_settlements${suffix}`, JSON.stringify(mergedSettlements));
+      localStorage.setItem('makbills_payments_settlements', JSON.stringify(mergedSettlements));
+      window.dispatchEvent(new CustomEvent('mak_payment_settled'));
+    }
+
     const mergedPayload: MasterRegistriesPayload = {
       vendors: mergedVendors,
       actualVendors: mergedActualVendors,
@@ -572,6 +601,8 @@ export const pullMasterRegistriesFromCloud = async (
       subCategories: mergedSubCategories,
       glAccounts: mergedGlAccounts,
       mappings: mergedMappings,
+      manualPayments: mergedManualPayments,
+      settlements: mergedSettlements
     };
 
     return mergedPayload;

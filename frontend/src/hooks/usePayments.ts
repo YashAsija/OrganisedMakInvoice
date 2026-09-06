@@ -358,8 +358,8 @@ export function usePayments({
           const newMasterParty = {
             id: `settle_reg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
             name: rawParty || rawComp,
-            company: rawComp,
-            companyName: rawComp,
+            company: rawComp || rawParty,
+            companyName: rawComp || rawParty,
             partyType: partyTypeStr,
             category: 'Added from Payment Settlement',
             gstin: record.partyGstin || '',
@@ -374,6 +374,11 @@ export function usePayments({
             createdAt: nowIso,
             updatedAt: nowIso
           };
+
+          unmarkRegistryKeyDeleted(newMasterParty, suffix);
+          unmarkRegistryKeyDeleted(rawComp, suffix);
+          if (rawParty && rawParty !== rawComp) unmarkRegistryKeyDeleted(rawParty, suffix);
+          if (record.partyGstin) unmarkRegistryKeyDeleted(record.partyGstin, suffix);
 
           if (existingIdx >= 0) {
             cachedRegistry[existingIdx] = {
@@ -392,16 +397,24 @@ export function usePayments({
           localStorage.setItem(`${targetStorageKey}${suffix}`, JSON.stringify(cachedRegistry));
           localStorage.setItem(targetStorageKey, JSON.stringify(cachedRegistry));
 
-          // Dispatch Master Database refresh events
-          window.dispatchEvent(new CustomEvent(isPurchase ? 'makbills_sync_actual_vendors' : 'makbills_sync_vendors'));
-          window.dispatchEvent(new CustomEvent('makbills_registry_deleted'));
+          // Also ensure the primary key 'makbills_masters_vendors' or 'makbills_masters_actual_vendors' is synchronized
+          if (suffix) {
+            localStorage.setItem(targetStorageKey, JSON.stringify(cachedRegistry));
+          }
 
-          // Push to Supabase Cloud so it syncs across all devices logged into the same account
+          // Dispatch Master Database refresh events immediately for all listeners & reactive hooks
+          window.dispatchEvent(new CustomEvent(isPurchase ? 'makbills_sync_actual_vendors' : 'makbills_sync_vendors'));
+          window.dispatchEvent(new CustomEvent('makbills_sync_vendors'));
+          window.dispatchEvent(new CustomEvent('makbills_sync_actual_vendors'));
+          window.dispatchEvent(new CustomEvent('makbills_registry_deleted'));
+          window.dispatchEvent(new CustomEvent('storage'));
+
+          // Push to Supabase Cloud so both new company registry AND payment records sync across all devices
           supabase.auth.getSession().then(async ({ data: { session } }) => {
             if (session?.user?.id) {
-              unmarkRegistryKeyDeleted(newMasterParty, suffix);
               await pushMasterRegistriesToCloud(session.user.id, suffix, {
-                [isPurchase ? 'actualVendors' : 'vendors']: cachedRegistry
+                [isPurchase ? 'actualVendors' : 'vendors']: cachedRegistry,
+                manualPayments: updated
               });
 
               if (!isPurchase) {
@@ -425,6 +438,15 @@ export function usePayments({
           }).catch(cloudErr => {
             console.warn('[usePayments] Master database cloud push notice:', cloudErr);
           });
+        } else {
+          // If no new party details, still push the updated manualPayments list to cloud
+          supabase.auth.getSession().then(async ({ data: { session } }) => {
+            if (session?.user?.id) {
+              await pushMasterRegistriesToCloud(session.user.id, suffix, {
+                manualPayments: updated
+              });
+            }
+          }).catch(() => {});
         }
       } catch (err) {
         console.warn('[usePayments] Master database registry insertion notice:', err);
@@ -445,6 +467,15 @@ export function usePayments({
       localStorage.setItem(`${MANUAL_PAYMENTS_STORAGE_KEY}${suffix}`, JSON.stringify(updated));
       localStorage.setItem(MANUAL_PAYMENTS_STORAGE_KEY, JSON.stringify(updated));
       window.dispatchEvent(new CustomEvent('mak_manual_payment_deleted', { detail: { id } }));
+
+      // Push deletion to Supabase Cloud
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (session?.user?.id) {
+          await pushMasterRegistriesToCloud(session.user.id, suffix, {
+            manualPayments: updated
+          });
+        }
+      }).catch(() => {});
     }
     setRefreshTrigger(prev => prev + 1);
   }, [getManualPayments, suffix]);
@@ -506,6 +537,20 @@ export function usePayments({
     if (typeof window !== 'undefined') {
       localStorage.setItem(`${SETTLEMENTS_STORAGE_KEY}${suffix}`, JSON.stringify(currentSettlements));
       localStorage.setItem(SETTLEMENTS_STORAGE_KEY, JSON.stringify(currentSettlements));
+
+      // Push settlements and manual payments to Supabase Cloud
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (session?.user?.id) {
+          const cloudPayload: any = {
+            settlements: currentSettlements
+          };
+          if (manualMatch) {
+            const currentLatestManuals = getManualPayments();
+            cloudPayload.manualPayments = currentLatestManuals;
+          }
+          await pushMasterRegistriesToCloud(session.user.id, suffix, cloudPayload);
+        }
+      }).catch(() => {});
     }
 
     // 3. If it's an Invoice / Purchase document

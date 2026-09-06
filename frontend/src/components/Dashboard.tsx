@@ -2697,57 +2697,43 @@ export default function Dashboard({
 
 
             <button onClick={() => handleTabClick('master_hsn')} className={navItemClass('master_hsn')}>
-
               <div className="flex items-center gap-2.5">
-
                 <div className={iconWrapper(activeTab === 'master_hsn', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><FileSpreadsheet className="w-3.5 h-3.5" /></div>
-
                 <span>HSN Registry</span>
-
               </div>
-
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'master_hsn' ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269]'}`}>
+                {hsnCodes.length}
+              </span>
             </button>
-
-
 
             <button onClick={() => handleTabClick('master_transport')} className={navItemClass('master_transport')}>
-
               <div className="flex items-center gap-2.5">
-
                 <div className={iconWrapper(activeTab === 'master_transport', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Truck className="w-3.5 h-3.5" /></div>
-
                 <span>Transport Database</span>
-
               </div>
-
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'master_transport' ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269]'}`}>
+                {transports.length}
+              </span>
             </button>
-
-
 
             <button onClick={() => handleTabClick('catalog_category')} className={navItemClass('catalog_category')}>
-
               <div className="flex items-center gap-2.5">
-
                 <div className={iconWrapper(activeTab === 'catalog_category', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Tag className="w-3.5 h-3.5" /></div>
-
                 <span>Product Category</span>
-
               </div>
-
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'catalog_category' ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269]'}`}>
+                {categories.length}
+              </span>
             </button>
 
-
-
             <button onClick={() => handleTabClick('catalog_material')} className={navItemClass('catalog_material')}>
-
               <div className="flex items-center gap-2.5">
-
                 <div className={iconWrapper(activeTab === 'catalog_material', 'bg-[#f8fafc] text-[#64748b] dark:bg-zinc-800 dark:text-zinc-300')}><Wrench className="w-3.5 h-3.5" /></div>
-
                 <span>Material Catalog</span>
-
               </div>
-
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'catalog_material' ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-[#e0f2fe] text-[#0284c7] dark:bg-[#1b264f] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269]'}`}>
+                {materials.length}
+              </span>
             </button>
 
           </div>
@@ -3010,6 +2996,7 @@ export default function Dashboard({
       case 'master_database':
         title = 'Master Database';
         description = 'Unified directory combining all client profiles, vendor databases, and billed party contacts';
+        const totalMasterDbCount = masterDatabaseList.length;
         if (masterDbFilter === 'clients') {
           list = masterDatabaseList.filter(item => item.partyType === 'Client' || item.partyType === 'Client & Vendor');
         } else if (masterDbFilter === 'vendors') {
@@ -3020,15 +3007,11 @@ export default function Dashboard({
           list = masterDatabaseList;
         }
         columns = [
-          { header: 'Party Name', key: 'name' },
-          { header: 'Company Name', key: 'company' },
-          { header: 'Party Type', key: 'partyType' },
-          { header: 'GSTIN / Tax No.', key: 'taxId' },
-          { header: 'PAN', key: 'pan' },
-          { header: 'Email Address', key: 'email' },
-          { header: 'Phone Number', key: 'phone' },
-          { header: 'State / Region', key: 'state' },
-          { header: 'Category / Tag', key: 'category' }
+          { header: 'Party / Company', key: 'name' },
+          { header: 'Type & Tag', key: 'partyType' },
+          { header: 'GSTIN / PAN', key: 'taxId' },
+          { header: 'Contact Details', key: 'contact' },
+          { header: 'State / Region', key: 'state' }
         ];
         fields = [
           { label: 'Party Type', key: 'partyType', type: 'select', options: ['Client', 'Vendor', 'Client & Vendor'] },
@@ -3050,14 +3033,11 @@ export default function Dashboard({
         description = 'Pre-saved client profiles, company settings, and billing contact information';
         list = masterDatabaseList.filter(item => item.partyType === 'Client' || item.partyType === 'Client & Vendor');
         columns = [
-          { header: 'Client Name', key: 'name' },
-          { header: 'Company Name', key: 'company' },
-          { header: 'GSTIN / Tax No.', key: 'taxId' },
-          { header: 'PAN', key: 'pan' },
-          { header: 'Email Address', key: 'email' },
-          { header: 'Phone Number', key: 'phone' },
-          { header: 'State / Region', key: 'state' },
-          { header: 'Category / Tag', key: 'category' }
+          { header: 'Client / Company', key: 'name' },
+          { header: 'Category / Tag', key: 'category' },
+          { header: 'GSTIN / PAN', key: 'taxId' },
+          { header: 'Contact Details', key: 'contact' },
+          { header: 'State / Region', key: 'state' }
         ];
         fields = [
           { label: 'Client Name', key: 'name', type: 'text' },
@@ -3078,14 +3058,11 @@ export default function Dashboard({
         description = 'Pre-saved vendor and supplier profiles, company configurations, and billing credentials';
         list = masterDatabaseList.filter(item => item.partyType === 'Vendor' || item.partyType === 'Client & Vendor');
         columns = [
-          { header: 'Vendor Name', key: 'name' },
-          { header: 'Company Name', key: 'company' },
-          { header: 'GSTIN / Tax No.', key: 'taxId' },
-          { header: 'PAN', key: 'pan' },
-          { header: 'Email Address', key: 'email' },
-          { header: 'Phone Number', key: 'phone' },
-          { header: 'State / Region', key: 'state' },
-          { header: 'Category / Tag', key: 'category' }
+          { header: 'Vendor / Company', key: 'name' },
+          { header: 'Category / Tag', key: 'category' },
+          { header: 'GSTIN / PAN', key: 'taxId' },
+          { header: 'Contact Details', key: 'contact' },
+          { header: 'State / Region', key: 'state' }
         ];
         fields = [
           { label: 'Vendor Name', key: 'name', type: 'text' },
@@ -4628,8 +4605,8 @@ export default function Dashboard({
           ) : (
             <>
               {/* Desktop Table View */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+              <div className="hidden md:block w-full overflow-hidden">
+                <table className="w-full text-left border-collapse table-fixed">
                   {/* Table Head */}
                   <thead>
                     <tr className={`border-b border-[#bae6fd]/30 dark:border-[#223269]/30 ${accent ? `${accent.theadBg}` : 'bg-[#f4f9ff] dark:bg-[#0b1329]'}`}>
@@ -4652,11 +4629,11 @@ export default function Dashboard({
                         />
                       </th>
                       {columns.map((col, idx) => (
-                        <th key={idx} className="px-4 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#64748b]/75 dark:text-zinc-500 whitespace-nowrap">
+                        <th key={idx} className="px-3.5 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#64748b]/75 dark:text-zinc-500 truncate">
                           {col.header}
                         </th>
                       ))}
-                      <th className="px-4 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#64748b]/75 dark:text-zinc-500 text-right">
+                      <th className="w-24 px-3.5 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#64748b]/75 dark:text-zinc-500 text-right">
                         Actions
                       </th>
                     </tr>
@@ -4666,6 +4643,8 @@ export default function Dashboard({
                   <tbody className="divide-y divide-[#bae6fd]/20 dark:divide-[#223269]/20">
                     {pagedList.map((item, rowIdx) => {
                       const isSelected = selectedMasterItemIds.includes(item.id);
+                      const isDirectoryTab = activeTab === 'master_database' || activeTab === 'master_vendor' || activeTab === 'master_actual_vendor';
+
                       return (
                         <tr
                           key={`master-item-${item.id || rowIdx}-${rowIdx}`}
@@ -4676,7 +4655,7 @@ export default function Dashboard({
                           }`}
                         >
                           {/* Checkbox */}
-                          <td className="w-10 px-3.5 py-3.5 text-center">
+                          <td className="w-10 px-3.5 py-3 text-center align-middle">
                             <input
                               type="checkbox"
                               checked={isSelected}
@@ -4695,25 +4674,129 @@ export default function Dashboard({
                             const cellVal = item[col.key];
                             const isFirstCol = idx2 === 0;
 
+                            if (isDirectoryTab) {
+                              if (isFirstCol) {
+                                return (
+                                  <td key={idx2} className="px-3.5 py-3 align-middle">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f] dark:border-[#223269]'}`}>
+                                        {activeTab === 'master_database' && <Layers className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#0284c7] dark:text-[#38bdf8]'}`} />}
+                                        {(activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') && <User className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="text-xs font-extrabold uppercase tracking-tight text-[#0f172a] dark:text-white truncate" title={String(item.name || '')}>
+                                          {String(item.name || '-')}
+                                        </div>
+                                        {item.company && item.company !== item.name && (
+                                          <div className="text-[10px] text-[#64748b]/90 dark:text-zinc-400 font-medium truncate" title={item.company}>
+                                            {item.company}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+                                );
+                              }
+
+                              if (col.key === 'partyType') {
+                                return (
+                                  <td key={idx2} className="px-3.5 py-3 align-middle">
+                                    <div className="flex flex-col gap-1 items-start">
+                                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                        item.partyType === 'Vendor'
+                                          ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800/40'
+                                          : item.partyType === 'Client & Vendor'
+                                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40'
+                                          : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border-sky-200 dark:border-sky-800/40'
+                                      }`}>
+                                        {item.partyType || 'Client'}
+                                      </span>
+                                      {item.category && (
+                                        <span className={`inline-flex items-center px-1.5 py-0.2 rounded-md text-[8.5px] font-bold uppercase tracking-wider border ${getCategoryBadgeStyle(item.category)}`}>
+                                          {item.category}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                );
+                              }
+
+                              if (col.key === 'taxId') {
+                                return (
+                                  <td key={idx2} className="px-3.5 py-3 align-middle">
+                                    <div className="flex flex-col text-[11px] font-mono leading-tight">
+                                      <span className="font-semibold text-[#0f172a] dark:text-zinc-200 truncate" title={item.taxId || item.gstin || '-'}>
+                                        {item.taxId || item.gstin || '-'}
+                                      </span>
+                                      {item.pan && item.pan !== (item.taxId || item.gstin) && (
+                                        <span className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 font-medium truncate" title={`PAN: ${item.pan}`}>
+                                          PAN: {item.pan}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                );
+                              }
+
+                              if (col.key === 'contact') {
+                                return (
+                                  <td key={idx2} className="px-3.5 py-3 align-middle">
+                                    <div className="flex flex-col text-[11px] leading-tight min-w-0">
+                                      {item.email ? (
+                                        <span className="text-sky-600 dark:text-sky-400 font-medium font-mono lowercase truncate" title={item.email}>
+                                          {item.email}
+                                        </span>
+                                      ) : null}
+                                      {item.phone ? (
+                                        <span className="text-[#64748b]/90 dark:text-zinc-400 font-mono truncate" title={item.phone}>
+                                          {item.phone}
+                                        </span>
+                                      ) : null}
+                                      {!item.email && !item.phone && (
+                                        <span className="text-[#64748b]/50 dark:text-zinc-600">-</span>
+                                      )}
+                                    </div>
+                                  </td>
+                                );
+                              }
+
+                              if (col.key === 'category') {
+                                return (
+                                  <td key={idx2} className="px-3.5 py-3 align-middle">
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${getCategoryBadgeStyle(item.category)}`}>
+                                      {item.category || 'General'}
+                                    </span>
+                                  </td>
+                                );
+                              }
+
+                              if (col.key === 'state') {
+                                return (
+                                  <td key={idx2} className="px-3.5 py-3 align-middle">
+                                    <span className="text-[11px] text-[#0f172a] dark:text-zinc-300 font-medium truncate block" title={item.state || '-'}>
+                                      {item.state || '-'}
+                                    </span>
+                                  </td>
+                                );
+                              }
+                            }
+
                             return (
-                              <td key={idx2} className="px-4 py-3.5">
+                              <td key={idx2} className="px-3.5 py-3 align-middle">
                                 {isFirstCol ? (
-                                  <div className="flex items-center gap-3">
-                                    {/* Avatar — per-tab accent color */}
+                                  <div className="flex items-center gap-2.5 min-w-0">
                                     <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${accent ? `${accent.avatarBg} ${accent.avatarBgDark}` : 'bg-[#e0f2fe] border-[#bae6fd] dark:bg-[#1b264f] dark:border-[#223269]'}`}>
-                                      {activeTab === 'master_database' && <Layers className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#0284c7] dark:text-[#38bdf8]'}`} />}
-                                      {(activeTab === 'master_vendor' || activeTab === 'master_actual_vendor') && <User className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                                       {activeTab === 'master_transport' && <Truck className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                                       {activeTab === 'master_hsn' && <FileSpreadsheet className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                                       {activeTab === 'catalog_material' && <Wrench className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                                       {activeTab === 'catalog_category' && <Tag className={`w-3.5 h-3.5 ${accent ? `${accent.avatarIcon} ${accent.avatarIconDark}` : 'text-[#64748b] dark:text-zinc-400'}`} />}
                                     </div>
-                                    <span className="text-xs font-extrabold uppercase tracking-tight text-[#0f172a] dark:text-white">
+                                    <span className="text-xs font-extrabold uppercase tracking-tight text-[#0f172a] dark:text-white truncate" title={String(cellVal || '')}>
                                       {String(cellVal || '')}
                                     </span>
                                   </div>
                                 ) : col.key === 'partyType' ? (
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
                                     cellVal === 'Vendor'
                                       ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800/40'
                                       : cellVal === 'Client & Vendor'
@@ -4727,19 +4810,19 @@ export default function Dashboard({
                                     {currencySymbol}{formatNum(cellVal || 0)}
                                   </span>
                                 ) : col.key === 'category' ? (
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${getCategoryBadgeStyle(cellVal)}`}>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${getCategoryBadgeStyle(cellVal)}`}>
                                     {cellVal || 'General'}
                                   </span>
                                 ) : col.key === 'email' ? (
-                                  <span className="text-[11px] text-sky-600 dark:text-sky-400 font-medium font-mono lowercase">
+                                  <span className="text-[11px] text-sky-600 dark:text-sky-400 font-medium font-mono lowercase truncate block" title={cellVal}>
                                     {cellVal || '-'}
                                   </span>
                                 ) : col.key === 'phone' ? (
-                                  <span className="text-[11px] text-[#64748b]/90 dark:text-zinc-400 font-mono">
+                                  <span className="text-[11px] text-[#64748b]/90 dark:text-zinc-400 font-mono truncate block" title={cellVal}>
                                     {cellVal || '-'}
                                   </span>
                                 ) : (
-                                  <span className="text-[11px] text-[#0f172a] dark:text-zinc-300 font-medium">
+                                  <span className="text-[11px] text-[#0f172a] dark:text-zinc-300 font-medium truncate block" title={String(cellVal || '-')}>
                                     {String(cellVal || '-')}
                                   </span>
                                 )}
@@ -4747,9 +4830,9 @@ export default function Dashboard({
                             );
                           })}
 
-                          {/* Actions */}
-                          <td className="px-4 py-3.5">
-                            <div className="flex justify-end items-center gap-0.5">
+                          {/* Actions - Always Visible */}
+                          <td className="w-24 px-3.5 py-3 align-middle text-right">
+                            <div className="flex justify-end items-center gap-1.5">
                               <button
                                 onClick={() => {
                                   const normalized = {
@@ -4766,14 +4849,16 @@ export default function Dashboard({
                                   setEditingMasterItem(normalized);
                                   setIsMasterModalOpen(true);
                                 }}
-                                className="p-2 text-[#64748b]/70 hover:text-[#0284c7] dark:text-zinc-500 dark:hover:text-[#38bdf8] hover:bg-[#e0f2fe]/50 dark:hover:bg-zinc-800 rounded-lg transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                                className="p-1.5 text-[#0284c7] hover:text-[#0369a1] dark:text-[#38bdf8] dark:hover:text-[#7dd3fc] bg-[#e0f2fe]/60 hover:bg-[#e0f2fe] dark:bg-[#1b264f]/60 dark:hover:bg-[#1b264f] rounded-lg transition-colors cursor-pointer border border-[#bae6fd]/60 dark:border-[#223269]"
+                                title="Edit record"
                                 aria-label="Edit record"
                               >
                                 <PenTool className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => handleDeleteMasterItem(item.id)}
-                                className="p-2 text-rose-400/70 hover:text-rose-500 dark:text-rose-500/60 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                                className="p-1.5 text-rose-500 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/60 rounded-lg transition-colors cursor-pointer border border-rose-200 dark:border-rose-900/50"
+                                title="Delete record"
                                 aria-label="Delete record"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
