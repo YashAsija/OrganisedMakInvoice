@@ -21,15 +21,36 @@ interface AuditLog {
 }
 
 export default function AuditLogsAdminPage() {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [total, setTotal] = useState(0);
+  const [logs, setLogs] = useState<AuditLog[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("makinvoices_admin_audit_logs_cache");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return [];
+  });
+  const [total, setTotal] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("makinvoices_admin_audit_logs_total");
+        if (cached) return parseInt(cached, 10);
+      } catch (e) {}
+    }
+    return 0;
+  });
   const [page, setPage] = useState(1);
   const [limit] = useState(15);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return !sessionStorage.getItem("makinvoices_admin_audit_logs_cache");
+    }
+    return true;
+  });
   const [error, setError] = useState<string | null>(null);
 
   const fetchLogs = async () => {
-    setLoading(true);
+    if (logs.length === 0) setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/admin/audit-logs?page=${page}&limit=${limit}`);
@@ -39,6 +60,12 @@ export default function AuditLogsAdminPage() {
       const data = await res.json();
       setLogs(data.logs);
       setTotal(data.total);
+      if (typeof window !== "undefined" && page === 1) {
+        try {
+          sessionStorage.setItem("makinvoices_admin_audit_logs_cache", JSON.stringify(data.logs));
+          sessionStorage.setItem("makinvoices_admin_audit_logs_total", data.total.toString());
+        } catch (e) {}
+      }
     } catch (err: any) {
       setError(err.message || "An error occurred fetching logs");
     } finally {

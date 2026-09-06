@@ -49,8 +49,24 @@ interface UserInfo {
 }
 
 export default function TicketsAdminPage() {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [total, setTotal] = useState(0);
+  const [tickets, setTickets] = useState<Ticket[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("makinvoices_admin_tickets_cache");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return [];
+  });
+  const [total, setTotal] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("makinvoices_admin_tickets_total");
+        if (cached) return parseInt(cached, 10);
+      } catch (e) {}
+    }
+    return 0;
+  });
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   
@@ -73,11 +89,16 @@ export default function TicketsAdminPage() {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [replySending, setReplySending] = useState(false);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return !sessionStorage.getItem("makinvoices_admin_tickets_cache");
+    }
+    return true;
+  });
   const [error, setError] = useState<string | null>(null);
 
   const fetchTickets = async () => {
-    setLoading(true);
+    if (tickets.length === 0) setLoading(true);
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -94,6 +115,12 @@ export default function TicketsAdminPage() {
       const data = await res.json();
       setTickets(data.tickets);
       setTotal(data.total);
+      if (typeof window !== "undefined" && !search && !statusFilter && !priorityFilter && !categoryFilter && page === 1) {
+        try {
+          sessionStorage.setItem("makinvoices_admin_tickets_cache", JSON.stringify(data.tickets));
+          sessionStorage.setItem("makinvoices_admin_tickets_total", data.total.toString());
+        } catch (e) {}
+      }
     } catch (err: any) {
       setError(err.message || "An error occurred fetching tickets");
     } finally {

@@ -27,12 +27,32 @@ export default function AdminShellLayout({ children }: AdminShellLayoutProps) {
   const pathname = usePathname();
   const adminSlug = params.admin_slug as string;
 
-  const [loading, setLoading] = useState(true);
-  const [adminEmail, setAdminEmail] = useState<string | null>(null);
+  const [adminEmail, setAdminEmail] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("makinvoices_admin_email") || null;
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== "undefined") {
+      // If we already have a cached admin email in session, mount the shell instantly (0ms delay)
+      return !sessionStorage.getItem("makinvoices_admin_email");
+    }
+    return true;
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // Check if the admin is authenticated
+    // Prefetch all admin routes and warm them up in browser cache
+    if (adminSlug) {
+      router.prefetch(`/${adminSlug}/dashboard`);
+      router.prefetch(`/${adminSlug}/analytics`);
+      router.prefetch(`/${adminSlug}/tickets`);
+      router.prefetch(`/${adminSlug}/users`);
+      router.prefetch(`/${adminSlug}/audit-log`);
+    }
+
+    // Check if the admin is authenticated in the background
     const checkAuth = async () => {
       try {
         const res = await fetch("/api/admin/me");
@@ -41,9 +61,20 @@ export default function AdminShellLayout({ children }: AdminShellLayoutProps) {
         }
         const data = await res.json();
         setAdminEmail(data.email);
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("makinvoices_admin_email", data.email);
+        }
         setLoading(false);
       } catch (err) {
-        // Not authenticated -> redirect to login
+        // Not authenticated -> clear cache and redirect to login
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("makinvoices_admin_email");
+          sessionStorage.removeItem("makinvoices_admin_stats_cache");
+          sessionStorage.removeItem("makinvoices_admin_users_cache");
+          sessionStorage.removeItem("makinvoices_admin_analytics_cache");
+          sessionStorage.removeItem("makinvoices_admin_tickets_cache");
+          sessionStorage.removeItem("makinvoices_admin_audit_logs_cache");
+        }
         router.push(`/${adminSlug}`);
       }
     };
@@ -51,11 +82,18 @@ export default function AdminShellLayout({ children }: AdminShellLayoutProps) {
   }, [adminSlug, router]);
 
   const handleLogout = async () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("makinvoices_admin_email");
+      sessionStorage.removeItem("makinvoices_admin_stats_cache");
+      sessionStorage.removeItem("makinvoices_admin_users_cache");
+      sessionStorage.removeItem("makinvoices_admin_analytics_cache");
+    }
     try {
       await fetch("/api/admin/logout", { method: "POST" });
       router.push(`/${adminSlug}`);
     } catch (err) {
       console.error("Logout failed:", err);
+      router.push(`/${adminSlug}`);
     }
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Lock, Mail, Loader2, AlertCircle, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import adminConfig from "../../../admin_config.json";
@@ -31,6 +31,17 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Prefetch admin routes on mount for millisecond-fast navigation after login
+  useEffect(() => {
+    if (adminSlug === adminConfig.admin_route_slug) {
+      router.prefetch(`/${adminSlug}/dashboard`);
+      router.prefetch(`/${adminSlug}/users`);
+      router.prefetch(`/${adminSlug}/analytics`);
+      router.prefetch(`/${adminSlug}/tickets`);
+      router.prefetch(`/${adminSlug}/audit-log`);
+    }
+  }, [adminSlug, router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -60,7 +71,12 @@ export default function AdminLoginPage() {
         throw new Error(data?.detail || "Invalid login credentials");
       }
 
-      // Successful login -> Redirect to admin dashboard
+      // Immediately cache authenticated email in sessionStorage for instant 0ms layout hydration
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("makinvoices_admin_email", email.trim().toLowerCase());
+      }
+
+      // Fast navigation to admin dashboard
       router.push(`/${adminSlug}/dashboard`);
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");

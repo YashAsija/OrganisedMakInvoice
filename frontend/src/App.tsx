@@ -499,20 +499,37 @@ export default function App() {
     }
   }, [userEmail, user]);
 
-  // Main Business state
-  const [profile, setProfile] = useState<BusinessProfile>({
-    uid: '',
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    taxId: '',
-    currency: 'INR',
-    defaultTaxRate: 18,
-    updatedAt: new Date().toISOString()
+  // Main Business state - initialized synchronously from local storage cache for instant 0ms mount
+  const [profile, setProfile] = useState<BusinessProfile>(() => {
+    if (typeof window !== "undefined") {
+      const activeEmail = localStorage.getItem('makbills_custom_email');
+      const sfx = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
+      const localProfile = localStorage.getItem(`invoice_maker_biz_profile${sfx}`);
+      if (localProfile) {
+        try {
+          return JSON.parse(localProfile);
+        } catch (e) {}
+      }
+    }
+    return {
+      uid: '',
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      taxId: '',
+      currency: 'INR',
+      defaultTaxRate: 18,
+      updatedAt: new Date().toISOString()
+    };
   });
 
-  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise' | null>(null);
+  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'basic' | 'pro' | 'unlimited' | 'enterprise' | null>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem('makbills_subscription_tier') as any) || 'free';
+    }
+    return null;
+  });
 
   useEffect(() => {
     const handleSubChange = (e: any) => {
@@ -527,12 +544,73 @@ export default function App() {
     };
   }, []);
 
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>(() => {
+    if (typeof window !== "undefined") {
+      const activeEmail = localStorage.getItem('makbills_custom_email');
+      const sfx = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
+      const localRaw = localStorage.getItem(`invoice_maker_invoices${sfx}`);
+      if (localRaw) {
+        try {
+          const list = JSON.parse(localRaw);
+          if (Array.isArray(list)) return list.filter((inv: any) => !inv._pendingDelete);
+        } catch (e) {}
+      }
+    }
+    return [];
+  });
   const isCloudLoadedRef = useRef<boolean>(false);
-  const [presets, setPresets] = useState<PresetItem[]>([]);
-  const [clients, setClients] = useState<ClientProfile[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [customTemplates, setCustomTemplates] = useState<InvoiceTemplate[]>([]);
+  const [presets, setPresets] = useState<PresetItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const activeEmail = localStorage.getItem('makbills_custom_email');
+      const sfx = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
+      const localPresets = localStorage.getItem(`invoice_maker_presets${sfx}`);
+      if (localPresets) {
+        try {
+          return JSON.parse(localPresets);
+        } catch (e) {}
+      }
+    }
+    return [];
+  });
+  const [clients, setClients] = useState<ClientProfile[]>(() => {
+    if (typeof window !== "undefined") {
+      const activeEmail = localStorage.getItem('makbills_custom_email');
+      const sfx = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
+      const localClients = localStorage.getItem(`invoice_maker_clients${sfx}`);
+      if (localClients) {
+        try {
+          const parsed = JSON.parse(localClients);
+          if (Array.isArray(parsed)) return parsed.filter((c: any) => !c._pendingDelete);
+        } catch (e) {}
+      }
+    }
+    return [];
+  });
+  const [expenses, setExpenses] = useState<Expense[]>(() => {
+    if (typeof window !== "undefined") {
+      const activeEmail = localStorage.getItem('makbills_custom_email');
+      const sfx = activeEmail ? `_${encodeURIComponent(activeEmail)}` : '';
+      const localExpenses = localStorage.getItem(`invoice_maker_expenses${sfx}`);
+      if (localExpenses) {
+        try {
+          const parsed = JSON.parse(localExpenses);
+          if (Array.isArray(parsed)) return parsed.filter((ex: any) => !ex._pendingDelete);
+        } catch (e) {}
+      }
+    }
+    return [];
+  });
+  const [customTemplates, setCustomTemplates] = useState<InvoiceTemplate[]>(() => {
+    if (typeof window !== "undefined") {
+      const localTemplates = localStorage.getItem('makbills_custom_templates');
+      if (localTemplates) {
+        try {
+          return JSON.parse(localTemplates);
+        } catch (e) {}
+      }
+    }
+    return [];
+  });
 
   // Periodic background sync every 90s when there are pending items
   // (placed after state declarations so invoices/clients/expenses are in scope)

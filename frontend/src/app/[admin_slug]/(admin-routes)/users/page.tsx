@@ -156,7 +156,9 @@ export default function UsersAdminPage() {
   };
 
   const fetchUsers = async () => {
-    setLoading(true);
+    if (users.length === 0) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const params = new URLSearchParams({
@@ -177,37 +179,48 @@ export default function UsersAdminPage() {
       }
       const data = await res.json();
       const rawUsers: UserRecord[] = Array.isArray(data.users) ? data.users : [];
-
-      // Query live subscriptions from Supabase directly via admin endpoint
-      try {
-        const uids = rawUsers.map(u => u.uid).filter(Boolean);
-        const emails = rawUsers.map(u => u.email).filter(Boolean);
-        const subRes = await fetch(`/api/admin-subscriptions?uids=${encodeURIComponent(uids.join(','))}&emails=${encodeURIComponent(emails.join(','))}`);
-        if (subRes.ok) {
-          const subData = await subRes.json();
-          const byUid = subData.byUserId || {};
-          const byEmail = subData.byUserEmail || {};
-
-          for (const u of rawUsers) {
-            const sub = byUid[u.uid] || (u.email ? byEmail[u.email.toLowerCase()] : null);
-            if (sub) {
-              u.subscription = sub;
-            }
-          }
-        }
-      } catch (subFetchErr) {
-        console.warn('[UsersAdmin] Live subscription sync note:', subFetchErr);
-      }
-
-      setUsers(rawUsers);
       const totalCount = typeof data.total === "number" ? data.total : 0;
+
+      // Update state and cache immediately so table renders in 0ms!
+      setUsers(rawUsers);
       setTotal(totalCount);
+      setLoading(false);
 
       if (page === 1 && !search.trim() && typeof window !== "undefined") {
         try {
           sessionStorage.setItem("makinvoices_admin_users_cache", JSON.stringify(rawUsers));
           sessionStorage.setItem("makinvoices_admin_users_total", String(totalCount));
         } catch (e) {}
+      }
+
+      // Query live subscriptions in the background asynchronously without blocking table render
+      const uids = rawUsers.map(u => u.uid).filter(Boolean);
+      const emails = rawUsers.map(u => u.email).filter(Boolean);
+      if (uids.length > 0 || emails.length > 0) {
+        fetch(`/api/admin-subscriptions?uids=${encodeURIComponent(uids.join(','))}&emails=${encodeURIComponent(emails.join(','))}`)
+          .then(async (subRes) => {
+            if (subRes.ok) {
+              const subData = await subRes.json();
+              const byUid = subData.byUserId || {};
+              const byEmail = subData.byUserEmail || {};
+
+              setUsers(prevUsers => {
+                const updated = prevUsers.map(u => {
+                  const sub = byUid[u.uid] || (u.email ? byEmail[u.email.toLowerCase()] : null);
+                  return sub ? { ...u, subscription: sub } : u;
+                });
+                if (page === 1 && !search.trim() && typeof window !== "undefined") {
+                  try {
+                    sessionStorage.setItem("makinvoices_admin_users_cache", JSON.stringify(updated));
+                  } catch (e) {}
+                }
+                return updated;
+              });
+            }
+          })
+          .catch(subFetchErr => {
+            console.warn('[UsersAdmin] Live subscription background sync note:', subFetchErr);
+          });
       }
     } catch (err: any) {
       setError(err.message || "An error occurred fetching users");
