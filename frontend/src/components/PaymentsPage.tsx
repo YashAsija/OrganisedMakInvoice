@@ -1865,7 +1865,7 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#bae6fd]/20 dark:divide-[#223269]/20">
-                  {paginatedPayments.map((p) => {
+                  {paginatedPayments.map((p, pIdx) => {
                     const isFullyPaid = p.status === 'paid';
                     const isOverdue = p.status === 'overdue';
                     const isPartial = p.status === 'partially_paid';
@@ -1873,7 +1873,7 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
 
                     return (
                       <tr
-                        key={p.id}
+                        key={`payment-${p.id || pIdx}-${pIdx}`}
                         className="hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 transition-colors group h-12"
                       >
                         {/* Document info */}

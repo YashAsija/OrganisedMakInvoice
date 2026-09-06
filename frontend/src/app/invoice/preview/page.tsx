@@ -30,7 +30,7 @@ function InvoicePreviewContent() {
 
     const updateHeight = () => {
       if (el) {
-        setMeasuredHeight(el.scrollHeight || 1123);
+        setMeasuredHeight(Math.max(el.offsetHeight, el.scrollHeight, 1123));
       }
     };
 

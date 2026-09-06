@@ -417,15 +417,17 @@ export default function TemplateManager({ businessProfile, subscriptionTier = 'f
 
   if (isBuilding) {
     return (
-      <TemplateCreationHub 
-        initialTemplate={editingTemplate} 
-        businessProfile={businessProfile}
-        onSave={handleSaveTemplate}
-        onCancel={() => {
-          setIsBuilding(false);
-          setEditingTemplate(null);
-        }}
-      />
+      <div className="w-full h-full flex flex-col flex-1 min-h-0">
+        <TemplateCreationHub 
+          initialTemplate={editingTemplate} 
+          businessProfile={businessProfile}
+          onSave={handleSaveTemplate}
+          onCancel={() => {
+            setIsBuilding(false);
+            setEditingTemplate(null);
+          }}
+        />
+      </div>
     );
   }
 
@@ -628,9 +630,9 @@ export default function TemplateManager({ businessProfile, subscriptionTier = 'f
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {sortedTemplates.map(template => (
+              {sortedTemplates.map((template, tIdx) => (
                 <div
-                  key={template.id}
+                  key={`template-${template.id || tIdx}-${tIdx}`}
                   onClick={() => setSelectedTemplateForModal(template)}
                   className={`flex flex-col bg-white dark:bg-[#111a36] border rounded-2xl overflow-hidden shadow-xs hover:shadow-lg transition-all group relative cursor-pointer ${
                     template.isDefault

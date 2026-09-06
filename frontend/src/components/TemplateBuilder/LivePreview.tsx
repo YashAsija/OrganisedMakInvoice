@@ -304,12 +304,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
   const baseStyle: React.CSSProperties = {
     width: isPrintMode ? '100%' : width,
-    height: (isPrintMode || forceFullHeight) ? minHeight : 'auto',
+    height: 'auto',
     minHeight: (isPrintMode || forceFullHeight) ? minHeight : 'auto',
     paddingTop: layout.compact ? '15px' : (layout.margins === 'Compact' ? '10px' : '20px'),
     paddingLeft: getPadding(),
     paddingRight: getPadding(),
-    paddingBottom: '15px',
+    paddingBottom: '25px',
     border: '1px solid #e2e8f0',
     backgroundColor: '#ffffff',
     fontFamily: styleConfig.fontFamily,
@@ -523,7 +523,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   ) => {
     const activeItems = currentItems || items;
     return (
-      <div className="invoice-live-preview relative flex flex-col h-full w-full paper-sheet-light live-preview-container no-privacy-blur" data-privacy-exempt="true" style={{ flex: 1 }}>
+      <div className="invoice-live-preview relative flex flex-col h-full w-full paper-sheet-light live-preview-container no-privacy-blur" data-privacy-exempt="true" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100%', height: '100%' }}>
       {/* Cancelled Document Top Banner */}
       {((invoiceData?.status || '').toLowerCase() === 'cancelled' || (invoiceData as any)?.cancelled) && (
         <div 

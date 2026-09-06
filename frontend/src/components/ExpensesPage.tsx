@@ -411,9 +411,9 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({ currencySymbol = 'â‚
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#bae6fd]/20 dark:divide-[#223269]/20">
-                {paginatedExpenses.map((exp) => (
+                {paginatedExpenses.map((exp, expIdx) => (
                   <tr
-                    key={exp.id}
+                    key={`exp-${exp.id || expIdx}-${expIdx}`}
                     className="hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20 transition-colors"
                   >
                     <td className="py-3 px-4 font-mono text-[11px] text-[#0f172a] dark:text-white font-bold whitespace-nowrap">

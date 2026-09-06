@@ -40,21 +40,29 @@ export default function TemplateCreationHub({ initialTemplate, businessProfile, 
   }, [mode]);
 
   if (mode === 'advanced') {
-    return <AdvancedStudio initialTemplate={initialTemplate} businessProfile={businessProfile} onSave={onSave} onCancel={onCancel} />;
+    return (
+      <div className="w-full h-full flex flex-col flex-1 min-h-0">
+        <AdvancedStudio initialTemplate={initialTemplate} businessProfile={businessProfile} onSave={onSave} onCancel={onCancel} />
+      </div>
+    );
   }
 
   if (mode === 'quick') {
-    return <QuickBuilder 
-      onSave={onSave} 
-      onCancel={onCancel} 
-      switchToAdvanced={(temp) => {
-        setMode('advanced');
-      }} 
-    />;
+    return (
+      <div className="w-full h-full flex flex-col flex-1 min-h-0">
+        <QuickBuilder 
+          onSave={onSave} 
+          onCancel={onCancel} 
+          switchToAdvanced={(temp) => {
+            setMode('advanced');
+          }} 
+        />
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-120px)] h-auto max-w-4xl mx-auto py-6 sm:py-8 px-4 sm:px-6 animate-in fade-in duration-200">
+    <div className="flex flex-col items-center justify-center h-full min-h-[500px] flex-1 max-w-4xl mx-auto py-6 sm:py-8 px-4 sm:px-6 animate-in fade-in duration-200">
       
       {/* Back button */}
       <div className="w-full flex items-center mb-6 sm:mb-10">

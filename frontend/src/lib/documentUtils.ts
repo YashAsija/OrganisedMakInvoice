@@ -70,6 +70,40 @@ export interface ClientDetails {
   pan: string | null;
 }
 
+export interface TransportDetails {
+  vehicleNo: string | null;
+  phone: string | null;
+  ewayBillNo: string | null;
+  name: string | null;
+  station: string | null;
+  grRrNo: string | null;
+  marka: string | null;
+}
+
+/**
+ * Build a TransportDetails object from InvoiceModal / Document state.
+ */
+export const buildTransportDetails = (params: {
+  vehicleNo?: string;
+  driverMobile?: string;
+  phone?: string;
+  ewayBillNo?: string;
+  transport?: string;
+  transportName?: string;
+  name?: string;
+  station?: string;
+  grRrNo?: string;
+  marka?: string;
+}): TransportDetails => ({
+  vehicleNo: (params.vehicleNo || '').trim() || null,
+  phone: (params.driverMobile || params.phone || '').trim() || null,
+  ewayBillNo: (params.ewayBillNo || '').trim() || null,
+  name: (params.transport || params.transportName || params.name || '').trim() || null,
+  station: (params.station || '').trim() || null,
+  grRrNo: (params.grRrNo || '').trim() || null,
+  marka: (params.marka || '').trim() || null,
+});
+
 /**
  * Build a ClientDetails object from the flat state variables in InvoiceModal.
  * All parameters match the state variable names used in InvoiceModal.tsx.
@@ -97,6 +131,92 @@ export const buildClientDetails = (params: {
 });
 
 // ─── Master Registry (localStorage) Upsert ───────────────────────────────────
+
+/**
+ * Upsert a transport record in the localStorage master transport registry.
+ */
+export const upsertTransportMasterRegistry = (
+  transport: TransportDetails,
+  suffix: string
+): void => {
+  const hasIdentifier =
+    transport.vehicleNo ||
+    transport.name ||
+    transport.phone ||
+    transport.ewayBillNo ||
+    transport.grRrNo ||
+    transport.station ||
+    transport.marka;
+
+  if (!hasIdentifier) return;
+
+  const registryKey = `makbills_masters_transports${suffix}`;
+  let registry: any[] = [];
+  try {
+    registry = JSON.parse(localStorage.getItem(registryKey) || '[]');
+  } catch {
+    registry = [];
+  }
+
+  const clean = (s: any) => String(s || '').trim().toLowerCase();
+  const cleanNum = (s: any) => String(s || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+  const vNo = cleanNum(transport.vehicleNo);
+  const tName = clean(transport.name);
+  const eway = cleanNum(transport.ewayBillNo);
+  const gr = cleanNum(transport.grRrNo);
+
+  const existingIdx = registry.findIndex((item: any) => {
+    if (!item) return false;
+    const itemVNo = cleanNum(item.vehicleNo);
+    const itemName = clean(item.name || item.transportName);
+    const itemEway = cleanNum(item.ewayBillNo || item.eWayBillNo);
+    const itemGr = cleanNum(item.grRrNo);
+
+    if (vNo && itemVNo && vNo === itemVNo) return true;
+    if (eway && itemEway && eway === itemEway) return true;
+    if (gr && itemGr && gr === itemGr) return true;
+    if (tName && itemName && tName === itemName) return true;
+    return false;
+  });
+
+  const incomingRecord = {
+    vehicleNo: transport.vehicleNo || '',
+    phone: transport.phone || '',
+    ewayBillNo: transport.ewayBillNo || '',
+    name: transport.name || '',
+    station: transport.station || '',
+    grRrNo: transport.grRrNo || '',
+    marka: transport.marka || '',
+    updatedAt: new Date().toISOString()
+  };
+
+  if (existingIdx > -1) {
+    const existing = registry[existingIdx];
+    registry[existingIdx] = {
+      ...existing,
+      vehicleNo: incomingRecord.vehicleNo || existing.vehicleNo || '',
+      phone: incomingRecord.phone || existing.phone || '',
+      ewayBillNo: incomingRecord.ewayBillNo || existing.ewayBillNo || '',
+      name: incomingRecord.name || existing.name || '',
+      station: incomingRecord.station || existing.station || '',
+      grRrNo: incomingRecord.grRrNo || existing.grRrNo || '',
+      marka: incomingRecord.marka || existing.marka || '',
+      updatedAt: new Date().toISOString()
+    };
+  } else {
+    registry.unshift({
+      id: `trans_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      ...incomingRecord,
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  localStorage.setItem(registryKey, JSON.stringify(registry));
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('makbills_sync_transports'));
+  }
+};
 
 /**
  * Upsert a client/vendor record in the localStorage master registry.
@@ -270,32 +390,40 @@ export const upsertSupabaseClient = async (
  * Primary entry point called after every successful document save.
  *
  * 1. Always writes to localStorage master registry (offline-first)
- * 2. For sales documents: also upserts to Supabase `clients` table
- * 3. Syncs updated master database with Supabase cloud across all devices
+ * 2. Saves transport section details to master transport registry if present
+ * 3. For sales documents: also upserts to Supabase `clients` table
+ * 4. Syncs updated master database with Supabase cloud across all devices
  *
- * @param details  - Extracted client/vendor details from the document
- * @param docType  - The invoiceType string from InvoiceModal (e.g. 'invoice', 'purchases')
- * @param userId   - Supabase user id (null/undefined for offline users)
- * @param suffix   - localStorage key suffix based on profile email
+ * @param details          - Extracted client/vendor details from the document
+ * @param docType          - The invoiceType string from InvoiceModal (e.g. 'invoice', 'purchases')
+ * @param userId           - Supabase user id (null/undefined for offline users)
+ * @param suffix           - localStorage key suffix based on profile email
+ * @param transportDetails - Optional extracted transport details
  */
 export const persistBilledParty = async (
   details: ClientDetails,
   docType: string,
   userId: string | null | undefined,
   suffix: string,
+  transportDetails?: TransportDetails | null,
 ): Promise<void> => {
   // 0. Clear any prior deleted tombstones for this party
   unmarkRegistryKeyDeleted(details, suffix);
 
-  // 1. Always save to localStorage master registry
+  // 1. Always save to localStorage master party registry
   upsertMasterRegistry(details, docType, suffix);
 
-  // 2. For sales documents, also sync to Supabase clients table
+  // 2. If transport details are filled, upsert to master transport registry
+  if (transportDetails) {
+    upsertTransportMasterRegistry(transportDetails, suffix);
+  }
+
+  // 3. For sales documents, also sync to Supabase clients table
   if (isSalesDocument(docType) && userId) {
     await upsertSupabaseClient(details, userId);
   }
 
-  // 3. Sync updated master database with Supabase cloud across all devices
+  // 4. Sync updated master database with Supabase cloud across all devices
   if (userId) {
     try {
       const isSales = isSalesDocument(docType);

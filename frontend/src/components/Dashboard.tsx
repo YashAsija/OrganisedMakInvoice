@@ -2881,7 +2881,8 @@ export default function Dashboard({
           { label: 'E-Way Bill No', key: 'ewayBillNo', type: 'text' },
           { label: 'Transport Name', key: 'name', type: 'text' },
           { label: 'Station', key: 'station', type: 'text' },
-          { label: 'GR/RR No.', key: 'grRrNo', type: 'text' }
+          { label: 'GR/RR No.', key: 'grRrNo', type: 'text' },
+          { label: 'Marka', key: 'marka', type: 'text' }
         ];
       case 'master_hsn':
         return [
@@ -3074,7 +3075,9 @@ export default function Dashboard({
 
           { header: 'Station', key: 'station' },
 
-          { header: 'GR/RR No.', key: 'grRrNo' }
+          { header: 'GR/RR No.', key: 'grRrNo' },
+
+          { header: 'Marka', key: 'marka' }
 
         ];
 
@@ -3090,7 +3093,9 @@ export default function Dashboard({
 
           { label: 'Station', key: 'station', type: 'text' },
 
-          { label: 'GR/RR No.', key: 'grRrNo', type: 'text' }
+          { label: 'GR/RR No.', key: 'grRrNo', type: 'text' },
+
+          { label: 'Marka', key: 'marka', type: 'text' }
 
         ];
 
@@ -3673,8 +3678,8 @@ export default function Dashboard({
                             sampleRow = ['Jane Smith', 'Global Supplies Pvt Ltd', 'Regular Supplier', '27BBBBB0000B1Z8', 'BBBBB0000B', 'jane@globalsupplies.com', '+91 9811122233', 'Maharashtra', 'India', '456 Industrial Estate, Andheri East, Mumbai - 400069'];
                             filename = 'vendor_database_template.csv';
                           } else if (activeTab === 'master_transport') {
-                            headers = ['Carrier Name', 'GSTIN / UIN', 'PAN', 'Phone Number', 'Email Address', 'State', 'Country', 'Address Details'];
-                            sampleRow = ['Safe Express Logistics', '07AAAAS0000A1Z1', 'AAAAS0000A', '+91 9888877777', 'info@safeexpress.com', 'Delhi', 'India', 'Okhla Phase 1, New Delhi'];
+                            headers = ['Vehicle No', 'Driver Mobile', 'E-Way Bill No', 'Transport Name', 'Station', 'GR/RR No', 'Marka'];
+                            sampleRow = ['DL 01 AB 1234', '+91 9888877777', '123456789012', 'Safe Express Logistics', 'Delhi HQ', 'GR-8899', 'MK-DEL-01'];
                             filename = 'transport_database_template.csv';
                           } else if (activeTab === 'master_hsn') {
                             headers = ['HSN/SAC Code', 'Description', 'Tax Rate (%)'];
@@ -3876,12 +3881,13 @@ export default function Dashboard({
                                       if (activeTab === 'master_transport') {
                                         return {
                                           id,
-                                          name: getVal(row, ['carriername', 'transportname', 'name', 'transporter', 'carrier', 'drivername']) || `Carrier ${index + 1}`,
-                                          phone: getVal(row, ['phonenumber', 'phone', 'drivermobile', 'mobile', 'contactno', 'contactnumber']),
+                                          name: getVal(row, ['transportname', 'carriername', 'name', 'transporter', 'carrier', 'drivername']) || `Carrier ${index + 1}`,
+                                          phone: getVal(row, ['drivermobile', 'phonenumber', 'phone', 'mobile', 'contactno', 'contactnumber']),
                                           vehicleNo: getVal(row, ['vehicleno', 'vehiclenumber', 'truckno', 'vehicle']),
                                           ewayBillNo: getVal(row, ['ewaybillno', 'ewaybill', 'ewaybillnumber']),
                                           station: getVal(row, ['station', 'destination', 'city', 'location']),
-                                          grRrNo: getVal(row, ['grrrno', 'grno', 'rrno'])
+                                          grRrNo: getVal(row, ['grrrno', 'grno', 'rrno']),
+                                          marka: getVal(row, ['marka', 'mark', 'shippingmark', 'identificationmark'])
                                         };
                                       }
 
@@ -4136,12 +4142,13 @@ export default function Dashboard({
                               if (activeTab === 'master_transport') {
                                 return {
                                   'S.No': idx + 1,
-                                  'Carrier / Driver Name': item.name || '',
-                                  'Phone Number': item.phone || '',
                                   'Vehicle No': item.vehicleNo || '',
+                                  'Driver Mobile': item.phone || '',
                                   'E-way Bill No': item.ewayBillNo || '',
+                                  'Transport Name': item.name || '',
                                   'Station / Destination': item.station || '',
-                                  'GR/RR No': item.grRrNo || ''
+                                  'GR/RR No': item.grRrNo || '',
+                                  'Marka': item.marka || ''
                                 };
                               }
                               if (activeTab === 'master_hsn') {
@@ -4307,13 +4314,14 @@ export default function Dashboard({
                                 ]);
                               } else if (activeTab === 'master_transport') {
                                 cols = [
-                                  { title: '#', width: 12 },
-                                  { title: 'Carrier / Driver Name', width: 55 },
-                                  { title: 'Phone Number', width: 38 },
-                                  { title: 'Vehicle No', width: 40 },
-                                  { title: 'E-Way Bill No', width: 42 },
-                                  { title: 'Station / Destination', width: 45 },
-                                  { title: 'GR / RR No', width: 37 }
+                                  { title: '#', width: 10 },
+                                  { title: 'Carrier / Driver Name', width: 50 },
+                                  { title: 'Phone Number', width: 35 },
+                                  { title: 'Vehicle No', width: 35 },
+                                  { title: 'E-Way Bill No', width: 38 },
+                                  { title: 'Station / Destination', width: 40 },
+                                  { title: 'GR / RR No', width: 32 },
+                                  { title: 'Marka', width: 28 }
                                 ];
                                 rows = list.map((item: any, idx: number) => [
                                   String(idx + 1),
@@ -4322,7 +4330,8 @@ export default function Dashboard({
                                   String(item.vehicleNo || '-'),
                                   String(item.ewayBillNo || '-'),
                                   String(item.station || '-'),
-                                  String(item.grRrNo || '-')
+                                  String(item.grRrNo || '-'),
+                                  String(item.marka || '-')
                                 ]);
                               } else if (activeTab === 'master_hsn') {
                                 cols = [
@@ -4613,7 +4622,7 @@ export default function Dashboard({
                       const isSelected = selectedMasterItemIds.includes(item.id);
                       return (
                         <tr
-                          key={item.id}
+                          key={`master-item-${item.id || rowIdx}-${rowIdx}`}
                           className={`group transition-colors duration-100 ${
                             isSelected
                               ? 'bg-rose-50/40 dark:bg-rose-950/20'
@@ -4737,7 +4746,7 @@ export default function Dashboard({
                 {pagedList.map((item, rowIdx) => {
                   const isSelected = selectedMasterItemIds.includes(item.id);
                   return (
-                    <div key={item.id} className={`p-4 flex flex-col gap-3 transition-colors ${isSelected ? 'bg-rose-50/40 dark:bg-rose-950/20' : ''}`}>
+                    <div key={`mob-master-item-${item.id || rowIdx}-${rowIdx}`} className={`p-4 flex flex-col gap-3 transition-colors ${isSelected ? 'bg-rose-50/40 dark:bg-rose-950/20' : ''}`}>
                       <div className="flex justify-between items-start gap-2">
                         <div className="flex items-start gap-2.5">
                           {/* Mobile Checkbox */}
@@ -6029,27 +6038,27 @@ export default function Dashboard({
     if (clientSearchQuery.trim()) {
       const q = clientSearchQuery.trim().toLowerCase();
       list = list.filter(c => 
-        (c.name || '').toLowerCase().includes(q) ||
-        (c.companyName || (c as any).company || '').toLowerCase().includes(q) ||
-        (c.gstin || '').toLowerCase().includes(q) ||
-        (c.phone || '').toLowerCase().includes(q) ||
-        (c.email || '').toLowerCase().includes(q) ||
-        (c.state || '').toLowerCase().includes(q) ||
-        (c.address || '').toLowerCase().includes(q)
+        String(c.name || '').toLowerCase().includes(q) ||
+        String(c.companyName || (c as any).company || '').toLowerCase().includes(q) ||
+        String(c.gstin || '').toLowerCase().includes(q) ||
+        String(c.phone || '').toLowerCase().includes(q) ||
+        String(c.email || '').toLowerCase().includes(q) ||
+        String(c.state || '').toLowerCase().includes(q) ||
+        String(c.address || '').toLowerCase().includes(q)
       );
     }
     list.sort((a, b) => {
       if (clientSortBy === 'name_asc') {
-        return (a.name || '').localeCompare(b.name || '');
+        return String(a.name || '').localeCompare(String(b.name || ''));
       }
       if (clientSortBy === 'name_desc') {
-        return (b.name || '').localeCompare(a.name || '');
+        return String(b.name || '').localeCompare(String(a.name || ''));
       }
       if (clientSortBy === 'company_asc') {
-        return (a.companyName || (a as any).company || a.name || '').localeCompare(b.companyName || (b as any).company || b.name || '');
+        return String(a.companyName || (a as any).company || a.name || '').localeCompare(String(b.companyName || (b as any).company || b.name || ''));
       }
       if (clientSortBy === 'company_desc') {
-        return (b.companyName || (b as any).company || b.name || '').localeCompare(a.companyName || (a as any).company || a.name || '');
+        return String(b.companyName || (b as any).company || b.name || '').localeCompare(String(a.companyName || (a as any).company || a.name || ''));
       }
       if (clientSortBy === 'newest') {
         return (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0);
@@ -6068,27 +6077,27 @@ export default function Dashboard({
     if (vendorSearchQuery.trim()) {
       const q = vendorSearchQuery.trim().toLowerCase();
       list = list.filter(c => 
-        (c.name || '').toLowerCase().includes(q) ||
-        (c.companyName || (c as any).company || '').toLowerCase().includes(q) ||
-        (c.gstin || '').toLowerCase().includes(q) ||
-        (c.phone || '').toLowerCase().includes(q) ||
-        (c.email || '').toLowerCase().includes(q) ||
-        (c.state || '').toLowerCase().includes(q) ||
-        (c.address || '').toLowerCase().includes(q)
+        String(c.name || '').toLowerCase().includes(q) ||
+        String(c.companyName || (c as any).company || '').toLowerCase().includes(q) ||
+        String(c.gstin || '').toLowerCase().includes(q) ||
+        String(c.phone || '').toLowerCase().includes(q) ||
+        String(c.email || '').toLowerCase().includes(q) ||
+        String(c.state || '').toLowerCase().includes(q) ||
+        String(c.address || '').toLowerCase().includes(q)
       );
     }
     list.sort((a, b) => {
       if (vendorSortBy === 'name_asc') {
-        return (a.name || '').localeCompare(b.name || '');
+        return String(a.name || '').localeCompare(String(b.name || ''));
       }
       if (vendorSortBy === 'name_desc') {
-        return (b.name || '').localeCompare(a.name || '');
+        return String(b.name || '').localeCompare(String(a.name || ''));
       }
       if (vendorSortBy === 'company_asc') {
-        return (a.companyName || (a as any).company || a.name || '').localeCompare(b.companyName || (b as any).company || b.name || '');
+        return String(a.companyName || (a as any).company || a.name || '').localeCompare(String(b.companyName || (b as any).company || b.name || ''));
       }
       if (vendorSortBy === 'company_desc') {
-        return (b.companyName || (b as any).company || b.name || '').localeCompare(a.companyName || (a as any).company || a.name || '');
+        return String(b.companyName || (b as any).company || b.name || '').localeCompare(String(a.companyName || (a as any).company || a.name || ''));
       }
       if (vendorSortBy === 'newest') {
         return (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0);
@@ -9603,11 +9612,11 @@ export default function Dashboard({
 
                 ) : (
 
-                  filteredInvoices.map((inv) => (
+                  filteredInvoices.map((inv, invIdx) => (
 
                     <div
 
-                      key={inv.id}
+                      key={`inv-card-${inv.id || invIdx}-${invIdx}`}
 
                       className={`p-3.5 sm:p-4 bg-white dark:bg-[#111a36] border rounded-2xl flex gap-2.5 sm:gap-3 relative shadow-xs hover:shadow-[0_4px_14px_rgba(2,132,199,0.08)] hover:border-[#0284c7]/30 transition-all cursor-pointer group ${selectedInvoiceIds.includes(inv.id) ? 'border-[#0284c7]/40 bg-[#e0f2fe]/20 dark:bg-[#1b264f]/30' : 'border-[#bae6fd]/60 dark:border-[#223269]/60'}`}
 
@@ -10321,11 +10330,11 @@ export default function Dashboard({
 
                     ) : (
 
-                      filteredInvoices.map((inv) => (
+                      filteredInvoices.map((inv, invIdx) => (
 
                         <tr 
 
-                          key={inv.id} 
+                          key={`inv-row-${inv.id || invIdx}-${invIdx}`} 
 
                           className={`hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/30 cursor-pointer transition-colors ${selectedInvoiceIds.includes(inv.id) ? 'bg-[#e0f2fe]/40 dark:bg-[#1b264f]/30' : ''}`}
 
@@ -11631,7 +11640,7 @@ export default function Dashboard({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
-                    {filteredDrafts.map(inv => {
+                    {filteredDrafts.map((inv, invIdx) => {
 
                       const docTypeKey = getInvoiceDocumentType(inv);
 
@@ -11645,7 +11654,7 @@ export default function Dashboard({
 
                         <div 
 
-                          key={inv.id} 
+                          key={`inv-grid-${inv.id || invIdx}-${invIdx}`} 
 
                           className={`p-5 bg-white dark:bg-[#111a36] border rounded-2xl shadow-xs hover:shadow-md transition-all duration-200 group relative flex flex-col justify-between ${
 
@@ -11787,7 +11796,7 @@ export default function Dashboard({
 
         {activeTab === 'invoice_templates' && (
 
-          <div className="space-y-4">
+          <div className="w-full h-full flex flex-col flex-1 min-h-0">
 
             <TemplateManager businessProfile={profile} subscriptionTier={subscriptionTier} />
 
@@ -11945,11 +11954,11 @@ export default function Dashboard({
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-                {displayBilledClients.map(c => (
+                {displayBilledClients.map((c, cIdx) => (
 
                   <div
 
-                    key={c.id}
+                    key={`billed-client-${c.id || cIdx}-${cIdx}`}
 
                     className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800/80 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-blue-500 active:border-blue-600 dark:hover:border-blue-500 dark:active:border-blue-600 hover:-translate-y-1 group flex flex-col justify-between cursor-pointer"
 
@@ -12245,11 +12254,11 @@ export default function Dashboard({
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-                {purchasersFiltered.map(c => (
+                {purchasersFiltered.map((c, cIdx) => (
 
                   <div
 
-                    key={c.id}
+                    key={`billed-vendor-${c.id || cIdx}-${cIdx}`}
 
                     className="bg-white dark:bg-zinc-900 border border-[#e2e8f0]/60 dark:border-zinc-800/80 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-blue-500 active:border-blue-600 dark:hover:border-blue-500 dark:active:border-blue-600 hover:-translate-y-1 group flex flex-col justify-between cursor-pointer"
 
@@ -13933,9 +13942,9 @@ export default function Dashboard({
 
                         <tbody>
 
-                          {reportedInvoices.slice(0, 2).map(inv => (
+                          {reportedInvoices.slice(0, 2).map((inv, idx) => (
 
-                            <tr key={inv.id} className="border-b border-[#bae6fd]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20">
+                            <tr key={`rep-inv-${inv.id || idx}-${idx}`} className="border-b border-[#bae6fd]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20">
 
                               <td className="py-3 font-extrabold text-[#0f172a] dark:text-white font-mono">{inv.invoiceNumber}</td>
 
@@ -13963,8 +13972,8 @@ export default function Dashboard({
 
                       {/* Mobile Card List View */}
                       <div className="block sm:hidden space-y-3">
-                        {reportedInvoices.slice(0, 2).map(inv => (
-                          <div key={inv.id} className="p-3 bg-slate-50 dark:bg-zinc-900/40 rounded-xl border border-[#bae6fd]/20 dark:border-zinc-800 space-y-2 relative">
+                        {reportedInvoices.slice(0, 2).map((inv, idx) => (
+                          <div key={`rep-inv-mob-${inv.id || idx}-${idx}`} className="p-3 bg-slate-50 dark:bg-zinc-900/40 rounded-xl border border-[#bae6fd]/20 dark:border-zinc-800 space-y-2 relative">
                             <div className="flex justify-between items-center pr-6">
                               <span className="font-extrabold text-[#0f172a] dark:text-white text-xs font-mono">{inv.invoiceNumber}</span>
                               <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(inv.status)}`}>
@@ -14031,8 +14040,8 @@ export default function Dashboard({
                           </tr>
                         </thead>
                         <tbody>
-                          {purchaseInvoices.slice(0, 2).map(pb => (
-                            <tr key={pb.id} className="border-b border-[#bae6fd]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20">
+                          {purchaseInvoices.slice(0, 2).map((pb, idx) => (
+                            <tr key={`rep-pb-${pb.id || idx}-${idx}`} className="border-b border-[#bae6fd]/20 hover:bg-[#e0f2fe]/20 dark:hover:bg-[#1b264f]/20">
                               <td className="py-3 font-extrabold text-[#0f172a] dark:text-white font-mono">{pb.invoiceNumber}</td>
                               <td className="py-3 font-bold text-[#64748b] dark:text-zinc-300 truncate max-w-[140px]">{pb.clientName}</td>
                               <td className="py-3 font-medium text-[#64748b]/80 dark:text-zinc-400 font-sans">{pb.date}</td>
@@ -14057,8 +14066,8 @@ export default function Dashboard({
 
                       {/* Mobile Card List View */}
                       <div className="block sm:hidden space-y-3">
-                        {purchaseInvoices.slice(0, 2).map(pb => (
-                          <div key={pb.id} className="p-3 bg-slate-50 dark:bg-zinc-900/40 rounded-xl border border-[#bae6fd]/20 dark:border-zinc-800 space-y-2 relative">
+                        {purchaseInvoices.slice(0, 2).map((pb, idx) => (
+                          <div key={`rep-pb-mob-${pb.id || idx}-${idx}`} className="p-3 bg-slate-50 dark:bg-zinc-900/40 rounded-xl border border-[#bae6fd]/20 dark:border-zinc-800 space-y-2 relative">
                             <div className="flex justify-between items-center pr-6">
                               <span className="font-extrabold text-[#0f172a] dark:text-white text-xs font-mono">{pb.invoiceNumber}</span>
                               <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(pb.status)}`}>

@@ -130,13 +130,13 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
   const handlePrev = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-[calc(100dvh-120px)] lg:h-[calc(100vh-120px)] bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200 w-full">
+    <div className="flex flex-col lg:flex-row h-full min-h-[500px] flex-1 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200 w-full">
       
       {/* Left Sidebar - Wizard Controls */}
-      <div className="w-full lg:w-[420px] shrink-0 bg-white dark:bg-[#111a36] border-b lg:border-b-0 lg:border-r border-[#bae6fd]/40 dark:border-[#223269]/40 flex flex-col min-h-[45dvh] sm:min-h-[50dvh] lg:h-full z-10">
+      <div className="w-full lg:w-[420px] shrink-0 bg-white dark:bg-[#111a36] border-b lg:border-b-0 lg:border-r border-[#bae6fd]/40 dark:border-[#223269]/40 flex flex-col h-[45vh] lg:h-full overflow-hidden z-10">
         
         {/* Header bar */}
-        <div className="p-4 sm:p-6 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex items-center justify-between bg-[#f4f9ff] dark:bg-[#0b1329]/40">
+        <div className="p-4 sm:p-6 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 flex items-center justify-between bg-[#f4f9ff] dark:bg-[#0b1329]/40 shrink-0">
            <div>
              <h2 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5" style={{ fontFamily: "'Fraunces', serif" }}>
                <span className="bg-gradient-to-r from-[#0284c7] via-[#2563eb] to-[#38bdf8] bg-clip-text text-transparent">Quick Builder Wizard</span>
@@ -155,7 +155,7 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
          </div>
 
         {/* Progress Bar */}
-        <div className="w-full bg-[#bae6fd]/20 dark:bg-zinc-800 h-1 relative overflow-hidden">
+        <div className="w-full bg-[#bae6fd]/20 dark:bg-zinc-800 h-1 relative overflow-hidden shrink-0">
           {(() => {
             const stepGradients = [
               'from-[#0284c7] to-[#2563eb]',
@@ -175,7 +175,7 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
         </div>
 
         {/* Form elements container */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scrollbar">
           {currentStep === 1 && (
             <div className="space-y-4 animate-in fade-in duration-200">
               <h3 className="text-xs font-black text-[#0f172a] dark:text-white uppercase tracking-wide" style={{ fontFamily: "'Fraunces', serif" }}>Document Purpose</h3>
@@ -384,7 +384,7 @@ export default function QuickBuilder({ onSave, onCancel, switchToAdvanced }: Qui
         </div>
 
         {/* Footer Navigation */}
-        <div className="p-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 flex items-center justify-between bg-[#f4f9ff] dark:bg-[#0b1329]/40 mt-auto">
+        <div className="p-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 flex items-center justify-between bg-[#f4f9ff] dark:bg-[#0b1329]/40 mt-auto shrink-0">
           <button 
             onClick={handlePrev} 
             disabled={currentStep === 1}

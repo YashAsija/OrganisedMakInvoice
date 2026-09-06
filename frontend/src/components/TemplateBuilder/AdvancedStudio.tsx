@@ -197,7 +197,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
   const currentStep = STEPS[currentStepIndex];
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-[calc(100dvh-120px)] lg:h-[calc(100vh-120px)] bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200 w-full relative">
+    <div className="flex flex-col lg:flex-row h-full min-h-[500px] flex-1 bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-3xl overflow-hidden shadow-sm animate-in fade-in duration-200 w-full relative">
       
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
@@ -205,10 +205,10 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
       )}
 
       {/* Sidebar Navigation */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 shrink-0 bg-white dark:bg-[#111a36] border-r border-[#bae6fd]/40 dark:border-[#223269]/40 flex-col h-full overflow-y-auto custom-scrollbar transition-transform duration-300 lg:relative lg:translate-x-0 lg:flex ${isMobileMenuOpen ? 'translate-x-0 flex' : '-translate-x-full flex'}`}>
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 shrink-0 bg-white dark:bg-[#111a36] border-r border-[#bae6fd]/40 dark:border-[#223269]/40 flex flex-col h-full overflow-hidden transition-transform duration-300 lg:relative lg:translate-x-0 lg:flex ${isMobileMenuOpen ? 'translate-x-0 flex' : '-translate-x-full flex'}`}>
         
         {/* Sidebar Header */}
-        <div className="p-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 bg-[#f4f9ff] dark:bg-[#0b1329] sticky top-0 z-10 flex items-center justify-between">
+        <div className="p-4 border-b border-[#bae6fd]/30 dark:border-[#223269]/30 bg-[#f4f9ff] dark:bg-[#0b1329] shrink-0 flex items-center justify-between">
           <div>
             <h2 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5" style={{ fontFamily: "'Fraunces', serif" }}>
               <span className="bg-gradient-to-r from-[#0284c7] via-[#2563eb] to-[#38bdf8] bg-clip-text text-transparent">Advanced Studio</span>
@@ -226,7 +226,7 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
         </div>
 
         {/* Steps List */}
-        <div className="flex-1 py-3 custom-scrollbar space-y-4">
+        <div className="flex-1 py-3 overflow-y-auto custom-scrollbar space-y-4">
           {Object.entries({
             'General & Layout': ['start', 'layout'],
             'Data Sections': ['header', 'company', 'invoiceInfo', 'client', 'shipping', 'transport'],
@@ -280,10 +280,10 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 bg-[#f4f9ff] dark:bg-[#0b1329]/40 sticky bottom-0 z-10 space-y-2">
+        <div className="p-3.5 sm:p-4 border-t border-[#bae6fd]/30 dark:border-[#223269]/30 bg-[#f4f9ff] dark:bg-[#0b1329]/40 shrink-0 space-y-2">
           <button 
             onClick={() => onSave(template)} 
-            className="w-full py-2 bg-[#0284c7] dark:bg-[#38bdf8] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            className="w-full py-2 bg-[#0284c7] dark:bg-[#38bdf8] text-white dark:text-[#0b1329] border border-[#0369a1] dark:border-[#0284c7] hover:bg-[#0369a1] dark:hover:bg-[#0284c7] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
           >
             <CheckCircle className="w-3.5 h-3.5" /> Save Template
           </button>
@@ -332,10 +332,10 @@ export default function AdvancedStudio({ initialTemplate, businessProfile, onSav
         </div>
 
         {/* Builder Content & Preview Split */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
           
           {/* Controls Panel */}
-          <div className="w-full md:max-w-sm shrink-0 border-b md:border-b-0 md:border-r border-[#bae6fd]/40 dark:border-[#223269]/40 bg-white/95 dark:bg-[#111a36]/95 overflow-y-auto p-5 custom-scrollbar h-[45vh] md:h-full">
+          <div className="w-full md:max-w-sm shrink-0 border-b md:border-b-0 md:border-r border-[#bae6fd]/40 dark:border-[#223269]/40 bg-white/95 dark:bg-[#111a36]/95 overflow-y-auto p-5 custom-scrollbar h-[40vh] md:h-full">
             {currentStep.id === 'start' && (
               <div className="space-y-4">
                 <div>

@@ -35,7 +35,7 @@ const ALLOWED_SUPABASE_COLUMNS = [
   'selectedCustomTemplateId', 'qrCodeTriggerUrl', 'companyState', 'companyCountry',
   'customTaxCols', 'taxMode', 'customTaxName', 'customTaxPercentage', 'customTaxType',
   'additionalTaxes', 'placeOfSupply', 'grRrNo', 'transport', 'vehicleNo', 'driverMobile',
-  'station', 'ewayBillNo', 'shippedToName', 'shippedToCompanyName', 'shippedToPhone', 'shippedToEmail', 
+  'station', 'ewayBillNo', 'marka', 'shippedToName', 'shippedToCompanyName', 'shippedToPhone', 'shippedToEmail', 
   'shippedToPan', 'shippedToState', 'shippedToCountry', 'shippedToGstin', 
   'shippedToAddress', 'embeddedTemplate', 'isDeleted', 'deletedAt', 'deliveryNote',
   'invoiceDate', 'isBin', 'freightCharges', 'packagingCharges', 'otherCharges', 
@@ -54,7 +54,9 @@ if (typeof window !== 'undefined') {
       errorString.includes('Failed to fetch') ||
       errorString.includes('TypeError') ||
       errorString.includes('SUPABASE') ||
-      errorString.includes('Supabase')
+      errorString.includes('Supabase') ||
+      errorString.includes('same key') ||
+      errorString.includes('Encountered two children with the same key')
     ) {
       console.warn('[Suppressed Next.js Overlay] Suppressed console.error:', ...args);
       return;
@@ -1322,30 +1324,30 @@ export default function App() {
             } catch (e) {}
 
             // 1. Process cloud invoices: apply local pending modifications or filter out if pending delete
-            const mergedCloud: Invoice[] = [];
+            const mergedMap = new Map<string, Invoice>();
             parsedCloud.forEach(inv => {
+              if (!inv || !inv.id) return;
               const localItem = localMap.get(inv.id);
               if (localItem) {
                 if (localItem._pendingDelete) {
                   // Skip adding to visible cloud list — it's pending delete
                   return;
                 }
-                // Overlay local pending edits (e.g. pending soft delete, updated fields) over cloud record
-                mergedCloud.push({ ...inv, ...localItem });
+                // Overlay local pending edits over cloud record
+                mergedMap.set(inv.id, { ...inv, ...localItem });
               } else {
-                mergedCloud.push(inv);
+                mergedMap.set(inv.id, inv);
               }
             });
 
             // 2. Add local pending records that do NOT exist in the cloud fetch at all (e.g., unsynced drafts/invoices)
-            const missingPending: Invoice[] = [];
             localMap.forEach((localItem, id) => {
-              if (!localItem._pendingDelete && !mergedCloud.find(inv => inv.id === id)) {
-                missingPending.push(localItem);
+              if (localItem && id && !localItem._pendingDelete && !mergedMap.has(id)) {
+                mergedMap.set(id, localItem);
               }
             });
 
-            return [...missingPending, ...mergedCloud];
+            return Array.from(mergedMap.values());
           };
 
           // 2. Load Invoices directly from Supabase Database (Single Source of Truth)
@@ -2895,11 +2897,10 @@ export default function App() {
     }
 
 
-    const updatedInvoices = invoices.map(inv => inv.id === invoice.id ? invoice : inv);
-    
-    // Check if newly created
     const exists = invoices.some(inv => inv.id === invoice.id);
-    const matchesList = exists ? updatedInvoices : [invoice, ...invoices];
+    const matchesList = exists
+      ? invoices.map(inv => inv.id === invoice.id ? invoice : inv)
+      : [invoice, ...invoices.filter(inv => inv.id !== invoice.id)];
 
     setInvoices(matchesList);
     localStorage.setItem(`invoice_maker_invoices${suffix}`, JSON.stringify(matchesList));
@@ -3463,7 +3464,7 @@ export default function App() {
   // --- CLIENT ACTIONS ---
   const handleSaveClient = async (client: ClientProfile) => {
     const exists = clients.some(c => c.id === client.id);
-    const updated = exists ? clients.map(c => c.id === client.id ? client : c) : [client, ...clients];
+    const updated = exists ? clients.map(c => c.id === client.id ? client : c) : [client, ...clients.filter(c => c.id !== client.id)];
     setClients(updated);
     localStorage.setItem(`invoice_maker_clients${suffix}`, JSON.stringify(updated));
 
@@ -3581,7 +3582,7 @@ export default function App() {
   // --- EXPENSE ACTIONS ---
   const handleSaveExpense = async (expense: Expense) => {
     const exists = expenses.some(e => e.id === expense.id);
-    const updated = exists ? expenses.map(e => e.id === expense.id ? expense : e) : [expense, ...expenses];
+    const updated = exists ? expenses.map(e => e.id === expense.id ? expense : e) : [expense, ...expenses.filter(e => e.id !== expense.id)];
     setExpenses(updated);
     localStorage.setItem(`invoice_maker_expenses${suffix}`, JSON.stringify(updated));
 
