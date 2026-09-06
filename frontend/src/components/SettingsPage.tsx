@@ -4,10 +4,13 @@ import {
   Trash2, Download, LogOut, ChevronRight, Check,
   Globe, Palette, RefreshCw, Monitor, Zap, Sparkles,
   Sliders, LayoutGrid, CheckCircle2, RotateCcw, Save,
-  Mail, Volume2, VolumeX, Eye, EyeOff, Clock, Fingerprint, ShieldCheck, Key, Smartphone
+  Mail, Volume2, VolumeX, Eye, EyeOff, Clock, Fingerprint, ShieldCheck, Key, Smartphone,
+  Calendar, FileText, Send, CheckCircle, AlertTriangle, ArrowRight, HardDrive
 } from 'lucide-react';
-import { BusinessProfile } from '../types';
+import { BusinessProfile, Invoice, Expense } from '../types';
 import { emitNotification } from '../lib/notifications';
+import { exportCollectiveReportPDF, exportInvoicePDFAsync } from '../lib/pdfExporter';
+import { isPurchaseDocument, isSalesDocument } from '../lib/documentUtils';
 import {
   WorkspaceSession,
   registerCurrentSession,
@@ -20,12 +23,14 @@ interface SettingsPageProps {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
   profile: BusinessProfile;
+  invoices?: Invoice[];
+  expenses?: Expense[];
   isPinLockEnabled: boolean;
   onToggleSecurity: (type: 'pin') => void;
   onLogout: () => void;
 }
 
-type SettingsSection = 'notifications' | 'security' | 'account';
+type SettingsSection = 'notifications' | 'security' | 'backup' | 'account';
 
 const Row = ({ label, description, control }: { label: string; description?: string; control: React.ReactNode }) => (
   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4 border-b border-[#bae6fd]/20 dark:border-[#223269]/30 last:border-0">
@@ -140,10 +145,65 @@ const loadSavedNotifPreferences = (): SavedNotificationPreferences => {
   };
 };
 
+export type BackupFrequency = 'daily' | 'weekly' | 'monthly';
+
+export interface BackupConfig {
+  isEnabled: boolean;
+  frequency: BackupFrequency;
+  targetEmail: string;
+  senderEmail: string;
+  includeSalesInvoices: boolean;
+  includePurchaseBills: boolean;
+  includeMasterRegistry: boolean;
+  lastBackupDate: string | null;
+  lastBackupStatus: 'success' | 'failed' | 'pending' | null;
+  autoSendTime: string; // e.g., "09:00 AM"
+  format: 'pdf_archive' | 'individual_pdfs';
+}
+
+const BACKUP_STORAGE_KEY = 'mak_automated_backup_config_v1';
+
+const DEFAULT_BACKUP_CONFIG: BackupConfig = {
+  isEnabled: false,
+  frequency: 'daily',
+  targetEmail: '',
+  senderEmail: 'noreply@makinvoices.com',
+  includeSalesInvoices: true,
+  includePurchaseBills: true,
+  includeMasterRegistry: true,
+  lastBackupDate: null,
+  lastBackupStatus: null,
+  autoSendTime: '09:00 AM',
+  format: 'pdf_archive'
+};
+
+const loadSavedBackupPreferences = (fallbackEmail?: string): BackupConfig => {
+  if (typeof window !== 'undefined') {
+    const raw = localStorage.getItem(BACKUP_STORAGE_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        return {
+          ...DEFAULT_BACKUP_CONFIG,
+          ...parsed,
+          targetEmail: parsed.targetEmail || fallbackEmail || '',
+          senderEmail: 'noreply@makinvoices.com'
+        };
+      } catch (e) {}
+    }
+  }
+  return {
+    ...DEFAULT_BACKUP_CONFIG,
+    targetEmail: fallbackEmail || ''
+  };
+};
+
 export default function SettingsPage({
   theme,
   toggleTheme,
   profile,
+  invoices = [],
+  expenses = [],
   isPinLockEnabled,
   onToggleSecurity,
   onLogout
@@ -429,9 +489,328 @@ export default function SettingsPage({
     }, 1200);
   };
 
+  // Persistent Backup Settings: Applied vs Draft States
+  const [appliedBackup, setAppliedBackup] = useState<BackupConfig>(() =>
+    loadSavedBackupPreferences(profile.email || '')
+  );
+  const [draftBackup, setDraftBackup] = useState<BackupConfig>(() =>
+    loadSavedBackupPreferences(profile.email || '')
+  );
+  const [isSendingBackup, setIsSendingBackup] = useState(false);
+  const [backupSuccessSummary, setBackupSuccessSummary] = useState<string | null>(null);
+
+  // Sync profile email into targetEmail if empty
+  useEffect(() => {
+    if (profile.email && !draftBackup.targetEmail) {
+      setDraftBackup(prev => ({ ...prev, targetEmail: profile.email }));
+      setAppliedBackup(prev => ({ ...prev, targetEmail: profile.email }));
+    }
+  }, [profile.email]);
+
+  const isBackupDirty = JSON.stringify(draftBackup) !== JSON.stringify(appliedBackup);
+
+  const handleToggleMasterBackup = () => {
+    setDraftBackup(prev => ({
+      ...prev,
+      isEnabled: !prev.isEnabled,
+      targetEmail: prev.targetEmail || profile.email || ''
+    }));
+  };
+
+  const handleSelectFrequency = (freq: BackupFrequency) => {
+    setDraftBackup(prev => ({ ...prev, frequency: freq }));
+  };
+
+  const handleToggleBackupDocType = (key: 'includeSalesInvoices' | 'includePurchaseBills' | 'includeMasterRegistry') => {
+    setDraftBackup(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleApplyBackupChanges = () => {
+    const emailToSave = draftBackup.targetEmail.trim() || profile.email || '';
+    const updated: BackupConfig = {
+      ...draftBackup,
+      targetEmail: emailToSave,
+      senderEmail: 'noreply@makinvoices.com'
+    };
+    setAppliedBackup(updated);
+    setDraftBackup(updated);
+    localStorage.setItem(BACKUP_STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('mak_backup_settings_changed', { detail: updated }));
+    emitNotification(
+      'Backup Preferences Saved',
+      updated.isEnabled
+        ? `Automated ${updated.frequency} backup is enabled. PDFs will be sent to ${emailToSave} from noreply@makinvoices.com.`
+        : 'Automated backup has been disabled.',
+      'success'
+    );
+  };
+
+  const handleDiscardBackupChanges = () => {
+    setDraftBackup(appliedBackup);
+    emitNotification('Changes Reset', 'Restored backup preferences to last saved state.', 'info');
+  };
+
+  // Immediate "Send Backup Now" handler
+  // Immediate "Send Backup Now" handler with frequency date filtering & PDF generation
+  const handleTriggerManualBackup = async () => {
+    const targetEmail = (draftBackup.targetEmail || profile.email || '').trim();
+    if (!targetEmail) {
+      emitNotification('Missing Recipient Email', 'Please enter a valid company destination email address.', 'error');
+      return;
+    }
+
+    setIsSendingBackup(true);
+    setBackupSuccessSummary(null);
+
+    try {
+      // Gather all local invoices and expenses
+      let allInvoices: Invoice[] = invoices && invoices.length > 0 ? [...invoices] : [];
+      let allExpenses: Expense[] = expenses && expenses.length > 0 ? [...expenses] : [];
+
+      if (typeof window !== 'undefined') {
+        try {
+          if (allInvoices.length === 0) {
+            const invRaw = localStorage.getItem('invoices');
+            if (invRaw) {
+              const parsed = JSON.parse(invRaw);
+              if (Array.isArray(parsed)) allInvoices = parsed;
+            }
+          }
+          if (allExpenses.length === 0) {
+            const expRaw = localStorage.getItem('mak_expenses_list_v1');
+            if (expRaw) {
+              const expList = JSON.parse(expRaw);
+              if (Array.isArray(expList)) allExpenses = expList;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // Filter by Frequency: Daily (today), Weekly (past 7 days), Monthly (past 30 days / current month)
+      const now = new Date();
+      const frequency = draftBackup.frequency; // 'daily' | 'weekly' | 'monthly'
+
+      const isDateInFrequencyRange = (dateStr?: string) => {
+        if (!dateStr) return true;
+        const itemDate = new Date(dateStr);
+        if (isNaN(itemDate.getTime())) return true;
+
+        if (frequency === 'daily') {
+          // Same calendar day
+          return (
+            itemDate.getFullYear() === now.getFullYear() &&
+            itemDate.getMonth() === now.getMonth() &&
+            itemDate.getDate() === now.getDate()
+          );
+        } else if (frequency === 'weekly') {
+          // Within last 7 days
+          const diffMs = now.getTime() - itemDate.getTime();
+          const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+          return diffMs >= 0 && diffMs <= sevenDaysMs;
+        } else if (frequency === 'monthly') {
+          // Within last 30 days or current calendar month
+          return (
+            (itemDate.getFullYear() === now.getFullYear() && itemDate.getMonth() === now.getMonth()) ||
+            (now.getTime() - itemDate.getTime() <= 31 * 24 * 60 * 60 * 1000 && now.getTime() - itemDate.getTime() >= 0)
+          );
+        }
+        return true;
+      };
+
+      // Filter documents according to frequency selection and document type toggles
+      let filteredInvoices = allInvoices.filter(inv => {
+        const type = (inv.invoiceType || 'invoice').toLowerCase();
+        const isSales = !isPurchaseDocument(type);
+        const isPurchase = isPurchaseDocument(type);
+
+        // Check if enabled in toggles
+        if (isSales && !draftBackup.includeSalesInvoices) return false;
+        if (isPurchase && !draftBackup.includePurchaseBills) return false;
+
+        return isDateInFrequencyRange(inv.date || inv.createdAt);
+      });
+
+      // Filter expenses according to frequency range and map to standardized document format for the master PDF
+      const mapExpenseToDoc = (exp: Expense): Invoice => {
+        const expD = exp.expense_date || exp.date || new Date().toISOString().split('T')[0];
+        const expAmt = Number(exp.amount || 0);
+        const isPaid = exp.status === 'paid';
+        return {
+          id: `exp_${exp.id}`,
+          userId: exp.user_id || exp.userId || '',
+          invoiceType: 'purchases' as any,
+          invoiceNumber: exp.reference_number ? `EXP-${exp.reference_number}` : `EXP-${exp.id.slice(0, 6).toUpperCase()}`,
+          date: expD,
+          dueDate: expD,
+          clientName: exp.vendor || exp.category || 'Business Expense',
+          clientEmail: '',
+          clientPhone: '',
+          clientAddress: exp.category || 'General Expense',
+          notes: exp.description || exp.category || '',
+          subtotal: expAmt,
+          discountType: 'none',
+          discountValue: 0,
+          discountTotal: 0,
+          taxTotal: 0,
+          grandTotal: expAmt,
+          status: isPaid ? 'paid' : 'pending',
+          items: [
+            {
+              id: `exp_it_${exp.id}`,
+              name: `${exp.category || 'Expense'}: ${exp.description || exp.vendor || 'General Expense'}`,
+              rate: expAmt,
+              quantity: 1,
+              taxPercentage: 0
+            }
+          ],
+          createdAt: exp.created_at || exp.createdAt || expD,
+          updatedAt: exp.updated_at || expD,
+          paidDate: isPaid ? expD : undefined,
+          paidAmount: isPaid ? expAmt : 0,
+          isExpense: true
+        } as any as Invoice;
+      };
+
+      let filteredExpenses = allExpenses
+        .filter(exp => isDateInFrequencyRange(exp.expense_date || exp.date || exp.created_at))
+        .map(mapExpenseToDoc);
+
+      // If no records in the exact window for test dispatch, fallback gracefully to latest records so user gets a populated PDF
+      const isWindowFiltered = filteredInvoices.length > 0 || filteredExpenses.length > 0;
+      const baseDocs = isWindowFiltered
+        ? filteredInvoices
+        : allInvoices.filter(inv => {
+            const type = (inv.invoiceType || 'invoice').toLowerCase();
+            return isPurchaseDocument(type) ? draftBackup.includePurchaseBills : draftBackup.includeSalesInvoices;
+          });
+
+      const expenseDocs = isWindowFiltered
+        ? filteredExpenses
+        : allExpenses.map(mapExpenseToDoc);
+
+      // Unified documents list containing all sales, purchases and business expenses
+      const documentsToExport: Invoice[] = [...baseDocs, ...expenseDocs];
+
+      const periodLabel = frequency === 'daily' 
+        ? `Daily Backup (${now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })})`
+        : frequency === 'weekly'
+          ? `Weekly Backup (Past 7 Days - ${now.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })})`
+          : `Monthly Backup (${now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })})`;
+
+      // Generate attachments array (Both collective master PDF + individual document PDFs)
+      const attachments: any[] = [];
+
+      // 1. Generate Collective Master Statement PDF (Includes Sales, Purchases, and Expenses in 1 report)
+      try {
+        if (documentsToExport.length > 0) {
+          const pdfBase64 = exportCollectiveReportPDF(
+            documentsToExport,
+            profile,
+            periodLabel,
+            'all',
+            'date_desc',
+            'base64'
+          );
+
+          if (typeof pdfBase64 === 'string' && pdfBase64.includes('base64,')) {
+            const rawBase64 = pdfBase64.split('base64,')[1];
+            const fileName = `MakInvoices_${frequency.toUpperCase()}_Master_Financial_Report_${now.toISOString().split('T')[0]}.pdf`;
+            attachments.push({
+              filename: fileName,
+              content: rawBase64
+            });
+          }
+        }
+      } catch (pdfErr) {
+        console.warn('Could not generate collective PDF attachment:', pdfErr);
+      }
+
+      // 2. Generate Individual Document PDFs (Up to 10 key documents for email size limits)
+      const maxIndividualDocs = 10;
+      const individualDocsToExport = documentsToExport.slice(0, maxIndividualDocs);
+
+      for (const docItem of individualDocsToExport) {
+        try {
+          const singlePdfDataUri = await exportInvoicePDFAsync(docItem, profile, 'datauri');
+          if (typeof singlePdfDataUri === 'string' && singlePdfDataUri.includes('base64,')) {
+            const rawBase64 = singlePdfDataUri.split('base64,')[1];
+            const docTypeLabel = (docItem.invoiceType || 'invoice').replace(/_/g, '-');
+            const docNumClean = (docItem.invoiceNumber || 'doc').replace(/[^a-zA-Z0-9-_]/g, '_');
+            const individualFileName = `${docTypeLabel.toUpperCase()}_${docNumClean}.pdf`;
+            
+            attachments.push({
+              filename: individualFileName,
+              content: rawBase64
+            });
+          }
+        } catch (indivErr) {
+          console.warn(`Could not render individual PDF for ${docItem.invoiceNumber}:`, indivErr);
+        }
+      }
+
+      // Call the backup dispatch API
+      const res = await fetch('/api/backup/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetEmail,
+          companyName: profile.name || 'Your Company',
+          frequency,
+          documentCount: documentsToExport.length + (isWindowFiltered ? filteredExpenses.length : allExpenses.length),
+          backupType: `${frequency.toUpperCase()} Document PDFs & Financial Records`,
+          senderEmail: 'noreply@makinvoices.com',
+          attachments
+        })
+      });
+
+      const resJson = await res.json();
+
+      if (!res.ok || resJson.success === false) {
+        throw new Error(resJson.error || 'Failed to dispatch backup email');
+      }
+
+      const nowFormatted = new Date().toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      // Update state and persistence with last successful backup
+      const updatedApplied: BackupConfig = {
+        ...draftBackup,
+        lastBackupDate: nowFormatted,
+        lastBackupStatus: 'success'
+      };
+      setAppliedBackup(updatedApplied);
+      setDraftBackup(updatedApplied);
+      localStorage.setItem(BACKUP_STORAGE_KEY, JSON.stringify(updatedApplied));
+
+      const isLiveProvider = resJson.provider === 'resend' || resJson.provider === 'smtp';
+      const summaryMsg = isLiveProvider
+        ? `Official ${frequency.toUpperCase()} PDF backup sent to ${targetEmail} from noreply@makinvoices.com (${documentsToExport.length} documents attached).`
+        : `${frequency.toUpperCase()} backup dispatched to ${targetEmail} (${nowFormatted}).`;
+
+      setBackupSuccessSummary(summaryMsg);
+
+      emitNotification(
+        'Backup Sent Successfully!',
+        `${frequency.toUpperCase()} backup PDF dispatched to ${targetEmail} from noreply@makinvoices.com`,
+        'success'
+      );
+    } catch (err: any) {
+      console.error('Backup trigger error:', err);
+      emitNotification('Backup Delivery Issue', err?.message || 'Could not send backup email.', 'error');
+    } finally {
+      setIsSendingBackup(false);
+    }
+  };
+
   const sections: { id: SettingsSection; label: string; icon: React.ReactNode }[] = [
     { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
     { id: 'security', label: 'Security', icon: <Shield className="w-4 h-4" /> },
+    { id: 'backup', label: 'Data Backup', icon: <Database className="w-4 h-4" /> },
     { id: 'account', label: 'Account', icon: <LogOut className="w-4 h-4" /> },
   ];
 
@@ -1166,6 +1545,321 @@ export default function SettingsPage({
                     })}
                   </div>
                 </div>
+              </div>
+            )}
+
+
+
+            {/* -------------------- DATA BACKUP -------------------- */}
+            {activeSection === 'backup' && (
+              <div className="space-y-6">
+                {/* Section Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 pb-4">
+                  <div>
+                    <h2 className="text-xs font-black text-[#0284c7] dark:text-[#38bdf8] uppercase tracking-widest flex items-center gap-2" style={{ fontFamily: "'Fraunces', serif" }}>
+                      <Database className="w-4 h-4" />
+                      <span>Automated Document Backup</span>
+                    </h2>
+                    <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">
+                      Schedule automated PDF delivery to your company email from <span className="font-mono text-[#0284c7] dark:text-[#38bdf8] font-bold">noreply@makinvoices.com</span>
+                    </p>
+                  </div>
+
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider self-start sm:self-auto shrink-0 ${
+                    draftBackup.isEnabled
+                      ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700/50'
+                      : 'bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 border border-slate-300 dark:border-zinc-700'
+                  }`}>
+                    {draftBackup.isEnabled ? `Active (${draftBackup.frequency.toUpperCase()})` : 'Backup Disabled'}
+                  </span>
+                </div>
+
+                {/* 1. MASTER TOGGLE: ENABLE AUTOMATED BACKUP */}
+                <div className="p-4 bg-[#f4f9ff] dark:bg-[#0b1329]/80 rounded-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                  <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      draftBackup.isEnabled
+                        ? 'bg-[#0284c7] text-white shadow-md shadow-[#0284c7]/20'
+                        : 'bg-slate-200 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500'
+                    }`}>
+                      <HardDrive className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-[#0f172a] dark:text-white block">Enable Automated Document Backup</span>
+                        <span className="text-[9px] font-bold text-[#0284c7] dark:text-[#38bdf8] px-2 py-0.2 bg-[#e0f2fe] dark:bg-[#1b264f] rounded-full border border-[#bae6fd] dark:border-[#223269] shrink-0">
+                          Official PDF Dispatch
+                        </span>
+                      </div>
+                      <span className="text-[10.5px] text-[#64748b]/80 dark:text-zinc-400 block mt-0.5 leading-snug">
+                        Automatically compile and email document PDFs & financial reports directly to your company inbox
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="self-end sm:self-center shrink-0">
+                    <Toggle
+                      checked={draftBackup.isEnabled}
+                      onChange={handleToggleMasterBackup}
+                    />
+                  </div>
+                </div>
+
+                {/* 2. CONDITIONAL OPTIONS: FREQUENCY & DESTINATION */}
+                {draftBackup.isEnabled ? (
+                  <div className="space-y-6 animate-in fade-in duration-200">
+                    
+                    {/* FREQUENCY SELECTOR: DAILY, WEEKLY, MONTHLY */}
+                    <div className="p-5 rounded-2xl border bg-[#f4f9ff]/60 dark:bg-[#0b1329]/60 border-[#bae6fd]/50 dark:border-[#223269]/50 shadow-2xs space-y-3">
+                      <div>
+                        <span className="text-[10px] uppercase font-extrabold tracking-widest text-[#0284c7] dark:text-[#38bdf8] block" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                          Backup Schedule Frequency
+                        </span>
+                        <p className="text-[10.5px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">
+                          Choose how often your document PDFs should be automatically generated and emailed to you
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                        {/* Daily */}
+                        <button
+                          type="button"
+                          onClick={() => handleSelectFrequency('daily')}
+                          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 ${
+                            draftBackup.frequency === 'daily'
+                              ? 'bg-white dark:bg-[#111a36] border-[#0284c7] dark:border-[#38bdf8] shadow-sm ring-1 ring-[#0284c7]'
+                              : 'bg-white/60 dark:bg-[#111a36]/60 border-[#bae6fd]/40 dark:border-[#223269]/40 hover:border-[#0284c7]/40'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-[#0f172a] dark:text-white flex items-center gap-1.5">
+                              <Calendar className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8]" />
+                              Daily Backup
+                            </span>
+                            {draftBackup.frequency === 'daily' && (
+                              <CheckCircle className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8]" />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 leading-snug">
+                            Every night at 11:59 PM. Recommended for active daily billing.
+                          </p>
+                        </button>
+
+                        {/* Weekly */}
+                        <button
+                          type="button"
+                          onClick={() => handleSelectFrequency('weekly')}
+                          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 ${
+                            draftBackup.frequency === 'weekly'
+                              ? 'bg-white dark:bg-[#111a36] border-[#0284c7] dark:border-[#38bdf8] shadow-sm ring-1 ring-[#0284c7]'
+                              : 'bg-white/60 dark:bg-[#111a36]/60 border-[#bae6fd]/40 dark:border-[#223269]/40 hover:border-[#0284c7]/40'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-[#0f172a] dark:text-white flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8]" />
+                              Weekly Backup
+                            </span>
+                            {draftBackup.frequency === 'weekly' && (
+                              <CheckCircle className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8]" />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 leading-snug">
+                            Every Sunday at 11:59 PM with weekly statements & invoice PDFs.
+                          </p>
+                        </button>
+
+                        {/* Monthly */}
+                        <button
+                          type="button"
+                          onClick={() => handleSelectFrequency('monthly')}
+                          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 ${
+                            draftBackup.frequency === 'monthly'
+                              ? 'bg-white dark:bg-[#111a36] border-[#0284c7] dark:text-[#38bdf8] shadow-sm ring-1 ring-[#0284c7]'
+                              : 'bg-white/60 dark:bg-[#111a36]/60 border-[#bae6fd]/40 dark:border-[#223269]/40 hover:border-[#0284c7]/40'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-[#0f172a] dark:text-white flex items-center gap-1.5">
+                              <Database className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8]" />
+                              Monthly Backup
+                            </span>
+                            {draftBackup.frequency === 'monthly' && (
+                              <CheckCircle className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8]" />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-[#64748b]/80 dark:text-zinc-400 leading-snug">
+                            On the 1st of every month. Ideal for CA/accountant audits & tax filing.
+                          </p>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RECIPIENT EMAIL & SENDER VERIFICATION */}
+                    <div className="p-5 rounded-2xl border bg-[#f4f9ff]/60 dark:bg-[#0b1329]/60 border-[#bae6fd]/50 dark:border-[#223269]/50 shadow-2xs space-y-4">
+                      <div>
+                        <span className="text-[10px] uppercase font-extrabold tracking-widest text-[#0284c7] dark:text-[#38bdf8] block" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                          Destination Company Email & Sender Route
+                        </span>
+                        <p className="text-[10.5px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">
+                          PDF files will be sent securely to your designated company inbox
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Target Recipient Email */}
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#0f172a] dark:text-zinc-200 mb-1.5">
+                            Company Recipient Email Address
+                          </label>
+                          <div className="relative">
+                            <Mail className="w-4 h-4 text-[#0284c7] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <input
+                              type="email"
+                              value={draftBackup.targetEmail}
+                              onChange={(e) => setDraftBackup(prev => ({ ...prev, targetEmail: e.target.value }))}
+                              placeholder={profile.email || "billing@yourcompany.com"}
+                              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 focus:border-[#0284c7] focus:outline-hidden text-[#0f172a] dark:text-zinc-100 font-mono"
+                            />
+                          </div>
+                          <span className="text-[9.5px] text-[#64748b]/75 dark:text-zinc-400 mt-1 block">
+                            Defaults to your account email: <span className="font-mono font-bold text-[#0284c7] dark:text-[#38bdf8]">{profile.email || 'None configured'}</span>
+                          </span>
+                        </div>
+
+                        {/* Verified Sender Info */}
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#0f172a] dark:text-zinc-200 mb-1.5">
+                            Verified Sender Route
+                          </label>
+                          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/80 dark:bg-[#111a36]/80 border border-[#bae6fd]/60 dark:border-[#223269]/60">
+                            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs font-mono font-bold text-[#0f172a] dark:text-zinc-200 block truncate">
+                                noreply@makinvoices.com
+                              </span>
+                            </div>
+                            <span className="text-[8.5px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-300 dark:border-emerald-800 shrink-0">
+                              Verified Brand
+                            </span>
+                          </div>
+                          <span className="text-[9.5px] text-[#64748b]/75 dark:text-zinc-400 mt-1 block">
+                            All automated backup emails will originate securely from this address
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* DOCUMENTS INCLUDED IN BACKUP */}
+                    <div className="p-5 rounded-2xl border bg-[#f4f9ff]/60 dark:bg-[#0b1329]/60 border-[#bae6fd]/50 dark:border-[#223269]/50 shadow-2xs space-y-3">
+                      <div>
+                        <span className="text-[10px] uppercase font-extrabold tracking-widest text-[#0284c7] dark:text-[#38bdf8] block" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                          Included Financial Documents & Registers
+                        </span>
+                        <p className="text-[10.5px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">
+                          Select which document PDFs and master registers should be bundled in the backup archive
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                        {/* Sales Invoices */}
+                        <div
+                          onClick={() => handleToggleBackupDocType('includeSalesInvoices')}
+                          className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-[#111a36] border border-[#bae6fd]/40 dark:border-[#223269]/40 cursor-pointer hover:border-[#0284c7]/40 transition-all"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <FileText className="w-4 h-4 text-[#0284c7] dark:text-[#38bdf8] shrink-0" />
+                            <div>
+                              <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 block">Sales Invoices PDFs</span>
+                              <span className="text-[9.5px] text-[#64748b]/75 dark:text-zinc-400 block">Tax invoices & credit notes</span>
+                            </div>
+                          </div>
+                          <Toggle
+                            checked={draftBackup.includeSalesInvoices}
+                            onChange={() => handleToggleBackupDocType('includeSalesInvoices')}
+                          />
+                        </div>
+
+                        {/* Purchase Bills */}
+                        <div
+                          onClick={() => handleToggleBackupDocType('includePurchaseBills')}
+                          className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-[#111a36] border border-[#bae6fd]/40 dark:border-[#223269]/40 cursor-pointer hover:border-[#0284c7]/40 transition-all"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <div>
+                              <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 block">Purchase Bills PDFs</span>
+                              <span className="text-[9.5px] text-[#64748b]/75 dark:text-zinc-400 block">Vendor bills & purchase vouchers</span>
+                            </div>
+                          </div>
+                          <Toggle
+                            checked={draftBackup.includePurchaseBills}
+                            onChange={() => handleToggleBackupDocType('includePurchaseBills')}
+                          />
+                        </div>
+
+                        {/* Master Registry */}
+                        <div
+                          onClick={() => handleToggleBackupDocType('includeMasterRegistry')}
+                          className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-[#111a36] border border-[#bae6fd]/40 dark:border-[#223269]/40 cursor-pointer hover:border-[#0284c7]/40 transition-all"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <Database className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
+                            <div>
+                              <span className="text-xs font-bold text-[#0f172a] dark:text-zinc-200 block">Master Registry & Customers</span>
+                              <span className="text-[9.5px] text-[#64748b]/75 dark:text-zinc-400 block">Clients, products & vendor master data</span>
+                            </div>
+                          </div>
+                          <Toggle
+                            checked={draftBackup.includeMasterRegistry}
+                            onChange={() => handleToggleBackupDocType('includeMasterRegistry')}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+
+
+                  </div>
+                ) : (
+                  <div className="p-8 rounded-2xl border border-dashed border-[#bae6fd]/70 dark:border-[#223269]/70 bg-[#f4f9ff]/30 dark:bg-[#0b1329]/40 text-center space-y-2">
+                    <Database className="w-8 h-8 text-slate-400 dark:text-zinc-600 mx-auto" />
+                    <h3 className="text-xs font-bold text-[#0f172a] dark:text-zinc-200">Automated Backup is currently turned off</h3>
+                    <p className="text-[10.5px] text-[#64748b]/80 dark:text-zinc-400 max-w-md mx-auto">
+                      Enable the toggle above to schedule automatic delivery of document PDFs (Daily, Weekly, or Monthly) directly from <span className="font-mono text-[#0284c7] dark:text-[#38bdf8]">noreply@makinvoices.com</span>.
+                    </p>
+                  </div>
+                )}
+
+                {/* Sticky Action Footer when changes are dirty */}
+                {isBackupDirty && (
+                  <div className="sticky bottom-0 z-10 pt-4 mt-6 border-t border-[#bae6fd]/40 dark:border-[#223269]/40 bg-white/95 dark:bg-[#111a36]/95 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in slide-in-from-bottom-2 duration-200">
+                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-[11px] font-bold">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <span>Unsaved backup schedule changes</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={handleDiscardBackupChanges}
+                        className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 text-xs font-bold text-[#64748b] dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Discard</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleApplyBackupChanges}
+                        className="px-4 py-1.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-black shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Save Backup Settings</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

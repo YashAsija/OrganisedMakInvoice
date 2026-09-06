@@ -47,7 +47,7 @@ export const getFinancialYearShort = (dateInput?: string | Date): string => {
   return `${y1}-${y2}`;
 };
 
-export const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesList: Invoice[], docType: string = 'invoice', docDate?: string) => {
+export const getNextInvoiceNumber = (prefixInput: string, startingInput: any, invoicesList: Invoice[], docType: string = 'invoice', docDate?: string, separatorInput?: string) => {
   const defaultPrefixes: Record<string, string> = {
     invoice: 'INV',
     proforma: 'PRO',
@@ -61,11 +61,12 @@ export const getNextInvoiceNumber = (prefixInput: string, startingInput: any, in
   };
   const prefix = prefixInput ? String(prefixInput).trim() : (defaultPrefixes[docType] || 'INV');
   const starting = startingInput !== undefined && startingInput !== null && String(startingInput).trim() !== '' ? String(startingInput).trim() : '1';
+  const sep = separatorInput !== undefined && separatorInput !== null && String(separatorInput).trim() !== '' ? String(separatorInput).trim() : '-';
 
   const fy = getFinancialYearShort(docDate);
-  const formatPrefix = `${prefix}-${fy}-`; // e.g. "INV-26-27-"
+  const formatPrefix = `${prefix}${sep}${fy}${sep}`; // e.g. "INV-26-27-" or "INV/26-27/"
   const currentYear = new Date().getFullYear();
-  const oldFormatPrefix = `${prefix}-${currentYear}-`; // e.g. "INV-2026-"
+  const oldFormatPrefix = `${prefix}${sep}${currentYear}${sep}`; // e.g. "INV-2026-"
 
   // Extract digits from starting input suffix
   const match = starting.match(/^(.*?)(\d+)$/);
@@ -94,6 +95,18 @@ export const getNextInvoiceNumber = (prefixInput: string, startingInput: any, in
           const num = parseInt(suffix, 10);
           if (num > maxNum) {
             maxNum = num;
+          }
+        }
+      } else {
+        // Also check default hyphenated prefix if custom separator is used (e.g. migrating from '-' to '/')
+        const defaultFormatPrefix = `${prefix}-${fy}-`;
+        if (invNum.startsWith(defaultFormatPrefix)) {
+          const suffix = invNum.substring(defaultFormatPrefix.length);
+          if (/^\d+$/.test(suffix)) {
+            const num = parseInt(suffix, 10);
+            if (num > maxNum) {
+              maxNum = num;
+            }
           }
         }
       }
@@ -791,7 +804,7 @@ export default function InvoiceModal({
       
       if (isDraft && numberIsTaken) {
         const config = getDocTypeConfig(type);
-        const nextAvailableNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, type);
+        const nextAvailableNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, type, undefined, config.separator);
         setInvoiceNumber(nextAvailableNumber);
       } else {
         setInvoiceNumber(invoice.invoiceNumber);
@@ -882,7 +895,7 @@ export default function InvoiceModal({
       const dateStr = now.toISOString().split('T')[0];
       const dueStr = new Date(now.setDate(now.getDate() + 14)).toISOString().split('T')[0];
       const initialConfig = getDocTypeConfig('invoice');
-      const defaultNumber = getNextInvoiceNumber(initialConfig.prefix, initialConfig.startingNumber, invoices, 'invoice');
+      const defaultNumber = getNextInvoiceNumber(initialConfig.prefix, initialConfig.startingNumber, invoices, 'invoice', undefined, initialConfig.separator);
 
       const initialDefaults = getDocumentTypeDefaults('invoice', profile);
       setInvoiceNumber(defaultNumber);
@@ -990,10 +1003,11 @@ export default function InvoiceModal({
     setActiveProfile(profile);
   }, [profile]);
 
-  // Helper function to resolve document prefix and starting number by document type
+  // Helper function to resolve document prefix, starting number and separator by document type
   const getDocTypeConfig = useCallback((type: string) => {
     let pFix = activeProfile.invoicePrefix || profile.invoicePrefix || 'INV';
     let sNum = activeProfile.startingInvoiceNumber || profile.startingInvoiceNumber || '1';
+    let sep = activeProfile.documentSeparator || profile.documentSeparator || '-';
 
     if (type === 'proforma') {
       pFix = activeProfile.proformaPrefix || profile.proformaPrefix || 'PI';
@@ -1015,14 +1029,14 @@ export default function InvoiceModal({
       sNum = activeProfile.startingPurchaseOrderNumber || profile.startingPurchaseOrderNumber || '1';
     }
 
-    return { prefix: pFix, startingNumber: sNum };
+    return { prefix: pFix, startingNumber: sNum, separator: sep };
   }, [activeProfile, profile]);
 
   // Sync default invoice number for new invoices when starting settings load or document type changes
   useEffect(() => {
     if (isOpen && !invoice) {
       const config = getDocTypeConfig(invoiceType);
-      const defaultNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, invoiceType);
+      const defaultNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, invoiceType, undefined, config.separator);
       setInvoiceNumber(defaultNumber);
     }
   }, [isOpen, invoice, invoiceType, invoices, getDocTypeConfig]);
@@ -1074,6 +1088,12 @@ export default function InvoiceModal({
                 country: settings.country || prev.country,
                 currencySymbol: settings.currency_symbol || prev.currencySymbol,
                 stateCode: settings.state_code || prev.stateCode,
+                bankName: settings.bank_name || prev.bankName,
+                accountNumber: settings.account_number || prev.accountNumber,
+                ifsc: settings.ifsc || prev.ifsc,
+                upiId: settings.upi_id || prev.upiId,
+                qrPreference: settings.qr_preference || extraConfig.qrPreference || prev.qrPreference || 'upi',
+                documentSeparator: settings.document_separator || extraConfig.documentSeparator || profile.documentSeparator || prev.documentSeparator || '-',
                 startingInvoiceNumber: settings.starting_invoice_number || profile.startingInvoiceNumber || prev.startingInvoiceNumber,
                 invoicePrefix: settings.invoice_prefix || profile.invoicePrefix || prev.invoicePrefix,
                 proformaPrefix: settings.proforma_prefix || profile.proformaPrefix || prev.proformaPrefix,
@@ -2311,7 +2331,7 @@ export default function InvoiceModal({
     let finalInvoiceNumber = invoiceNumber;
     if (!finalInvoiceNumber || status === 'draft' || (invoice && invoice.status === 'draft')) {
       const config = getDocTypeConfig(invoiceType);
-      finalInvoiceNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, invoiceType);
+      finalInvoiceNumber = getNextInvoiceNumber(config.prefix, config.startingNumber, invoices, invoiceType, undefined, config.separator);
     }
 
     // For new invoices (drafted locally), replace the inv_draft_ ID with a real UUID

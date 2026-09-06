@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Plus,
@@ -48,6 +48,16 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({ currencySymbol = 'â‚
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
+  // Listen for direct open trigger from billing dashboard or quick actions
+  useEffect(() => {
+    const handleOpenTrigger = () => {
+      setEditingExpense(null);
+      setIsModalOpen(true);
+    };
+    window.addEventListener('mak_open_add_expense', handleOpenTrigger);
+    return () => window.removeEventListener('mak_open_add_expense', handleOpenTrigger);
+  }, []);
 
   // Delete Confirmation State
   const [deletingId, setDeletingId] = useState<string | null>(null);

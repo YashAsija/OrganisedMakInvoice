@@ -66,8 +66,9 @@ export function exportCollectiveReportPDF(
   profile: BusinessProfile,
   periodName: string,
   docTypeFilter: string = 'all',
-  sortBy: string = 'doc_no_asc'
-): void {
+  sortBy: string = 'doc_no_asc',
+  action: 'save' | 'base64' = 'save'
+): string | void {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const sym = getCurrencySymbol(profile.currency || 'INR');
   const W = 210, H = 297;
@@ -141,6 +142,12 @@ export function exportCollectiveReportPDF(
       subTitle: 'DEBIT NOTES STATEMENT',
       card1: 'TOTAL DEBIT ISSUED', card2: 'RECOVERED VALUE', card3: 'REMAINING DEBIT', card4: 'TAX ADJUSTMENT',
       themeRgb: [217, 70, 239]
+    },
+    expenses: {
+      topBanner: 'BUSINESS EXPENSES ACCOUNTING LEDGER',
+      subTitle: 'EXPENSE TRANSACTIONS STATEMENT',
+      card1: 'TOTAL EXPENSES', card2: 'PAID EXPENSES', card3: 'PENDING BILLS', card4: 'CATEGORY COUNT',
+      themeRgb: [168, 85, 247]
     }
   };
 
@@ -200,11 +207,14 @@ export function exportCollectiveReportPDF(
   doc.text(`${invoices.length} document(s)`, W - mR, ry, { align: 'right' });
 
   y = Math.max(ly + 1, ry + 4);
+
   // Helper to categorize an invoice
   const getDocTypeKey = (inv: Invoice): string => {
     const rawType = (inv.invoiceType || (inv as any).type || (inv as any).docType || '').toLowerCase().trim();
     const invNum = (inv.invoiceNumber || '').toUpperCase().trim();
     const title = (inv.embeddedTemplate?.config?.header?.invoiceTitle || '').toLowerCase();
+
+    if (rawType === 'expense' || rawType === 'expenses' || (inv as any).isExpense || invNum.startsWith('EXP-') || invNum.startsWith('EXP_')) return 'expenses';
 
     const isPurchase = (inv as any).isPurchase || 
                        rawType.includes('purchase') || 
@@ -252,11 +262,14 @@ export function exportCollectiveReportPDF(
   const totalTax = cleanInvoicesList.reduce((s, i) => s + i.taxTotal, 0);
   const pending = cleanInvoicesList.reduce((s, i) => s + (i.status === 'paid' ? 0 : Math.max(0, i.grandTotal - (i.paidAmount ?? 0))), 0);
 
+  const isExpensesOnlyReport = docTypeFilter === 'expenses';
+  const categoryCount = new Set(cleanInvoicesList.map(it => (it as any).notes || it.clientAddress || it.clientName)).size;
+
   const cards = [
     { label: meta.card1, val: fmt(totalGrand, sym), bg: [240, 246, 255], fg: [37, 99, 235] },
     { label: meta.card2, val: fmt(totalPaid, sym), bg: [240, 253, 250], fg: [13, 148, 136] },
     { label: meta.card3, val: fmt(pending, sym), bg: [254, 243, 199], fg: [146, 64, 14] },
-    { label: meta.card4, val: fmt(totalTax, sym), bg: [254, 226, 226], fg: [153, 27, 27] },
+    { label: meta.card4, val: isExpensesOnlyReport ? `${categoryCount} CATEGORIES` : fmt(totalTax, sym), bg: [254, 226, 226], fg: [153, 27, 27] },
   ];
   const cardW = (cW - 9) / 4;
   cards.forEach((c, i) => {
@@ -280,6 +293,7 @@ export function exportCollectiveReportPDF(
     { key: 'purchase_order', title: 'PURCHASE ORDER TRANSACTIONS', subtitle: 'PURCHASE ORDERS', partyHeader: 'VENDOR / SUPPLIER', color: [99, 102, 241] as [number, number, number] },
     { key: 'purchase_invoice', title: 'PURCHASES TRANSACTIONS', subtitle: 'PURCHASES', partyHeader: 'VENDOR / SUPPLIER', color: [139, 92, 246] as [number, number, number] },
     { key: 'debit_note', title: 'DEBIT NOTE ADJUSTMENTS', subtitle: 'DEBIT NOTES', partyHeader: 'VENDOR / SUPPLIER', color: [217, 70, 239] as [number, number, number] },
+    { key: 'expenses', title: 'BUSINESS EXPENSES TRANSACTIONS', subtitle: 'EXPENSES', partyHeader: 'VENDOR / CATEGORY', color: [168, 85, 247] as [number, number, number] },
   ];
 
   // Helper to sort invoices array according to selected sortBy option
@@ -318,19 +332,30 @@ export function exportCollectiveReportPDF(
   });
 
   const activeSections = SECTIONS.filter(sec => (groupedInvoices[sec.key] || []).length > 0);
-  const cols = { date: mL + 2, inv: mL + 21, client: mL + 45, sub: mL + 106, tax: mL + 127, grand: mL + 154, status: W - mR - 1 };
+  // Table column specifications with strict widths for clear table layout with borders
+  // Total width available = cW (182mm)
+  const colDef = [
+    { key: 'date', label: 'DATE', w: 22, align: 'left' as const },
+    { key: 'inv', label: 'DOC NO', w: 28, align: 'left' as const },
+    { key: 'party', label: 'PARTY NAME', w: 50, align: 'left' as const },
+    { key: 'sub', label: 'SUBTOTAL', w: 23, align: 'right' as const },
+    { key: 'tax', label: 'TAX', w: 18, align: 'right' as const },
+    { key: 'grand', label: 'TOTAL', w: 23, align: 'right' as const },
+    { key: 'status', label: 'STATUS', w: 18, align: 'center' as const }
+  ];
 
   if (cleanInvoicesList.length === 0 || activeSections.length === 0) {
     doc.setFillColor(241, 245, 249);
     doc.rect(mL, y, cW, 7, 'F');
+    doc.setDrawColor(203, 213, 225);
+    doc.rect(mL, y, cW, 7, 'D');
     doc.setFontSize(6.5); doc.setFont('Helvetica', 'bold'); doc.setTextColor(71, 85, 105);
-    doc.text('DATE', cols.date, y + 4.8);
-    doc.text('DOC NO', cols.inv, y + 4.8);
-    doc.text('PARTY NAME', cols.client, y + 4.8);
-    doc.text('SUBTOTAL', cols.sub, y + 4.8, { align: 'right' });
-    doc.text('TAX', cols.tax, y + 4.8, { align: 'right' });
-    doc.text('TOTAL', cols.grand, y + 4.8, { align: 'right' });
-    doc.text('STATUS', cols.status, y + 4.8, { align: 'right' });
+    let curX = mL;
+    colDef.forEach(c => {
+      const textX = c.align === 'right' ? curX + c.w - 2 : c.align === 'center' ? curX + c.w / 2 : curX + 2;
+      doc.text(c.label, textX, y + 4.8, { align: c.align });
+      curX += c.w;
+    });
     y += 7;
 
     doc.setFontSize(7.8); doc.setFont('Helvetica', 'normal'); doc.setTextColor(100, 116, 139);
@@ -348,6 +373,8 @@ export function exportCollectiveReportPDF(
       // --- SECTION SUB-TITLE HEADER BANNER ---
       doc.setFillColor(248, 250, 252);
       doc.roundedRect(mL, y, cW, 8.5, 1, 1, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(mL, y, cW, 8.5, 1, 1, 'D');
       doc.setFillColor(sec.color[0], sec.color[1], sec.color[2]);
       doc.rect(mL, y, 2.5, 8.5, 'F');
 
@@ -358,88 +385,163 @@ export function exportCollectiveReportPDF(
       doc.text(`${items.length} RECORD(S)`, W - mR - 3, y + 5.5, { align: 'right' });
       y += 10;
 
-      // Table Header for this section
+      // Table Header Row with borders
       doc.setFillColor(241, 245, 249);
-      doc.rect(mL, y, cW, 6.5, 'F');
-      doc.setFontSize(6.2); doc.setFont('Helvetica', 'bold'); doc.setTextColor(71, 85, 105);
-      doc.text('DATE', cols.date, y + 4.5);
-      doc.text('DOC NO', cols.inv, y + 4.5);
-      doc.text(sec.partyHeader, cols.client, y + 4.5);
-      doc.text('SUBTOTAL', cols.sub, y + 4.5, { align: 'right' });
-      doc.text('TAX', cols.tax, y + 4.5, { align: 'right' });
-      doc.text('TOTAL', cols.grand, y + 4.5, { align: 'right' });
-      doc.text('STATUS', cols.status, y + 4.5, { align: 'right' });
-      y += 6.5;
+      doc.rect(mL, y, cW, 7, 'F');
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.25);
+      doc.rect(mL, y, cW, 7, 'D');
+
+      let curX = mL;
+      colDef.forEach((c, cIdx) => {
+        if (cIdx > 0) {
+          doc.line(curX, y, curX, y + 7);
+        }
+        doc.setFontSize(6.2); doc.setFont('Helvetica', 'bold'); doc.setTextColor(71, 85, 105);
+        const headerLabel = c.key === 'party' ? sec.partyHeader : c.label;
+        const textX = c.align === 'right' ? curX + c.w - 2 : c.align === 'center' ? curX + c.w / 2 : curX + 2;
+        doc.text(headerLabel, textX, y + 4.7, { align: c.align });
+        curX += c.w;
+      });
+      y += 7;
 
       let secGrand = 0;
       let secTax = 0;
 
       items.forEach((inv, i) => {
-        if (y > H - 25) {
+        const rowH = 8.5;
+        if (y + rowH > H - 25) {
           doc.addPage(); y = 15;
           doc.setFillColor(15, 23, 42); doc.rect(0, 0, W, 3.5, 'F');
 
+          // Re-draw Table Header on new page
           doc.setFillColor(241, 245, 249);
-          doc.rect(mL, y, cW, 6.5, 'F');
-          doc.setFontSize(6.2); doc.setFont('Helvetica', 'bold'); doc.setTextColor(71, 85, 105);
-          doc.text('DATE', cols.date, y + 4.5);
-          doc.text('DOC NO', cols.inv, y + 4.5);
-          doc.text(sec.partyHeader, cols.client, y + 4.5);
-          doc.text('SUBTOTAL', cols.sub, y + 4.5, { align: 'right' });
-          doc.text('TAX', cols.tax, y + 4.5, { align: 'right' });
-          doc.text('TOTAL', cols.grand, y + 4.5, { align: 'right' });
-          doc.text('STATUS', cols.status, y + 4.5, { align: 'right' });
-          y += 6.5;
+          doc.rect(mL, y, cW, 7, 'F');
+          doc.setDrawColor(203, 213, 225);
+          doc.setLineWidth(0.25);
+          doc.rect(mL, y, cW, 7, 'D');
+
+          let reX = mL;
+          colDef.forEach((c, cIdx) => {
+            if (cIdx > 0) doc.line(reX, y, reX, y + 7);
+            doc.setFontSize(6.2); doc.setFont('Helvetica', 'bold'); doc.setTextColor(71, 85, 105);
+            const headerLabel = c.key === 'party' ? sec.partyHeader : c.label;
+            const textX = c.align === 'right' ? reX + c.w - 2 : c.align === 'center' ? reX + c.w / 2 : reX + 2;
+            doc.text(headerLabel, textX, y + 4.7, { align: c.align });
+            reX += c.w;
+          });
+          y += 7;
         }
 
-        if (i % 2 === 1) { doc.setFillColor(252, 253, 254); doc.rect(mL, y, cW, 8.5, 'F'); }
+        if (i % 2 === 1) {
+          doc.setFillColor(248, 250, 252);
+        } else {
+          doc.setFillColor(255, 255, 255);
+        }
+        doc.rect(mL, y, cW, rowH, 'F');
+
+        // Draw outer row border and cell vertical dividers
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.2);
+        doc.rect(mL, y, cW, rowH, 'D');
+
+        let cellX = mL;
+        colDef.forEach((c, cIdx) => {
+          if (cIdx > 0) {
+            doc.line(cellX, y, cellX, y + rowH);
+          }
+          cellX += c.w;
+        });
 
         secGrand += inv.grandTotal;
         secTax += inv.taxTotal;
 
-        doc.setFontSize(7.2); doc.setFont('Helvetica', 'normal'); doc.setTextColor(30, 41, 59);
-        doc.text(inv.date, cols.date, y + 5.2);
-        doc.text(inv.invoiceNumber, cols.inv, y + 5.2);
-        const partyName = ((inv.clientCompanyName || inv.clientCompany || '').trim()) || inv.clientName || '';
-        let partyFontSize = 7.2;
+        // Date
+        doc.setFontSize(6.8); doc.setFont('Helvetica', 'normal'); doc.setTextColor(51, 65, 85);
+        doc.text(inv.date || '', mL + 2, y + 5.2);
+
+        // Doc No
+        let docNoText = inv.invoiceNumber || '';
+        let docNoSize = 6.8;
+        doc.setFontSize(docNoSize);
+        while (docNoSize > 4.5 && doc.getTextWidth(docNoText) > (colDef[1].w - 3)) {
+          docNoSize -= 0.3;
+          doc.setFontSize(docNoSize);
+        }
+        doc.text(docNoText, mL + colDef[0].w + 2, y + 5.2);
+
+        // Party Name with adaptive truncation
+        const partyName = (((inv.clientCompanyName || inv.clientCompany || '').trim()) || inv.clientName || '').trim();
+        let partyFontSize = 6.8;
         doc.setFontSize(partyFontSize);
-        while (partyFontSize > 4.6 && doc.getTextWidth(partyName) > 38) {
-          partyFontSize -= 0.2;
+        const maxPartyW = colDef[2].w - 4;
+        let displayParty = partyName;
+        while (partyFontSize > 5.0 && doc.getTextWidth(displayParty) > maxPartyW) {
+          partyFontSize -= 0.3;
           doc.setFontSize(partyFontSize);
         }
-        doc.text(partyName, cols.client, y + 5.2);
-        doc.setFontSize(7.2);
-        doc.text(fmt(inv.subtotal, sym), cols.sub, y + 5.2, { align: 'right' });
-        doc.text(fmt(inv.taxTotal, sym), cols.tax, y + 5.2, { align: 'right' });
-        doc.text(fmt(inv.grandTotal, sym), cols.grand, y + 5.2, { align: 'right' });
+        if (doc.getTextWidth(displayParty) > maxPartyW) {
+          while (displayParty.length > 3 && doc.getTextWidth(displayParty + '..') > maxPartyW) {
+            displayParty = displayParty.slice(0, -1);
+          }
+          displayParty += '..';
+        }
+        doc.text(displayParty, mL + colDef[0].w + colDef[1].w + 2, y + 5.2);
 
+        // Subtotal
+        doc.setFontSize(6.8);
+        const subX = mL + colDef[0].w + colDef[1].w + colDef[2].w + colDef[3].w - 2;
+        doc.text(fmt(inv.subtotal, sym), subX, y + 5.2, { align: 'right' });
+
+        // Tax
+        const taxX = mL + colDef[0].w + colDef[1].w + colDef[2].w + colDef[3].w + colDef[4].w - 2;
+        doc.text(fmt(inv.taxTotal, sym), taxX, y + 5.2, { align: 'right' });
+
+        // Total
+        doc.setFont('Helvetica', 'bold'); doc.setTextColor(15, 23, 42);
+        const grandX = mL + colDef[0].w + colDef[1].w + colDef[2].w + colDef[3].w + colDef[4].w + colDef[5].w - 2;
+        doc.text(fmt(inv.grandTotal, sym), grandX, y + 5.2, { align: 'right' });
+
+        // Status Badge / Cell
         const sc = statusColors(inv.status);
         const st = formatStatusDisplay(inv.status, inv.paidDate);
+        const statusCenterX = mL + colDef[0].w + colDef[1].w + colDef[2].w + colDef[3].w + colDef[4].w + colDef[5].w + colDef[6].w / 2;
+        
         doc.setFont('Helvetica', 'bold'); doc.setTextColor(sc.text[0], sc.text[1], sc.text[2]);
-
         if (st.sub) {
-          doc.text(st.main, cols.status, y + 3.8, { align: 'right' });
-          doc.setFontSize(5);
-          doc.text(st.sub, cols.status, y + 7, { align: 'right' });
+          doc.setFontSize(6.2);
+          doc.text(st.main, statusCenterX, y + 3.8, { align: 'center' });
+          doc.setFontSize(4.8); doc.setFont('Helvetica', 'normal');
+          doc.text(st.sub, statusCenterX, y + 6.8, { align: 'center' });
         } else {
-          doc.text(st.main, cols.status, y + 5.2, { align: 'right' });
+          doc.setFontSize(6.2);
+          doc.text(st.main, statusCenterX, y + 5.2, { align: 'center' });
         }
 
         doc.setFont('Helvetica', 'normal');
-        y += 8.5;
+        y += rowH;
       });
 
       // SECTION SUBTOTAL BAR
       if (y > H - 25) { doc.addPage(); y = 15; }
-      doc.setFillColor(245, 247, 250);
-      doc.rect(mL, y, cW, 7, 'F');
+      doc.setFillColor(241, 245, 249);
+      doc.rect(mL, y, cW, 7.5, 'F');
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.25);
+      doc.rect(mL, y, cW, 7.5, 'D');
+
       doc.setFontSize(6.8); doc.setFont('Helvetica', 'bold'); doc.setTextColor(71, 85, 105);
-      doc.text(`SUBTOTAL (${sec.subtitle} - ${items.length} Records):`, mL + 4, y + 4.8);
+      doc.text(`SUBTOTAL (${sec.subtitle} - ${items.length} Records):`, mL + 4, y + 5.0);
+
+      // Align subtotal tax and grand directly under their table columns
+      const subTaxX = mL + colDef[0].w + colDef[1].w + colDef[2].w + colDef[3].w + colDef[4].w - 2;
+      const subGrandX = mL + colDef[0].w + colDef[1].w + colDef[2].w + colDef[3].w + colDef[4].w + colDef[5].w - 2;
+
+      doc.text(fmt(secTax, sym), subTaxX, y + 5.0, { align: 'right' });
       doc.setTextColor(sec.color[0], sec.color[1], sec.color[2]);
-      doc.text(fmt(secGrand, sym), cols.grand, y + 4.8, { align: 'right' });
-      doc.setTextColor(71, 85, 105);
-      doc.text(fmt(secTax, sym), cols.tax, y + 4.8, { align: 'right' });
-      y += 10;
+      doc.text(fmt(secGrand, sym), subGrandX, y + 5.0, { align: 'right' });
+
+      y += 11;
     });
   }
 
@@ -449,11 +551,20 @@ export function exportCollectiveReportPDF(
   if (y > H - 30) { doc.addPage(); y = 20; }
   doc.setFillColor(240, 249, 255);
   doc.rect(mL, y, cW, 9, 'F');
-  doc.setFontSize(7.8); doc.setFont('Helvetica', 'bold'); doc.setTextColor(2, 132, 199);
-  doc.text(`GRAND COMBINED TOTALS (${invoices.length} total records across ${activeSections.length} document categories)`, mL + 3, y + 6);
-  doc.text(fmt(totalGrand, sym), cols.grand, y + 6, { align: 'right' });
+  doc.setDrawColor(186, 230, 253);
+  doc.setLineWidth(0.3);
+  doc.rect(mL, y, cW, 9, 'D');
+
+  doc.setFontSize(7.5); doc.setFont('Helvetica', 'bold'); doc.setTextColor(2, 132, 199);
+  doc.text(`GRAND TOTALS (${invoices.length} total records across ${activeSections.length} document categories)`, mL + 3, y + 6);
+
+  const grandTaxX = mL + colDef[0].w + colDef[1].w + colDef[2].w + colDef[3].w + colDef[4].w - 2;
+  const grandTotalX = mL + colDef[0].w + colDef[1].w + colDef[2].w + colDef[3].w + colDef[4].w + colDef[5].w - 2;
+
   doc.setTextColor(30, 41, 59);
-  doc.text(fmt(totalTax, sym), cols.tax, y + 6, { align: 'right' });
+  doc.text(fmt(totalTax, sym), grandTaxX, y + 6, { align: 'right' });
+  doc.setTextColor(2, 132, 199);
+  doc.text(fmt(totalGrand, sym), grandTotalX, y + 6, { align: 'right' });
   y += 15;
 
   if (y < H - 35) {
@@ -471,6 +582,10 @@ export function exportCollectiveReportPDF(
     doc.setFillColor(15, 23, 42); doc.rect(0, H - 3.5, W, 3.5, 'F');
     doc.setFontSize(6.8); doc.setFont('Helvetica', 'normal'); doc.setTextColor(148, 163, 184);
     doc.text(`Ledger Statement  |  Page ${p} of ${totalPgs}  |  MakInvoices Enterprise Accounting`, W / 2, H - 6, { align: 'center' });
+  }
+
+  if (action === 'base64') {
+    return doc.output('datauristring');
   }
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -810,34 +925,41 @@ export async function exportInvoicePDFAsync(invoice: Invoice, profile: BusinessP
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
 
+    const renderNodeToImage = async (node: HTMLElement): Promise<string> => {
+      try {
+        return await Promise.race([
+          toPng(node, {
+            quality: 0.95,
+            pixelRatio: 2,
+            cacheBust: false,
+            skipFonts: true,
+            filter: (n) => !(n instanceof HTMLScriptElement)
+          }),
+          new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 6000))
+        ]);
+      } catch (err) {
+        console.warn('html-to-image failed or timed out, using html2canvas fallback:', err);
+        const html2canvas = (await import('html2canvas')).default;
+        const canvas = await html2canvas(node, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+        return canvas.toDataURL('image/jpeg', 0.95);
+      }
+    };
+
     if (pages.length > 0) {
       for (let i = 0; i < pages.length; i++) {
         if (i > 0) {
           pdf.addPage();
         }
-        const pageDataUrl = await Promise.race([
-          toPng(pages[i], {
-            quality: 0.95,
-            pixelRatio: 2,
-            cacheBust: false,
-            fontEmbedCSS: '',
-            filter: (node) => !(node instanceof HTMLScriptElement)
-          }),
-          new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 10000))
-        ]);
+        const pageDataUrl = await renderNodeToImage(pages[i]);
         pdf.addImage(pageDataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
       }
     } else {
-      const dataUrl = await Promise.race([
-        toPng(container, {
-          quality: 0.95,
-          pixelRatio: 2,
-          cacheBust: false,
-          fontEmbedCSS: '',
-          filter: (node) => !(node instanceof HTMLScriptElement)
-        }),
-        new Promise<string>((_, reject) => setTimeout(() => reject(new Error('html-to-image timeout')), 10000))
-      ]);
+      const dataUrl = await renderNodeToImage(container);
       pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
     }
 

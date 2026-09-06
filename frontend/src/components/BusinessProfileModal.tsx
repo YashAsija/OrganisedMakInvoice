@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Check, Trash2, Upload, CreditCard, ShieldCheck, Sparkles, Building2, Landmark, Sliders, Award, FileSpreadsheet, KeyRound, ArrowLeft, ArrowRight, Plus, AlertCircle, Lock, Banknote, SlidersHorizontal, Hash, FileText, HelpCircle, RefreshCw, ChevronDown } from 'lucide-react';
+import { X, Check, Trash2, Upload, CreditCard, ShieldCheck, Sparkles, Building2, Landmark, Sliders, Award, FileSpreadsheet, KeyRound, ArrowLeft, ArrowRight, Plus, AlertCircle, Lock, Banknote, SlidersHorizontal, Hash, FileText, HelpCircle, RefreshCw, ChevronDown, QrCode, Building } from 'lucide-react';
 import { BusinessProfile } from '../types';
 import { Country, State } from 'country-state-city';
 import { supabase } from '../lib/supabase';
@@ -158,6 +158,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const [accountNumber, setAccountNumber] = useState(() => isOnboarding ? '' : (profile.accountNumber || ''));
   const [ifsc, setIfsc] = useState(() => isOnboarding ? '' : (profile.ifsc || ''));
   const [upiId, setUpiId] = useState(() => isOnboarding ? '' : (profile.upiId || ''));
+  const [qrPreference, setQrPreference] = useState<'upi' | 'bank'>(() => (profile.qrPreference || 'upi'));
 
   // Banking verification states
   const [upiVerified, setUpiVerified] = useState<boolean | null>(() => profile.upiId ? true : null);
@@ -173,6 +174,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
   const [accountError, setAccountError] = useState<string>('');
 
   // Billing
+  const [documentSeparator, setDocumentSeparator] = useState(() => isOnboarding ? '-' : (profile.documentSeparator || '-'));
   const [invoicePrefix, setInvoicePrefix] = useState(() => isOnboarding ? '' : (profile.invoicePrefix || 'INV'));
   const [startingInvoiceNumber, setStartingInvoiceNumber] = useState(() => isOnboarding ? '' : (profile.startingInvoiceNumber || '1'));
   const [proformaPrefix, setProformaPrefix] = useState(() => isOnboarding ? '' : (profile.proformaPrefix || 'PI'));
@@ -553,6 +555,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
             setIfsc(profile.ifsc || '');
             setUpiId(profile.upiId || '');
 
+            setDocumentSeparator(profile.documentSeparator || '-');
             setInvoicePrefix(profile.invoicePrefix || 'INV');
             setStartingInvoiceNumber(profile.startingInvoiceNumber || '1');
             setProformaPrefix(profile.proformaPrefix || 'PI');
@@ -631,6 +634,18 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           setAccountNumber(settings.account_number || '');
           setIfsc(settings.ifsc || '');
           setUpiId(settings.upi_id || '');
+          
+          let resolvedSeparator: string = settings.document_separator || '-';
+          let resolvedQrPref: 'upi' | 'bank' = (settings.qr_preference === 'bank' || settings.qr_preference === 'upi') ? settings.qr_preference : 'upi';
+          if (settings.custom_templates) {
+            try {
+              const extra = typeof settings.custom_templates === 'string' ? JSON.parse(settings.custom_templates) : settings.custom_templates;
+              if (extra.qrPreference) resolvedQrPref = extra.qrPreference;
+              if (extra.documentSeparator) resolvedSeparator = extra.documentSeparator;
+            } catch (e) {}
+          }
+          setQrPreference(resolvedQrPref);
+          setDocumentSeparator(resolvedSeparator);
 
           setInvoicePrefix(settings.invoice_prefix || 'INV');
           setStartingInvoiceNumber(settings.starting_invoice_number || '1');
@@ -682,6 +697,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           setIfsc('');
           setUpiId('');
 
+          setDocumentSeparator('-');
           setInvoicePrefix('INV');
           setStartingInvoiceNumber('1');
           setProformaPrefix('PRO');
@@ -1567,6 +1583,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           accountNumber,
           ifsc,
           upiId,
+          qrPreference,
+          documentSeparator: documentSeparator || '-',
           invoicePrefix,
           startingInvoiceNumber,
           proformaPrefix,
@@ -1740,6 +1758,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         account_number: accountNumber,
         ifsc,
         upi_id: upiId,
+        qr_preference: qrPreference,
+        document_separator: documentSeparator || '-',
         invoice_prefix: invoicePrefix,
         starting_invoice_number: startingInvoiceNumber,
         proforma_prefix: proformaPrefix,
@@ -1759,7 +1779,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         material_categorization: materialCategorization.toLowerCase(),
         default_notes: defaultNotes,
         default_terms: defaultTerms,
-        custom_templates: JSON.stringify({ signatureSize, signatureText, signatureFont, signatureMode }),
+        custom_templates: JSON.stringify({ signatureSize, signatureText, signatureFont, signatureMode, qrPreference, documentSeparator: documentSeparator || '-' }),
         updated_at: new Date().toISOString()
       };
 
@@ -1798,6 +1818,7 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           const { proforma_prefix, starting_proforma_number, debit_note_prefix, starting_debit_note_number,
             credit_note_prefix, starting_credit_note_number, quote_prefix, starting_quote_number,
             purchase_order_prefix, starting_purchase_order_number, purchases_prefix, starting_purchases_number,
+            qr_preference, document_separator,
             ...fallbackData } = settingData;
 
           ({ data: savedSetting, error: settingError } = await supabase
@@ -1891,6 +1912,8 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
         accountNumber,
         ifsc,
         upiId,
+        qrPreference,
+        documentSeparator: documentSeparator || '-',
         invoicePrefix,
         startingInvoiceNumber,
         proformaPrefix,
@@ -2717,8 +2740,41 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
             <div className="space-y-6 animate-fade-in text-[#0f172a] dark:text-[#e2e8f0]">
               {/* White background main Card with brown border */}
               <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
-                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
-                  Primary Bank Account
+                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
+                    Primary Bank Account
+                  </div>
+
+                  {/* QR Code Source Toggle (UPI vs Bank) */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-[#64748b] dark:text-zinc-400">QR Code Source:</span>
+                    <div className="inline-flex p-0.5 rounded-lg bg-slate-200/80 dark:bg-[#070d1e] border border-[#bae6fd]/50 dark:border-[#223269]/60">
+                      <button
+                        type="button"
+                        onClick={() => setQrPreference('upi')}
+                        className={`px-2.5 py-1 text-[10px] font-extrabold rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                          qrPreference === 'upi'
+                            ? 'bg-gradient-to-r from-[#0284c7] to-[#2563eb] text-white shadow-xs'
+                            : 'text-[#64748b] dark:text-zinc-400 hover:text-[#0f172a] dark:hover:text-white'
+                        }`}
+                      >
+                        <QrCode className="w-3 h-3" />
+                        <span>UPI QR</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQrPreference('bank')}
+                        className={`px-2.5 py-1 text-[10px] font-extrabold rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                          qrPreference === 'bank'
+                            ? 'bg-gradient-to-r from-[#0284c7] to-[#2563eb] text-white shadow-xs'
+                            : 'text-[#64748b] dark:text-zinc-400 hover:text-[#0f172a] dark:hover:text-white'
+                        }`}
+                      >
+                        <Building className="w-3 h-3" />
+                        <span>Bank QR</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <div className="p-6 space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
@@ -2881,6 +2937,60 @@ export default function BusinessProfileModal({ profile, isOpen, isOnboarding = f
           {activeTab === 'billing' && (
             <div className="space-y-6 animate-fade-in text-[#0f172a] dark:text-[#e2e8f0]">
               
+              {/* Card 0: Document Numbering Separator */}
+              <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
+                <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 flex items-center justify-between">
+                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">
+                    Document Number Separator
+                  </div>
+                  <div className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#e0f2fe] dark:bg-[#1b264f] text-[#0284c7] dark:text-[#38bdf8]">
+                    Sample: {invoicePrefix || 'INV'}{documentSeparator || '-'}{'26'}{documentSeparator || '-'}{'27'}{documentSeparator || '-'}{String(startingInvoiceNumber || '1').padStart(4, '0')}
+                  </div>
+                </div>
+                <div className="p-6 space-y-4">
+                  <p className="text-[11px] text-[#64748b] dark:text-zinc-400">
+                    Choose or enter a custom separator used between prefix, financial year, and sequential document numbers (e.g. <span className="font-mono font-semibold text-sky-600 dark:text-sky-400">INV-26-27-0001</span> or <span className="font-mono font-semibold text-sky-600 dark:text-sky-400">INV/26-27/0001</span> or <span className="font-mono font-semibold text-sky-600 dark:text-sky-400">INV_26-27_0001</span>).
+                  </p>
+                  
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
+                    {[
+                      { label: 'Hyphen ( - )', value: '-' },
+                      { label: 'Slash ( / )', value: '/' },
+                      { label: 'Underscore ( _ )', value: '_' },
+                      { label: 'Dot ( . )', value: '.' },
+                    ].map((preset) => (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        onClick={() => setDocumentSeparator(preset.value)}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 border flex items-center gap-2 cursor-pointer ${
+                          documentSeparator === preset.value
+                            ? 'bg-[#0284c7] text-white border-[#0284c7] shadow-xs ring-2 ring-[#0284c7]/25'
+                            : 'bg-[#f4f9ff] dark:bg-[#0b1329] text-[#0f172a] dark:text-zinc-300 border-[#bae6fd]/50 dark:border-[#223269]/50 hover:border-[#0284c7]/50'
+                        }`}
+                      >
+                        <span className="font-mono font-bold text-sm">{preset.value}</span>
+                        <span>{preset.label}</span>
+                      </button>
+                    ))}
+                    
+                    {/* Custom Separator input */}
+                    <div className="flex items-center gap-2 ml-auto">
+                      <label htmlFor="custom-separator-input" className="text-[10px] font-extrabold uppercase tracking-wider text-[#64748b] dark:text-zinc-400">Custom:</label>
+                      <input
+                        id="custom-separator-input"
+                        type="text"
+                        maxLength={3}
+                        value={documentSeparator}
+                        onChange={(e) => setDocumentSeparator(e.target.value)}
+                        placeholder="e.g. /"
+                        className="w-16 px-3 py-1.5 rounded-xl border border-[#bae6fd]/50 dark:border-[#223269]/50 bg-[#f4f9ff] dark:bg-[#0b1329] text-sm text-center font-mono font-bold text-[#0f172a] dark:text-white focus:outline-none focus:border-[#0284c7] dark:focus:border-[#38bdf8] focus:ring-2 focus:ring-[#0284c7]/15 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Card 1: Invoice Numbering */}
               <div className="border border-[#bae6fd]/50 dark:border-[#223269]/50 rounded-2xl overflow-hidden bg-white dark:bg-[#111a36] shadow-xs">
                 <div className="bg-[#f4f9ff] dark:bg-[#0b1329]/50 border-b border-[#bae6fd]/40 dark:border-[#223269]/40 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-[#0284c7] dark:text-[#38bdf8]">

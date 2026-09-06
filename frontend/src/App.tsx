@@ -234,7 +234,7 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
       if (path === '/dashboard' || path === '/') {
-        return 'invoices';
+        return 'dashboard';
       }
       if (path.startsWith('/invoice-templates')) {
         return 'invoice_templates';
@@ -560,11 +560,15 @@ export default function App() {
       
       const path = window.location.pathname;
       if (userEmail) {
-        let expectedPath = tabToPath[activeTab] || '/invoices';
+        let expectedPath = tabToPath[activeTab] || '/dashboard';
         if (isInvoiceEditorOpen) {
           expectedPath = '/quick-bill';
         } else if (isProfileOpen) {
           expectedPath = '/company-settings';
+        } else if (activeTab === 'dashboard') {
+          if (path === '/dashboard' || path === '/') {
+            expectedPath = path;
+          }
         } else if (activeTab === 'invoices') {
           if (path.startsWith('/invoices')) {
             expectedPath = path;
@@ -621,8 +625,7 @@ export default function App() {
             if (matchedTab) {
               setActiveTab(matchedTab);
             } else if (path === '/' || path === '/dashboard') {
-              // If at root or /dashboard on back navigation, default to invoices (Sales Ledger)
-              setActiveTab('invoices');
+              setActiveTab('dashboard');
             }
           }
         } else {
@@ -1062,6 +1065,8 @@ export default function App() {
                 accountNumber: companySettings.account_number || cloudProf.accountNumber || '',
                 ifsc: companySettings.ifsc || cloudProf.ifsc || '',
                 upiId: companySettings.upi_id || cloudProf.upiId || '',
+                qrPreference: companySettings.qr_preference || extraConfig.qrPreference || cloudProf.qrPreference || 'upi',
+                documentSeparator: companySettings.document_separator || extraConfig.documentSeparator || cloudProf.documentSeparator || '-',
                 invoicePrefix: companySettings.invoice_prefix || cloudProf.invoicePrefix || 'INV',
                 startingInvoiceNumber: companySettings.starting_invoice_number || cloudProf.startingInvoiceNumber || '1',
                 proformaPrefix: companySettings.proforma_prefix || cloudProf.proformaPrefix || 'PI',
@@ -1119,6 +1124,8 @@ export default function App() {
                 accountNumber: companySettings?.account_number || '',
                 ifsc: companySettings?.ifsc || '',
                 upiId: companySettings?.upi_id || '',
+                qrPreference: companySettings?.qr_preference || 'upi',
+                documentSeparator: companySettings?.document_separator || '-',
                 updatedAt: new Date().toISOString()
               };
               await supabase.from('users').upsert(initProf);
@@ -1739,7 +1746,7 @@ export default function App() {
         if (session?.user?.id) {
           triggerBackgroundSync();
           if (typeof window !== 'undefined' && window.location.search.includes('code=')) {
-            const cleanUrl = (window.location.pathname === '/' || window.location.pathname === '/dashboard') ? '/invoices' : window.location.pathname;
+            const cleanUrl = (window.location.pathname === '/' || window.location.pathname === '/dashboard') ? '/dashboard' : window.location.pathname;
             window.history.replaceState(null, '', cleanUrl);
           }
         }

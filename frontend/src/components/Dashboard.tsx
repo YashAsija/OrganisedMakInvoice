@@ -430,7 +430,7 @@ export default function Dashboard({
 
   // Navigation tabs: 'dashboard' | 'profile' | 'learn' | 'invoices' | 'clients' | 'reports' | 'master_vendor' ...
 
-  const [localActiveTab, setLocalActiveTab] = useState<string>('invoices');
+  const [localActiveTab, setLocalActiveTab] = useState<string>('dashboard');
 
   const activeTab = propActiveTab !== undefined ? propActiveTab : localActiveTab;
 
@@ -2301,6 +2301,14 @@ export default function Dashboard({
           <div className="space-y-1">
             <span className="text-[9px] uppercase font-extrabold tracking-widest block px-2 pb-1" style={{fontFamily: "'IBM Plex Mono', monospace", color: 'var(--nav-eyebrow-color, #0284c7)', opacity: 0.7}}>Financial Hub</span>
 
+            {/* Billing Dashboard */}
+            <button onClick={() => handleTabClick('dashboard')} className={navItemClass('dashboard')}>
+              <div className="flex items-center gap-2.5">
+                <div className={iconWrapper(activeTab === 'dashboard', 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400')}><BarChart3 className="w-3.5 h-3.5" /></div>
+                <span>Billing Dashboard</span>
+              </div>
+            </button>
+
             {/* Sales Ledger Accordion Section */}
             <div className="space-y-0.5">
               <button
@@ -2471,14 +2479,6 @@ export default function Dashboard({
               <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'payments' ? 'bg-[#0284c7] text-white dark:bg-[#0284c7]' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'}`}>
                 {paymentStats.totalPending > 0 ? `${paymentStats.salesPendingCount + paymentStats.purchasesPendingCount} DUE` : `${paymentStats.salesCount + paymentStats.purchasesCount}`}
               </span>
-            </button>
-
-            {/* Billing Dashboard */}
-            <button onClick={() => handleTabClick('dashboard')} className={navItemClass('dashboard')}>
-              <div className="flex items-center gap-2.5">
-                <div className={iconWrapper(activeTab === 'dashboard', 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400')}><BarChart3 className="w-3.5 h-3.5" /></div>
-                <span>Billing Dashboard</span>
-              </div>
             </button>
 
             {/* Accounting Summary */}
@@ -6489,104 +6489,54 @@ export default function Dashboard({
     // Use profile-configured prefixes with fallback defaults
 
     const prefixMap: Record<string, string> = {
-
       invoice: (profile.invoicePrefix || 'INV').toUpperCase(),
-
       proforma: (profile.proformaPrefix || 'PI').toUpperCase(),
-
       credit_note: (profile.creditNotePrefix || 'CN').toUpperCase(),
-
       debit_note: (profile.debitNotePrefix || 'DN').toUpperCase(),
-
       quote: (profile.quotePrefix || 'EST').toUpperCase(),
-
-      purchases: 'PUR',
-
-      purchase_order: 'PO',
-
+      purchases: (profile.purchasesPrefix || 'PUR').toUpperCase(),
+      purchase_order: (profile.purchaseOrderPrefix || 'PO').toUpperCase(),
       purchase_debit_note: 'PDN'
-
     };
-
-
 
     // Compute the next sequential number for this document type
-
-    const startingMap: Record<string, number> = {
-
-      invoice: parseInt(profile.startingInvoiceNumber || '1', 10),
-
-      proforma: parseInt(profile.startingProformaNumber || '1', 10),
-
-      credit_note: parseInt(profile.startingCreditNoteNumber || '1', 10),
-
-      debit_note: parseInt(profile.startingDebitNoteNumber || '1', 10),
-
-      quote: parseInt(profile.startingQuoteNumber || '1', 10),
-
-      purchases: 1,
-
-      purchase_order: 1,
-
-      purchase_debit_note: 1
-
+    const startingMap: Record<string, string> = {
+      invoice: profile.startingInvoiceNumber || '1',
+      proforma: profile.startingProformaNumber || '1',
+      credit_note: profile.startingCreditNoteNumber || '1',
+      debit_note: profile.startingDebitNoteNumber || '1',
+      quote: profile.startingQuoteNumber || '1',
+      purchases: profile.startingPurchasesNumber || '1',
+      purchase_order: profile.startingPurchaseOrderNumber || '1',
+      purchase_debit_note: '1'
     };
 
-    const existingCount = documentTypeCounts[section] || 0;
-
-    const nextNum = (startingMap[section] || 1) + existingCount;
-
-    const paddedNum = String(nextNum).padStart(4, '0');
-
-
-
     const titleMap: Record<string, string> = {
-
       invoice: 'TAX INVOICE',
-
       proforma: 'PROFORMA INVOICE',
-
       credit_note: 'CREDIT NOTE',
-
       debit_note: 'DEBIT NOTE',
-
       quote: 'QUOTATION / ESTIMATE',
-
       purchases: 'PURCHASE BILL',
-
       purchase_order: 'PURCHASE ORDER',
-
       purchase_debit_note: 'PURCHASE DEBIT NOTE'
-
     };
 
     const typeMap: Record<string, any> = {
-
       invoice: 'invoice',
-
       proforma: 'proforma',
-
       credit_note: 'credit_note',
-
       debit_note: 'debit_note',
-
       quote: 'estimate',
-
       purchases: 'purchases',
-
       purchase_order: 'purchase_order',
-
       purchase_debit_note: 'purchase_debit_note'
-
     };
 
-
-
-    const fy = getFinancialYearShort(today);
     const prefix = prefixMap[section] || 'INV';
     const docTypeKey = typeMap[section] || 'invoice';
     const startingInput = startingMap[section] || '1';
-    const num = getNextInvoiceNumber(prefix, startingInput, invoices, docTypeKey, today);
+    const num = getNextInvoiceNumber(prefix, startingInput, invoices, docTypeKey, today, profile.documentSeparator || '-');
 
 
 
@@ -6619,29 +6569,15 @@ export default function Dashboard({
       clientState: '',
 
       companyState: profile.state || '',
-
-      items: [
-
-        { id: '1', name: 'Sample Item / Service', quantity: 1, rate: 100, taxPercentage: 18 }
-
-      ],
-
-      subtotal: 100,
-
+      items: [],
+      subtotal: 0,
       discountType: 'none',
-
       discountValue: 0,
-
       discountTotal: 0,
-
-      taxTotal: 18,
-
-      grandTotal: 118,
-
+      taxTotal: 0,
+      grandTotal: 0,
       notes: defaults.notes,
-
       invoiceTerms: defaults.terms,
-
       status: 'pending',
       isNewDocument: true,
       invoiceType: typeMap[section],
@@ -6803,20 +6739,32 @@ export default function Dashboard({
       }
       return;
     }
-    const defaultPrefixes: Record<string, string> = {
-      invoice: 'INV',
-      proforma: 'PRO',
-      debit_note: 'DN',
-      credit_note: 'CN',
-      estimate: 'EST',
-      quote: 'EST',
-      purchases: 'PUR',
-      purchase_order: 'PO',
+    const prefixMap: Record<string, string> = {
+      invoice: (profile.invoicePrefix || 'INV').toUpperCase(),
+      proforma: (profile.proformaPrefix || 'PI').toUpperCase(),
+      credit_note: (profile.creditNotePrefix || 'CN').toUpperCase(),
+      debit_note: (profile.debitNotePrefix || 'DN').toUpperCase(),
+      estimate: (profile.quotePrefix || 'EST').toUpperCase(),
+      quote: (profile.quotePrefix || 'EST').toUpperCase(),
+      purchases: (profile.purchasesPrefix || 'PUR').toUpperCase(),
+      purchase_order: (profile.purchaseOrderPrefix || 'PO').toUpperCase(),
       purchase_debit_note: 'PDN'
     };
-    const prefix = defaultPrefixes[targetType] || 'INV';
+    const startingMap: Record<string, string> = {
+      invoice: profile.startingInvoiceNumber || '1',
+      proforma: profile.startingProformaNumber || '1',
+      credit_note: profile.startingCreditNoteNumber || '1',
+      debit_note: profile.startingDebitNoteNumber || '1',
+      estimate: profile.startingQuoteNumber || '1',
+      quote: profile.startingQuoteNumber || '1',
+      purchases: profile.startingPurchasesNumber || '1',
+      purchase_order: profile.startingPurchaseOrderNumber || '1',
+      purchase_debit_note: '1'
+    };
+    const prefix = prefixMap[targetType] || 'INV';
+    const startingNum = startingMap[targetType] || '1';
     const todayStr = new Date().toISOString().split('T')[0];
-    const nextNumber = getNextInvoiceNumber(prefix, '1', invoices, targetType, todayStr);
+    const nextNumber = getNextInvoiceNumber(prefix, startingNum, invoices, targetType, todayStr, profile.documentSeparator || '-');
 
     onOpenInvoiceEditor({
       // Base identifier
@@ -8123,6 +8071,83 @@ export default function Dashboard({
   // Apply date, client, and document type filters
 
   const reportedInvoices = useMemo(() => {
+    // Helper to map an expense item into a standardized Invoice structure for unified ledger reporting
+    const mapExpenseToDoc = (exp: any): Invoice => {
+      const expD = exp.expense_date || exp.date || new Date().toISOString().split('T')[0];
+      const expAmt = Number(exp.amount || 0);
+      const isPaid = exp.status === 'paid';
+      return {
+        id: `exp_${exp.id}`,
+        userId: exp.user_id || exp.userId || '',
+        invoiceType: 'purchases' as any,
+        invoiceNumber: exp.reference_number ? `EXP-${exp.reference_number}` : `EXP-${exp.id.slice(0, 6).toUpperCase()}`,
+        date: expD,
+        dueDate: expD,
+        clientName: exp.vendor || exp.category || 'Business Expense',
+        clientEmail: '',
+        clientPhone: '',
+        clientAddress: exp.category || 'General Expense',
+        notes: exp.description || exp.category || '',
+        subtotal: expAmt,
+        discountType: 'none',
+        discountValue: 0,
+        discountTotal: 0,
+        taxTotal: 0,
+        grandTotal: expAmt,
+        status: isPaid ? 'paid' : 'pending',
+        items: [
+          {
+            id: `exp_it_${exp.id}`,
+            name: `${exp.category || 'Expense'}: ${exp.description || exp.vendor || 'General Expense'}`,
+            rate: expAmt,
+            quantity: 1,
+            taxPercentage: 0
+          }
+        ],
+        createdAt: exp.created_at || exp.createdAt || expD,
+        updatedAt: exp.updated_at || expD,
+        paidDate: isPaid ? expD : undefined,
+        paidAmount: isPaid ? expAmt : 0,
+        isExpense: true
+      } as any as Invoice;
+    };
+
+    const filterExpense = (exp: any): boolean => {
+      if (exp.isDeleted) return false;
+      const expD = exp.expense_date || exp.date || '';
+      if (reportStartDate && expD < reportStartDate) return false;
+      if (reportEndDate && expD > reportEndDate) return false;
+      if (reportClientFilter !== 'all') {
+        const vendorMatch = (exp.vendor || '').trim() === reportClientFilter;
+        const catMatch = (exp.category || '').trim() === reportClientFilter;
+        if (!vendorMatch && !catMatch) return false;
+      }
+      return true;
+    };
+
+    // If expenses document type is selected, return all filtered expenses
+    if (reportDocTypeFilter === 'expenses') {
+      const expList = expenses.filter(filterExpense).map(mapExpenseToDoc);
+      return expList.sort((a, b) => {
+        switch (reportSortBy) {
+          case 'doc_no_asc':
+            return (a.invoiceNumber || '').localeCompare(b.invoiceNumber || '', undefined, { numeric: true, sensitivity: 'base' });
+          case 'doc_no_desc':
+            return (b.invoiceNumber || '').localeCompare(a.invoiceNumber || '', undefined, { numeric: true, sensitivity: 'base' });
+          case 'date_asc':
+            return new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime();
+          case 'date_desc':
+            return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+          case 'amount_asc':
+            return (a.grandTotal || 0) - (b.grandTotal || 0);
+          case 'amount_desc':
+            return (b.grandTotal || 0) - (a.grandTotal || 0);
+          default:
+            return 0;
+        }
+      });
+    }
+
     const rawList = invoices.filter(inv => {
       if (inv.isDeleted) return false;
       if (inv.status === 'draft') return false;
@@ -8146,6 +8171,12 @@ export default function Dashboard({
       if (reportDocTypeFilter === 'debit_note') return docType === 'debit_note';
       return true;
     });
+
+    // When "all" (All Documents Combined) is selected, also incorporate mapped business expenses
+    if (reportDocTypeFilter === 'all') {
+      const expList = expenses.filter(filterExpense).map(mapExpenseToDoc);
+      rawList.push(...expList);
+    }
 
     const deduplicatedMap = new Map<string, Invoice>();
     rawList.forEach(inv => {
@@ -8182,7 +8213,7 @@ export default function Dashboard({
           return 0;
       }
     });
-  }, [invoices, reportClientFilter, reportStartDate, reportEndDate, reportDocTypeFilter, reportSortBy]);
+  }, [invoices, expenses, reportClientFilter, reportStartDate, reportEndDate, reportDocTypeFilter, reportSortBy]);
 
 
 
@@ -12492,10 +12523,11 @@ export default function Dashboard({
                   </div>
 
                   {/* Client Account */}
+                  {/* Client Account */}
                   <div className="space-y-1.5 min-w-0">
                     <label htmlFor="rep-client" className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-[#64748b]/80 dark:text-zinc-400">
                       <span className="w-1 h-1 rounded-full bg-[#0284c7] dark:bg-[#38bdf8] inline-block" />
-                      Client Account
+                      {reportDocTypeFilter === 'expenses' ? 'Vendor / Category' : reportDocTypeFilter === 'all' ? 'Client / Vendor' : 'Client Account'}
                     </label>
                     <select
                       id="rep-client"
@@ -12503,10 +12535,24 @@ export default function Dashboard({
                       onChange={(e) => setReportClientFilter(e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-[#f4f9ff] dark:bg-[#0b1329] border border-[#bae6fd]/60 hover:border-[#0284c7] focus:border-[#0284c7] dark:border-[#223269] dark:focus:border-[#38bdf8] rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:outline-none transition-all duration-150 cursor-pointer shadow-2xs"
                     >
-                      <option value="all">All Clients</option>
-                      {Array.from(new Set(invoices.map(it => it.clientName))).filter(Boolean).map(clName => (
-                        <option key={clName} value={clName}>{clName}</option>
-                      ))}
+                      <option value="all">
+                        {reportDocTypeFilter === 'expenses' ? 'All Vendors & Categories' : reportDocTypeFilter === 'all' ? 'All Accounts & Parties' : 'All Clients'}
+                      </option>
+                      {reportDocTypeFilter === 'expenses'
+                        ? Array.from(new Set(expenses.flatMap(exp => [exp.vendor, exp.category]))).filter(Boolean).map(party => (
+                            <option key={party} value={party}>{party}</option>
+                          ))
+                        : reportDocTypeFilter === 'all'
+                        ? Array.from(new Set([
+                            ...invoices.map(it => it.clientName),
+                            ...expenses.flatMap(exp => [exp.vendor, exp.category])
+                          ])).filter(Boolean).map(party => (
+                            <option key={party} value={party}>{party}</option>
+                          ))
+                        : Array.from(new Set(invoices.map(it => it.clientName))).filter(Boolean).map(clName => (
+                            <option key={clName} value={clName}>{clName}</option>
+                          ))
+                      }
                     </select>
                   </div>
 
@@ -12528,7 +12574,6 @@ export default function Dashboard({
                       <optgroup label="Sales Documents">
                         <option value="tax_invoice">Tax Invoice</option>
                         <option value="proforma">Proforma Invoice</option>
-                        <option value="receipt">Receipt / Cash Voucher</option>
                         <option value="quote">Quotation / Estimate</option>
                         <option value="credit_note">Credit Note</option>
                       </optgroup>
@@ -12536,6 +12581,9 @@ export default function Dashboard({
                         <option value="purchase_order">Purchase Order</option>
                         <option value="purchase_invoice">Purchases</option>
                         <option value="debit_note">Debit Note</option>
+                      </optgroup>
+                      <optgroup label="Expense Documents">
+                        <option value="expenses">Business Expenses</option>
                       </optgroup>
                     </select>
                   </div>
@@ -14356,7 +14404,72 @@ export default function Dashboard({
           };
 
           return (
-            <div className="space-y-6 text-sans animate-in fade-in duration-300">
+            <div className="space-y-5 sm:space-y-6 text-sans animate-in fade-in duration-300">
+
+              {/* Quick Action Buttons Bar (Add Sales, Add Purchase, Add Expense) */}
+              <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3.5 sm:p-4.5 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3.5 sm:gap-4 transition-all">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] flex items-center justify-center shrink-0">
+                    <Zap className="w-4 h-4 sm:w-5 sm:h-5 fill-[#0284c7]/20 dark:fill-[#38bdf8]/20" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs sm:text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight flex items-center gap-2">
+                      Quick Billing Actions
+                    </h2>
+                    <p className="text-[10px] sm:text-[11px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">
+                      Create new sales tax invoices, record vendor purchase bills, or log operational expenses
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3 Quick Action Actionable Buttons */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5 w-full md:w-auto shrink-0">
+                  {/* 1. Add Sales -> Redirects to Create Tax Invoice */}
+                  <button
+                    onClick={() => {
+                      setActiveTab('invoices');
+                      setLedgerSection('invoice');
+                      handleCreateDocumentForSection('invoice');
+                    }}
+                    className="group relative flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer border border-[#0284c7]"
+                    title="Create Tax Invoice (Sales)"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span className="truncate">Add Sales</span>
+                  </button>
+
+                  {/* 2. Add Purchase -> Redirects to Create Purchase Bill */}
+                  <button
+                    onClick={() => {
+                      setActiveTab('purchases');
+                      setPurchaseLedgerSection('purchases');
+                      handleCreateDocumentForSection('purchases');
+                    }}
+                    className="group relative flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer border border-rose-600"
+                    title="Create Purchase Bill (Vendor Bill)"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span className="truncate">Add Purchase</span>
+                  </button>
+
+                  {/* 3. Add Expense -> Redirects to Create Expense */}
+                  <button
+                    onClick={() => {
+                      setActiveTab('expenses');
+                      if (typeof window !== 'undefined') {
+                        setTimeout(() => {
+                          window.dispatchEvent(new CustomEvent('mak_open_add_expense'));
+                        }, 50);
+                      }
+                    }}
+                    className="group relative flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer border border-purple-600"
+                    title="Log Operational Expense"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span className="truncate">Add Expense</span>
+                  </button>
+                </div>
+              </div>
 
               {/* KPI Cards — Top Row (Lifetime Sales -> Lifetime Purchases -> Lifetime Stock -> Lifetime Expenses) */}
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
@@ -16615,25 +16728,17 @@ export default function Dashboard({
 
 
         {/* ------------------ TAB: SETTINGS ------------------ */}
-
         {activeTab === 'settings' && (
-
           <SettingsPage
-
             theme={theme}
-
             toggleTheme={toggleTheme}
-
             profile={profile}
-
+            invoices={invoices}
+            expenses={expenses}
             isPinLockEnabled={isPinLockEnabled}
-
             onToggleSecurity={onToggleSecurity}
-
             onLogout={onLogout}
-
           />
-
         )}
 
 

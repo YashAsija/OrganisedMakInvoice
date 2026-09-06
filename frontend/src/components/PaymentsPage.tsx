@@ -100,7 +100,7 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('All');
   const [dateFilter, setDateFilter] = useState<string>('All');
-  const [sortBy, setSortBy] = useState<'date' | 'amount' | 'party' | 'due'>('date');
+  const [sortBy, setSortBy] = useState<'date' | 'amount' | 'party' | 'due' | 'docNumber'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Settlement Modal State
@@ -114,6 +114,17 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
   // Pagination State - Parties / Companies List (Left: exactly 5 entries per page with vertical scroll)
   const [partyCurrentPage, setPartyCurrentPage] = useState<number>(1);
   const partyItemsPerPage = 5;
+
+  // Toggle Sorting for Column Headers
+  const toggleSort = (field: typeof sortBy) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === 'party' || field === 'docNumber' ? 'asc' : 'desc');
+    }
+    setCurrentPage(1);
+  };
 
   // Format Helper
   const formatAmount = (val: number) => {
@@ -266,13 +277,21 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
     }).sort((a, b) => {
       let comparison = 0;
       if (sortBy === 'date') {
-        comparison = new Date(b.date).getTime() - new Date(a.date).getTime();
+        const timeA = a.date ? new Date(a.date).getTime() : 0;
+        const timeB = b.date ? new Date(b.date).getTime() : 0;
+        comparison = timeB - timeA;
       } else if (sortBy === 'amount') {
-        comparison = b.totalAmount - a.totalAmount;
+        comparison = (b.totalAmount || 0) - (a.totalAmount || 0);
       } else if (sortBy === 'due') {
-        comparison = b.dueAmount - a.dueAmount;
+        comparison = (b.dueAmount || 0) - (a.dueAmount || 0);
       } else if (sortBy === 'party') {
-        comparison = (a.companyName || a.partyName).localeCompare(b.companyName || b.partyName);
+        const nameA = (a.companyName || a.partyName || '').trim().toLowerCase();
+        const nameB = (b.companyName || b.partyName || '').trim().toLowerCase();
+        comparison = nameB.localeCompare(nameA);
+      } else if (sortBy === 'docNumber') {
+        const docA = (a.documentNumber || '').trim();
+        const docB = (b.documentNumber || '').trim();
+        comparison = docB.localeCompare(docA, undefined, { numeric: true, sensitivity: 'base' });
       }
       return sortOrder === 'asc' ? -comparison : comparison;
     });
@@ -1298,7 +1317,7 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
       {/* Category Toggle Tabs & Export CSV Options Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Toggle Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-[#e0f2fe]/50 dark:bg-[#0b1329]/80 rounded-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 w-full sm:w-auto">
+        <div className="order-2 sm:order-1 flex items-center gap-1.5 p-1 bg-[#e0f2fe]/50 dark:bg-[#0b1329]/80 rounded-2xl border border-[#bae6fd]/60 dark:border-[#223269]/60 w-full sm:w-auto">
           <button
             onClick={() => {
               if (activeCategory !== 'sales') {
@@ -1349,15 +1368,14 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
         </div>
 
         {/* Export Options Button beside Tabs */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="order-1 sm:order-2 flex items-center gap-2 shrink-0">
           <button
             onClick={handleOpenExportModal}
-            title="Export Records (Excel, PDF, JSON, CSV)"
-            className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-[#bae6fd] dark:border-[#223269] bg-gradient-to-r from-white to-[#f0f9ff] dark:from-[#111a36] dark:to-[#1e293b] text-xs font-bold text-[#0f172a] dark:text-white hover:border-[#0284c7] dark:hover:border-[#38bdf8] hover:shadow-md hover:shadow-sky-500/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs group"
+            title="Export Payment Records (Excel, PDF, CSV, JSON)"
+            className="w-full sm:w-auto h-10 px-4.5 rounded-xl bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm hover:shadow-md hover:shadow-[#0284c7]/25 active:scale-98 transition-all cursor-pointer group shrink-0"
           >
-            <Download className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#38bdf8] transition-transform group-hover:-translate-y-0.5" />
-            <span>Export</span>
-            <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
+            <Download className="w-3.5 h-3.5 text-white/90 group-hover:-translate-y-0.5 transition-transform duration-200" />
+            <span>Export Report</span>
           </button>
         </div>
       </div>
@@ -1654,9 +1672,9 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
-              {/* Search Box */}
-              <div className="relative">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+              {/* Search Box (Full width on mobile/tablet, 1 col on desktop) */}
+              <div className="relative col-span-2 md:col-span-3 lg:col-span-1">
                 <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" />
                 <input
                   type="text"
@@ -1723,6 +1741,31 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
                   ))}
                 </select>
               </div>
+
+              {/* Sort By Filter */}
+              <div className="relative">
+                <select
+                  value={`${sortBy}_${sortOrder}`}
+                  onChange={(e) => {
+                    const [field, order] = e.target.value.split('_') as [typeof sortBy, typeof sortOrder];
+                    setSortBy(field);
+                    setSortOrder(order);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full px-2.5 py-1.5 bg-[#f8fafc] dark:bg-[#0b1329] border border-[#bae6fd] dark:border-[#223269] rounded-xl text-xs font-semibold text-[#0f172a] dark:text-white focus:outline-hidden focus:ring-2 focus:ring-[#0284c7]"
+                >
+                  <option value="date_desc">Sort: Date (Newest)</option>
+                  <option value="date_asc">Sort: Date (Oldest)</option>
+                  <option value="docNumber_asc">Sort: Doc No. (A to Z / Low to High)</option>
+                  <option value="docNumber_desc">Sort: Doc No. (Z to A / High to Low)</option>
+                  <option value="amount_desc">Sort: Amount (High to Low)</option>
+                  <option value="amount_asc">Sort: Amount (Low to High)</option>
+                  <option value="due_desc">Sort: Due (High to Low)</option>
+                  <option value="due_asc">Sort: Due (Low to High)</option>
+                  <option value="party_asc">Sort: Party (A to Z)</option>
+                  <option value="party_desc">Sort: Party (Z to A)</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -1756,12 +1799,67 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({
                 </colgroup>
                 <thead>
                   <tr className="text-[10px] font-black uppercase text-[#64748b]/80 dark:text-zinc-400 tracking-wider border-b border-[#bae6fd]/30 dark:border-[#223269]/30 bg-[#f4f9ff]/60 dark:bg-[#0b1329]/40 h-10">
-                    <th className="px-3 font-black truncate">DOCUMENT</th>
-                    <th className="px-3 font-black truncate">{activeCategory === 'sales' ? 'COMPANY / CLIENT' : 'COMPANY / VENDOR'}</th>
-                    <th className="px-2 font-black truncate">DATE & DUE</th>
-                    <th className="px-2 font-black truncate">TOTAL</th>
+                    <th
+                      onClick={() => toggleSort('docNumber')}
+                      className="px-3 font-black truncate cursor-pointer select-none hover:text-[#0284c7] dark:hover:text-[#38bdf8] transition-colors"
+                      title="Sort by Document Number"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>DOCUMENT</span>
+                        {sortBy === 'docNumber' && (
+                          <span className="text-[11px] text-[#0284c7] dark:text-[#38bdf8] font-black">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => toggleSort('party')}
+                      className="px-3 font-black truncate cursor-pointer select-none hover:text-[#0284c7] dark:hover:text-[#38bdf8] transition-colors"
+                      title="Sort by Company / Party Name"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>{activeCategory === 'sales' ? 'COMPANY / CLIENT' : 'COMPANY / VENDOR'}</span>
+                        {sortBy === 'party' && (
+                          <span className="text-[11px] text-[#0284c7] dark:text-[#38bdf8] font-black">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => toggleSort('date')}
+                      className="px-2 font-black truncate cursor-pointer select-none hover:text-[#0284c7] dark:hover:text-[#38bdf8] transition-colors"
+                      title="Sort by Date"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>DATE & DUE</span>
+                        {sortBy === 'date' && (
+                          <span className="text-[11px] text-[#0284c7] dark:text-[#38bdf8] font-black">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => toggleSort('amount')}
+                      className="px-2 font-black truncate cursor-pointer select-none hover:text-[#0284c7] dark:hover:text-[#38bdf8] transition-colors"
+                      title="Sort by Total Amount"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>TOTAL</span>
+                        {sortBy === 'amount' && (
+                          <span className="text-[11px] text-[#0284c7] dark:text-[#38bdf8] font-black">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </th>
                     <th className="px-2 font-black truncate">PAID</th>
-                    <th className="px-2 font-black truncate">DUE BALANCE</th>
+                    <th
+                      onClick={() => toggleSort('due')}
+                      className="px-2 font-black truncate cursor-pointer select-none hover:text-[#0284c7] dark:hover:text-[#38bdf8] transition-colors"
+                      title="Sort by Due Balance"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>DUE BALANCE</span>
+                        {sortBy === 'due' && (
+                          <span className="text-[11px] text-[#0284c7] dark:text-[#38bdf8] font-black">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </th>
                     <th className="px-2 font-black text-center">STATUS</th>
                     <th className="px-3 text-right font-black">ACTION</th>
                   </tr>

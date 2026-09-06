@@ -200,8 +200,10 @@ export interface BusinessProfile {
   accountNumber?: string;
   ifsc?: string;
   upiId?: string;
+  qrPreference?: 'upi' | 'bank';
 
   // Billing & Preset Rules Tab
+  documentSeparator?: string;
   invoicePrefix?: string;
   startingInvoiceNumber?: string;
   proformaPrefix?: string;
