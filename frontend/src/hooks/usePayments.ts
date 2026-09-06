@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Invoice, Expense, PaymentRecord, PaymentSettlementPayload, PaymentStatus, InvoiceStatus } from '../types';
 import { supabase } from '../lib/supabase';
+import { pushMasterRegistriesToCloud, unmarkRegistryKeyDeleted } from '../lib/masterRegistrySync';
 
 export interface PaymentSummaryStats {
   // Sales
@@ -394,6 +395,36 @@ export function usePayments({
           // Dispatch Master Database refresh events
           window.dispatchEvent(new CustomEvent(isPurchase ? 'makbills_sync_actual_vendors' : 'makbills_sync_vendors'));
           window.dispatchEvent(new CustomEvent('makbills_registry_deleted'));
+
+          // Push to Supabase Cloud so it syncs across all devices logged into the same account
+          supabase.auth.getSession().then(async ({ data: { session } }) => {
+            if (session?.user?.id) {
+              unmarkRegistryKeyDeleted(newMasterParty, suffix);
+              await pushMasterRegistriesToCloud(session.user.id, suffix, {
+                [isPurchase ? 'actualVendors' : 'vendors']: cachedRegistry
+              });
+
+              if (!isPurchase) {
+                try {
+                  await supabase.from('clients').upsert({
+                    id: newMasterParty.id,
+                    userId: session.user.id,
+                    name: newMasterParty.name,
+                    companyName: newMasterParty.companyName,
+                    company: newMasterParty.companyName,
+                    gstin: newMasterParty.gstin,
+                    email: newMasterParty.email,
+                    phone: newMasterParty.phone,
+                    updatedAt: nowIso
+                  }, { onConflict: 'id' });
+                } catch {
+                  // Ignore client upsert errors
+                }
+              }
+            }
+          }).catch(cloudErr => {
+            console.warn('[usePayments] Master database cloud push notice:', cloudErr);
+          });
         }
       } catch (err) {
         console.warn('[usePayments] Master database registry insertion notice:', err);
