@@ -14416,23 +14416,23 @@ export default function Dashboard({
             <div className="space-y-5 sm:space-y-6 text-sans animate-in fade-in duration-300">
 
               {/* Quick Action Buttons Bar (Add Sales, Add Purchase, Add Expense) */}
-              <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3.5 sm:p-4.5 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3.5 sm:gap-4 transition-all">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] flex items-center justify-center shrink-0">
+              <div className="bg-white dark:bg-[#111a36] border border-[#bae6fd]/60 dark:border-[#223269]/60 rounded-2xl p-3 sm:p-4.5 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4 transition-all">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-[#0284c7] dark:text-[#38bdf8] border border-[#bae6fd] dark:border-[#223269] flex items-center justify-center shrink-0">
                     <Zap className="w-4 h-4 sm:w-5 sm:h-5 fill-[#0284c7]/20 dark:fill-[#38bdf8]/20" />
                   </div>
-                  <div>
-                    <h2 className="text-xs sm:text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-xs sm:text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-tight flex items-center gap-2 truncate">
                       Quick Billing Actions
                     </h2>
-                    <p className="text-[10px] sm:text-[11px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5">
+                    <p className="text-[10px] sm:text-[11px] text-[#64748b]/80 dark:text-zinc-400 mt-0.5 leading-snug">
                       Create new sales tax invoices, record vendor purchase bills, or log operational expenses
                     </p>
                   </div>
                 </div>
 
                 {/* 3 Quick Action Actionable Buttons */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5 w-full md:w-auto shrink-0">
+                <div className="grid grid-cols-3 sm:grid-cols-3 gap-1.5 xs:gap-2 sm:gap-2.5 w-full lg:w-auto shrink-0">
                   {/* 1. Add Sales -> Redirects to Create Tax Invoice */}
                   <button
                     onClick={() => {
@@ -14440,10 +14440,10 @@ export default function Dashboard({
                       setLedgerSection('invoice');
                       handleCreateDocumentForSection('invoice');
                     }}
-                    className="group relative flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer border border-[#0284c7]"
+                    className="group relative flex items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer border border-[#0284c7] min-w-0"
                     title="Create Tax Invoice (Sales)"
                   >
-                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
                     <span className="truncate">Add Sales</span>
                   </button>
 
@@ -14454,10 +14454,10 @@ export default function Dashboard({
                       setPurchaseLedgerSection('purchases');
                       handleCreateDocumentForSection('purchases');
                     }}
-                    className="group relative flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer border border-rose-600"
+                    className="group relative flex items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer border border-rose-600 min-w-0"
                     title="Create Purchase Bill (Vendor Bill)"
                   >
-                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
                     <span className="truncate">Add Purchase</span>
                   </button>
 
@@ -14471,10 +14471,10 @@ export default function Dashboard({
                         }, 50);
                       }
                     }}
-                    className="group relative flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer border border-purple-600"
+                    className="group relative flex items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer border border-purple-600 min-w-0"
                     title="Log Operational Expense"
                   >
-                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
                     <span className="truncate">Add Expense</span>
                   </button>
                 </div>
